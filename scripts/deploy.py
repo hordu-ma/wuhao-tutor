@@ -175,9 +175,9 @@ class DeploymentManager:
             print(f"❌ 部署失败: {e}")
             return False
 
-    def start_services(self, services: List[str] = None) -> bool:
+    def start_services(self, services: List[str] | None = None) -> bool:
         """启动服务"""
-        service_list = services or list(self.services.keys())
+        service_list = services if services is not None else list(self.services.keys())
         print(f"🏃 启动服务: {', '.join(service_list)}")
 
         try:
@@ -191,9 +191,9 @@ class DeploymentManager:
             print(f"❌ 服务启动失败: {e}")
             return False
 
-    def stop_services(self, services: List[str] = None) -> bool:
+    def stop_services(self, services: List[str] | None = None) -> bool:
         """停止服务"""
-        service_list = services or list(self.services.keys())
+        service_list = services if services is not None else list(self.services.keys())
         print(f"🛑 停止服务: {', '.join(service_list)}")
 
         try:
@@ -207,9 +207,9 @@ class DeploymentManager:
             print(f"❌ 服务停止失败: {e}")
             return False
 
-    def restart_services(self, services: List[str] = None) -> bool:
+    def restart_services(self, services: List[str] | None = None) -> bool:
         """重启服务"""
-        service_list = services or list(self.services.keys())
+        service_list = services if services is not None else list(self.services.keys())
         print(f"🔄 重启服务: {', '.join(service_list)}")
 
         try:
@@ -228,9 +228,9 @@ class DeploymentManager:
             print(f"❌ 服务重启失败: {e}")
             return False
 
-    def wait_for_services(self, services: List[str] = None, timeout: int = 300) -> bool:
+    def wait_for_services(self, services: List[str] | None = None, timeout: int = 300) -> bool:
         """等待服务健康检查"""
-        service_list = services or [s for s, config in self.services.items() if config["required"]]
+        service_list = services if services is not None else [s for s, config in self.services.items() if config["required"]]
         print(f"⏳ 等待服务健康检查: {', '.join(service_list)}")
 
         start_time = time.time()
@@ -358,7 +358,7 @@ class DeploymentManager:
                 if "restart_count" in details and details["restart_count"] > 0:
                     print(f"    🔄 Restarts: {details['restart_count']}")
 
-    def show_logs(self, service: str = None, tail: int = 100, follow: bool = False):
+    def show_logs(self, service: str | None = None, tail: int = 100, follow: bool = False):
         """查看服务日志"""
         cmd = ["docker-compose", "logs"]
 
@@ -368,7 +368,7 @@ class DeploymentManager:
         if follow:
             cmd.append("-f")
 
-        if service:
+        if service is not None:
             cmd.append(service)
             print(f"📋 查看 {service} 服务日志 (最近{tail}行):")
         else:
@@ -379,10 +379,10 @@ class DeploymentManager:
         except KeyboardInterrupt:
             print("\n⏹️  日志查看已停止")
 
-    def backup_data(self, backup_dir: str = None):
+    def backup_data(self, backup_dir: str | None = None):
         """备份数据"""
-        if not backup_dir:
-            backup_dir = self.project_root / "backups" / datetime.now().strftime("%Y%m%d_%H%M%S")
+        if backup_dir is None:
+            backup_dir = str(self.project_root / "backups" / datetime.now().strftime("%Y%m%d_%H%M%S"))
 
         backup_path = Path(backup_dir)
         backup_path.mkdir(parents=True, exist_ok=True)
@@ -561,15 +561,15 @@ def main():
             sys.exit(0 if success else 1)
 
         elif args.command == "start":
-            success = manager.start_services(args.services or None)
+            success = manager.start_services(args.services if args.services else None)
             sys.exit(0 if success else 1)
 
         elif args.command == "stop":
-            success = manager.stop_services(args.services or None)
+            success = manager.stop_services(args.services if args.services else None)
             sys.exit(0 if success else 1)
 
         elif args.command == "restart":
-            success = manager.restart_services(args.services or None)
+            success = manager.restart_services(args.services if args.services else None)
             sys.exit(0 if success else 1)
 
         elif args.command == "status":

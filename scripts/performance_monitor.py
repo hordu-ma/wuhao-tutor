@@ -152,6 +152,7 @@ class PerformanceMonitor:
         print("=" * 80)
 
         # 获取数据库优化分析
+        analysis = None
         try:
             async for db in get_db():
                 analysis = await self.db_optimizer.analyze_performance(db)
@@ -160,7 +161,7 @@ class PerformanceMonitor:
             print(f"无法连接数据库进行分析: {e}")
             return
 
-        suggestions = analysis.get('optimization_suggestions', [])
+        suggestions = analysis.get('optimization_suggestions', []) if analysis else []
 
         if not suggestions:
             print("✅ 当前系统性能良好，暂无优化建议")
@@ -197,7 +198,8 @@ class PerformanceMonitor:
         if cache_type in ["all", "redis"]:
             try:
                 # 清理Redis缓存
-                keys = await cache_manager.scan_pattern("*")
+                pattern = f"{cache_manager.prefix}:*"
+                keys = await cache_manager.redis_client.keys(pattern) if hasattr(cache_manager, 'redis_client') else []
                 if keys:
                     for key in keys:
                         await cache_manager.delete(key)
@@ -227,7 +229,7 @@ class PerformanceMonitor:
 
         print("✅ 旧数据清理完成")
 
-    async def export_metrics(self, output_file: str = None):
+    async def export_metrics(self, output_file: str | None = None):
         """导出性能指标"""
         if not output_file:
             output_file = f"performance_metrics_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"

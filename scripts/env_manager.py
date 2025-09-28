@@ -445,7 +445,7 @@ AI_CACHE_TTL=3600
 
         return True
 
-    def validate_environment(self, environment: str = None):
+    def validate_environment(self, environment: str | None = None):
         """验证环境配置"""
         if environment:
             env_file = self.project_root / self.environments[environment]["file"]

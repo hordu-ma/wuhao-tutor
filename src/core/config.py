@@ -32,16 +32,34 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
 
     # CORS配置
-    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
+    BACKEND_CORS_ORIGINS: List[str] = []
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
-    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
-        if isinstance(v, str) and not v.startswith("["):
-            return [i.strip() for i in v.split(",")]
-        elif isinstance(v, (list, str)):
+    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
+        """CORS源地址预处理
+
+        支持两种格式：
+        1. 逗号分隔的字符串: "http://localhost:3000,http://localhost:8080"
+        2. 字符串数组: ["http://localhost:3000", "http://localhost:8080"]
+        """
+        if isinstance(v, str):
+            if not v.strip():  # 空字符串返回空数组
+                return []
+            if v.startswith("[") and v.endswith("]"):
+                # JSON数组格式
+                import json
+                try:
+                    return json.loads(v)
+                except json.JSONDecodeError:
+                    pass
+            # 逗号分隔格式
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        elif isinstance(v, list):
             return v
-        raise ValueError(v)
+        elif v is None:
+            return []
+        raise ValueError(f"Invalid CORS origins format: {v}")
 
     # 数据库配置
     POSTGRES_SERVER: str = "localhost"
@@ -49,7 +67,7 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = ""
     POSTGRES_DB: str = "wuhao_tutor"
     POSTGRES_PORT: str = "5432"
-    SQLALCHEMY_DATABASE_URI: Optional[PostgresDsn] = None
+    SQLALCHEMY_DATABASE_URI: Optional[Union[PostgresDsn, str]] = None
 
     @model_validator(mode="after")
     def assemble_db_connection(self) -> 'Settings':
@@ -160,8 +178,16 @@ class DevelopmentSettings(Settings):
     LOG_LEVEL: str = "DEBUG"
     POSTGRES_DB: str = "wuhao_tutor_dev"
 
+    # 开发环境默认CORS配置（如果.env中没有指定）
+    # 注意：.env文件中的配置会覆盖这里的默认值
+    BACKEND_CORS_ORIGINS: List[str] = [
+        "http://localhost:3000",  # Vue.js 开发服务器
+        "http://127.0.0.1:3000",
+        "http://localhost:8080",  # 其他开发服务器
+    ]
+
     # 开发环境使用SQLite
-    SQLALCHEMY_DATABASE_URI: Optional[str] = "sqlite+aiosqlite:///./wuhao_tutor_dev.db"
+    SQLALCHEMY_DATABASE_URI: Optional[Union[PostgresDsn, str]] = "sqlite+aiosqlite:///./wuhao_tutor_dev.db"
 
     # 开发环境宽松的限流配置
     RATE_LIMIT_PER_IP: int = 1000
@@ -176,13 +202,18 @@ class TestingSettings(Settings):
     POSTGRES_DB: str = "wuhao_tutor_test"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 5  # 测试用短过期时间
 
+    # 测试环境CORS配置（避免解析.env文件出错）
+    BACKEND_CORS_ORIGINS: List[str] = []
+
     # 测试环境使用内存SQLite
-    SQLALCHEMY_DATABASE_URI: Optional[str] = "sqlite+aiosqlite:///:memory:"
+    SQLALCHEMY_DATABASE_URI: Optional[Union[PostgresDsn, str]] = "sqlite+aiosqlite:///:memory:"
 
     # 测试环境禁用某些功能
     ENABLE_METRICS: bool = False
     RATE_LIMIT_ENABLED: bool = False
     CACHE_ENABLED: bool = False
+
+    model_config = {"env_file": None}  # 测试环境不读取.env文件
 
 
 class ProductionSettings(Settings):

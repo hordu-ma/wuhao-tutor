@@ -89,7 +89,7 @@
         <el-form-item>
           <div class="login-link">
             已有账号？
-            <el-link type="primary" @click="$router.push('/login')">
+            <el-link type="primary" @click="router.push('/login')">
               立即登录
             </el-link>
           </div>

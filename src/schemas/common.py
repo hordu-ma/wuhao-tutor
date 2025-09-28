@@ -30,7 +30,7 @@ class BaseResponse(BaseModel):
 class SuccessResponse(BaseResponse):
     """成功响应模型"""
     success: bool = Field(default=True, description="请求成功")
-    message: str = Field(default="操作成功", description="成功消息")
+    message: Optional[str] = Field(default="操作成功", description="成功消息")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -165,7 +165,7 @@ class FileInfo(BaseModel):
 
 class FileUploadResponse(DataResponse[FileInfo]):
     """文件上传响应"""
-    message: str = Field(default="文件上传成功", description="上传成功消息")
+    message: Optional[str] = Field(default="文件上传成功", description="上传成功消息")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -356,7 +356,7 @@ class ExportTask(BaseModel):
 
 class ExportResponse(DataResponse[ExportTask]):
     """导出响应"""
-    message: str = Field(default="导出任务已创建", description="任务创建消息")
+    message: Optional[str] = Field(default="导出任务已创建", description="任务创建消息")
 
     model_config = ConfigDict(
         json_schema_extra={

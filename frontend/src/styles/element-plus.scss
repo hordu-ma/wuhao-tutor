@@ -77,7 +77,9 @@
   --el-fill-color-blank: #ffffff;
 
   /* 字体 */
-  --el-font-family: 'PingFang SC', 'Helvetica Neue', Helvetica, 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+  --el-font-family:
+    "PingFang SC", "Helvetica Neue", Helvetica, "Microsoft YaHei", "微软雅黑",
+    Arial, sans-serif;
   --el-font-size-extra-large: 20px;
   --el-font-size-large: 18px;
   --el-font-size-medium: 16px;
@@ -94,8 +96,10 @@
   /* 阴影 */
   --el-box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12), 0 0 6px rgba(0, 0, 0, 0.04);
   --el-box-shadow-light: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-  --el-box-shadow-base: 0 2px 4px rgba(0, 0, 0, 0.12), 0 0 6px rgba(0, 0, 0, 0.04);
-  --el-box-shadow-dark: 0 2px 4px rgba(0, 0, 0, 0.12), 0 0 6px rgba(0, 0, 0, 0.12);
+  --el-box-shadow-base:
+    0 2px 4px rgba(0, 0, 0, 0.12), 0 0 6px rgba(0, 0, 0, 0.04);
+  --el-box-shadow-dark:
+    0 2px 4px rgba(0, 0, 0, 0.12), 0 0 6px rgba(0, 0, 0, 0.12);
 
   /* 动画时长 */
   --el-transition-duration: 0.2s;
@@ -118,26 +122,46 @@
 }
 
 .el-button--primary {
-  background: linear-gradient(135deg, var(--el-color-primary) 0%, var(--el-color-primary-dark-2) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--el-color-primary) 0%,
+    var(--el-color-primary-dark-2) 100%
+  );
   border: none;
 
   &:hover {
-    background: linear-gradient(135deg, var(--el-color-primary-light-3) 0%, var(--el-color-primary) 100%);
+    background: linear-gradient(
+      135deg,
+      var(--el-color-primary-light-3) 0%,
+      var(--el-color-primary) 100%
+    );
   }
 }
 
 .el-button--success {
-  background: linear-gradient(135deg, var(--el-color-success) 0%, var(--el-color-success-dark-2) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--el-color-success) 0%,
+    var(--el-color-success-dark-2) 100%
+  );
   border: none;
 }
 
 .el-button--warning {
-  background: linear-gradient(135deg, var(--el-color-warning) 0%, var(--el-color-warning-dark-2) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--el-color-warning) 0%,
+    var(--el-color-warning-dark-2) 100%
+  );
   border: none;
 }
 
 .el-button--danger {
-  background: linear-gradient(135deg, var(--el-color-danger) 0%, var(--el-color-danger-dark-2) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--el-color-danger) 0%,
+    var(--el-color-danger-dark-2) 100%
+  );
   border: none;
 }
 
@@ -432,7 +456,11 @@
 
 .el-progress-bar__inner {
   border-radius: var(--el-border-radius-round);
-  background: linear-gradient(90deg, var(--el-color-primary-light-3) 0%, var(--el-color-primary) 100%);
+  background: linear-gradient(
+    90deg,
+    var(--el-color-primary-light-3) 0%,
+    var(--el-color-primary) 100%
+  );
 }
 
 /* 评分组件样式覆写 */
@@ -451,7 +479,11 @@
 
 .el-slider__bar {
   border-radius: var(--el-border-radius-round);
-  background: linear-gradient(90deg, var(--el-color-primary-light-3) 0%, var(--el-color-primary) 100%);
+  background: linear-gradient(
+    90deg,
+    var(--el-color-primary-light-3) 0%,
+    var(--el-color-primary) 100%
+  );
 }
 
 .el-slider__button {

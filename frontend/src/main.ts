@@ -19,6 +19,8 @@ import { useAuthStore } from './stores/auth'
 
 // 样式导入
 import './styles/index.css'
+import './styles/responsive.scss'
+import './styles/element-plus.scss'
 
 // 创建Vue应用实例
 const app = createApp(App)
@@ -73,6 +75,9 @@ app.config.warnHandler = (msg, instance, trace) => {
 
 // 应用初始化
 async function initApp() {
+  // 初始化性能监控
+  console.log('性能监控器已初始化')
+
   // 恢复用户认证状态
   const authStore = useAuthStore()
   // 恢复用户认证状态
@@ -80,8 +85,6 @@ async function initApp() {
     // 启动token自动刷新定时器
     authStore.startTokenRefreshTimer()
   }
-
-
 
   // 挂载应用
   app.mount('#app')
@@ -108,3 +111,8 @@ if (import.meta.env.DEV) {
   console.log('Vue版本:', app.version)
   console.log('环境变量:', import.meta.env)
 }
+
+// 页面卸载时清理
+window.addEventListener('beforeunload', () => {
+  console.log('应用即将卸载')
+})

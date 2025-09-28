@@ -95,7 +95,7 @@ class APITestSuite:
         self.results = []
         self.auth_headers = {"Authorization": "Bearer test_token_123"}
 
-    def log_result(self, test_name: str, result: Dict[str, Any], expected_codes: List[int] = None):
+    def log_result(self, test_name: str, result: Dict[str, Any], expected_codes: List[int] | None = None):
         """记录测试结果"""
         if expected_codes is None:
             expected_codes = [200, 201]

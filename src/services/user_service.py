@@ -31,6 +31,11 @@ from src.schemas.auth import (
 )
 from src.utils.cache import cache_result, cache_key
 from src.repositories.base_repository import BaseRepository
+from src.utils.type_converters import (
+    extract_orm_str, extract_orm_bool, extract_orm_uuid_str,
+    extract_orm_int, safe_json_loads, wrap_orm,
+    build_user_response_data
+)
 
 
 logger = logging.getLogger("user_service")
@@ -78,17 +83,18 @@ class UserService:
 
             user = await self.user_repo.create(user_data)
 
-            logger.info(f"用户注册成功",
-                       user_id=user.id,
-                       phone=request.phone,
-                       name=request.name)
+            logger.info("用户注册成功", extra={
+                "user_id": extract_orm_uuid_str(user, "id"),
+                "phone": request.phone,
+                "name": request.name
+            })
 
             return UserResponse.model_validate(user)
 
         except ConflictError:
             raise
         except Exception as e:
-            logger.error(f"用户注册失败: {str(e)}", phone=request.phone, exc_info=True)
+            logger.error(f"用户注册失败: {str(e)}", extra={"phone": request.phone}, exc_info=True)
             raise ServiceError(f"用户注册失败: {str(e)}") from e
 
     async def authenticate_user(self, phone: str, password: str) -> Optional[User]:
@@ -98,16 +104,17 @@ class UserService:
             if not user:
                 return None
 
-            if not user.is_active:
+            if not extract_orm_bool(user, "is_active"):
                 raise AuthenticationError("用户账号已被禁用")
 
-            if not self._verify_password(password, user.password_hash):
+            if not self._verify_password(password, extract_orm_str(user, "password_hash")):
                 return None
 
             # 更新登录信息
-            await self.user_repo.update(user.id, {
+            current_login_count = extract_orm_int(user, "login_count", 0) or 0
+            await self.user_repo.update(extract_orm_uuid_str(user, "id"), {
                 "last_login_at": datetime.utcnow().isoformat(),
-                "login_count": user.login_count + 1
+                "login_count": current_login_count + 1
             })
 
             return user
@@ -115,7 +122,7 @@ class UserService:
         except AuthenticationError:
             raise
         except Exception as e:
-            logger.error(f"用户认证失败: {str(e)}", phone=phone, exc_info=True)
+            logger.error(f"用户认证失败: {str(e)}", extra={"phone": phone}, exc_info=True)
             return None
 
     async def get_user_by_id(self, user_id: str) -> Optional[UserResponse]:
@@ -136,17 +143,19 @@ class UserService:
         study_goals = []
         study_preferences = None
 
-        if user.study_subjects:
+        study_subjects_str = extract_orm_str(user, "study_subjects")
+        if study_subjects_str:
             try:
                 import json
-                study_subjects = json.loads(user.study_subjects)
+                study_subjects = json.loads(study_subjects_str)
             except:
                 pass
 
-        if user.study_goals:
+        study_goals_str = extract_orm_str(user, "study_goals")
+        if study_goals_str:
             try:
                 import json
-                study_goals = json.loads(user.study_goals)
+                study_goals = json.loads(study_goals_str)
             except:
                 pass
 
@@ -181,7 +190,7 @@ class UserService:
             await self.user_repo.update(user_id, update_data)
             user = await self.user_repo.get_by_id(user_id)
 
-        logger.info(f"用户信息更新成功", user_id=user_id, fields=list(update_data.keys()))
+        logger.info("用户信息更新成功", extra={"user_id": user_id, "fields": list(update_data.keys())})
         return UserResponse.model_validate(user)
 
     async def update_study_preferences(
@@ -204,7 +213,7 @@ class UserService:
             })
 
         # 这里可以扩展更多学习偏好字段的更新
-        logger.info(f"学习偏好更新成功", user_id=user_id)
+        logger.info("用户学习偏好更新成功", extra={"user_id": user_id})
         return True
 
     async def add_learning_goal(
@@ -221,17 +230,18 @@ class UserService:
 
         # 获取现有目标
         existing_goals = []
-        if user.study_goals:
+        study_goals_str = extract_orm_str(user, "study_goals")
+        if study_goals_str:
             try:
-                existing_goals = json.loads(user.study_goals)
+                existing_goals = json.loads(study_goals_str)
             except:
                 existing_goals = []
 
         # 添加新目标
         new_goal = request.model_dump()
-        if hasattr(request.goal_type, 'value'):
+        if hasattr(request.goal_type, 'value') and request.goal_type is not None:
             new_goal['goal_type'] = request.goal_type.value
-        if hasattr(request.subject, 'value'):
+        if hasattr(request.subject, 'value') and request.subject is not None:
             new_goal['subject'] = request.subject.value
 
         new_goal['id'] = secrets.token_hex(8)
@@ -245,7 +255,7 @@ class UserService:
             "study_goals": json.dumps(existing_goals)
         })
 
-        logger.info(f"学习目标添加成功", user_id=user_id, goal_type=request.goal_type)
+        logger.info("学习目标添加成功", extra={"user_id": user_id, "goal_type": str(request.goal_type)})
         return True
 
     # ========== 用户查询和统计 ==========
@@ -316,7 +326,7 @@ class UserService:
             "total": total,
             "page": query.page,
             "size": query.size,
-            "pages": (total + query.size - 1) // query.size,
+            "pages": (total + query.size - 1) // query.size if total else 0,
             "items": [UserResponse.model_validate(user) for user in users]
         }
 
@@ -407,6 +417,7 @@ class UserService:
         # 这里需要跨模块查询，暂时返回基础数据
         # 实际实现需要查询问答记录、作业记录等
 
+        last_login_str = extract_orm_str(user, "last_login_at")
         return UserActivityResponse(
             user_id=user_id,
             total_questions=0,  # TODO: 查询问答记录
@@ -415,7 +426,7 @@ class UserService:
             study_streak_days=0,
             avg_daily_questions=0.0,
             most_active_subject=None,
-            last_activity_at=datetime.fromisoformat(user.last_login_at) if user.last_login_at else None
+            last_activity_at=datetime.fromisoformat(last_login_str) if last_login_str else None
         )
 
     async def get_user_progress(self, user_id: str) -> Optional[UserProgressResponse]:
@@ -486,7 +497,7 @@ class UserService:
     async def revoke_user_session(self, session_id: str, user_id: str) -> bool:
         """撤销用户会话"""
         session = await self.session_repo.get_by_id(session_id)
-        if not session or session.user_id != user_id:
+        if not session or extract_orm_str(session, "user_id") != user_id:
             return False
 
         await self.session_repo.update(session_id, {"is_revoked": True})
@@ -505,10 +516,11 @@ class UserService:
         # 批量撤销
         revoked_count = 0
         for session in sessions:
-            await self.session_repo.update(session.id, {"is_revoked": True})
+            session_id = extract_orm_uuid_str(session, "id")
+            await self.session_repo.update(session_id, {"is_revoked": True})
             revoked_count += 1
 
-        logger.info(f"撤销用户所有会话", user_id=user_id, count=revoked_count)
+        logger.info("撤销用户所有会话", extra={"user_id": user_id, "count": revoked_count})
         return revoked_count
 
     # ========== 密码管理 ==========
@@ -525,7 +537,7 @@ class UserService:
             raise NotFoundError("用户不存在")
 
         # 验证旧密码
-        if not self._verify_password(old_password, user.password_hash):
+        if not self._verify_password(old_password, extract_orm_str(user, "password_hash")):
             raise AuthenticationError("原密码错误")
 
         # 更新密码
@@ -535,7 +547,7 @@ class UserService:
         # 撤销所有会话，要求重新登录
         await self.revoke_all_user_sessions(user_id)
 
-        logger.info(f"用户密码修改成功", user_id=user_id)
+        logger.info("用户密码更新成功", extra={"user_id": user_id})
         return True
 
     async def reset_password(
@@ -555,12 +567,13 @@ class UserService:
 
         # 更新密码
         new_password_hash = self._hash_password(new_password)
-        await self.user_repo.update(user.id, {"password_hash": new_password_hash})
+        user_id_str = extract_orm_uuid_str(user, "id")
+        await self.user_repo.update(user_id_str, {"password_hash": new_password_hash})
 
         # 撤销所有会话
-        await self.revoke_all_user_sessions(user.id)
+        await self.revoke_all_user_sessions(user_id_str)
 
-        logger.info(f"用户密码重置成功", user_id=user.id, phone=phone)
+        logger.info("用户密码重置成功", extra={"user_id": user_id_str, "phone": phone})
         return True
 
     # ========== 工具方法 ==========
@@ -603,10 +616,11 @@ class UserService:
         expired_sessions = result.scalars().all()
 
         for session in expired_sessions:
-            await self.session_repo.update(session.id, {"is_revoked": True})
+            session_id = extract_orm_uuid_str(session, "id")
+            await self.session_repo.update(session_id, {"is_revoked": True})
 
         if expired_sessions:
-            logger.info(f"清理过期会话", count=len(expired_sessions))
+            logger.info("清理过期会话", extra={"count": len(expired_sessions)})
 
 
 # 依赖注入函数

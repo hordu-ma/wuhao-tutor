@@ -38,10 +38,8 @@
 
         <el-form-item>
           <div class="login-options">
-            <el-checkbox v-model="loginForm.remember_me">
-              记住我
-            </el-checkbox>
-            <el-link type="primary" @click="$router.push('/forgot-password')">
+            <el-checkbox v-model="loginForm.remember_me"> 记住我 </el-checkbox>
+            <el-link type="primary" @click="router.push('/forgot-password')">
               忘记密码？
             </el-link>
           </div>
@@ -54,14 +52,14 @@
             :loading="loginLoading"
             @click="handleLogin"
           >
-            {{ loginLoading ? '登录中...' : '登录' }}
+            {{ loginLoading ? "登录中..." : "登录" }}
           </el-button>
         </el-form-item>
 
         <el-form-item>
           <div class="register-link">
             还没有账号？
-            <el-link type="primary" @click="$router.push('/register')">
+            <el-link type="primary" @click="router.push('/register')">
               立即注册
             </el-link>
           </div>
@@ -72,96 +70,96 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
-import { ElMessage, ElNotification } from 'element-plus'
-import type { FormInstance, FormRules } from 'element-plus'
+import { ref, reactive, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import { useAuthStore } from "@/stores/auth";
+import { ElMessage, ElNotification } from "element-plus";
+import type { FormInstance, FormRules } from "element-plus";
 
-const router = useRouter()
-const authStore = useAuthStore()
+const router = useRouter();
+const authStore = useAuthStore();
 
 // 表单引用
-const loginFormRef = ref<FormInstance>()
+const loginFormRef = ref<FormInstance>();
 
 // 登录表单数据
 const loginForm = reactive({
-  username: '',
-  password: '',
+  username: "",
+  password: "",
   remember_me: false,
-})
+});
 
 // 登录加载状态
-const loginLoading = ref(false)
+const loginLoading = ref(false);
 
 // 表单验证规则
 const loginRules: FormRules = {
   username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 3, max: 50, message: '用户名长度为3-50个字符', trigger: 'blur' },
+    { required: true, message: "请输入用户名", trigger: "blur" },
+    { min: 3, max: 50, message: "用户名长度为3-50个字符", trigger: "blur" },
   ],
   password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, max: 128, message: '密码长度为6-128个字符', trigger: 'blur' },
+    { required: true, message: "请输入密码", trigger: "blur" },
+    { min: 6, max: 128, message: "密码长度为6-128个字符", trigger: "blur" },
   ],
-}
+};
 
 // 处理登录
 const handleLogin = async () => {
-  if (!loginFormRef.value) return
+  if (!loginFormRef.value) return;
 
   try {
     // 表单验证
-    const valid = await loginFormRef.value.validate()
-    if (!valid) return
+    const valid = await loginFormRef.value.validate();
+    if (!valid) return;
 
-    loginLoading.value = true
+    loginLoading.value = true;
 
     // 调用登录接口
-    const success = await authStore.login(loginForm)
+    const success = await authStore.login(loginForm);
 
     if (success) {
       ElNotification({
-        title: '登录成功',
+        title: "登录成功",
         message: `欢迎回来，${authStore.userNickname}！`,
-        type: 'success',
+        type: "success",
         duration: 3000,
-      })
+      });
 
       // 跳转到目标页面或仪表板
-      const redirect = router.currentRoute.value.query.redirect as string
-      await router.push(redirect || '/dashboard')
+      const redirect = router.currentRoute.value.query.redirect as string;
+      await router.push(redirect || "/dashboard");
     } else {
-      ElMessage.error('登录失败，请检查用户名和密码')
+      ElMessage.error("登录失败，请检查用户名和密码");
     }
   } catch (error) {
-    console.error('Login error:', error)
-    ElMessage.error('登录过程中发生错误，请稍后重试')
+    console.error("Login error:", error);
+    ElMessage.error("登录过程中发生错误，请稍后重试");
   } finally {
-    loginLoading.value = false
+    loginLoading.value = false;
   }
-}
+};
 
 // 组件挂载时检查登录状态
 onMounted(() => {
   // 如果已经登录，直接跳转到仪表板
   if (authStore.isAuthenticated) {
-    router.push('/dashboard')
-    return
+    router.push("/dashboard");
+    return;
   }
 
   // 尝试从URL参数获取错误信息
-  const error = router.currentRoute.value.query.error as string
+  const error = router.currentRoute.value.query.error as string;
   if (error) {
-    ElMessage.error(decodeURIComponent(error))
+    ElMessage.error(decodeURIComponent(error));
   }
 
   // 开发环境下预填充测试账号
   if (import.meta.env.DEV) {
-    loginForm.username = 'test_student'
-    loginForm.password = 'password123'
+    loginForm.username = "test_student";
+    loginForm.password = "password123";
   }
-})
+});
 </script>
 
 <style lang="scss" scoped>
@@ -175,13 +173,14 @@ onMounted(() => {
   position: relative;
 
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background-image: radial-gradient(
+    background-image:
+      radial-gradient(
         circle at 20% 50%,
         rgba(120, 119, 198, 0.3) 0%,
         transparent 50%

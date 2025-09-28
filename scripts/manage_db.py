@@ -31,7 +31,7 @@ class DatabaseManager:
         self.scripts_dir = Path(__file__).parent
         self.project_root = self.scripts_dir.parent
 
-    def run_script(self, script_name: str, args: List[str] = None) -> bool:
+    def run_script(self, script_name: str, args: List[str] | None = None) -> bool:
         """运行指定脚本"""
         script_path = self.scripts_dir / script_name
         if not script_path.exists():
@@ -96,7 +96,7 @@ class DatabaseManager:
         else:
             logger.error("❌ 数据库测试失败")
 
-    def cmd_backup(self, env: str = "production", name: str = None) -> None:
+    def cmd_backup(self, env: str = "production", name: str | None = None) -> None:
         """备份数据库"""
         logger.info(f"💾 备份数据库环境: {env}")
         args = ["create", "--env", env]

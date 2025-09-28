@@ -164,7 +164,7 @@ class LearningRepository:
         try:
             # 获取会话信息
             session = await self.session_repo.get_by_field('id', session_id)
-            if not session or session.user_id != user_id:
+            if not session or str(getattr(session, 'user_id', '')) != str(user_id):
                 return None
 
             # 获取问答历史
@@ -375,7 +375,8 @@ class LearningRepository:
             ).group_by(Question.subject).order_by(desc('count'))
 
             subject_result = await self.db.execute(subject_query)
-            subject_stats = dict(subject_result.all())
+            subject_rows = subject_result.all()
+            subject_stats = {row[0]: row[1] for row in subject_rows}
 
             # 问题类型分布查询
             type_query = select(
@@ -390,19 +391,32 @@ class LearningRepository:
             ).group_by(Question.question_type).order_by(desc('count'))
 
             type_result = await self.db.execute(type_query)
-            type_stats = dict(type_result.all())
+            type_rows = type_result.all()
+            type_stats = {row[0]: row[1] for row in type_rows}
 
             # 组合统计结果
-            learning_stats = {
-                'total_questions': stats_row.total_questions or 0,
-                'total_sessions': stats_row.total_sessions or 0,
-                'active_subjects': stats_row.active_subjects or 0,
-                'avg_rating': round(stats_row.avg_rating, 2) if stats_row.avg_rating else None,
-                'helpful_answers': stats_row.helpful_answers or 0,
-                'subject_distribution': subject_stats,
-                'question_type_distribution': type_stats,
-                'period_days': days
-            }
+            if stats_row:
+                learning_stats = {
+                    'total_questions': getattr(stats_row, 'total_questions', 0) or 0,
+                    'total_sessions': getattr(stats_row, 'total_sessions', 0) or 0,
+                    'active_subjects': getattr(stats_row, 'active_subjects', 0) or 0,
+                    'avg_rating': round(getattr(stats_row, 'avg_rating', 0), 2) if getattr(stats_row, 'avg_rating', None) else None,
+                    'helpful_answers': getattr(stats_row, 'helpful_answers', 0) or 0,
+                    'subject_distribution': subject_stats,
+                    'question_type_distribution': type_stats,
+                    'period_days': days
+                }
+            else:
+                learning_stats = {
+                    'total_questions': 0,
+                    'total_sessions': 0,
+                    'active_subjects': 0,
+                    'avg_rating': None,
+                    'helpful_answers': 0,
+                    'subject_distribution': subject_stats,
+                    'question_type_distribution': type_stats,
+                    'period_days': days
+                }
 
             logger.debug(f"Generated learning stats for user {user_id}: {learning_stats}")
             return learning_stats

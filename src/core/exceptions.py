@@ -454,8 +454,7 @@ EXCEPTION_HTTP_STATUS_MAP = {
 # 通用异常别名（为了兼容性）
 # ============================================================================
 
-# 认证相关异常
-AuthenticationError = UserAuthError
+# 认证相关异常 - 使用原有的AuthenticationError类，不创建别名
 ConflictError = RecordAlreadyExistsError
 NotFoundError = RecordNotFoundError
 ServiceError = BaseCustomException

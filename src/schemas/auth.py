@@ -67,7 +67,7 @@ class RegisterRequest(UserBase):
     """用户注册请求"""
     password: str = Field(..., min_length=6, max_length=128, description="密码")
     password_confirm: str = Field(..., description="确认密码")
-    verification_code: str = Field(..., len=6, description="短信验证码")
+    verification_code: str = Field(..., min_length=6, max_length=6, description="短信验证码")
     role: UserRole = Field(default=UserRole.STUDENT, description="用户角色")
 
     @validator('password_confirm')
@@ -155,7 +155,7 @@ class SendVerificationCodeRequest(BaseModel):
 class ResetPasswordRequest(BaseModel):
     """重置密码请求"""
     phone: str = Field(..., pattern=r"^1[3-9]\d{9}$", description="手机号")
-    verification_code: str = Field(..., len=6, description="短信验证码")
+    verification_code: str = Field(..., min_length=6, max_length=6, description="短信验证码")
     new_password: str = Field(..., min_length=6, max_length=128, description="新密码")
     password_confirm: str = Field(..., description="确认密码")
 

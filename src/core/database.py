@@ -26,6 +26,9 @@ AsyncSessionLocal = async_sessionmaker(
     class_=AsyncSession,
 )
 
+# 别名，为了兼容性
+async_session = AsyncSessionLocal
+
 # 创建声明性基类
 Base = declarative_base()
 

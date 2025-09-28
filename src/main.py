@@ -35,6 +35,11 @@ async def lifespan(app: FastAPI):
     """应用生命周期管理"""
     logger = get_logger("app.lifespan")
 
+    # 初始化变量
+    system_collector = None
+    cleanup_task = None
+    rate_limit_cleanup_task = None
+
     # 启动时
     logger.info("🚀 应用启动中...")
 
@@ -54,10 +59,12 @@ async def lifespan(app: FastAPI):
     logger.info("🛑 应用关闭中...")
 
     # 停止监控服务
-    if settings.ENABLE_METRICS:
+    if settings.ENABLE_METRICS and system_collector:
         await system_collector.stop()
-        cleanup_task.cancel()
-        rate_limit_cleanup_task.cancel()
+        if cleanup_task:
+            cleanup_task.cancel()
+        if rate_limit_cleanup_task:
+            rate_limit_cleanup_task.cancel()
         logger.info("✅ 性能监控已停止")
 
 
