@@ -375,3 +375,32 @@ class BatchOperationResponse(BaseModel):
 
 # 解决前向引用问题
 HomeworkSubmissionDetail.model_rebuild()
+
+
+# ============================================================================
+# API端点别名 - 为了兼容API端点的命名约定
+# ============================================================================
+
+# 模板相关别名
+HomeworkTemplateCreate = HomeworkCreate
+HomeworkTemplateUpdate = HomeworkUpdate
+HomeworkTemplateResponse = HomeworkResponse
+
+# 提交相关别名
+HomeworkSubmissionListResponse = PaginatedResponse
+
+# 批改相关别名
+HomeworkCorrectionResponse = HomeworkReviewResponse
+
+# 查询相关别名
+HomeworkListQuery = HomeworkQuery
+
+# 模板列表响应
+class HomeworkTemplateListResponse(BaseModel):
+    """作业模板列表响应"""
+    success: bool = Field(True, description="是否成功")
+    data: List[HomeworkTemplateResponse] = Field(..., description="模板列表")
+    message: str = Field(..., description="响应消息")
+    total: int = Field(..., ge=0, description="总数量")
+    page: int = Field(..., ge=1, description="当前页码")
+    size: int = Field(..., ge=1, description="每页数量")

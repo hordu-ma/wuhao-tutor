@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     VERSION: str = "0.1.0"
     API_V1_STR: str = "/api/v1"
     SECRET_KEY: str = secrets.token_urlsafe(32)
+    ENVIRONMENT: str = "development"
 
     # 服务器配置
     HOST: str = "127.0.0.1"
@@ -94,6 +95,7 @@ class Settings(BaseSettings):
     OSS_ACCESS_KEY_SECRET: Optional[str] = None
     UPLOAD_MAX_SIZE: int = 10 * 1024 * 1024  # 10MB
     ALLOWED_EXTENSIONS: List[str] = [".jpg", ".jpeg", ".png", ".pdf", ".webp"]
+    UPLOAD_DIR: str = "./uploads"  # 文件上传目录
 
     # 短信服务配置
     SMS_ACCESS_KEY_ID: Optional[str] = None

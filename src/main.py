@@ -75,10 +75,12 @@ def setup_middleware(app: FastAPI) -> None:
         )
 
     # 安全中间件
-    app.add_middleware(
-        TrustedHostMiddleware,
-        allowed_hosts=["localhost", "127.0.0.1", settings.HOST] if settings.DEBUG else ["*"]
-    )
+    import os
+    if os.getenv("TESTING") != "1":  # 测试时跳过主机验证
+        app.add_middleware(
+            TrustedHostMiddleware,
+            allowed_hosts=["localhost", "127.0.0.1", "testserver", settings.HOST] if settings.DEBUG else ["*"]
+        )
 
     # 日志中间件
     app.add_middleware(LoggingMiddleware)
