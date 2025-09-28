@@ -581,7 +581,7 @@ onUnmounted(() => {
 
 <style scoped>
 .learning-stats-chart {
-  @apply w-full;
+  width: 100%;
 }
 
 .learning-stats-chart :deep(.el-select) {
@@ -589,6 +589,6 @@ onUnmounted(() => {
 }
 
 .learning-stats-chart :deep(.el-card__body) {
-  @apply p-0;
+  padding: 0;
 }
 </style>

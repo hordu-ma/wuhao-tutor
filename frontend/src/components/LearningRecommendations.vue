@@ -575,7 +575,7 @@ onMounted(() => {
 
 <style scoped>
 .learning-recommendations {
-  @apply w-full;
+  width: 100%;
 }
 
 .recommendation-card {
