@@ -1,0 +1,357 @@
+/* SCSS 变量定义文件 */
+
+// ============= 颜色系统 =============
+
+// 主题色
+$color-primary: #409eff;
+$color-primary-light-1: #53a8ff;
+$color-primary-light-2: #66b1ff;
+$color-primary-light-3: #79bbff;
+$color-primary-light-4: #8cc5ff;
+$color-primary-light-5: #a0cfff;
+$color-primary-light-6: #b3d8ff;
+$color-primary-light-7: #c6e2ff;
+$color-primary-light-8: #d9ecff;
+$color-primary-light-9: #ecf5ff;
+$color-primary-dark-1: #337ecc;
+$color-primary-dark-2: #2d70b3;
+
+// 成功色
+$color-success: #67c23a;
+$color-success-light-1: #75c947;
+$color-success-light-2: #82d054;
+$color-success-light-3: #90d661;
+$color-success-light-4: #9edd6e;
+$color-success-light-5: #abe47b;
+$color-success-light-6: #b9ea88;
+$color-success-light-7: #c7f195;
+$color-success-light-8: #d4f7a2;
+$color-success-light-9: #e2feaf;
+$color-success-dark-1: #529b2e;
+$color-success-dark-2: #447521;
+
+// 警告色
+$color-warning: #e6a23c;
+$color-warning-light-1: #e9b04a;
+$color-warning-light-2: #ecbe58;
+$color-warning-light-3: #efcc66;
+$color-warning-light-4: #f2d974;
+$color-warning-light-5: #f5e782;
+$color-warning-light-6: #f8f590;
+$color-warning-light-7: #fbf29e;
+$color-warning-light-8: #feefac;
+$color-warning-light-9: #fff7ba;
+$color-warning-dark-1: #b8851f;
+$color-warning-dark-2: #9e6b15;
+
+// 危险色
+$color-danger: #f56c6c;
+$color-danger-light-1: #f67c7c;
+$color-danger-light-2: #f78c8c;
+$color-danger-light-3: #f89c9c;
+$color-danger-light-4: #f9acac;
+$color-danger-light-5: #fabbbb;
+$color-danger-light-6: #fbcbcb;
+$color-danger-light-7: #fcdcdc;
+$color-danger-light-8: #fdecec;
+$color-danger-light-9: #fefcfc;
+$color-danger-dark-1: #c45656;
+$color-danger-dark-2: #a04141;
+
+// 信息色
+$color-info: #909399;
+$color-info-light-1: #9ea1a5;
+$color-info-light-2: #acafb1;
+$color-info-light-3: #babdbd;
+$color-info-light-4: #c8cbc9;
+$color-info-light-5: #d6d9d5;
+$color-info-light-6: #e4e7e1;
+$color-info-light-7: #f2f5ed;
+$color-info-light-8: #ffffff;
+$color-info-light-9: #ffffff;
+$color-info-dark-1: #73767a;
+$color-info-dark-2: #565961;
+
+// 文本色
+$color-text-primary: #303133;
+$color-text-regular: #606266;
+$color-text-secondary: #909399;
+$color-text-placeholder: #c0c4cc;
+
+// 边框色
+$color-border: #dcdfe6;
+$color-border-light: #e4e7ed;
+$color-border-lighter: #ebeef5;
+$color-border-extra-light: #f2f6fc;
+
+// 背景色
+$color-bg-white: #ffffff;
+$color-bg-page: #f2f3f5;
+$color-bg-light: #f5f7fa;
+$color-bg-lighter: #fafbfc;
+
+// 填充色
+$color-fill-base: #f0f2f5;
+$color-fill-light: #f5f7fa;
+$color-fill-lighter: #fafbfc;
+$color-fill-extra-light: #fafcff;
+
+// ============= 字体系统 =============
+
+// 字体族
+$font-family-primary: 'PingFang SC', 'Helvetica Neue', Helvetica, 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+$font-family-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Liberation Mono', 'Menlo', monospace;
+
+// 字体大小
+$font-size-extra-large: 20px;
+$font-size-large: 18px;
+$font-size-medium: 16px;
+$font-size-base: 14px;
+$font-size-small: 13px;
+$font-size-extra-small: 12px;
+
+// 字体粗细
+$font-weight-light: 300;
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+$font-weight-bold: 700;
+
+// 行高
+$line-height-base: 1.5;
+$line-height-small: 1.2;
+$line-height-large: 1.8;
+
+// ============= 尺寸系统 =============
+
+// 间距
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-base: 12px;
+$spacing-md: 16px;
+$spacing-lg: 20px;
+$spacing-xl: 24px;
+$spacing-2xl: 32px;
+$spacing-3xl: 40px;
+$spacing-4xl: 48px;
+
+// 圆角
+$border-radius-xs: 2px;
+$border-radius-sm: 4px;
+$border-radius-base: 6px;
+$border-radius-md: 8px;
+$border-radius-lg: 12px;
+$border-radius-xl: 16px;
+$border-radius-2xl: 20px;
+$border-radius-circle: 50%;
+
+// 边框宽度
+$border-width-thin: 1px;
+$border-width-base: 2px;
+$border-width-thick: 3px;
+
+// 阴影
+$box-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+$box-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+$box-shadow-base: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+$box-shadow-md: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+$box-shadow-lg: 0 20px 25px rgba(0, 0, 0, 0.1), 0 10px 10px rgba(0, 0, 0, 0.04);
+$box-shadow-xl: 0 25px 50px rgba(0, 0, 0, 0.25);
+$box-shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+
+// ============= 组件尺寸 =============
+
+// 按钮尺寸
+$button-height-large: 40px;
+$button-height-default: 32px;
+$button-height-small: 24px;
+$button-height-mini: 20px;
+
+// 输入框尺寸
+$input-height-large: 40px;
+$input-height-default: 32px;
+$input-height-small: 24px;
+$input-height-mini: 20px;
+
+// 头部高度
+$header-height: 64px;
+$header-height-small: 56px;
+
+// 侧边栏宽度
+$sidebar-width: 260px;
+$sidebar-width-collapsed: 64px;
+
+// 容器最大宽度
+$container-max-width: 1200px;
+$container-max-width-large: 1400px;
+$container-max-width-small: 768px;
+
+// ============= 断点系统 =============
+
+$breakpoint-xs: 480px;
+$breakpoint-sm: 576px;
+$breakpoint-md: 768px;
+$breakpoint-lg: 992px;
+$breakpoint-xl: 1200px;
+$breakpoint-2xl: 1600px;
+
+// ============= 动画系统 =============
+
+// 过渡时长
+$transition-duration-fast: 0.1s;
+$transition-duration-base: 0.2s;
+$transition-duration-slow: 0.3s;
+
+// 过渡函数
+$transition-timing-function-ease: ease;
+$transition-timing-function-ease-in: ease-in;
+$transition-timing-function-ease-out: ease-out;
+$transition-timing-function-ease-in-out: ease-in-out;
+$transition-timing-function-cubic-bezier: cubic-bezier(0.25, 0.8, 0.25, 1);
+
+// 常用过渡
+$transition-all: all $transition-duration-base $transition-timing-function-ease;
+$transition-color: color $transition-duration-fast $transition-timing-function-ease;
+$transition-background: background-color $transition-duration-fast $transition-timing-function-ease;
+$transition-border: border-color $transition-duration-fast $transition-timing-function-ease;
+$transition-box-shadow: box-shadow $transition-duration-fast $transition-timing-function-ease;
+$transition-transform: transform $transition-duration-base $transition-timing-function-ease;
+$transition-opacity: opacity $transition-duration-base $transition-timing-function-ease;
+
+// ============= 层级系统 =============
+
+$z-index-dropdown: 1000;
+$z-index-sticky: 1020;
+$z-index-fixed: 1030;
+$z-index-modal-backdrop: 1040;
+$z-index-offcanvas: 1045;
+$z-index-modal: 1050;
+$z-index-popover: 1060;
+$z-index-tooltip: 1070;
+$z-index-toast: 1080;
+
+// ============= 主题变量 =============
+
+// 渐变色
+$gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+$gradient-success: linear-gradient(135deg, #a8e6cf 0%, #7fcdcd 100%);
+$gradient-warning: linear-gradient(135deg, #ffd89b 0%, #19547b 100%);
+$gradient-danger: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+
+// 背景图案
+$pattern-dots: radial-gradient(circle, #c0c4cc 1px, transparent 1px);
+$pattern-grid: linear-gradient(#e4e7ed 1px, transparent 1px), linear-gradient(90deg, #e4e7ed 1px, transparent 1px);
+
+// ============= 响应式混合宏 =============
+
+@mixin respond-to($breakpoint) {
+  @if $breakpoint == xs {
+    @media (max-width: #{$breakpoint-xs - 1px}) {
+      @content;
+    }
+  }
+  @if $breakpoint == sm {
+    @media (min-width: #{$breakpoint-sm}) {
+      @content;
+    }
+  }
+  @if $breakpoint == md {
+    @media (min-width: #{$breakpoint-md}) {
+      @content;
+    }
+  }
+  @if $breakpoint == lg {
+    @media (min-width: #{$breakpoint-lg}) {
+      @content;
+    }
+  }
+  @if $breakpoint == xl {
+    @media (min-width: #{$breakpoint-xl}) {
+      @content;
+    }
+  }
+  @if $breakpoint == 2xl {
+    @media (min-width: #{$breakpoint-2xl}) {
+      @content;
+    }
+  }
+}
+
+// ============= 工具混合宏 =============
+
+// 清除浮动
+@mixin clearfix {
+  &::after {
+    content: '';
+    display: table;
+    clear: both;
+  }
+}
+
+// 文本省略
+@mixin text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// 多行文本省略
+@mixin text-ellipsis-lines($lines) {
+  display: -webkit-box;
+  -webkit-line-clamp: $lines;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// 居中对齐
+@mixin center-absolute {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+@mixin center-flex {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// 按钮重置
+@mixin button-reset {
+  appearance: none;
+  background: none;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+}
+
+// 滚动条样式
+@mixin scrollbar-style($width: 6px, $track-color: #f1f1f1, $thumb-color: #c1c1c1) {
+  &::-webkit-scrollbar {
+    width: $width;
+    height: $width;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: $track-color;
+    border-radius: #{$width / 2};
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: $thumb-color;
+    border-radius: #{$width / 2};
+    transition: background-color $transition-duration-fast;
+
+    &:hover {
+      background: darken($thumb-color, 20%);
+    }
+  }
+
+  // Firefox
+  scrollbar-width: thin;
+  scrollbar-color: $thumb-color $track-color;
+}

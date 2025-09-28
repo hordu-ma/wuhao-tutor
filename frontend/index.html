@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+        <!-- 网站基本信息 -->
+        <title>五好伴学 - 智能学习助手</title>
+        <meta
+            name="description"
+            content="五好伴学是一个集作业批改、学习问答、学情分析于一体的智能学习平台，帮助学生提升学习效率和成绩。"
+        />
+        <meta
+            name="keywords"
+            content="智能学习,作业批改,学习问答,学情分析,AI教育,学习助手"
+        />
+        <meta name="author" content="五好伴学团队" />
+
+        <!-- Open Graph / Facebook -->
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://wuhao-tutor.com/" />
+        <meta property="og:title" content="五好伴学 - 智能学习助手" />
+        <meta
+            property="og:description"
+            content="智能学习平台，提供作业批改、学习问答、学情分析等功能"
+        />
+        <meta property="og:image" content="/og-image.png" />
+
+        <!-- Twitter -->
+        <meta property="twitter:card" content="summary_large_image" />
+        <meta property="twitter:url" content="https://wuhao-tutor.com/" />
+        <meta property="twitter:title" content="五好伴学 - 智能学习助手" />
+        <meta
+            property="twitter:description"
+            content="智能学习平台，提供作业批改、学习问答、学情分析等功能"
+        />
+        <meta property="twitter:image" content="/og-image.png" />
+
+        <!-- 移动端优化 -->
+        <meta name="format-detection" content="telephone=no" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta
+            name="apple-mobile-web-app-status-bar-style"
+            content="black-translucent"
+        />
+        <meta name="apple-mobile-web-app-title" content="五好伴学" />
+
+        <!-- PWA相关 -->
+        <meta name="theme-color" content="#3b82f6" />
+        <link rel="manifest" href="/manifest.json" />
+
+        <!-- 图标 -->
+        <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+
+        <!-- 预连接到外部资源 -->
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+        <!-- 预加载关键资源 -->
+        <link
+            rel="preload"
+            href="/fonts/pingfang-sc-regular.woff2"
+            as="font"
+            type="font/woff2"
+            crossorigin
+        />
+
+        <!-- 安全策略 -->
+        <meta
+            http-equiv="Content-Security-Policy"
+            content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com;
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+    font-src 'self' https://fonts.gstatic.com data:;
+    img-src 'self' data: blob: https:;
+    connect-src 'self' https: wss:;
+    media-src 'self' blob:;
+    object-src 'none';
+    base-uri 'self';
+    form-action 'self';
+    frame-ancestors 'none';
+    block-all-mixed-content;
+    upgrade-insecure-requests;
+  "
+        />
+
+        <!-- 加载状态样式 -->
+        <style>
+            /* 初始加载样式 */
+            #loading {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-direction: column;
+                z-index: 9999;
+                font-family:
+                    "PingFang SC", "Helvetica Neue", Helvetica, "Microsoft YaHei",
+                    "微软雅黑", Arial, sans-serif;
+            }
+
+            .loading-logo {
+                width: 80px;
+                height: 80px;
+                background: white;
+                border-radius: 16px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin-bottom: 24px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+                animation: logoFloat 2s ease-in-out infinite alternate;
+            }
+
+            .loading-logo svg {
+                width: 48px;
+                height: 48px;
+                fill: #3b82f6;
+            }
+
+            .loading-title {
+                color: white;
+                font-size: 24px;
+                font-weight: 600;
+                margin-bottom: 8px;
+                letter-spacing: 1px;
+            }
+
+            .loading-subtitle {
+                color: rgba(255, 255, 255, 0.8);
+                font-size: 14px;
+                margin-bottom: 32px;
+            }
+
+            .loading-spinner {
+                width: 40px;
+                height: 40px;
+                border: 3px solid rgba(255, 255, 255, 0.3);
+                border-top: 3px solid white;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+            }
+
+            .loading-dots {
+                display: flex;
+                gap: 8px;
+                margin-top: 16px;
+            }
+
+            .loading-dot {
+                width: 8px;
+                height: 8px;
+                background: rgba(255, 255, 255, 0.6);
+                border-radius: 50%;
+                animation: dotPulse 1.4s ease-in-out infinite both;
+            }
+
+            .loading-dot:nth-child(1) {
+                animation-delay: -0.32s;
+            }
+            .loading-dot:nth-child(2) {
+                animation-delay: -0.16s;
+            }
+            .loading-dot:nth-child(3) {
+                animation-delay: 0s;
+            }
+
+            @keyframes logoFloat {
+                0% {
+                    transform: translateY(0px);
+                }
+                100% {
+                    transform: translateY(-10px);
+                }
+            }
+
+            @keyframes spin {
+                0% {
+                    transform: rotate(0deg);
+                }
+                100% {
+                    transform: rotate(360deg);
+                }
+            }
+
+            @keyframes dotPulse {
+                0%,
+                80%,
+                100% {
+                    transform: scale(0);
+                    opacity: 0.5;
+                }
+                40% {
+                    transform: scale(1);
+                    opacity: 1;
+                }
+            }
+
+            /* 隐藏已加载的应用 */
+            #app {
+                display: none;
+            }
+
+            #app.loaded {
+                display: block;
+            }
+
+            #loading.loaded {
+                opacity: 0;
+                visibility: hidden;
+                transition:
+                    opacity 0.5s ease,
+                    visibility 0.5s ease;
+            }
+
+            /* 无脚本支持时的样式 */
+            .no-js #loading {
+                display: none;
+            }
+
+            .no-js #app {
+                display: block;
+            }
+
+            /* 错误状态样式 */
+            .error-message {
+                color: #ff6b6b;
+                text-align: center;
+                margin-top: 20px;
+                padding: 0 20px;
+            }
+        </style>
+    </head>
+
+    <body>
+        <!-- 加载屏幕 -->
+        <div id="loading">
+            <div class="loading-logo">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
+                    />
+                </svg>
+            </div>
+            <div class="loading-title">五好伴学</div>
+            <div class="loading-subtitle">智能学习助手</div>
+            <div class="loading-spinner"></div>
+            <div class="loading-dots">
+                <div class="loading-dot"></div>
+                <div class="loading-dot"></div>
+                <div class="loading-dot"></div>
+            </div>
+        </div>
+
+        <!-- 应用容器 -->
+        <div id="app">
+            <!-- Vue应用将在这里渲染 -->
+        </div>
+
+        <!-- 无脚本支持提示 -->
+        <noscript>
+            <div
+                style="
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: #f5f5f5;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-direction: column;
+                    font-family: Arial, sans-serif;
+                    text-align: center;
+                    padding: 20px;
+                "
+            >
+                <h2 style="color: #333; margin-bottom: 16px">需要启用JavaScript</h2>
+                <p style="color: #666; margin-bottom: 24px">
+                    五好伴学需要JavaScript才能正常运行，请启用JavaScript后刷新页面。
+                </p>
+                <button
+                    onclick="location.reload()"
+                    style="
+                        background: #3b82f6;
+                        color: white;
+                        border: none;
+                        padding: 12px 24px;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 16px;
+                    "
+                >
+                    刷新页面
+                </button>
+            </div>
+        </noscript>
+
+        <!-- 浏览器兼容性检查脚本 -->
+        <script>
+            // 检查浏览器兼容性
+            (function () {
+                "use strict";
+
+                // 检查必要的浏览器特性
+                var requiredFeatures = [
+                    "fetch",
+                    "Promise",
+                    "Map",
+                    "Set",
+                    "Symbol",
+                    "Object.assign",
+                ];
+
+                var unsupported = [];
+                for (var i = 0; i < requiredFeatures.length; i++) {
+                    var feature = requiredFeatures[i];
+                    var parts = feature.split(".");
+                    var obj = window;
+
+                    for (var j = 0; j < parts.length; j++) {
+                        if (!obj || typeof obj[parts[j]] === "undefined") {
+                            unsupported.push(feature);
+                            break;
+                        }
+                        obj = obj[parts[j]];
+                    }
+                }
+
+                if (unsupported.length > 0) {
+                    // 显示浏览器升级提示
+                    document.getElementById("loading").innerHTML =
+                        '<div class="error-message">' +
+                        "<h2>浏览器版本过低</h2>" +
+                        "<p>您的浏览器不支持以下特性：" +
+                        unsupported.join(", ") +
+                        "</p>" +
+                        "<p>请升级到最新版本的Chrome、Firefox、Safari或Edge浏览器</p>" +
+                        "</div>";
+                    return;
+                }
+
+                // 设置全局错误处理
+                window.onerror = function (msg, url, lineNo, columnNo, error) {
+                    console.error("Global Error:", {
+                        message: msg,
+                        source: url,
+                        line: lineNo,
+                        column: columnNo,
+                        error: error,
+                    });
+
+                    // 在加载屏幕显示错误信息
+                    var loading = document.getElementById("loading");
+                    if (loading && loading.style.display !== "none") {
+                        loading.innerHTML =
+                            '<div class="error-message">' +
+                            "<h2>应用加载失败</h2>" +
+                            "<p>请刷新页面重试，如果问题持续存在，请联系技术支持。</p>" +
+                            '<button onclick="location.reload()" style="' +
+                            "background: #3b82f6; color: white; border: none; " +
+                            "padding: 12px 24px; border-radius: 6px; cursor: pointer; " +
+                            "font-size: 16px; margin-top: 16px;" +
+                            '">刷新页面</button>' +
+                            "</div>";
+                    }
+                    return false;
+                };
+
+                // Promise错误处理
+                window.addEventListener("unhandledrejection", function (event) {
+                    console.error("Unhandled promise rejection:", event.reason);
+                });
+
+                // 应用加载完成后隐藏加载屏幕
+                window.addEventListener("DOMContentLoaded", function () {
+                    setTimeout(function () {
+                        var loading = document.getElementById("loading");
+                        var app = document.getElementById("app");
+
+                        if (loading && app) {
+                            loading.classList.add("loaded");
+                            app.classList.add("loaded");
+
+                            // 完全移除加载屏幕
+                            setTimeout(function () {
+                                if (loading.parentNode) {
+                                    loading.parentNode.removeChild(loading);
+                                }
+                            }, 500);
+                        }
+                    }, 1000); // 最少显示1秒加载屏幕
+                });
+            })();
+        </script>
+
+        <!-- Vue应用脚本 -->
+        <script type="module" src="/src/main.ts"></script>
+    </body>
+</html>
