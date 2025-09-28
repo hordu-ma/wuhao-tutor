@@ -21,12 +21,17 @@ dependencies = [
     "structlog>=23.2.0",
     "redis>=5.0.1",
     "asyncpg>=0.29.0",
+    "psycopg2-binary>=2.9.5",
     "aiofiles>=23.2.1",
     "python-dotenv>=1.0.0",
     # 百炼AI服务相关依赖
     "pillow>=10.0.0",
     "oss2>=2.18.0",
     "pytesseract>=0.3.10",
+    "opencv-python>=4.8.0",
+    "numpy>=1.24.0",
+    "aioredis>=2.0.1",
+    "celery>=5.3.0",
 ]
 
 [project.optional-dependencies]

@@ -52,8 +52,8 @@ async def init_db() -> None:
     """
     async with engine.begin() as conn:
         # 导入所有模型以确保它们被注册到Base.metadata
-        from src.models import user, study, knowledge  # noqa
-        
+        from src.models import user, study, knowledge, homework  # noqa
+
         # 创建所有表
         await conn.run_sync(Base.metadata.create_all)
 
