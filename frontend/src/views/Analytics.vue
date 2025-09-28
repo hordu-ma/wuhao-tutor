@@ -553,16 +553,32 @@ onMounted(async () => {
 
 <style scoped>
 .analytics-page {
-  @apply max-w-7xl mx-auto px-4 py-6;
+  max-width: 80rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
 }
 
 .section-title {
-  @apply text-xl font-semibold text-gray-900 mb-4 flex items-center;
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  font-weight: 600;
+  color: rgb(17, 24, 39);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
 }
 
 .section-title::before {
   content: "";
-  @apply w-1 h-6 bg-blue-500 rounded-full mr-3;
+  width: 0.25rem;
+  height: 1.5rem;
+  background-color: rgb(59, 130, 246);
+  border-radius: 9999px;
+  margin-right: 0.75rem;
 }
 
 .stat-card {
@@ -574,15 +590,31 @@ onMounted(async () => {
 }
 
 .stat-icon {
-  @apply w-12 h-12 rounded-lg flex items-center justify-center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .trend-indicator {
-  @apply flex items-center px-2 py-1 rounded-full text-xs font-medium;
+  display: flex;
+  align-items: center;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 500;
 }
 
 .knowledge-summary .summary-item {
-  @apply p-3 rounded-lg bg-gray-50;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background-color: rgb(249, 250, 251);
 }
 
 .weak-point-item {
@@ -590,33 +622,49 @@ onMounted(async () => {
 }
 
 .weak-point-item:hover {
-  @apply bg-red-100 border-red-200;
+  background-color: rgb(254, 226, 226);
+  border-color: rgb(254, 202, 202);
 }
 
 .calendar-placeholder,
 .insights-placeholder {
-  @apply border-2 border-dashed border-gray-200 rounded-lg;
+  border-width: 2px;
+  border-style: dashed;
+  border-color: rgb(229, 231, 235);
+  border-radius: 0.5rem;
 }
 
 .achievements-grid .achievement-item {
-  @apply p-3 rounded-lg text-center transition-all duration-200;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  text-align: center;
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
 }
 
 .achievements-grid .achievement-item.unlocked {
-  @apply bg-green-50 border border-green-200;
+  background-color: rgb(240, 253, 244);
+  border-width: 1px;
+  border-color: rgb(187, 247, 208);
 }
 
 .achievements-grid .achievement-item.locked {
-  @apply bg-gray-50 border border-gray-200 opacity-60;
+  background-color: rgb(249, 250, 251);
+  border-width: 1px;
+  border-color: rgb(229, 231, 235);
+  opacity: 0.6;
 }
 
 .achievements-grid .achievement-item:hover {
   transform: translateY(-1px);
-  @apply shadow-sm;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
 }
 
 .achievement-icon {
-  @apply flex items-center justify-center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .insights-content .trend-item {
@@ -624,53 +672,64 @@ onMounted(async () => {
 }
 
 .insights-content .trend-item:hover {
-  @apply bg-blue-100;
+  background-color: rgb(219, 234, 254);
 }
 
 .loading-container {
-  @apply bg-white rounded-lg p-6 shadow-sm border;
+  background-color: rgb(255, 255, 255);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  border-width: 1px;
 }
 
 /* 响应式调整 */
 @media (max-width: 768px) {
   .analytics-page {
-    @apply px-2 py-4;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
   }
 
   .section-title {
-    @apply text-lg;
+    font-size: 1.125rem;
+    line-height: 1.75rem;
   }
 
   .stat-card {
-    @apply p-4;
+    padding: 1rem;
   }
 
   .stat-value {
-    @apply text-xl;
+    font-size: 1.25rem;
+    line-height: 1.75rem;
   }
 }
 
 /* 深色主题支持 */
 @media (prefers-color-scheme: dark) {
   .analytics-page {
-    @apply bg-gray-900 text-white;
+    background-color: rgb(17, 24, 39);
+    color: rgb(255, 255, 255);
   }
 
   .stat-card,
   .bg-white {
-    @apply bg-gray-800 border-gray-700;
+    background-color: rgb(31, 41, 55);
+    border-color: rgb(55, 65, 81);
   }
 
   .text-gray-900 {
-    @apply text-white;
+    color: rgb(255, 255, 255);
   }
 
   .text-gray-600 {
-    @apply text-gray-300;
+    color: rgb(209, 213, 219);
   }
 
   .text-gray-500 {
-    @apply text-gray-400;
+    color: rgb(156, 163, 175);
   }
 }
 
