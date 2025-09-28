@@ -1,0 +1,153 @@
+# Prometheus 监控配置文件
+# 用于监控五好伴学应用和基础设施
+
+global:
+    scrape_interval: 15s
+    evaluation_interval: 15s
+    scrape_timeout: 10s
+    external_labels:
+        cluster: "wuhao-tutor"
+        environment: "production"
+
+# 规则文件配置
+rule_files:
+    - "rules/*.yml"
+
+# 告警管理器配置
+alerting:
+    alertmanagers:
+        - static_configs:
+              - targets:
+                    - alertmanager:9093
+          timeout: 10s
+          path_prefix: /
+
+# 数据抓取配置
+scrape_configs:
+    # Prometheus自监控
+    - job_name: "prometheus"
+      static_configs:
+          - targets: ["localhost:9090"]
+      scrape_interval: 30s
+      metrics_path: "/metrics"
+
+    # 五好伴学应用监控
+    - job_name: "wuhao-tutor-app"
+      static_configs:
+          - targets: ["app:8000"]
+      scrape_interval: 15s
+      metrics_path: "/api/v1/health/metrics"
+      scrape_timeout: 10s
+      honor_labels: true
+      params:
+          format: ["prometheus"]
+      relabel_configs:
+          - source_labels: [__address__]
+            target_label: __param_target
+          - source_labels: [__param_target]
+            target_label: instance
+          - target_label: __address__
+            replacement: app:8000
+
+    # PostgreSQL 监控 (使用 postgres_exporter)
+    - job_name: "postgres"
+      static_configs:
+          - targets: ["postgres-exporter:9187"]
+      scrape_interval: 30s
+      relabel_configs:
+          - source_labels: [__address__]
+            target_label: instance
+            replacement: "wuhao-postgres"
+
+    # Redis 监控 (使用 redis_exporter)
+    - job_name: "redis"
+      static_configs:
+          - targets: ["redis-exporter:9121"]
+      scrape_interval: 30s
+      relabel_configs:
+          - source_labels: [__address__]
+            target_label: instance
+            replacement: "wuhao-redis"
+
+    # Nginx 监控 (使用 nginx_exporter)
+    - job_name: "nginx"
+      static_configs:
+          - targets: ["nginx-exporter:9113"]
+      scrape_interval: 30s
+      relabel_configs:
+          - source_labels: [__address__]
+            target_label: instance
+            replacement: "wuhao-nginx"
+
+    # Node Exporter (系统监控)
+    - job_name: "node"
+      static_configs:
+          - targets: ["node-exporter:9100"]
+      scrape_interval: 30s
+      relabel_configs:
+          - source_labels: [__address__]
+            target_label: instance
+            replacement: "host-system"
+
+    # Docker 容器监控 (使用 cAdvisor)
+    - job_name: "cadvisor"
+      static_configs:
+          - targets: ["cadvisor:8080"]
+      scrape_interval: 30s
+      metrics_path: "/metrics"
+      relabel_configs:
+          - source_labels: [__address__]
+            target_label: instance
+            replacement: "docker-containers"
+
+    # 自定义业务指标监控
+    - job_name: "wuhao-tutor-business"
+      static_configs:
+          - targets: ["app:8000"]
+      scrape_interval: 60s
+      metrics_path: "/api/v1/health/performance"
+      params:
+          format: ["prometheus"]
+      metric_relabel_configs:
+          # 重命名业务指标
+          - source_labels: [__name__]
+            regex: "wuhao_(.+)"
+            target_label: __name__
+            replacement: "business_${1}"
+
+    # API 健康检查监控
+    - job_name: "wuhao-tutor-health"
+      static_configs:
+          - targets: ["app:8000"]
+      scrape_interval: 30s
+      metrics_path: "/health"
+      honor_labels: true
+      metric_relabel_configs:
+          # 只保留健康检查相关指标
+          - source_labels: [__name__]
+            regex: "(up|http_.*|response_time_.*)"
+            action: keep
+# 远程存储配置 (可选)
+# remote_write:
+#   - url: "https://prometheus-remote-write-endpoint/api/v1/write"
+#     remote_timeout: 30s
+#     queue_config:
+#       capacity: 2500
+#       max_shards: 200
+#       min_shards: 1
+#       max_samples_per_send: 500
+
+# 远程读取配置 (可选)
+# remote_read:
+#   - url: "https://prometheus-remote-read-endpoint/api/v1/read"
+#     remote_timeout: 1m
+
+# 存储配置 (使用默认配置)
+# storage:
+#     tsdb:
+#         path: /prometheus
+#         retention.time: 15d
+#         retention.size: 10GB
+
+# 查询日志配置 (可选)
+# query_log_file: /prometheus/query.log

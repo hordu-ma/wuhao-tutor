@@ -287,37 +287,95 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    """安全头中间件"""
+    """增强安全头中间件"""
+
+    def __init__(self, app):
+        super().__init__(app)
+        self.is_production = not settings.DEBUG
+        self.allowed_origins = [str(origin) for origin in settings.BACKEND_CORS_ORIGINS] if settings.BACKEND_CORS_ORIGINS else []
 
     async def dispatch(self, request: Request, call_next) -> Response:
         """添加安全头"""
         response = await call_next(request)
 
-        # 添加安全头
+        # 基础安全头
         security_headers = {
             "X-Content-Type-Options": "nosniff",
             "X-Frame-Options": "DENY",
             "X-XSS-Protection": "1; mode=block",
             "Referrer-Policy": "strict-origin-when-cross-origin",
-            "Content-Security-Policy": (
+            "X-Permitted-Cross-Domain-Policies": "none",
+            "Cross-Origin-Embedder-Policy": "require-corp",
+            "Cross-Origin-Opener-Policy": "same-origin",
+            "Cross-Origin-Resource-Policy": "same-origin",
+        }
+
+        # 内容安全策略 (CSP)
+        if self.is_production:
+            # 生产环境严格CSP
+            csp_policy = (
+                "default-src 'self'; "
+                "script-src 'self'; "
+                "style-src 'self' 'unsafe-inline'; "
+                "img-src 'self' data: https:; "
+                "font-src 'self'; "
+                "connect-src 'self'; "
+                "frame-ancestors 'none'; "
+                "form-action 'self'; "
+                "base-uri 'self'; "
+                "object-src 'none'; "
+                "media-src 'self'; "
+                "worker-src 'self'; "
+                "manifest-src 'self'"
+            )
+        else:
+            # 开发环境宽松CSP
+            csp_policy = (
                 "default-src 'self'; "
                 "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
                 "style-src 'self' 'unsafe-inline'; "
                 "img-src 'self' data: https:; "
                 "font-src 'self'; "
-                "connect-src 'self'; "
+                "connect-src 'self' ws: wss:; "
                 "frame-ancestors 'none'"
             )
-        }
 
-        # 在生产环境添加HSTS
-        if not settings.DEBUG:
-            security_headers["Strict-Transport-Security"] = (
-                "max-age=31536000; includeSubDomains; preload"
-            )
+        security_headers["Content-Security-Policy"] = csp_policy
 
+        # 生产环境额外安全头
+        if self.is_production:
+            security_headers.update({
+                "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
+                "Expect-CT": "max-age=86400, enforce",
+                "Feature-Policy": (
+                    "accelerometer 'none'; "
+                    "camera 'none'; "
+                    "geolocation 'none'; "
+                    "gyroscope 'none'; "
+                    "magnetometer 'none'; "
+                    "microphone 'none'; "
+                    "payment 'none'; "
+                    "usb 'none'"
+                ),
+                "Permissions-Policy": (
+                    "accelerometer=(), "
+                    "camera=(), "
+                    "geolocation=(), "
+                    "gyroscope=(), "
+                    "magnetometer=(), "
+                    "microphone=(), "
+                    "payment=(), "
+                    "usb=()"
+                )
+            })
+
+        # 应用安全头
         for header, value in security_headers.items():
             response.headers[header] = value
+
+        # 移除可能暴露服务器信息的头
+        response.headers.pop("Server", None)
+        response.headers.pop("X-Powered-By", None)
 
         return response
 
