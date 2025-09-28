@@ -9,6 +9,12 @@ from .base import BaseModel
 # 用户相关模型
 from .user import User, UserSession, GradeLevel, UserRole
 
+# 学习问答模型
+from .learning import (
+    ChatSession, Question, Answer, LearningAnalytics,
+    QuestionType, SessionStatus
+)
+
 # 学习记录模型
 from .study import (
     MistakeRecord, KnowledgeMastery, ReviewSchedule, StudySession,
@@ -39,6 +45,14 @@ __all__ = [
     "UserSession",
     "GradeLevel",
     "UserRole",
+
+    # 学习问答模型
+    "ChatSession",
+    "Question",
+    "Answer",
+    "LearningAnalytics",
+    "QuestionType",
+    "SessionStatus",
 
     # 学习模型
     "MistakeRecord",

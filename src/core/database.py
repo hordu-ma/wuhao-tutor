@@ -52,7 +52,7 @@ async def init_db() -> None:
     """
     async with engine.begin() as conn:
         # 导入所有模型以确保它们被注册到Base.metadata
-        from src.models import user, study, knowledge, homework  # noqa
+        from src.models import user, study, knowledge, homework, learning  # noqa
 
         # 创建所有表
         await conn.run_sync(Base.metadata.create_all)
@@ -63,3 +63,19 @@ async def close_db() -> None:
     关闭数据库连接
     """
     await engine.dispose()
+
+
+# FastAPI依赖注入函数
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """
+    数据库会话依赖注入
+    用于FastAPI路由的依赖注入
+    """
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()

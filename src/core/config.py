@@ -139,6 +139,9 @@ class DevelopmentSettings(Settings):
     LOG_LEVEL: str = "DEBUG"
     POSTGRES_DB: str = "wuhao_tutor_dev"
 
+    # 开发环境使用SQLite
+    SQLALCHEMY_DATABASE_URI: Optional[str] = "sqlite+aiosqlite:///./wuhao_tutor_dev.db"
+
 
 class TestingSettings(Settings):
     """测试环境配置"""
@@ -146,6 +149,9 @@ class TestingSettings(Settings):
     LOG_LEVEL: str = "DEBUG"
     POSTGRES_DB: str = "wuhao_tutor_test"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 5  # 测试用短过期时间
+
+    # 测试环境使用内存SQLite
+    SQLALCHEMY_DATABASE_URI: Optional[str] = "sqlite+aiosqlite:///:memory:"
 
 
 class ProductionSettings(Settings):

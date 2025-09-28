@@ -410,6 +410,17 @@ EXCEPTION_HTTP_STATUS_MAP = {
 }
 
 
+# ============================================================================
+# 通用异常别名（为了兼容性）
+# ============================================================================
+
+# 认证相关异常
+AuthenticationError = UserAuthError
+ConflictError = RecordAlreadyExistsError
+NotFoundError = RecordNotFoundError
+ServiceError = BaseCustomException
+
+
 def get_http_status_code(exception: BaseCustomException) -> int:
     """
     根据异常类型获取对应的HTTP状态码

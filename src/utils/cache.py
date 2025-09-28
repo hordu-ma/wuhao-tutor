@@ -446,3 +446,35 @@ def get_cache_manager() -> RedisCache:
 
 # 为方便使用导出的实例
 cache_manager = get_cache_manager()
+
+
+# ============================================================================
+# 兼容性函数别名
+# ============================================================================
+
+def cache_result(ttl: int = 3600, namespace: str = "default"):
+    """
+    缓存结果装饰器（cache函数的别名）
+
+    Args:
+        ttl: 缓存时间（秒）
+        namespace: 命名空间
+
+    Returns:
+        装饰器函数
+    """
+    return cache(ttl=ttl, namespace=namespace)
+
+
+def cache_key(*args, **kwargs) -> str:
+    """
+    生成缓存键（cache_key_generator函数的别名）
+
+    Args:
+        *args: 位置参数
+        **kwargs: 关键字参数
+
+    Returns:
+        生成的缓存键
+    """
+    return cache_key_generator(*args, **kwargs)
