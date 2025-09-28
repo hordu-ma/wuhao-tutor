@@ -276,7 +276,7 @@ export const QUESTION_TYPE_OPTIONS = [
   },
 ];
 
-export const SUBJECT_OPTIONS = [
+export const LEARNING_SUBJECT_OPTIONS = [
   { label: "数学", value: SubjectType.MATH, color: "#3B82F6" },
   { label: "语文", value: SubjectType.CHINESE, color: "#EF4444" },
   { label: "英语", value: SubjectType.ENGLISH, color: "#10B981" },

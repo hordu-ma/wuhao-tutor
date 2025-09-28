@@ -97,6 +97,19 @@ const routes: RouteRecordRaw[] = [
     },
   },
 
+  // 学情分析
+  {
+    path: "/analytics",
+    name: "Analytics",
+    component: () => import("@/views/Analytics.vue"),
+    meta: {
+      title: "学情分析",
+      requiresAuth: true,
+      layout: "main",
+      icon: "DataAnalysis",
+    },
+  },
+
   // 仪表板
   {
     path: "/dashboard",
