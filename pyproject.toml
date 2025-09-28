@@ -23,6 +23,10 @@ dependencies = [
     "asyncpg>=0.29.0",
     "aiofiles>=23.2.1",
     "python-dotenv>=1.0.0",
+    # 百炼AI服务相关依赖
+    "pillow>=10.0.0",
+    "oss2>=2.18.0",
+    "pytesseract>=0.3.10",
 ]
 
 [project.optional-dependencies]
@@ -124,3 +128,10 @@ max-line-length = 88
 extend-ignore = ["E203", "W503"]
 exclude = [".git", "__pycache__", "docs/source/conf.py", "old", "build", "dist"]
 max-complexity = 10
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+    "pytest-cov>=7.0.0",
+]
