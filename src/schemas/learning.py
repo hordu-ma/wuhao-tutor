@@ -246,22 +246,66 @@ class AskQuestionResponse(BaseModel):
 
 class SessionListQuery(BaseModel):
     """会话列表查询"""
-    status: Optional[SessionStatus] = None
-    subject: Optional[SubjectType] = None
+    status: Optional[str] = None
+    subject: Optional[str] = None
     page: int = Field(default=1, ge=1, description="页码")
     size: int = Field(default=20, ge=1, le=100, description="每页大小")
     search: Optional[str] = Field(None, max_length=100, description="搜索关键词")
+
+    @validator('status', pre=True)
+    def validate_status(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, str):
+            try:
+                return SessionStatus(v)
+            except ValueError:
+                raise ValueError(f"Invalid status: {v}")
+        return v
+
+    @validator('subject', pre=True)
+    def validate_subject(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, str):
+            try:
+                return SubjectType(v)
+            except ValueError:
+                raise ValueError(f"Invalid subject: {v}")
+        return v
 
 
 class QuestionHistoryQuery(BaseModel):
     """问题历史查询"""
     session_id: Optional[str] = None
-    subject: Optional[SubjectType] = None
-    question_type: Optional[QuestionType] = None
+    subject: Optional[str] = None
+    question_type: Optional[str] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
     page: int = Field(default=1, ge=1)
     size: int = Field(default=20, ge=1, le=100)
+
+    @validator('subject', pre=True)
+    def validate_subject(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, str):
+            try:
+                return SubjectType(v)
+            except ValueError:
+                raise ValueError(f"Invalid subject: {v}")
+        return v
+
+    @validator('question_type', pre=True)
+    def validate_question_type(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, str):
+            try:
+                return QuestionType(v)
+            except ValueError:
+                raise ValueError(f"Invalid question_type: {v}")
+        return v
 
 
 class PaginatedResponse(BaseModel):

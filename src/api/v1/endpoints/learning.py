@@ -5,7 +5,8 @@
 
 from typing import Any, Optional, Dict
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import status as http_status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import get_db
@@ -57,17 +58,17 @@ async def ask_question(
 
     except BailianServiceError as e:
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            status_code=http_status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"AI服务暂时不可用: {str(e)}"
         )
     except ValidationError as e:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(e)
         )
     except ServiceError as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
         )
 
@@ -97,12 +98,12 @@ async def submit_feedback(
 
     except NotFoundError as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=http_status.HTTP_404_NOT_FOUND,
             detail=str(e)
         )
     except ValidationError as e:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(e)
         )
 
@@ -132,20 +133,20 @@ async def create_session(
 
     except ValidationError as e:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(e)
         )
     except ServiceError as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
         )
 
 
 @router.get("/sessions", response_model=SessionListResponse, summary="获取会话列表")
 async def get_session_list(
-    status: Optional[str] = Query(None, description="会话状态筛选"),
-    subject: Optional[str] = Query(None, description="学科筛选"),
+    status_filter: Optional[str] = Query(None, description="会话状态筛选"),
+    subject_filter: Optional[str] = Query(None, description="学科筛选"),
     page: int = Query(1, ge=1, description="页码"),
     size: int = Query(20, ge=1, le=100, description="每页大小"),
     search: Optional[str] = Query(None, description="搜索关键词"),
@@ -157,8 +158,8 @@ async def get_session_list(
         learning_service = get_learning_service(db)
 
         query = SessionListQuery(
-            status=status,
-            subject=subject,
+            status=status_filter,
+            subject=subject_filter,
             page=page,
             size=size,
             search=search
@@ -170,7 +171,7 @@ async def get_session_list(
 
     except ValidationError as e:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(e)
         )
 
@@ -186,17 +187,23 @@ async def get_session_detail(
         learning_service = get_learning_service(db)
 
         session = await learning_service.session_repo.get_by_id(session_id)
-        if not session or session.user_id != current_user_id:
+        if not session:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="会话不存在或无权限访问"
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail="会话不存在"
+            )
+
+        if str(session.user_id) != str(current_user_id):
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail="无权限访问该会话"
             )
 
         return SessionResponse.model_validate(session)
 
     except NotFoundError:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=http_status.HTTP_404_NOT_FOUND,
             detail="会话不存在"
         )
 
@@ -220,10 +227,16 @@ async def update_session(
 
         # 验证会话归属
         session = await learning_service.session_repo.get_by_id(session_id)
-        if not session or session.user_id != current_user_id:
+        if not session:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="会话不存在或无权限访问"
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail="会话不存在"
+            )
+
+        if str(session.user_id) != str(current_user_id):
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail="无权限访问该会话"
             )
 
         # 更新会话
@@ -236,7 +249,7 @@ async def update_session(
 
     except ValidationError as e:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(e)
         )
 
@@ -253,10 +266,16 @@ async def delete_session(
 
         # 验证会话归属
         session = await learning_service.session_repo.get_by_id(session_id)
-        if not session or session.user_id != current_user_id:
+        if not session:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="会话不存在或无权限访问"
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail="会话不存在"
+            )
+
+        if str(session.user_id) != str(current_user_id):
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail="无权限访问该会话"
             )
 
         # 标记为已删除
@@ -268,18 +287,17 @@ async def delete_session(
 
     except NotFoundError:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=http_status.HTTP_404_NOT_FOUND,
             detail="会话不存在"
         )
 
 
 # ========== 历史查询功能 ==========
 
-@router.get("/history", response_model=QuestionHistoryResponse, summary="获取问答历史")
+@router.get("/questions", response_model=QuestionHistoryResponse, summary="获取问题历史")
 async def get_question_history(
-    session_id: Optional[str] = Query(None, description="会话ID筛选"),
-    subject: Optional[str] = Query(None, description="学科筛选"),
-    question_type: Optional[str] = Query(None, description="问题类型筛选"),
+    subject_filter: Optional[str] = Query(None, description="学科筛选"),
+    question_type_filter: Optional[str] = Query(None, description="问题类型筛选"),
     start_date: Optional[str] = Query(None, description="开始日期"),
     end_date: Optional[str] = Query(None, description="结束日期"),
     page: int = Query(1, ge=1, description="页码"),
@@ -294,9 +312,8 @@ async def get_question_history(
         from datetime import datetime
 
         query = QuestionHistoryQuery(
-            session_id=session_id,
-            subject=subject,
-            question_type=question_type,
+            subject=subject_filter,
+            question_type=question_type_filter,
             start_date=datetime.fromisoformat(start_date) if start_date else None,
             end_date=datetime.fromisoformat(end_date) if end_date else None,
             page=page,
@@ -309,12 +326,12 @@ async def get_question_history(
 
     except ValidationError as e:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(e)
         )
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"日期格式错误: {str(e)}"
         )
 
@@ -333,10 +350,16 @@ async def get_session_history(
 
         # 验证会话归属
         session = await learning_service.session_repo.get_by_id(session_id)
-        if not session or session.user_id != current_user_id:
+        if not session:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="会话不存在或无权限访问"
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail="会话不存在"
+            )
+
+        if str(session.user_id) != str(current_user_id):
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail="无权限访问该会话"
             )
 
         query = QuestionHistoryQuery(
@@ -351,7 +374,7 @@ async def get_session_history(
 
     except NotFoundError:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=http_status.HTTP_404_NOT_FOUND,
             detail="会话不存在"
         )
 
@@ -372,17 +395,18 @@ async def get_learning_analytics(
         if not analytics:
             # 如果没有分析数据，返回默认结构
             from datetime import datetime
+            from src.schemas.learning import LearningPattern, DifficultyLevel
             return LearningAnalyticsResponse(
                 user_id=current_user_id,
                 total_questions=0,
                 total_sessions=0,
                 subject_stats=[],
-                learning_pattern={
-                    "most_active_hour": 20,
-                    "most_active_day": 0,
-                    "avg_session_length": 0,
-                    "preferred_difficulty": 3
-                },
+                learning_pattern=LearningPattern(
+                    most_active_hour=20,
+                    most_active_day=0,
+                    avg_session_length=0,
+                    preferred_difficulty=DifficultyLevel.MEDIUM
+                ),
                 avg_rating=0.0,
                 positive_feedback_rate=0,
                 improvement_suggestions=[],
@@ -394,7 +418,7 @@ async def get_learning_analytics(
 
     except ServiceError as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
         )
 
@@ -406,37 +430,40 @@ async def get_learning_recommendations(
 ):
     """获取个性化学习推荐"""
     try:
+        from src.schemas.learning import RecommendedQuestion, StudyPlan, SubjectType, DifficultyLevel
+
         # 简化实现，返回基础推荐
         return RecommendationResponse(
             recommended_questions=[
-                {
-                    "content": "二次函数的对称轴公式是什么？",
-                    "subject": "math",
-                    "topic": "二次函数",
-                    "difficulty_level": 2,
-                    "reason": "基于你最近的数学学习记录"
-                },
-                {
-                    "content": "如何理解牛顿第二定律？",
-                    "subject": "physics",
-                    "topic": "牛顿定律",
-                    "difficulty_level": 3,
-                    "reason": "物理基础知识巩固"
-                }
+                RecommendedQuestion(
+                    content="二次函数的对称轴公式是什么？",
+                    subject=SubjectType.MATH,
+                    topic="二次函数",
+                    difficulty_level=DifficultyLevel.EASY,
+                    reason="基于你最近的数学学习记录"
+                ),
+                RecommendedQuestion(
+                    content="如何理解牛顿第二定律？",
+                    subject=SubjectType.PHYSICS,
+                    topic="牛顿定律",
+                    difficulty_level=DifficultyLevel.MEDIUM,
+                    reason="物理基础知识巩固"
+                )
             ],
             study_plans=[
-                {
-                    "title": "数学基础强化计划",
-                    "description": "针对函数和方程的专项训练",
-                    "subjects": ["math"],
-                    "estimated_hours": 10,
-                    "tasks": [
-                        "完成函数基础概念复习",
-                        "练习一次函数和二次函数",
-                        "掌握方程求解方法"
+                StudyPlan(
+                    title="数学基础强化",
+                    description="针对二次函数和代数运算的专项训练",
+                    subjects=[SubjectType.MATH],
+                    estimated_hours=10,
+                    tasks=[
+                        "复习二次函数概念",
+                        "练习配方法",
+                        "掌握对称轴和顶点公式",
+                        "完成综合练习题"
                     ],
-                    "priority": 4
-                }
+                    priority=1
+                )
             ],
             focus_areas=["数学函数", "物理力学"],
             next_topics=["三角函数", "电磁学"]
@@ -444,7 +471,7 @@ async def get_learning_recommendations(
 
     except ServiceError as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
         )
 
@@ -478,7 +505,7 @@ async def get_daily_stats(
 
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"日期格式错误: {str(e)}"
         )
 
@@ -522,6 +549,6 @@ async def get_weekly_stats(
 
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"日期格式错误: {str(e)}"
         )

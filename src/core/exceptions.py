@@ -48,6 +48,46 @@ class AIServiceError(BaseCustomException):
     pass
 
 
+# ============================================================================
+# 认证和授权异常
+# ============================================================================
+
+class AuthenticationError(BaseCustomException):
+    """认证失败异常"""
+
+    def __init__(self, message: str = "认证失败"):
+        super().__init__(
+            message=message,
+            error_code="AUTHENTICATION_ERROR"
+        )
+
+
+class AuthorizationError(BaseCustomException):
+    """授权失败异常"""
+
+    def __init__(self, message: str = "权限不足"):
+        super().__init__(
+            message=message,
+            error_code="AUTHORIZATION_ERROR"
+        )
+
+
+class TokenExpiredError(AuthenticationError):
+    """Token过期异常"""
+
+    def __init__(self, message: str = "Token已过期"):
+        super().__init__(message)
+        self.error_code = "TOKEN_EXPIRED_ERROR"
+
+
+class InvalidTokenError(AuthenticationError):
+    """无效Token异常"""
+
+    def __init__(self, message: str = "无效的Token"):
+        super().__init__(message)
+        self.error_code = "INVALID_TOKEN_ERROR"
+
+
 class BailianAuthError(BailianServiceError):
     """百炼服务认证异常"""
 

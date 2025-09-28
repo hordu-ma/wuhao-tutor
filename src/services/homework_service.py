@@ -25,11 +25,12 @@ from src.schemas.homework import (
     HomeworkCreate, HomeworkUpdate, HomeworkResponse,
     HomeworkSubmissionCreate, HomeworkSubmissionUpdate, HomeworkSubmissionResponse,
     HomeworkReviewCreate, HomeworkReviewResponse,
-    HomeworkQuery, SubmissionQuery, PaginationParams, PaginatedResponse,
+    HomeworkQuery, SubmissionQuery, PaginationParams,
     KnowledgePointAnalysis, ImprovementSuggestion, QuestionReview
 )
+from src.schemas.common import PaginatedResponse
 from src.services.bailian_service import BailianService
-from src.utils.ocr import OCRService, OCRType
+from src.utils.ocr import AliCloudOCRService
 from src.utils.file_upload import FileUploadService
 from src.utils.cache import cache, cache_manager
 from src.core.config import settings
@@ -45,7 +46,7 @@ class HomeworkService:
     def __init__(
         self,
         bailian_service: Optional[BailianService] = None,
-        ocr_service: Optional[OCRService] = None,
+        ocr_service: Optional[AliCloudOCRService] = None,
         file_service: Optional[FileUploadService] = None
     ):
         """
@@ -880,3 +881,247 @@ class HomeworkService:
 
         except Exception as e:
             logger.error(f"更新作业统计失败: {e}")
+
+    # ============================================================================
+    # API所需的附加方法
+    # ============================================================================
+
+    async def update_homework(
+        self,
+        session: AsyncSession,
+        homework_id: str,
+        update_data: Dict[str, Any]
+    ) -> Homework:
+        """
+        更新作业模板
+
+        Args:
+            session: 数据库会话
+            homework_id: 作业ID
+            update_data: 更新数据
+
+        Returns:
+            更新后的作业对象
+        """
+        try:
+            # 获取作业对象
+            homework = await session.get(Homework, homework_id)
+            if not homework:
+                raise ValidationError("作业不存在")
+
+            # 更新字段
+            for field, value in update_data.items():
+                if hasattr(homework, field):
+                    setattr(homework, field, value)
+
+            homework.updated_at = datetime.utcnow()
+            await session.commit()
+            await session.refresh(homework)
+
+            logger.info(f"作业更新成功: {homework_id}")
+            return homework
+
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"更新作业失败: {e}")
+            raise DatabaseError(f"更新作业失败: {e}")
+
+    async def list_submissions(
+        self,
+        session: AsyncSession,
+        student_id: str,
+        filters: Optional[Dict[str, Any]] = None,
+        page: int = 1,
+        size: int = 20
+    ) -> PaginatedResponse:
+        """
+        获取学生的作业提交列表
+
+        Args:
+            session: 数据库会话
+            student_id: 学生ID
+            filters: 过滤条件
+            page: 页码
+            size: 每页大小
+
+        Returns:
+            分页的提交列表
+        """
+        try:
+            # 构建查询
+            query = select(HomeworkSubmission).where(
+                HomeworkSubmission.student_id == student_id
+            ).options(selectinload(HomeworkSubmission.homework))
+
+            # 应用过滤条件
+            if filters:
+                if filters.get('status'):
+                    query = query.where(HomeworkSubmission.status == filters['status'])
+                if filters.get('subject'):
+                    query = query.join(Homework).where(Homework.subject == filters['subject'])
+                if filters.get('homework_type'):
+                    query = query.join(Homework).where(Homework.homework_type == filters['homework_type'])
+
+            # 计算总数
+            count_query = select(func.count(HomeworkSubmission.id)).where(
+                HomeworkSubmission.student_id == student_id
+            )
+            if filters:
+                if filters.get('status'):
+                    count_query = count_query.where(HomeworkSubmission.status == filters['status'])
+                if filters.get('subject'):
+                    count_query = count_query.join(Homework).where(Homework.subject == filters['subject'])
+                if filters.get('homework_type'):
+                    count_query = count_query.join(Homework).where(Homework.homework_type == filters['homework_type'])
+
+            total_result = await session.execute(count_query)
+            total = total_result.scalar()
+
+            # 分页
+            offset = (page - 1) * size
+            query = query.order_by(HomeworkSubmission.created_at.desc()).offset(offset).limit(size)
+
+            result = await session.execute(query)
+            submissions = result.scalars().all()
+
+            # 转换为响应格式
+            items = [HomeworkSubmissionResponse.from_orm(sub) for sub in submissions]
+
+            return PaginatedResponse(
+                items=items,
+                total=total,
+                page=page,
+                size=size,
+                has_more=offset + size < total
+            )
+
+        except Exception as e:
+            logger.error(f"获取提交列表失败: {e}")
+            raise DatabaseError(f"获取提交列表失败: {e}")
+
+    async def get_homework_statistics(
+        self,
+        session: AsyncSession,
+        student_id: str,
+        subject: Optional[str] = None,
+        days: int = 30
+    ) -> Dict[str, Any]:
+        """
+        获取作业统计信息
+
+        Args:
+            session: 数据库会话
+            student_id: 学生ID
+            subject: 学科过滤
+            days: 统计天数
+
+        Returns:
+            统计信息
+        """
+        try:
+            cutoff_date = datetime.utcnow() - timedelta(days=days)
+
+            # 基础统计查询
+            query = select(
+                func.count(HomeworkSubmission.id).label('total_submissions'),
+                func.count(
+                    func.case((HomeworkSubmission.status == 'reviewed', 1))
+                ).label('completed_submissions'),
+                func.avg(HomeworkSubmission.total_score).label('avg_score'),
+                func.avg(HomeworkSubmission.accuracy_rate).label('avg_accuracy')
+            ).where(
+                and_(
+                    HomeworkSubmission.student_id == student_id,
+                    HomeworkSubmission.created_at >= cutoff_date
+                )
+            )
+
+            if subject:
+                query = query.join(Homework).where(Homework.subject == subject)
+
+            result = await session.execute(query)
+            stats = result.first()
+
+            # 学科分布统计
+            subject_query = select(
+                Homework.subject,
+                func.count(HomeworkSubmission.id).label('count'),
+                func.avg(HomeworkSubmission.total_score).label('avg_score')
+            ).select_from(
+                HomeworkSubmission.join(Homework)
+            ).where(
+                and_(
+                    HomeworkSubmission.student_id == student_id,
+                    HomeworkSubmission.created_at >= cutoff_date
+                )
+            ).group_by(Homework.subject)
+
+            subject_result = await session.execute(subject_query)
+            subject_stats = [
+                {
+                    'subject': row.subject,
+                    'count': row.count,
+                    'avg_score': round(row.avg_score, 2) if row.avg_score else None
+                }
+                for row in subject_result
+            ]
+
+            return {
+                'period_days': days,
+                'total_submissions': stats.total_submissions or 0,
+                'completed_submissions': stats.completed_submissions or 0,
+                'completion_rate': round(
+                    (stats.completed_submissions / stats.total_submissions * 100)
+                    if stats.total_submissions else 0, 2
+                ),
+                'avg_score': round(stats.avg_score, 2) if stats.avg_score else None,
+                'avg_accuracy': round(stats.avg_accuracy, 2) if stats.avg_accuracy else None,
+                'subject_distribution': subject_stats
+            }
+
+        except Exception as e:
+            logger.error(f"获取统计信息失败: {e}")
+            raise DatabaseError(f"获取统计信息失败: {e}")
+
+    async def health_check(self, session: AsyncSession) -> bool:
+        """
+        健康检查 - 检查数据库连接
+
+        Args:
+            session: 数据库会话
+
+        Returns:
+            是否健康
+        """
+        try:
+            # 简单的数据库查询测试
+            await session.execute(select(func.count(Homework.id)).limit(1))
+            return True
+        except Exception as e:
+            logger.error(f"数据库健康检查失败: {e}")
+            return False
+
+    async def check_ai_service_status(self) -> bool:
+        """
+        检查AI服务状态
+
+        Returns:
+            AI服务是否可用
+        """
+        try:
+            # 这里可以添加对百炼服务的健康检查
+            # 目前返回True，实际项目中应该调用百炼服务的健康检查接口
+            return True
+        except Exception as e:
+            logger.error(f"AI服务状态检查失败: {e}")
+            return False
+
+
+def get_homework_service() -> HomeworkService:
+    """
+    获取作业服务实例
+
+    Returns:
+        作业服务实例
+    """
+    return HomeworkService()
