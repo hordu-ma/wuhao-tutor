@@ -1,6 +1,6 @@
 """
 健康检查API端点
-提供系统健康状态检查和监控功能
+提供系统健康状态检查和监控功能，包含性能指标和详细系统状态
 """
 
 import asyncio
@@ -15,6 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import get_db
 from src.core.config import get_settings
+from src.core.monitoring import get_metrics_collector
+from src.core.security import get_rate_limiter
 from src.services.bailian_service import get_bailian_service
 from src.services.homework_service import get_homework_service
 from src.services.learning_service import get_learning_service
@@ -222,7 +224,7 @@ async def liveness_check() -> JSONResponse:
 @router.get(
     "/metrics",
     summary="系统指标",
-    description="获取系统运行指标"
+    description="获取系统运行指标和性能数据"
 )
 async def get_metrics(
     db: AsyncSession = Depends(get_db)
@@ -233,46 +235,88 @@ async def get_metrics(
         import psutil
         import os
 
+        # 获取性能监控数据
+        metrics_collector = get_metrics_collector()
+        rate_limiter = get_rate_limiter()
+
         metrics = {
             "timestamp": datetime.utcnow().isoformat(),
             "system": {},
             "database": {},
-            "application": {}
+            "application": {},
+            "performance": {},
+            "security": {}
         }
 
         # 系统指标
         try:
+            system_stats = metrics_collector.get_system_stats()
             metrics["system"] = {
                 "cpu_percent": psutil.cpu_percent(interval=1),
                 "memory_percent": psutil.virtual_memory().percent,
                 "disk_usage_percent": psutil.disk_usage('/').percent,
-                "load_average": os.getloadavg() if hasattr(os, 'getloadavg') else None
+                "load_average": os.getloadavg() if hasattr(os, 'getloadavg') else None,
+                "active_connections": system_stats.get("active_connections", 0),
+                "uptime_seconds": system_stats.get("uptime_seconds", 0)
             }
-        except:
-            metrics["system"] = {"error": "Unable to collect system metrics"}
+        except Exception as e:
+            metrics["system"] = {"error": f"Unable to collect system metrics: {str(e)}"}
 
         # 数据库指标
         try:
-            # 获取数据库连接数等信息（这里需要根据实际数据库类型调整）
+            # 获取数据库连接数等信息
             result = await db.execute(text("SELECT COUNT(*) as total_tables FROM information_schema.tables WHERE table_schema = 'public'"))
             row = result.fetchone()
             metrics["database"] = {
                 "total_tables": row[0] if row else 0,
-                "connection_status": "connected"
+                "connection_status": "connected",
+                "engine": str(db.bind.dialect.name) if hasattr(db.bind, 'dialect') else "unknown"
             }
         except Exception as e:
-            metrics["database"] = {
-                "connection_status": "error",
-                "error": str(e)
-            }
+            # 尝试SQLite查询
+            try:
+                result = await db.execute(text("SELECT COUNT(*) FROM sqlite_master WHERE type='table'"))
+                row = result.fetchone()
+                metrics["database"] = {
+                    "total_tables": row[0] if row else 0,
+                    "connection_status": "connected",
+                    "engine": "sqlite"
+                }
+            except:
+                metrics["database"] = {
+                    "connection_status": "error",
+                    "error": str(e)
+                }
 
         # 应用指标
         metrics["application"] = {
             "environment": settings.ENVIRONMENT,
             "version": getattr(settings, 'VERSION', '1.0.0'),
             "upload_directory": settings.UPLOAD_DIR,
-            "upload_directory_exists": os.path.exists(settings.UPLOAD_DIR)
+            "upload_directory_exists": os.path.exists(settings.UPLOAD_DIR),
+            "debug_mode": settings.DEBUG
         }
+
+        # 性能指标
+        try:
+            performance_summary = metrics_collector.get_performance_summary()
+            metrics["performance"] = {
+                "request_stats": performance_summary.get("request_stats", {}),
+                "slowest_endpoints": performance_summary.get("slowest_endpoints", []),
+                "error_endpoints": performance_summary.get("error_endpoints", [])
+            }
+        except Exception as e:
+            metrics["performance"] = {"error": f"Unable to collect performance metrics: {str(e)}"}
+
+        # 安全指标
+        try:
+            metrics["security"] = {
+                "rate_limiter_status": "active",
+                "active_counters": len(rate_limiter.counters),
+                "active_buckets": len(rate_limiter.buckets)
+            }
+        except Exception as e:
+            metrics["security"] = {"error": f"Unable to collect security metrics: {str(e)}"}
 
         return JSONResponse(
             status_code=status.HTTP_200_OK,
@@ -285,6 +329,88 @@ async def get_metrics(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={
                 "error": "Failed to collect metrics",
+                "details": str(e),
+                "timestamp": datetime.utcnow().isoformat()
+            }
+        )
+
+
+@router.get(
+    "/performance",
+    summary="性能监控",
+    description="获取详细的性能监控数据和统计信息"
+)
+async def get_performance_metrics() -> JSONResponse:
+    """获取详细性能指标"""
+    try:
+        metrics_collector = get_metrics_collector()
+
+        # 获取不同时间窗口的统计
+        performance_data = {
+            "timestamp": datetime.utcnow().isoformat(),
+            "last_hour": metrics_collector.get_request_stats(minutes=60),
+            "last_15_minutes": metrics_collector.get_request_stats(minutes=15),
+            "last_5_minutes": metrics_collector.get_request_stats(minutes=5),
+            "path_statistics": metrics_collector.get_path_stats(),
+            "system_status": metrics_collector.get_system_stats(),
+            "summary": metrics_collector.get_performance_summary()
+        }
+
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content=performance_data
+        )
+
+    except Exception as e:
+        logger.error(f"Performance metrics collection failed: {e}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "error": "Failed to collect performance metrics",
+                "details": str(e),
+                "timestamp": datetime.utcnow().isoformat()
+            }
+        )
+
+
+@router.get(
+    "/rate-limits",
+    summary="限流状态",
+    description="获取当前限流器状态和统计信息"
+)
+async def get_rate_limit_status() -> JSONResponse:
+    """获取限流状态"""
+    try:
+        rate_limiter = get_rate_limiter()
+
+        rate_limit_data = {
+            "timestamp": datetime.utcnow().isoformat(),
+            "active_counters": len(rate_limiter.counters),
+            "active_buckets": len(rate_limiter.buckets),
+            "rules_count": len(rate_limiter.rules),
+            "rules": [
+                {
+                    "type": rule.rule_type.value,
+                    "limit": rule.limit,
+                    "window": rule.window,
+                    "endpoint": rule.endpoint,
+                    "message": rule.message
+                }
+                for rule in rate_limiter.rules
+            ]
+        }
+
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content=rate_limit_data
+        )
+
+    except Exception as e:
+        logger.error(f"Rate limit status collection failed: {e}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "error": "Failed to collect rate limit status",
                 "details": str(e),
                 "timestamp": datetime.utcnow().isoformat()
             }

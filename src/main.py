@@ -5,6 +5,7 @@
 
 from contextlib import asynccontextmanager
 from typing import Dict, Any
+import asyncio
 
 import uvicorn
 from fastapi import FastAPI, Request, status
@@ -15,6 +16,18 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
 from src.core.config import settings
 from src.core.logging import configure_logging, get_logger, LoggingMiddleware
+from src.core.monitoring import (
+    get_metrics_collector,
+    get_system_collector,
+    PerformanceMonitoringMiddleware,
+    cleanup_old_metrics
+)
+from src.core.security import (
+    get_rate_limiter,
+    RateLimitMiddleware,
+    SecurityHeadersMiddleware,
+    cleanup_rate_limiters
+)
 
 
 @asynccontextmanager
@@ -24,10 +37,28 @@ async def lifespan(app: FastAPI):
 
     # 启动时
     logger.info("🚀 应用启动中...")
+
+    # 启动性能监控
+    if settings.ENABLE_METRICS:
+        system_collector = get_system_collector()
+        await system_collector.start()
+        logger.info("✅ 性能监控已启动")
+
+        # 启动清理任务
+        cleanup_task = asyncio.create_task(cleanup_old_metrics())
+        rate_limit_cleanup_task = asyncio.create_task(cleanup_rate_limiters())
+
     yield
 
     # 关闭时
     logger.info("🛑 应用关闭中...")
+
+    # 停止监控服务
+    if settings.ENABLE_METRICS:
+        await system_collector.stop()
+        cleanup_task.cancel()
+        rate_limit_cleanup_task.cancel()
+        logger.info("✅ 性能监控已停止")
 
 
 def create_app() -> FastAPI:
@@ -64,6 +95,18 @@ def create_app() -> FastAPI:
 def setup_middleware(app: FastAPI) -> None:
     """配置中间件"""
 
+    # 性能监控中间件（最外层，最先执行）
+    if settings.ENABLE_METRICS:
+        metrics_collector = get_metrics_collector()
+        app.add_middleware(PerformanceMonitoringMiddleware, collector=metrics_collector)
+
+    # 安全头中间件
+    app.add_middleware(SecurityHeadersMiddleware)
+
+    # 限流中间件
+    rate_limiter = get_rate_limiter()
+    app.add_middleware(RateLimitMiddleware, rate_limiter=rate_limiter)
+
     # CORS 中间件
     if settings.BACKEND_CORS_ORIGINS:
         app.add_middleware(
@@ -82,7 +125,7 @@ def setup_middleware(app: FastAPI) -> None:
             allowed_hosts=["localhost", "127.0.0.1", "testserver", settings.HOST] if settings.DEBUG else ["*"]
         )
 
-    # 日志中间件
+    # 日志中间件（最内层，最后执行）
     app.add_middleware(LoggingMiddleware)
 
 

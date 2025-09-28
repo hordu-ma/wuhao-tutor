@@ -130,6 +130,25 @@ class Settings(BaseSettings):
     ENABLE_METRICS: bool = True
     METRICS_PORT: int = 9090
 
+    # 性能监控配置
+    SLOW_QUERY_THRESHOLD: float = 1.0  # 慢查询阈值（秒）
+    MAX_SLOW_QUERIES: int = 100  # 最大慢查询记录数
+    QUERY_CACHE_TTL: int = 300  # 查询缓存TTL（秒）
+    MAX_CACHE_SIZE: int = 1000  # 最大缓存条目数
+    METRICS_COLLECTION_INTERVAL: int = 60  # 指标收集间隔（秒）
+
+    # 限流配置
+    RATE_LIMIT_ENABLED: bool = True
+    RATE_LIMIT_PER_IP: int = 100  # 每IP每分钟请求限制
+    RATE_LIMIT_PER_USER: int = 50  # 每用户每分钟请求限制
+    RATE_LIMIT_AI_SERVICE: int = 20  # AI服务每分钟请求限制
+    RATE_LIMIT_LOGIN: int = 10  # 登录端点每分钟请求限制
+
+    # 缓存配置
+    CACHE_ENABLED: bool = True
+    CACHE_DEFAULT_TTL: int = 300  # 默认缓存TTL（秒）
+    CACHE_MAX_SIZE: int = 10000  # 最大缓存大小
+
     class Config:
         env_file = ".env"
         case_sensitive = True
@@ -144,6 +163,11 @@ class DevelopmentSettings(Settings):
     # 开发环境使用SQLite
     SQLALCHEMY_DATABASE_URI: Optional[str] = "sqlite+aiosqlite:///./wuhao_tutor_dev.db"
 
+    # 开发环境宽松的限流配置
+    RATE_LIMIT_PER_IP: int = 1000
+    RATE_LIMIT_PER_USER: int = 500
+    SLOW_QUERY_THRESHOLD: float = 2.0  # 开发环境更宽松的慢查询阈值
+
 
 class TestingSettings(Settings):
     """测试环境配置"""
@@ -155,12 +179,23 @@ class TestingSettings(Settings):
     # 测试环境使用内存SQLite
     SQLALCHEMY_DATABASE_URI: Optional[str] = "sqlite+aiosqlite:///:memory:"
 
+    # 测试环境禁用某些功能
+    ENABLE_METRICS: bool = False
+    RATE_LIMIT_ENABLED: bool = False
+    CACHE_ENABLED: bool = False
+
 
 class ProductionSettings(Settings):
     """生产环境配置"""
     DEBUG: bool = False
     LOG_LEVEL: str = "INFO"
     AI_CACHE_ENABLED: bool = True
+
+    # 生产环境严格的性能配置
+    SLOW_QUERY_THRESHOLD: float = 0.5  # 更严格的慢查询阈值
+    RATE_LIMIT_PER_IP: int = 60  # 更严格的限流
+    RATE_LIMIT_PER_USER: int = 30
+    RATE_LIMIT_AI_SERVICE: int = 10
 
     # 生产环境必需配置验证
     @field_validator("SECRET_KEY", mode="before")
