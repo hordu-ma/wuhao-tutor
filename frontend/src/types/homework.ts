@@ -115,7 +115,7 @@ export interface GradeLevelOption {
 }
 
 // 常用选项数据
-export const SUBJECT_OPTIONS: SubjectOption[] = [
+export const HOMEWORK_SUBJECT_OPTIONS: SubjectOption[] = [
   { value: Subject.MATH, label: "数学" },
   { value: Subject.CHINESE, label: "语文" },
   { value: Subject.ENGLISH, label: "英语" },

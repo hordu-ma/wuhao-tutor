@@ -382,3 +382,5 @@ export interface FilterParams {
 
 // ============= 导入其他模块类型 =============
 export * from "./homework";
+export * from "./learning";
+export * from "./analytics";
