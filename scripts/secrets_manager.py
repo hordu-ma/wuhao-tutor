@@ -70,7 +70,7 @@ class SecretsManager:
             }
         }
 
-    def generate_password(self, length: int = 32, chars: str = None) -> str:
+    def generate_password(self, length: int = 32, chars: str | None = None) -> str:
         """生成安全密码"""
         if chars is None:
             # 生成字节密钥并转换为base64
@@ -287,7 +287,7 @@ class SecretsManager:
             print("❌ 未找到openssl命令，请安装OpenSSL")
             return False
 
-    def create_htpasswd(self, username: str, password: str = None) -> bool:
+    def create_htpasswd(self, username: str, password: str | None = None) -> bool:
         """创建HTTP基本认证文件"""
         if not password:
             password = self.generate_password(16, string.ascii_letters + string.digits)
@@ -298,7 +298,13 @@ class SecretsManager:
         try:
             # 使用bcrypt加密密码
             import crypt
-            encrypted_password = crypt.crypt(password, crypt.mksalt(crypt.METHOD_BLKFISH))
+            import hashlib
+            try:
+                # 尝试使用 METHOD_BLKFISH (如果可用)
+                encrypted_password = crypt.crypt(password, crypt.mksalt(getattr(crypt, 'METHOD_BLKFISH', crypt.METHOD_SHA512)))
+            except AttributeError:
+                # 如果不支持，使用SHA512
+                encrypted_password = crypt.crypt(password, crypt.mksalt(crypt.METHOD_SHA512))
 
             with open(htpasswd_file, 'a', encoding='utf-8') as f:
                 f.write(f"{username}:{encrypted_password}\n")
@@ -314,7 +320,7 @@ class SecretsManager:
             print(f"❌ 创建HTTP认证文件失败: {e}")
             return False
 
-    def export_secrets(self, output_file: str = None) -> bool:
+    def export_secrets(self, output_file: str | None = None) -> bool:
         """导出密钥（加密）"""
         if not output_file:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

@@ -10,7 +10,14 @@ import re
 from pathlib import Path
 from typing import Optional, Tuple, Set
 from PIL import Image
-import magic
+
+# Optional magic library for MIME type detection
+try:
+    import magic  # type: ignore
+    HAS_MAGIC = True
+except ImportError:
+    magic = None  # type: ignore
+    HAS_MAGIC = False
 
 
 # 支持的文件类型
@@ -30,7 +37,7 @@ MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 MAX_IMAGE_DIMENSION = 4000  # 最大图片尺寸
 
 
-def validate_file_type(content_type: str, filename: str = None) -> bool:
+def validate_file_type(content_type: str, filename: Optional[str] = None) -> bool:
     """
     验证文件类型是否被支持
 
@@ -54,7 +61,7 @@ def validate_file_type(content_type: str, filename: str = None) -> bool:
     return content_type in ALLOWED_TYPES
 
 
-def get_file_extension(filename: str) -> str:
+def get_file_extension(filename: Optional[str] = None) -> str:
     """
     获取文件扩展名
 
@@ -139,7 +146,7 @@ def format_file_size(size_bytes: int) -> str:
     return f"{size:.1f} {size_names[i]}"
 
 
-def get_mime_type(filename: str, file_content: bytes = None) -> str:
+def get_mime_type(filename: str, file_content: Optional[bytes] = None) -> Optional[str]:
     """
     获取文件的MIME类型
 
@@ -157,7 +164,7 @@ def get_mime_type(filename: str, file_content: bytes = None) -> str:
         return mime_type
 
     # 如果有文件内容，使用magic库检测
-    if file_content:
+    if file_content and HAS_MAGIC and magic:
         try:
             mime_type = magic.from_buffer(file_content, mime=True)
             if mime_type:
@@ -202,8 +209,9 @@ def validate_image_file(file_content: bytes) -> Tuple[bool, Optional[str], Optio
                 return False, f"图片尺寸过大，最大支持 {MAX_IMAGE_DIMENSION}x{MAX_IMAGE_DIMENSION}", (width, height)
 
             # 检查图片格式
-            if img.format.lower() not in ['jpeg', 'png', 'gif', 'webp']:
-                return False, f"不支持的图片格式: {img.format}", (width, height)
+            format_str = img.format.lower() if img.format else ''
+            if format_str not in ['jpeg', 'png', 'gif', 'webp']:
+                return False, f"不支持的图片格式: {img.format or 'unknown'}", (width, height)
 
             return True, None, (width, height)
 

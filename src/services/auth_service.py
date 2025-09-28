@@ -13,7 +13,7 @@ from src.core.config import get_settings
 from src.core.exceptions import (
     AuthenticationError, ValidationError, ServiceError
 )
-from src.schemas.auth import LoginResponse, RefreshTokenResponse
+from src.schemas.auth import LoginResponse, RefreshTokenResponse, UserResponse
 from src.services.user_service import UserService
 from src.models.user import User, UserSession
 
@@ -195,7 +195,7 @@ class AuthService:
 
             # 创建用户会话
             session = await self.user_service.create_user_session(
-                user_id=user.id,
+                user_id=str(user.id),
                 device_type=device_type,
                 device_id=device_id,
                 ip_address=ip_address,
@@ -213,19 +213,19 @@ class AuthService:
 
             # 生成JWT令牌
             access_token = self.create_access_token(
-                subject=user.id,
-                jti=session.access_token_jti,
+                subject=str(user.id),
+                jti=str(session.access_token_jti),
                 expires_delta=access_expires
             )
 
             refresh_token = self.create_refresh_token(
-                subject=user.id,
-                jti=session.refresh_token_jti,
+                subject=str(user.id),
+                jti=str(session.refresh_token_jti),
                 expires_delta=refresh_expires
             )
 
             # 构建响应
-            from src.schemas.user import UserResponse
+            # 构建用户响应数据
             user_response = UserResponse.model_validate(user)
 
             response = LoginResponse(
@@ -234,21 +234,18 @@ class AuthService:
                 token_type="bearer",
                 expires_in=int(access_expires.total_seconds()),
                 user=user_response,
-                session_id=session.id
+                session_id=str(session.id)
             )
 
-            logger.info(f"用户登录成功",
-                       user_id=user.id,
-                       phone=phone,
-                       device_type=device_type)
+            logger.info(f"用户登录成功: user_id={str(user.id)}, phone={phone}, device_type={device_type}")
 
             return response
 
         except AuthenticationError:
-            logger.warning(f"用户登录失败: 认证错误", phone=phone)
+            logger.warning(f"用户登录失败: 认证错误, phone={phone}")
             raise
         except Exception as e:
-            logger.error(f"用户登录失败: {str(e)}", phone=phone, exc_info=True)
+            logger.error(f"用户登录失败: {str(e)}, phone={phone}", exc_info=True)
             raise ServiceError(f"登录失败: {str(e)}") from e
 
     async def refresh_access_token(
@@ -287,16 +284,17 @@ class AuthService:
                 "refresh_token_jti", jti
             )
 
-            if not session or session.is_revoked:
+            if not session or getattr(session, 'is_revoked', True):
                 raise AuthenticationError("会话已失效")
 
-            if session.user_id != user_id:
+            if str(getattr(session, 'user_id', '')) != str(user_id):
                 raise AuthenticationError("令牌用户不匹配")
 
             # 生成新的访问令牌
             access_token = self.create_access_token(
-                subject=user_id,
-                jti=session.access_token_jti
+                subject=str(user_id),
+                jti=str(getattr(session, 'access_token_jti', '')),
+                expires_delta=timedelta(minutes=self.access_token_expire_minutes)
             )
 
             response = RefreshTokenResponse(
@@ -304,10 +302,10 @@ class AuthService:
                 refresh_token=refresh_token,  # 刷新令牌保持不变
                 token_type="bearer",
                 expires_in=self.access_token_expire_minutes * 60,
-                session_id=session.id
+                session_id=str(session.id)
             )
 
-            logger.info(f"令牌刷新成功", user_id=user_id, device_type=device_type)
+            logger.info(f"令牌刷新成功: user_id={user_id}, device_type={device_type}")
             return response
 
         except AuthenticationError:
@@ -337,20 +335,20 @@ class AuthService:
             if logout_all_devices:
                 # 撤销所有会话
                 revoked_count = await self.user_service.revoke_all_user_sessions(user_id)
-                logger.info(f"用户登出所有设备", user_id=user_id, count=revoked_count)
+                logger.info(f"用户登出所有设备: user_id={user_id}, count={revoked_count}")
                 return revoked_count > 0
             elif session_id:
                 # 撤销指定会话
                 success = await self.user_service.revoke_user_session(session_id, user_id)
                 if success:
-                    logger.info(f"用户登出成功", user_id=user_id, session_id=session_id)
+                    logger.info(f"用户登出成功: user_id={user_id}, session_id={session_id}")
                 return success
             else:
-                logger.warning(f"登出参数不足", user_id=user_id)
+                logger.warning(f"登出参数不足: user_id={user_id}")
                 return False
 
         except Exception as e:
-            logger.error(f"用户登出失败: {str(e)}", user_id=user_id, exc_info=True)
+            logger.error(f"用户登出失败: {str(e)}, user_id={user_id}", exc_info=True)
             return False
 
     async def verify_user_session(self, jti: str) -> Optional[UserSession]:
@@ -369,23 +367,24 @@ class AuthService:
             if not session:
                 return None
 
-            if session.is_revoked:
+            if getattr(session, 'is_revoked', True):
                 return None
 
             # 检查是否过期
-            if session.expires_at:
-                expire_time = datetime.fromisoformat(session.expires_at)
+            expires_at = getattr(session, 'expires_at', None)
+            if expires_at:
+                expire_time = datetime.fromisoformat(str(expires_at))
                 if expire_time < datetime.utcnow():
                     # 会话已过期，标记为撤销
                     await self.user_service.session_repo.update(
-                        session.id, {"is_revoked": True}
+                        str(getattr(session, 'id', '')), {"is_revoked": True}
                     )
                     return None
 
             return session
 
         except Exception as e:
-            logger.error(f"会话验证失败: {str(e)}", jti=jti[:8], exc_info=True)
+            logger.error(f"会话验证失败: {str(e)}, jti={jti[:8]}", exc_info=True)
             return None
 
     # ========== 权限验证 ==========
@@ -443,8 +442,7 @@ class AuthService:
             return action in resource_perms
 
         except Exception as e:
-            logger.error(f"权限检查失败: {str(e)}",
-                        user_id=user_id, resource=resource, action=action)
+            logger.error(f"权限检查失败: {str(e)}, user_id={user_id}, resource={resource}, action={action}")
             return False
 
     def require_permission(self, resource: str, action: str):

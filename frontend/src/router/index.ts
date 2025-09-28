@@ -25,7 +25,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: "/login",
     name: "Login",
-    component: () => import("@/views/auth/LoginView.vue"),
+    component: () => import(/* webpackChunkName: "auth" */ "@/views/auth/LoginView.vue"),
     meta: {
       title: "用户登录",
       requiresAuth: false,
@@ -38,7 +38,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: "/register",
     name: "Register",
-    component: () => import("@/views/auth/RegisterView.vue"),
+    component: () => import(/* webpackChunkName: "auth" */ "@/views/auth/RegisterView.vue"),
     meta: {
       title: "用户注册",
       requiresAuth: false,
@@ -47,23 +47,123 @@ const routes: RouteRecordRaw[] = [
     },
   },
 
+  // 主应用布局
+  {
+    path: "/",
+    component: () => import(/* webpackChunkName: "layout" */ "@/layouts/MainLayout.vue"),
+    children: [
+      // 仪表板
+      {
+        path: "dashboard",
+        name: "Dashboard",
+        component: () => import(/* webpackChunkName: "dashboard" */ "@/views/Dashboard.vue"),
+        meta: {
+          title: "仪表板",
+          requiresAuth: true,
+          icon: "House",
+        },
+      },
+
+      // 作业批改
+      {
+        path: "/homework",
+        name: "Homework",
+        component: () => import(/* webpackChunkName: "homework" */ "@/views/Homework.vue"),
+        meta: {
+          title: "作业批改",
+          requiresAuth: true,
+          icon: "Document",
+        },
+      },
+
+      // 学习问答
+      {
+        path: "/learning",
+        name: "Learning",
+        component: () => import(/* webpackChunkName: "learning" */ "@/views/Learning.vue"),
+        meta: {
+          title: "学习问答",
+          requiresAuth: true,
+          icon: "ChatSquare",
+        },
+      },
+
+      // 学情分析
+      {
+        path: "/analytics",
+        name: "Analytics",
+        component: () => import(/* webpackChunkName: "analytics" */ "@/views/Analytics.vue"),
+        meta: {
+          title: "学情分析",
+          requiresAuth: true,
+          icon: "DataAnalysis",
+        },
+      },
+    ],
+  },
+
+  // 移动端布局
+  {
+    path: "/mobile",
+    component: () => import(/* webpackChunkName: "mobile-layout" */ "@/layouts/MobileLayout.vue"),
+    children: [
+      {
+        path: "",
+        redirect: "/mobile/dashboard",
+      },
+      {
+        path: "dashboard",
+        component: () => import(/* webpackChunkName: "dashboard" */ "@/views/Dashboard.vue"),
+        meta: {
+          title: "首页",
+          requiresAuth: true,
+        },
+      },
+      {
+        path: "homework",
+        component: () => import(/* webpackChunkName: "homework" */ "@/views/Homework.vue"),
+        meta: {
+          title: "作业批改",
+          requiresAuth: true,
+        },
+      },
+      {
+        path: "learning",
+        component: () => import(/* webpackChunkName: "learning" */ "@/views/Learning.vue"),
+        meta: {
+          title: "学习问答",
+          requiresAuth: true,
+        },
+      },
+      {
+        path: "analytics",
+        component: () => import(/* webpackChunkName: "analytics" */ "@/views/Analytics.vue"),
+        meta: {
+          title: "学情分析",
+          requiresAuth: true,
+        },
+      },
+    ],
+  },
+
   // 作业管理
   {
     path: "/homework",
     name: "HomeworkList",
-    component: () => import("@/views/homework/HomeworkList.vue"),
+    component: () => import(/* webpackChunkName: "homework" */ "@/views/homework/HomeworkList.vue"),
     meta: {
       title: "我的作业",
       requiresAuth: true,
       layout: "main",
       icon: "Notebook",
+      keepAlive: true,
     },
   },
 
   {
     path: "/homework/upload",
     name: "HomeworkUpload",
-    component: () => import("@/views/homework/HomeworkUpload.vue"),
+    component: () => import(/* webpackChunkName: "homework" */ "@/views/homework/HomeworkUpload.vue"),
     meta: {
       title: "上传作业",
       requiresAuth: true,
@@ -75,7 +175,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: "/homework/:id",
     name: "HomeworkDetail",
-    component: () => import("@/views/homework/HomeworkDetail.vue"),
+    component: () => import(/* webpackChunkName: "homework" */ "@/views/homework/HomeworkDetail.vue"),
     meta: {
       title: "作业详情",
       requiresAuth: true,
@@ -88,12 +188,13 @@ const routes: RouteRecordRaw[] = [
   {
     path: "/learning",
     name: "Learning",
-    component: () => import("@/views/Learning.vue"),
+    component: () => import(/* webpackChunkName: "learning" */ "@/views/Learning.vue"),
     meta: {
       title: "AI学习助手",
       requiresAuth: true,
       layout: "main",
       icon: "ChatDotRound",
+      keepAlive: true,
     },
   },
 
@@ -101,12 +202,13 @@ const routes: RouteRecordRaw[] = [
   {
     path: "/analytics",
     name: "Analytics",
-    component: () => import("@/views/Analytics.vue"),
+    component: () => import(/* webpackChunkName: "analytics" */ "@/views/Analytics.vue"),
     meta: {
       title: "学情分析",
       requiresAuth: true,
       layout: "main",
       icon: "DataAnalysis",
+      keepAlive: true,
     },
   },
 
@@ -114,12 +216,13 @@ const routes: RouteRecordRaw[] = [
   {
     path: "/dashboard",
     name: "Dashboard",
-    component: () => import("@/views/dashboard/DashboardView.vue"),
+    component: () => import(/* webpackChunkName: "dashboard" */ "@/views/dashboard/DashboardView.vue"),
     meta: {
       title: "仪表板",
       requiresAuth: true,
       layout: "main",
       icon: "House",
+      keepAlive: true,
     },
   },
 
@@ -127,7 +230,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: "/:pathMatch(.*)*",
     name: "NotFound",
-    component: () => import("@/views/error/NotFoundView.vue"),
+    component: () => import(/* webpackChunkName: "error" */ "@/views/error/NotFoundView.vue"),
     meta: {
       title: "页面不存在",
       requiresAuth: false,

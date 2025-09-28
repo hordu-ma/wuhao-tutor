@@ -68,14 +68,14 @@ class QueryCache:
         self.miss_count = 0
         self.cache_keys: deque = deque(maxlen=max_cache_size)
 
-    def _generate_cache_key(self, query: str, params: Dict[str, Any] = None) -> str:
+    def _generate_cache_key(self, query: str, params: Optional[Dict[str, Any]] = None) -> str:
         """生成缓存键"""
         content = query
         if params:
             content += json.dumps(params, sort_keys=True, default=str)
         return f"query:{hashlib.md5(content.encode()).hexdigest()}"
 
-    async def get(self, query: str, params: Dict[str, Any] = None) -> Optional[Any]:
+    async def get(self, query: str, params: Optional[Dict[str, Any]] = None) -> Optional[Any]:
         """获取缓存结果"""
         cache_key = self._generate_cache_key(query, params)
         result = await cache_manager.get(cache_key)
@@ -88,7 +88,7 @@ class QueryCache:
         self.miss_count += 1
         return None
 
-    async def set(self, query: str, result: Any, params: Dict[str, Any] = None, ttl: int = None) -> None:
+    async def set(self, query: str, result: Any, params: Optional[Dict[str, Any]] = None, ttl: Optional[int] = None) -> None:
         """设置缓存结果"""
         cache_key = self._generate_cache_key(query, params)
         ttl = ttl or self.default_ttl
@@ -383,17 +383,20 @@ class DatabaseOptimizer:
     async def _get_connection_info(self, db: AsyncSession) -> Dict[str, Any]:
         """获取连接信息"""
         try:
-            # 尝试获取PostgreSQL连接信息
-            result = await db.execute(text("SELECT COUNT(*) FROM pg_stat_activity"))
-            active_connections = result.scalar()
+            # PostgreSQL
+            result = await db.execute(text("SELECT count(*) FROM pg_stat_activity"))
+            active_connections = result.scalar() or 0
 
             result = await db.execute(text("SELECT setting FROM pg_settings WHERE name = 'max_connections'"))
-            max_connections = result.scalar()
+            max_connections = result.scalar() or 1
+
+            max_conn_int = int(max_connections) if max_connections else 1
+            active_conn_int = int(active_connections) if active_connections else 0
 
             return {
-                'active_connections': active_connections,
-                'max_connections': int(max_connections),
-                'connection_usage': round((active_connections / int(max_connections)) * 100, 2),
+                'active_connections': active_conn_int,
+                'max_connections': max_conn_int,
+                'connection_usage': round((active_conn_int / max_conn_int) * 100, 2) if max_conn_int > 0 else 0.0,
                 'database_type': 'postgresql'
             }
         except:
@@ -501,7 +504,7 @@ def get_database_optimizer() -> DatabaseOptimizer:
 
 
 # 辅助函数
-async def cached_db_query(db: AsyncSession, query: str, params: Dict[str, Any] = None,
+async def cached_db_query(db: AsyncSession, query: str, params: Optional[Dict[str, Any]] = None,
                          ttl: int = 300) -> Any:
     """执行带缓存的数据库查询"""
     # 检查缓存
@@ -519,20 +522,32 @@ async def cached_db_query(db: AsyncSession, query: str, params: Dict[str, Any] =
 
     execution_time = time.time() - start_time
 
-    # 获取结果
-    if result.returns_rows:
+    # 获取结果 - 更安全的Result对象处理
+    try:
+        # 尝试获取行数据
         data = result.fetchall()
-        # 转换为可序列化格式
-        serializable_data = [dict(row._mapping) for row in data]
-    else:
-        serializable_data = {"affected_rows": result.rowcount}
+        if data:
+            # 转换为可序列化格式
+            serializable_data = [dict(row._mapping) for row in data]
+        else:
+            # 如果没有行数据，可能是DML操作
+            affected_rows = getattr(result, 'rowcount', 0) or 0
+            serializable_data = {"affected_rows": affected_rows}
+    except Exception:
+        # 如果fetchall失败，尝试获取affected rows
+        try:
+            affected_rows = getattr(result, 'rowcount', 0) or 0
+            serializable_data = {"affected_rows": affected_rows}
+        except Exception:
+            # 最终回退
+            serializable_data = {"affected_rows": 0}
 
     # 缓存结果
     await query_cache.set(query, serializable_data, params, ttl)
 
     # 记录指标
-    query_monitor.record_query(query, execution_time,
-                             affected_rows=result.rowcount if hasattr(result, 'rowcount') else 0)
+    affected_rows = getattr(result, 'rowcount', 0) or 0
+    query_monitor.record_query(query, execution_time, affected_rows=affected_rows)
 
     return serializable_data
 

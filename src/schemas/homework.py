@@ -361,7 +361,7 @@ class HomeworkStatistics(BaseModel):
 
 class BatchHomeworkCreate(BaseModel):
     """批量创建作业请求"""
-    homeworks: List[HomeworkCreate] = Field(..., min_items=1, max_items=10, description="作业列表")
+    homeworks: List[HomeworkCreate] = Field(..., min_length=1, max_length=10, description="作业列表")
 
 
 class BatchOperationResponse(BaseModel):

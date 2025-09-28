@@ -4,6 +4,7 @@
 """
 
 import asyncio
+import json
 from typing import List, Optional, Dict, Any, Tuple
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -28,9 +29,9 @@ from src.schemas.homework import (
     HomeworkQuery, SubmissionQuery, PaginationParams,
     KnowledgePointAnalysis, ImprovementSuggestion, QuestionReview
 )
-from src.schemas.common import PaginatedResponse
-from src.services.bailian_service import BailianService
-from src.utils.ocr import AliCloudOCRService
+from src.schemas.common import PaginatedResponse, PaginationInfo
+from src.services.bailian_service import BailianService, ChatMessage, MessageRole
+from src.utils.ocr import AliCloudOCRService, OCRType
 from src.utils.file_upload import FileUploadService
 from src.utils.cache import cache, cache_manager
 from src.core.config import settings
@@ -196,8 +197,9 @@ class HomeworkService:
             # 查询数据
             offset = (pagination.page - 1) * pagination.size
 
-            order_column = getattr(Homework, pagination.sort_by, Homework.created_at)
-            order_clause = order_column.desc() if pagination.sort_order == "desc" else order_column.asc()
+            # 安全获取排序列
+            sort_column = getattr(Homework, pagination.sort_by or "created_at", Homework.created_at)
+            order_clause = sort_column.desc() if pagination.sort_order == "desc" else sort_column.asc()
 
             stmt = (
                 select(Homework)
@@ -210,19 +212,18 @@ class HomeworkService:
             result = await session.execute(stmt)
             homeworks = result.scalars().all()
 
-            # 计算分页信息
-            pages = (total + pagination.size - 1) // pagination.size
-            has_next = pagination.page < pages
-            has_prev = pagination.page > 1
+            # 创建分页信息
+            pagination_info = PaginationInfo.create(
+                total=total or 0,
+                page=pagination.page,
+                size=pagination.size
+            )
 
             return PaginatedResponse(
-                items=[HomeworkResponse.from_orm(hw) for hw in homeworks],
-                total=total,
-                page=pagination.page,
-                size=pagination.size,
-                pages=pages,
-                has_next=has_next,
-                has_prev=has_prev
+                data=[HomeworkResponse.from_orm(hw) for hw in homeworks],
+                pagination=pagination_info,
+                success=True,
+                message="查询作业列表成功"
             )
 
         except Exception as e:
@@ -258,7 +259,7 @@ class HomeworkService:
             if not homework:
                 raise ValidationError("作业不存在")
 
-            if not homework.is_active:
+            if not getattr(homework, 'is_active', True):
                 raise ValidationError("作业已停用")
 
             # 检查是否已经提交过
@@ -289,7 +290,7 @@ class HomeworkService:
             await session.refresh(submission)
 
             # 更新作业提交统计
-            await self._update_homework_stats(session, homework.id)
+            await self._update_homework_stats(session, getattr(homework, 'id'))
 
             logger.info(f"作业提交创建成功: {submission.id}")
             return submission
@@ -410,14 +411,14 @@ class HomeworkService:
                 return
 
             # 确定图片路径
-            image_path = image.file_path
-            if not os.path.exists(image_path):
-                logger.warning(f"图片文件不存在: {image_path}")
+            file_path = str(image.file_path)
+            if not os.path.exists(file_path):
+                logger.warning(f"图片文件不存在: {file_path}")
                 return
 
             # 执行OCR识别
             ocr_result = await self.ocr_service.auto_recognize(
-                image_path=image_path,
+                image_path=file_path,
                 ocr_type=OCRType.GENERAL,  # 可以根据作业类型选择
                 enhance=True
             )
@@ -545,13 +546,27 @@ class HomeworkService:
             review_data = await self._prepare_ai_review_data(session, submission)
 
             # 调用百炼AI进行批改
-            ai_result = await self.bailian_service.review_homework(
-                homework_data=review_data,
-                max_score=max_score
-            )
+            from typing import Dict, Any, List, Union
+            from dataclasses import asdict
+
+            messages: List[Union[Dict[str, str], ChatMessage]] = [
+                ChatMessage(
+                    role=MessageRole.SYSTEM,
+                    content="你是一个专业的作业批改助手，请仔细分析学生提交的作业，给出准确的评分和建议。"
+                ),
+                ChatMessage(
+                    role=MessageRole.USER,
+                    content=f"请批改以下作业，满分为{max_score}分：\n{json.dumps(review_data, ensure_ascii=False)}"
+                )
+            ]
+            ai_result = await self.bailian_service.chat_completion(messages=messages)
 
             # 处理AI批改结果
-            await self._process_ai_review_result(session, review.id, ai_result)
+            review_id = getattr(review, 'id')
+            # 将AI响应转换为字典格式
+            ai_result_dict = asdict(ai_result)
+
+            await self._process_ai_review_result(session, review_id, ai_result_dict)
 
             logger.info(f"AI批改完成: {review.id}")
             return review
@@ -561,8 +576,14 @@ class HomeworkService:
             logger.error(f"AI批改失败: {e}")
 
             # 更新批改状态为失败
-            if 'review' in locals():
-                await self._mark_review_failed(session, review.id, str(e))
+            try:
+                # 检查review是否已定义并且不为None
+                review_var = locals().get('review')
+                if review_var is not None:
+                    review_id = getattr(review_var, 'id')
+                    await self._mark_review_failed(session, review_id, str(e))
+            except Exception as mark_error:
+                logger.error(f"标记批改失败时发生错误: {mark_error}")
 
             raise AIServiceError(f"AI批改失败: {e}")
 
@@ -595,8 +616,9 @@ class HomeworkService:
             # 合并OCR文本
             ocr_texts = []
             for image in images:
-                if image.ocr_text and image.ocr_text.strip():
-                    ocr_texts.append(image.ocr_text.strip())
+                ocr_text = getattr(image, 'ocr_text', None)
+                if ocr_text and str(ocr_text).strip():
+                    ocr_texts.append(str(ocr_text).strip())
 
             combined_text = "\n\n".join(ocr_texts) if ocr_texts else ""
 
@@ -867,16 +889,17 @@ class HomeworkService:
             stats = result.first()
 
             # 更新作业记录
-            update_stmt = (
-                update(Homework)
-                .where(Homework.id == homework_id)
-                .values(
-                    total_submissions=stats.total_submissions or 0,
-                    avg_score=stats.avg_score
+            if stats:
+                update_stmt = (
+                    update(Homework)
+                    .where(Homework.id == homework_id)
+                    .values(
+                        total_submissions=stats.total_submissions or 0,
+                        avg_score=stats.avg_score
+                    )
                 )
-            )
+                await session.execute(update_stmt)
 
-            await session.execute(update_stmt)
             await session.commit()
 
         except Exception as e:
@@ -914,7 +937,7 @@ class HomeworkService:
                 if hasattr(homework, field):
                     setattr(homework, field, value)
 
-            homework.updated_at = datetime.utcnow()
+            # updated_at will be automatically updated by SQLAlchemy
             await session.commit()
             await session.refresh(homework)
 
@@ -987,12 +1010,18 @@ class HomeworkService:
             # 转换为响应格式
             items = [HomeworkSubmissionResponse.from_orm(sub) for sub in submissions]
 
-            return PaginatedResponse(
-                items=items,
-                total=total,
+            # 创建分页信息
+            pagination_info = PaginationInfo.create(
+                total=total or 0,
                 page=page,
-                size=size,
-                has_more=offset + size < total
+                size=size
+            )
+
+            return PaginatedResponse(
+                data=items,
+                pagination=pagination_info,
+                success=True,
+                message="获取提交列表成功"
             )
 
         except Exception as e:
@@ -1066,13 +1095,29 @@ class HomeworkService:
                 for row in subject_result
             ]
 
+            # 安全处理统计结果
+            if not stats:
+                return {
+                    'period_days': days,
+                    'total_submissions': 0,
+                    'completed_submissions': 0,
+                    'completion_rate': 0.0,
+                    'avg_score': None,
+                    'avg_accuracy': None,
+                    'subject_stats': [],
+                    'recent_trends': []
+                }
+
+            total_submissions = stats.total_submissions or 0
+            completed_submissions = stats.completed_submissions or 0
+
             return {
                 'period_days': days,
-                'total_submissions': stats.total_submissions or 0,
-                'completed_submissions': stats.completed_submissions or 0,
+                'total_submissions': total_submissions,
+                'completed_submissions': completed_submissions,
                 'completion_rate': round(
-                    (stats.completed_submissions / stats.total_submissions * 100)
-                    if stats.total_submissions else 0, 2
+                    (completed_submissions / total_submissions * 100)
+                    if total_submissions else 0, 2
                 ),
                 'avg_score': round(stats.avg_score, 2) if stats.avg_score else None,
                 'avg_accuracy': round(stats.avg_accuracy, 2) if stats.avg_accuracy else None,

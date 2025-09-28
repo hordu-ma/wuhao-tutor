@@ -347,7 +347,10 @@ import type {
   CreateSessionRequest,
   FeedbackRequest,
 } from "@/types/learning";
-import { SUBJECT_OPTIONS, QuestionType } from "@/types/learning";
+import {
+  LEARNING_SUBJECT_OPTIONS,
+  LearningSubjectOption,
+} from "@/types/learning";
 
 // ========== 响应式数据 ==========
 
@@ -466,7 +469,7 @@ const handleSessionCommand = async (command: string) => {
           "确认归档",
           {
             type: "warning",
-          }
+          },
         );
         await learningStore.archiveSession(currentSession.id);
         ElMessage.success("会话已归档");
@@ -489,7 +492,7 @@ const handleSessionCommand = async (command: string) => {
           "确认删除",
           {
             type: "error",
-          }
+          },
         );
         await learningStore.deleteSession(currentSession.id);
       } catch (error) {

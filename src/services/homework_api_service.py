@@ -102,12 +102,15 @@ class HomeworkAPIService:
         submission_data: Dict[str, Any]
     ) -> HomeworkSubmissionResponse:
         """创建作业提交"""
+        from src.schemas.homework import HomeworkSubmissionCreate
+        # 添加homework_id到submission_data中
+        submission_data_with_id = {**submission_data, "homework_id": homework_id}
+        submission_create = HomeworkSubmissionCreate(**submission_data_with_id)
         submission = await self.homework_service.create_submission(
             session=self.db,
-            homework_id=UUID(homework_id),
+            submission_data=submission_create,
             student_id=UUID(student_id),
-            student_name=student_name,
-            submission_data=submission_data
+            student_name=student_name
         )
         return HomeworkSubmissionResponse.from_orm(submission)
 
@@ -119,9 +122,11 @@ class HomeworkAPIService:
         """获取作业提交"""
         submission = await self.homework_service.get_submission(
             session=self.db,
-            submission_id=UUID(submission_id),
-            student_id=UUID(student_id)
+            submission_id=UUID(submission_id)
         )
+        # 验证提交属于当前学生
+        if submission and str(submission.student_id) != student_id:
+            return None
         return HomeworkSubmissionResponse.from_orm(submission) if submission else None
 
     async def get_submission_with_details(
@@ -130,11 +135,14 @@ class HomeworkAPIService:
         student_id: str
     ) -> Optional[HomeworkSubmissionDetail]:
         """获取作业提交详情"""
-        return await self.homework_service.get_submission_with_details(
+        details = await self.homework_service.get_submission_with_details(
             session=self.db,
-            submission_id=UUID(submission_id),
-            student_id=UUID(student_id)
+            submission_id=UUID(submission_id)
         )
+        # 验证提交属于当前学生
+        if details and str(details.student_id) != student_id:
+            return None
+        return details
 
     async def upload_homework_images(
         self,

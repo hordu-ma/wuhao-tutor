@@ -1,0 +1,662 @@
+@use "sass:map";
+
+/**
+ * 响应式设计样式文件
+ * 提供移动端优化、响应式布局和交互优化
+ */
+
+// ===========================
+// 1. 响应式断点定义
+// ===========================
+$breakpoints: (
+  "xs": 0,
+  "sm": 576px,
+  "md": 768px,
+  "lg": 992px,
+  "xl": 1200px,
+  "2xl": 1400px,
+);
+
+// 响应式混入
+@mixin respond-to($breakpoint) {
+  @if map.has-key($breakpoints, $breakpoint) {
+    $value: map.get($breakpoints, $breakpoint);
+    @if $value > 0 {
+      @media (min-width: $value) {
+        @content;
+      }
+    } @else {
+      @content;
+    }
+  } @else {
+    @warn "无效的断点: #{$breakpoint}";
+  }
+}
+
+@mixin respond-below($breakpoint) {
+  @if map.has-key($breakpoints, $breakpoint) {
+    $value: map.get($breakpoints, $breakpoint);
+    @if $value > 0 {
+      @media (max-width: $value - 1px) {
+        @content;
+      }
+    }
+  }
+}
+
+// ===========================
+// 2. 移动端优化样式
+// ===========================
+
+// 触摸优化
+.touch-optimized {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+
+  // 增大点击区域
+  &.btn-touch {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 12px 16px;
+
+    @include respond-below("sm") {
+      min-height: 48px;
+      padding: 14px 18px;
+    }
+  }
+}
+
+// 移动端容器样式
+.mobile-container {
+  @include respond-below("md") {
+    padding: 12px;
+    margin: 0;
+  }
+}
+
+// 移动端页面头部
+.mobile-header {
+  @include respond-below("md") {
+    .page-header {
+      .flex {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+      }
+
+      .page-title {
+        font-size: 1.5rem;
+        margin-bottom: 4px;
+      }
+
+      .page-description {
+        font-size: 0.875rem;
+      }
+
+      .header-actions {
+        width: 100%;
+        justify-content: space-between;
+
+        .el-select {
+          flex: 1;
+          max-width: 120px;
+        }
+
+        .el-button {
+          font-size: 12px;
+          padding: 8px 12px;
+        }
+      }
+    }
+  }
+}
+
+// ===========================
+// 3. 网格响应式布局
+// ===========================
+
+// 响应式网格系统
+.responsive-grid {
+  display: grid;
+  gap: 1rem;
+
+  // 默认单列
+  grid-template-columns: 1fr;
+
+  // 平板：2列
+  @include respond-to("md") {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+
+  // 桌面：3列
+  @include respond-to("lg") {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+  }
+
+  // 大屏：4列
+  @include respond-to("xl") {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  &.grid-stats {
+    @include respond-to("sm") {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    @include respond-to("lg") {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  &.grid-charts {
+    @include respond-below("lg") {
+      grid-template-columns: 1fr;
+    }
+
+    @include respond-to("lg") {
+      grid-template-columns: 2fr 1fr;
+    }
+  }
+}
+
+// 响应式卡片布局
+.responsive-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  transition: all 0.3s ease;
+
+  @include respond-below("md") {
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  &:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+  }
+
+  &.compact {
+    @include respond-below("md") {
+      padding: 0.75rem;
+
+      .card-title {
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+      }
+    }
+  }
+}
+
+// ===========================
+// 4. 导航响应式
+// ===========================
+
+// 移动端导航
+.mobile-navigation {
+  @include respond-below("lg") {
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: -280px;
+      height: 100vh;
+      width: 280px;
+      background: white;
+      z-index: 1000;
+      transition: left 0.3s ease;
+      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+
+      &.open {
+        left: 0;
+      }
+    }
+
+    .sidebar-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+
+      &.show {
+        opacity: 1;
+        visibility: visible;
+      }
+    }
+
+    .main-content {
+      margin-left: 0;
+      padding-top: 60px;
+    }
+
+    .mobile-menu-button {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 1001;
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+  }
+}
+
+// 底部导航栏（移动端）
+.bottom-navigation {
+  display: none;
+
+  @include respond-below("md") {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: white;
+    border-top: 1px solid #e5e7eb;
+    z-index: 100;
+
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      color: #6b7280;
+      font-size: 0.75rem;
+      transition: color 0.2s ease;
+
+      .nav-icon {
+        font-size: 1.25rem;
+        margin-bottom: 2px;
+      }
+
+      &.active {
+        color: #3b82f6;
+      }
+
+      &:hover {
+        color: #3b82f6;
+        background-color: #f8fafc;
+      }
+    }
+  }
+}
+
+// ===========================
+// 5. 表单响应式
+// ===========================
+
+.responsive-form {
+  .form-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: 1fr;
+
+    @include respond-to("md") {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+    }
+
+    .form-group {
+      &.full-width {
+        @include respond-to("md") {
+          grid-column: 1 / -1;
+        }
+      }
+    }
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+
+    @include respond-below("sm") {
+      flex-direction: column-reverse;
+
+      .el-button {
+        width: 100%;
+        margin: 0;
+      }
+    }
+  }
+}
+
+// ===========================
+// 6. 表格响应式
+// ===========================
+
+.responsive-table {
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+
+    @include respond-below("md") {
+      margin: -12px;
+      padding: 12px;
+    }
+  }
+
+  .el-table {
+    @include respond-below("md") {
+      font-size: 0.875rem;
+
+      .el-table__header th,
+      .el-table__body td {
+        padding: 8px 4px;
+      }
+
+      .el-table__cell {
+        &.is-hidden {
+          display: none;
+        }
+      }
+    }
+  }
+
+  // 移动端表格卡片模式
+  .table-card-mode {
+    @include respond-below("md") {
+      .el-table {
+        display: none;
+      }
+
+      .table-cards {
+        display: block;
+      }
+    }
+
+    .table-cards {
+      display: none;
+
+      .table-card {
+        background: white;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        border: 1px solid #e5e7eb;
+
+        .card-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 0.25rem 0;
+
+          &:not(:last-child) {
+            border-bottom: 1px solid #f3f4f6;
+          }
+
+          .row-label {
+            font-weight: 500;
+            color: #6b7280;
+            font-size: 0.875rem;
+          }
+
+          .row-value {
+            color: #111827;
+          }
+        }
+      }
+    }
+  }
+}
+
+// ===========================
+// 7. 图表响应式
+// ===========================
+
+.responsive-chart {
+  .chart-container {
+    height: 400px;
+
+    @include respond-below("md") {
+      height: 300px;
+    }
+
+    @include respond-below("sm") {
+      height: 250px;
+    }
+  }
+
+  .chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+
+    @include respond-below("sm") {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.75rem;
+
+      .chart-title {
+        font-size: 1rem;
+      }
+
+      .chart-actions {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+      }
+    }
+  }
+}
+
+// ===========================
+// 8. 弹窗响应式
+// ===========================
+
+.responsive-dialog {
+  .el-dialog {
+    @include respond-below("md") {
+      width: 95% !important;
+      margin: 2.5% auto;
+      max-height: 90vh;
+
+      .el-dialog__header {
+        padding: 16px 20px 8px;
+
+        .el-dialog__title {
+          font-size: 1.125rem;
+        }
+      }
+
+      .el-dialog__body {
+        padding: 8px 20px 20px;
+        max-height: calc(90vh - 120px);
+        overflow-y: auto;
+      }
+
+      .el-dialog__footer {
+        padding: 12px 20px 16px;
+
+        .el-button {
+          margin-left: 0;
+          margin-right: 8px;
+
+          &:last-child {
+            margin-right: 0;
+          }
+        }
+      }
+    }
+  }
+
+  // 全屏弹窗（移动端）
+  &.mobile-fullscreen {
+    @include respond-below("sm") {
+      .el-dialog {
+        width: 100% !important;
+        height: 100% !important;
+        margin: 0 !important;
+        border-radius: 0 !important;
+        max-height: 100vh;
+
+        .el-dialog__body {
+          max-height: calc(100vh - 120px);
+        }
+      }
+    }
+  }
+}
+
+// ===========================
+// 9. 消息通知响应式
+// ===========================
+
+.responsive-message {
+  .el-message {
+    @include respond-below("sm") {
+      width: calc(100vw - 32px);
+      left: 16px !important;
+      right: 16px !important;
+      transform: none !important;
+    }
+  }
+
+  .el-notification {
+    @include respond-below("sm") {
+      width: calc(100vw - 32px);
+      right: 16px;
+    }
+  }
+}
+
+// ===========================
+// 10. 实用工具类
+// ===========================
+
+// 显示/隐藏工具类
+.hidden-mobile {
+  @include respond-below("md") {
+    display: none !important;
+  }
+}
+
+.hidden-desktop {
+  @include respond-to("md") {
+    display: none !important;
+  }
+}
+
+.show-mobile {
+  display: none;
+
+  @include respond-below("md") {
+    display: block;
+  }
+}
+
+.show-tablet {
+  display: none;
+
+  @include respond-to("md") {
+    @include respond-below("lg") {
+      display: block;
+    }
+  }
+}
+
+.show-desktop {
+  display: none;
+
+  @include respond-to("lg") {
+    display: block;
+  }
+}
+
+// 文字大小响应式
+.text-responsive {
+  font-size: 1rem;
+
+  @include respond-to("md") {
+    font-size: 1.125rem;
+  }
+
+  @include respond-to("lg") {
+    font-size: 1.25rem;
+  }
+}
+
+.text-responsive-sm {
+  font-size: 0.875rem;
+
+  @include respond-to("md") {
+    font-size: 1rem;
+  }
+}
+
+// 间距响应式
+.spacing-responsive {
+  padding: 0.75rem;
+
+  @include respond-to("md") {
+    padding: 1rem;
+  }
+
+  @include respond-to("lg") {
+    padding: 1.5rem;
+  }
+}
+
+// 滚动优化
+.smooth-scroll {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+// 性能优化
+.will-change-transform {
+  will-change: transform;
+}
+
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+// ===========================
+// 11. 动画响应式
+// ===========================
+
+// 减少动画（用户偏好）
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+// 移动端动画优化
+@include respond-below("md") {
+  .fade-enter-active,
+  .fade-leave-active {
+    transition: opacity 0.15s ease;
+  }
+
+  .slide-enter-active,
+  .slide-leave-active {
+    transition: transform 0.2s ease;
+  }
+}

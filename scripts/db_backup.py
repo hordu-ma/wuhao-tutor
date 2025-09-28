@@ -167,6 +167,9 @@ class DatabaseBackupManager:
         Returns:
             恢复是否成功
         """
+        # 初始化临时文件变量
+        temp_file = None
+
         try:
             backup_path = Path(backup_file)
             if not backup_path.exists():
@@ -178,7 +181,6 @@ class DatabaseBackupManager:
 
             # 如果是压缩文件，先解压
             restore_file = backup_path
-            temp_file = None
 
             if backup_path.suffix == '.gz':
                 temp_file = backup_path.with_suffix('')
@@ -329,6 +331,7 @@ class DatabaseBackupManager:
                     reason = f"超过保留天数限制 ({keep_days}天)"
 
                 if should_delete:
+                    reason = "过期" if should_delete else ""
                     if self.delete_backup(backup["name"]):
                         deleted_count += 1
                         logger.info(f"🗑️  已删除旧备份: {backup['name']} ({reason})")

@@ -74,8 +74,9 @@ class FileService:
         file_hash = calculate_file_hash(content)
 
         # 返回响应
+        from uuid import UUID
         return FileUploadResponse(
-            id=file_id,
+            id=UUID(file_id),
             original_filename=metadata.original_filename,
             stored_filename=safe_filename,
             content_type=metadata.content_type,

@@ -39,15 +39,22 @@ async def get_current_user(
     try:
         # 创建认证服务并验证token
         auth_service = AuthService(user_service)
-        user = await auth_service.verify_token(
-            token=credentials.credentials,
-            db=db
-        )
+        payload = auth_service.verify_token(credentials.credentials)
 
+        # 从payload中获取用户ID并查询用户
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token payload",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        user = await user_service.user_repo.get_by_id(user_id)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid authentication credentials",
+                detail="User not found",
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
@@ -112,10 +119,14 @@ async def get_optional_current_user(
 
     try:
         auth_service = AuthService(user_service)
-        user = await auth_service.verify_token(
-            token=credentials.credentials,
-            db=db
-        )
+        payload = auth_service.verify_token(credentials.credentials)
+
+        # 从payload中获取用户ID并查询用户
+        user_id = payload.get("sub")
+        if not user_id:
+            return None
+
+        user = await user_service.user_repo.get_by_id(user_id)
         return user
     except:
         return None
