@@ -27,7 +27,7 @@ dependencies = [
     # 百炼AI服务相关依赖
     "pillow>=10.0.0",
     "oss2>=2.18.0",
-    "pytesseract>=0.3.10",
+    "alibabacloud-ocr20191230>=3.0.0",
     "opencv-python>=4.8.0",
     "numpy>=1.24.0",
     "aioredis>=2.0.1",

@@ -43,6 +43,11 @@ class BailianServiceError(BaseCustomException):
     pass
 
 
+class AIServiceError(BaseCustomException):
+    """AI服务相关异常（OCR、文件处理等）"""
+    pass
+
+
 class BailianAuthError(BailianServiceError):
     """百炼服务认证异常"""
 
