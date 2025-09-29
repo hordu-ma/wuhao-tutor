@@ -289,7 +289,7 @@ import {
 import type { AskQuestionRequest } from "@/types/learning";
 import {
   QUESTION_TYPE_OPTIONS,
-  SUBJECT_OPTIONS,
+  LEARNING_SUBJECT_OPTIONS,
   DIFFICULTY_OPTIONS,
   QuestionType,
 } from "@/types/learning";
@@ -344,7 +344,7 @@ const imageFiles = ref<ImageFile[]>([]);
 
 // 选项数据
 const questionTypeOptions = QUESTION_TYPE_OPTIONS;
-const subjectOptions = SUBJECT_OPTIONS;
+const subjectOptions = LEARNING_SUBJECT_OPTIONS;
 const difficultyOptions = DIFFICULTY_OPTIONS;
 
 // ========== 计算属性 ==========
@@ -554,7 +554,7 @@ defineExpose({
   focus: () => {
     nextTick(() => {
       const textarea = document.querySelector(
-        ".question-textarea textarea"
+        ".question-textarea textarea",
       ) as HTMLElement;
       textarea?.focus();
     });

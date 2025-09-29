@@ -350,10 +350,11 @@ import dayjs from "dayjs";
 
 import { useHomeworkStore } from "@/stores/homework";
 import {
-  SUBJECT_OPTIONS,
+  HOMEWORK_SUBJECT_OPTIONS,
   GRADE_LEVEL_OPTIONS,
   STATUS_OPTIONS,
   type HomeworkStatus,
+  type SubjectOption,
 } from "@/types/homework";
 
 const route = useRoute();
@@ -433,7 +434,7 @@ const deleteHomework = async () => {
         confirmButtonText: "删除",
         cancelButtonText: "取消",
         type: "warning",
-      }
+      },
     );
 
     await homeworkStore.deleteHomework(homework.value.id);
@@ -490,7 +491,9 @@ const exportResult = () => {
 
 // 获取学科标签
 const getSubjectLabel = (subject: string): string => {
-  const option = SUBJECT_OPTIONS.find((opt) => opt.value === subject);
+  const option = HOMEWORK_SUBJECT_OPTIONS.find(
+    (opt: SubjectOption) => opt.value === subject,
+  );
   return option?.label || subject;
 };
 
@@ -508,7 +511,7 @@ const getStatusLabel = (status: HomeworkStatus): string => {
 
 // 获取状态标签类型
 const getStatusTagType = (
-  status: HomeworkStatus
+  status: HomeworkStatus,
 ): "success" | "primary" | "warning" | "info" | "danger" => {
   const typeMap: Record<
     HomeworkStatus,
