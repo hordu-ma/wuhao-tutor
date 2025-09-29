@@ -189,13 +189,14 @@
         }
       }
 
-      /* 隐藏已加载的应用 */
+      /* 应用容器默认可见 */
       #app {
-        display: none;
+        display: block;
+        min-height: 100vh;
       }
 
-      #app.loaded {
-        display: block;
+      #app.loading {
+        display: none;
       }
 
       #loading.loaded {
@@ -246,8 +247,24 @@
     </div>
 
     <!-- 应用容器 -->
-    <div id="app">
+    <div id="app" class="loading">
       <!-- Vue应用将在这里渲染 -->
+      <div style="padding: 20px; text-align: center; color: #666">
+        <p>如果此消息持续显示，说明应用可能未正常加载</p>
+        <button
+          onclick="location.reload()"
+          style="
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+          "
+        >
+          刷新页面
+        </button>
+      </div>
     </div>
 
     <!-- 无脚本支持提示 -->
@@ -368,13 +385,18 @@
 
         // 应用加载完成后隐藏加载屏幕
         window.addEventListener("DOMContentLoaded", function () {
+          // 立即显示应用容器
+          var app = document.getElementById("app");
+          if (app) {
+            app.classList.remove("loading");
+          }
+
+          // 等待Vue应用初始化
           setTimeout(function () {
             var loading = document.getElementById("loading");
-            var app = document.getElementById("app");
 
-            if (loading && app) {
+            if (loading) {
               loading.classList.add("loaded");
-              app.classList.add("loaded");
 
               // 完全移除加载屏幕
               setTimeout(function () {
@@ -383,7 +405,7 @@
                 }
               }, 500);
             }
-          }, 1000); // 最少显示1秒加载屏幕
+          }, 2000); // 给Vue更多时间初始化
         });
       })();
     </script>
