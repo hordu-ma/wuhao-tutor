@@ -52,7 +52,7 @@ def run_migrations_offline() -> None:
     if url is None:
         # 从配置文件获取数据库URL
         settings = get_settings()
-        url = str(settings.SQLALCHEMY_DATABASE_URI).replace("+asyncpg", "")
+        url = str(settings.SQLALCHEMY_DATABASE_URI).replace("+asyncpg", "").replace("+aiosqlite", "")
 
     context.configure(
         url=url,
@@ -78,7 +78,7 @@ def run_migrations_online() -> None:
     if "sqlalchemy.url" not in configuration:
         # 从配置文件获取数据库URL
         settings = get_settings()
-        configuration["sqlalchemy.url"] = str(settings.SQLALCHEMY_DATABASE_URI).replace("+asyncpg", "")
+        configuration["sqlalchemy.url"] = str(settings.SQLALCHEMY_DATABASE_URI).replace("+asyncpg", "").replace("+aiosqlite", "")
 
     connectable = engine_from_config(
         configuration,

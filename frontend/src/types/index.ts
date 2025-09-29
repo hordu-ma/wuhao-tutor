@@ -46,12 +46,16 @@ export type Status =
 /** 用户信息 */
 export interface User {
   id: ID;
-  username: string;
-  email?: string;
+  phone: string;
+  name: string;
   nickname?: string;
   avatar?: string;
   role: UserRole;
   is_active: boolean;
+  is_verified: boolean;
+  school?: string;
+  grade_level?: string;
+  class_name?: string;
   created_at: string;
   updated_at: string;
 }
@@ -61,8 +65,10 @@ export type UserRole = "student" | "teacher" | "admin";
 
 /** 登录请求 */
 export interface LoginRequest {
-  username: string;
+  phone: string;
   password: string;
+  device_type?: "web" | "mobile" | "mini_program" | "app";
+  device_id?: string;
   remember_me?: boolean;
 }
 
@@ -76,11 +82,16 @@ export interface LoginResponse {
 
 /** 注册请求 */
 export interface RegisterRequest {
-  username: string;
-  email: string;
+  phone: string;
+  name: string;
   password: string;
-  confirm_password: string;
+  password_confirm: string;
+  verification_code: string;
   nickname?: string;
+  role?: UserRole;
+  school?: string;
+  grade_level?: string;
+  class_name?: string;
 }
 
 // ============= 作业批改相关 =============

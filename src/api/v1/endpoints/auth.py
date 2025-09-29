@@ -3,6 +3,7 @@
 提供用户注册、登录、登出、token刷新等认证相关接口
 """
 
+import logging
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
@@ -27,6 +28,7 @@ from src.services.auth_service import get_auth_service
 
 router = APIRouter()
 security = HTTPBearer()
+logger = logging.getLogger("auth.endpoints")
 
 
 # ========== 依赖注入 ==========
@@ -163,14 +165,16 @@ async def login(
         return login_response
 
     except AuthenticationError as e:
+        logger.warning(f"登录认证失败: {str(e)}", extra={"phone": request.phone})
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=str(e)
         )
     except Exception as e:
+        logger.error(f"登录过程中发生异常: {str(e)}", extra={"phone": request.phone}, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="登录失败，请稍后重试"
+            detail=f"登录失败: {str(e)}"
         )
 
 

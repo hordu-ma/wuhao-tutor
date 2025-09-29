@@ -14,11 +14,11 @@
         size="large"
         @submit.prevent="handleLogin"
       >
-        <el-form-item prop="username">
+        <el-form-item prop="phone">
           <el-input
-            v-model="loginForm.username"
-            placeholder="用户名"
-            prefix-icon="User"
+            v-model="loginForm.phone"
+            placeholder="手机号"
+            prefix-icon="Phone"
             clearable
             @keyup.enter="handleLogin"
           />
@@ -56,6 +56,18 @@
           </el-button>
         </el-form-item>
 
+        <!-- 开发模式快速登录 -->
+        <el-form-item v-if="isDev">
+          <el-button
+            type="warning"
+            class="dev-login-button"
+            plain
+            @click="handleDevLogin"
+          >
+            🚀 开发模式快速登录
+          </el-button>
+        </el-form-item>
+
         <el-form-item>
           <div class="register-link">
             还没有账号？
@@ -75,6 +87,7 @@ import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { ElMessage, ElNotification } from "element-plus";
 import type { FormInstance, FormRules } from "element-plus";
+import type { UserRole } from "@/types";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -84,7 +97,7 @@ const loginFormRef = ref<FormInstance>();
 
 // 登录表单数据
 const loginForm = reactive({
-  username: "",
+  phone: "",
   password: "",
   remember_me: false,
 });
@@ -92,11 +105,18 @@ const loginForm = reactive({
 // 登录加载状态
 const loginLoading = ref(false);
 
+// 开发模式标识
+const isDev = import.meta.env.DEV;
+
 // 表单验证规则
 const loginRules: FormRules = {
-  username: [
-    { required: true, message: "请输入用户名", trigger: "blur" },
-    { min: 3, max: 50, message: "用户名长度为3-50个字符", trigger: "blur" },
+  phone: [
+    { required: true, message: "请输入手机号", trigger: "blur" },
+    {
+      pattern: /^1[3-9]\d{9}$/,
+      message: "请输入正确的手机号格式",
+      trigger: "blur",
+    },
   ],
   password: [
     { required: true, message: "请输入密码", trigger: "blur" },
@@ -130,11 +150,60 @@ const handleLogin = async () => {
       const redirect = router.currentRoute.value.query.redirect as string;
       await router.push(redirect || "/dashboard");
     } else {
-      ElMessage.error("登录失败，请检查用户名和密码");
+      ElMessage.error("登录失败，请检查手机号和密码");
     }
   } catch (error) {
     console.error("Login error:", error);
     ElMessage.error("登录过程中发生错误，请稍后重试");
+  } finally {
+    loginLoading.value = false;
+  }
+};
+
+// 处理开发模式登录
+const handleDevLogin = async () => {
+  try {
+    loginLoading.value = true;
+
+    // 模拟登录成功
+    const mockUser = {
+      id: "dev-user-001",
+      phone: "13800138000",
+      name: "开发测试用户",
+      nickname: "Dev测试",
+      role: "student" as UserRole,
+      is_active: true,
+      is_verified: true,
+      school: "测试学校",
+      grade_level: "junior_2",
+      class_name: "初二(1)班",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const mockLoginResponse = {
+      access_token: "dev-token-" + Date.now(),
+      token_type: "bearer",
+      expires_in: 86400,
+      user: mockUser,
+    };
+
+    // 直接设置认证状态
+    authStore.setAuth(mockLoginResponse, loginForm.remember_me);
+
+    ElNotification({
+      title: "开发模式登录成功",
+      message: `欢迎回来，${mockUser.nickname}！`,
+      type: "success",
+      duration: 3000,
+    });
+
+    // 跳转到仪表板
+    const redirect = router.currentRoute.value.query.redirect as string;
+    await router.push(redirect || "/dashboard");
+  } catch (error) {
+    console.error("Dev login error:", error);
+    ElMessage.error("开发模式登录失败");
   } finally {
     loginLoading.value = false;
   }
@@ -156,8 +225,8 @@ onMounted(() => {
 
   // 开发环境下预填充测试账号
   if (import.meta.env.DEV) {
-    loginForm.username = "test_student";
-    loginForm.password = "password123";
+    loginForm.phone = "13800138000";
+    loginForm.password = "123456";
   }
 });
 </script>
@@ -320,6 +389,29 @@ onMounted(() => {
     &:hover {
       text-decoration: underline;
     }
+  }
+}
+
+.dev-login-button {
+  width: 100%;
+  height: 40px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 8px;
+  border: 2px dashed var(--el-color-warning);
+  color: var(--el-color-warning);
+  background: var(--el-color-warning-light-9);
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: var(--el-color-warning-light-8);
+    border-color: var(--el-color-warning-dark-2);
+    color: var(--el-color-warning-dark-2);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 }
 
