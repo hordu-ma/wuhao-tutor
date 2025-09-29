@@ -312,7 +312,11 @@ import {
 // Store和类型导入
 import { useLearningStore } from "@/stores/learning";
 import type { ChatSession } from "@/types/learning";
-import { SUBJECT_OPTIONS, SessionStatus } from "@/types/learning";
+import {
+  LEARNING_SUBJECT_OPTIONS,
+  SessionStatus,
+  type LearningSubjectOption,
+} from "@/types/learning";
 
 // ========== 接口定义 ==========
 
@@ -350,8 +354,8 @@ const renameData = reactive({
 
 const activeSessions = computed(() =>
   learningStore.chatState.sessions.filter(
-    (session) => session.status === SessionStatus.ACTIVE
-  )
+    (session) => session.status === SessionStatus.ACTIVE,
+  ),
 );
 
 const filteredSessions = computed(() => {
@@ -364,7 +368,7 @@ const filteredSessions = computed(() => {
       (session) =>
         session.title.toLowerCase().includes(keyword) ||
         (session.subject &&
-          getSubjectLabel(session.subject).toLowerCase().includes(keyword))
+          getSubjectLabel(session.subject).toLowerCase().includes(keyword)),
     );
   }
 
@@ -372,18 +376,18 @@ const filteredSessions = computed(() => {
   switch (currentFilter.value) {
     case "active":
       sessions = sessions.filter(
-        (session) => session.status === SessionStatus.ACTIVE
+        (session) => session.status === SessionStatus.ACTIVE,
       );
       break;
     case "archived":
       sessions = sessions.filter(
-        (session) => session.status === SessionStatus.ARCHIVED
+        (session) => session.status === SessionStatus.ARCHIVED,
       );
       break;
     case "today":
       sessions = sessions.filter((session) => {
         const sessionDate = new Date(
-          session.last_active_at || session.updated_at
+          session.last_active_at || session.updated_at,
         );
         const today = new Date();
         return sessionDate.toDateString() === today.toDateString();
@@ -392,7 +396,7 @@ const filteredSessions = computed(() => {
     case "week":
       sessions = sessions.filter((session) => {
         const sessionDate = new Date(
-          session.last_active_at || session.updated_at
+          session.last_active_at || session.updated_at,
         );
         const oneWeekAgo = new Date();
         oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
@@ -402,7 +406,7 @@ const filteredSessions = computed(() => {
     case "month":
       sessions = sessions.filter((session) => {
         const sessionDate = new Date(
-          session.last_active_at || session.updated_at
+          session.last_active_at || session.updated_at,
         );
         const oneMonthAgo = new Date();
         oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
@@ -421,13 +425,17 @@ const filteredSessions = computed(() => {
 
 // ========== 工具函数 ==========
 
-const getSubjectColor = (subject: string) => {
-  const option = SUBJECT_OPTIONS.find((opt) => opt.value === subject);
+const getSubjectColor = (subject: string): string => {
+  const option = LEARNING_SUBJECT_OPTIONS.find(
+    (opt: LearningSubjectOption) => opt.value === subject,
+  );
   return option?.color || "#6b7280";
 };
 
-const getSubjectLabel = (subject: string) => {
-  const option = SUBJECT_OPTIONS.find((opt) => opt.value === subject);
+const getSubjectLabel = (subject: string): string => {
+  const option = LEARNING_SUBJECT_OPTIONS.find(
+    (opt: LearningSubjectOption) => opt.value === subject,
+  );
   return option?.label || subject;
 };
 
@@ -542,7 +550,7 @@ const handleSessionCommand = async (command: string, session: ChatSession) => {
             type: "error",
             confirmButtonText: "删除",
             cancelButtonText: "取消",
-          }
+          },
         );
         await learningStore.deleteSession(session.id);
       } catch (error) {

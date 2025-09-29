@@ -225,12 +225,34 @@ find_available_port() {
     exit 1
 }
 
+# 清理僵尸端口进程
+cleanup_port() {
+    local port=$1
+    local pids=$(lsof -ti :$port 2>/dev/null)
+
+    if [ -n "$pids" ]; then
+        log_warning "端口 $port 被占用，正在清理进程..."
+        for pid in $pids; do
+            if kill -0 "$pid" 2>/dev/null; then
+                log_info "终止进程 PID: $pid"
+                kill -TERM "$pid" 2>/dev/null || true
+                sleep 1
+                kill -KILL "$pid" 2>/dev/null || true
+            fi
+        done
+        sleep 2
+    fi
+}
+
 # 启动后端服务器
 start_backend_server() {
     log_backend "启动后端开发服务器..."
 
     # 创建PID目录
     mkdir -p "$PIDFILE_DIR"
+
+    # 清理可能的僵尸进程
+    cleanup_port 8000
 
     # 查找可用端口
     BACKEND_PORT=$(find_available_port 8000 8020)
@@ -265,7 +287,12 @@ start_backend_server() {
 start_frontend_server() {
     log_frontend "启动前端开发服务器..."
 
+    # 保存当前目录
+    local project_root=$(pwd)
     cd frontend
+
+    # 清理可能的僵尸进程
+    cleanup_port 5173
 
     # 查找可用端口
     FRONTEND_PORT=$(find_available_port 5173 5200)
@@ -277,16 +304,19 @@ start_frontend_server() {
 
     log_frontend "前端服务器将在端口 $FRONTEND_PORT 启动"
 
-    # 后台启动前端服务器
+    # 使用绝对路径来写入日志
+    local frontend_log_file="$project_root/.dev-pids/frontend.log"
+
+    # 后台启动前端服务器，禁用自动打开浏览器
     case $PACKAGE_MANAGER in
         "pnpm")
-            nohup pnpm run dev --port $FRONTEND_PORT --host > "../$PIDFILE_DIR/frontend.log" 2>&1 &
+            nohup pnpm run dev --port $FRONTEND_PORT --host --no-open > "$frontend_log_file" 2>&1 &
             ;;
         "yarn")
-            nohup yarn dev --port $FRONTEND_PORT --host > "../$PIDFILE_DIR/frontend.log" 2>&1 &
+            nohup yarn dev --port $FRONTEND_PORT --host --no-open > "$frontend_log_file" 2>&1 &
             ;;
         "npm")
-            nohup npm run dev -- --port $FRONTEND_PORT --host > "../$PIDFILE_DIR/frontend.log" 2>&1 &
+            nohup npm run dev -- --port $FRONTEND_PORT --host --no-open > "$frontend_log_file" 2>&1 &
             ;;
     esac
 
@@ -301,10 +331,10 @@ start_frontend_server() {
 # 健康检查
 health_check() {
     log_info "等待服务器启动..."
-    sleep 3
+    sleep 5
 
     # 检查后端健康状态
-    local backend_attempts=15
+    local backend_attempts=20
     local backend_healthy=false
 
     for ((i=1; i<=backend_attempts; i++)); do
@@ -318,27 +348,40 @@ health_check() {
     done
 
     if [ "$backend_healthy" = false ]; then
-        log_error "后端服务器启动失败"
+        log_error "后端服务器启动失败，请检查日志："
+        log_error "tail -f $PIDFILE_DIR/backend.log"
         cleanup
         exit 1
     fi
 
     # 检查前端健康状态
-    local frontend_attempts=15
+    local frontend_attempts=20
     local frontend_healthy=false
 
     for ((i=1; i<=frontend_attempts; i++)); do
+        # 检查前端进程是否还在运行
+        if [ -f "$FRONTEND_PID_FILE" ]; then
+            FRONTEND_PID=$(cat "$FRONTEND_PID_FILE")
+            if ! kill -0 "$FRONTEND_PID" 2>/dev/null; then
+                log_error "前端进程异常退出，请检查日志："
+                log_error "tail -f $PIDFILE_DIR/frontend.log"
+                break
+            fi
+        fi
+
         if curl -s "http://localhost:$FRONTEND_PORT" >/dev/null 2>&1; then
             log_frontend "前端服务器健康检查通过"
             frontend_healthy=true
             break
         fi
         log_info "等待前端启动... ($i/$frontend_attempts)"
-        sleep 2
+        sleep 3
     done
 
     if [ "$frontend_healthy" = false ]; then
-        log_warning "前端服务器可能需要更多时间启动，请稍后手动检查"
+        log_warning "前端服务器可能需要更多时间启动"
+        log_warning "请检查日志: tail -f $PIDFILE_DIR/frontend.log"
+        log_warning "或手动访问: http://localhost:$FRONTEND_PORT"
     fi
 }
 
@@ -355,12 +398,14 @@ show_project_info() {
     echo ""
     echo "🖥️  前端服务:"
     echo "  - 本地访问: http://localhost:$FRONTEND_PORT"
-    echo "  - 网络访问: http://$(hostname -I | awk '{print $1}' 2>/dev/null || echo '127.0.0.1'):$FRONTEND_PORT"
+    echo "  - 网络访问: http://$(ifconfig | grep 'inet ' | grep -v '127.0.0.1' | head -1 | awk '{print $2}' 2>/dev/null || echo '127.0.0.1'):$FRONTEND_PORT"
+    echo "  - 前端日志: tail -f $PIDFILE_DIR/frontend.log"
     echo ""
     echo "🔧 后端服务:"
     echo "  - API 地址: http://localhost:$BACKEND_PORT"
     echo "  - API 文档: http://localhost:$BACKEND_PORT/docs"
     echo "  - 健康检查: http://localhost:$BACKEND_PORT/health"
+    echo "  - 后端日志: tail -f $PIDFILE_DIR/backend.log"
     echo ""
     echo "📝 日志文件:"
     echo "  - 前端日志: $PIDFILE_DIR/frontend.log"
