@@ -74,28 +74,74 @@ app.config.warnHandler = (msg, instance, trace) => {
 }
 
 // 应用初始化
-async function initApp() {
-  // 初始化性能监控
-  console.log('性能监控器已初始化')
+function initApp() {
+  try {
+    console.log('🚀 开始初始化五好伴学应用...')
 
-  // 恢复用户认证状态
-  const authStore = useAuthStore()
-  // 恢复用户认证状态
-  if (authStore.restoreAuth()) {
-    // 启动token自动刷新定时器
-    authStore.startTokenRefreshTimer()
+    // 挂载应用到DOM
+    app.mount('#app')
+    console.log('✅ Vue应用已挂载到DOM')
+
+    // 初始化认证状态（异步，不阻塞应用启动）
+    setTimeout(() => {
+      try {
+        const authStore = useAuthStore()
+        console.log('🔐 开始恢复认证状态...')
+
+        if (authStore.restoreAuth()) {
+          console.log('✅ 认证状态已恢复')
+          authStore.startTokenRefreshTimer()
+        } else {
+          console.log('ℹ️ 未找到有效的认证状态')
+        }
+      } catch (authError) {
+        console.warn('⚠️ 认证状态恢复失败:', authError)
+      }
+    }, 100)
+
+    console.log('🎉 五好伴学前端应用启动完成')
+
+  } catch (error) {
+    console.error('❌ 应用启动失败:', error)
+
+    // 显示错误信息到页面
+    const app = document.getElementById('app')
+    if (app) {
+      app.innerHTML = `
+        <div style="
+          padding: 40px 20px;
+          text-align: center;
+          font-family: Arial, sans-serif;
+          max-width: 600px;
+          margin: 0 auto;
+        ">
+          <h2 style="color: #dc3545; margin-bottom: 16px;">应用启动失败</h2>
+          <p style="color: #666; margin-bottom: 24px;">
+            抱歉，应用无法正常启动。错误信息：<br>
+            <code style="background: #f8f9fa; padding: 4px 8px; border-radius: 4px;">${error.message}</code>
+          </p>
+          <button onclick="location.reload()" style="
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+          ">重新加载</button>
+        </div>
+      `
+    }
+    throw error
   }
-
-  // 挂载应用
-  app.mount('#app')
-
-  console.log('🚀 五好伴学前端应用启动完成')
 }
 
 // 启动应用
-initApp().catch(error => {
-  console.error('应用启动失败:', error)
-})
+try {
+  initApp()
+} catch (error) {
+  console.error('严重错误: 应用无法启动', error)
+}
 
 // 开发环境配置
 if (import.meta.env.DEV) {
