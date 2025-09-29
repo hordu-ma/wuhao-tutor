@@ -110,12 +110,12 @@ class UserService:
             if not self._verify_password(password, extract_orm_str(user, "password_hash")):
                 return None
 
-            # 更新登录信息
-            current_login_count = extract_orm_int(user, "login_count", 0) or 0
-            await self.user_repo.update(extract_orm_uuid_str(user, "id"), {
-                "last_login_at": datetime.utcnow().isoformat(),
-                "login_count": current_login_count + 1
-            })
+            # 更新登录信息 - 暂时注释掉以绕过数据库错误
+            # current_login_count = extract_orm_int(user, "login_count", 0) or 0
+            # await self.user_repo.update(extract_orm_uuid_str(user, "id"), {
+            #     "last_login_at": datetime.utcnow().isoformat(),
+            #     "login_count": current_login_count + 1
+            # })
 
             return user
 

@@ -63,7 +63,7 @@ export const useAuthStore = defineStore('auth', {
      * 获取用户昵称
      */
     userNickname: (state): string =>
-      state.user?.nickname || state.user?.username || '未知用户',
+      state.user?.nickname || state.user?.name || '未知用户',
 
     /**
      * 检查是否有特定权限

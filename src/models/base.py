@@ -8,11 +8,16 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 
 from sqlalchemy import Column, DateTime, String
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql import func
 
 from src.core.database import Base
+from src.core.config import get_settings
+
+
+# 获取配置以确定数据库类型
+settings = get_settings()
+is_sqlite = settings.SQLALCHEMY_DATABASE_URI and "sqlite" in settings.SQLALCHEMY_DATABASE_URI
 
 
 class BaseModel(Base):
@@ -22,75 +27,67 @@ class BaseModel(Base):
     """
     __abstract__ = True
 
-    # 主键 - 使用UUID确保跨数据库唯一性
-    id = Column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
-        unique=True,
-        nullable=False,
-        comment="主键ID"
-    )
+    # 主键 - 兼容SQLite和PostgreSQL
+    if is_sqlite:
+        # SQLite使用字符串类型
+        id = Column(
+            String(36),
+            primary_key=True,
+            default=lambda: str(uuid.uuid4()),
+            unique=True,
+            nullable=False,
+            comment="主键ID"
+        )
+    else:
+        # PostgreSQL使用UUID类型
+        from sqlalchemy.dialects.postgresql import UUID
+        id = Column(
+            UUID(as_uuid=True),
+            primary_key=True,
+            default=uuid.uuid4,
+            unique=True,
+            nullable=False,
+            comment="主键ID"
+        )
 
     # 创建时间
     created_at = Column(
-        DateTime(timezone=True),
-        server_default=func.now(),
+        DateTime(timezone=True) if not is_sqlite else String(50),
+        server_default=func.now() if not is_sqlite else None,
+        default=lambda: datetime.utcnow().isoformat() if is_sqlite else None,
         nullable=False,
         comment="创建时间"
     )
 
     # 更新时间
     updated_at = Column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now(),
+        DateTime(timezone=True) if not is_sqlite else String(50),
+        server_default=func.now() if not is_sqlite else None,
+        onupdate=func.now() if not is_sqlite else None,
+        default=lambda: datetime.utcnow().isoformat() if is_sqlite else None,
         nullable=False,
         comment="更新时间"
     )
 
-    def to_dict(self, exclude_fields: Optional[set] = None) -> Dict[str, Any]:
-        """
-        将模型转换为字典
-
-        Args:
-            exclude_fields: 需要排除的字段集合
-
-        Returns:
-            模型数据字典
-        """
-        exclude_fields = exclude_fields or set()
+    def to_dict(self) -> Dict[str, Any]:
+        """转换为字典"""
         result = {}
-
         for column in self.__table__.columns:
-            if column.name not in exclude_fields:
-                value = getattr(self, column.name)
-                # 处理特殊类型的序列化
-                if isinstance(value, datetime):
-                    result[column.name] = value.isoformat()
-                elif isinstance(value, uuid.UUID):
-                    result[column.name] = str(value)
-                else:
-                    result[column.name] = value
-
+            value = getattr(self, column.name)
+            if isinstance(value, uuid.UUID):
+                value = str(value)
+            elif isinstance(value, datetime):
+                value = value.isoformat()
+            result[column.name] = value
         return result
 
-    def update_from_dict(self, data: Dict[str, Any], exclude_fields: Optional[set] = None) -> None:
-        """
-        从字典更新模型字段
-
-        Args:
-            data: 更新数据字典
-            exclude_fields: 需要排除的字段集合
-        """
-        exclude_fields = exclude_fields or {"id", "created_at"}
-
-        for key, value in data.items():
-            if (hasattr(self, key) and
-                key not in exclude_fields and
-                value is not None):
-                setattr(self, key, value)
+    def update_timestamp(self):
+        """更新时间戳"""
+        if is_sqlite:
+            self.updated_at = datetime.utcnow().isoformat()
+        else:
+            self.updated_at = datetime.utcnow()
 
     def __repr__(self) -> str:
         """字符串表示"""
-        return f"<{self.__class__.__name__}(id='{self.id}')>"
+        return f"<{self.__class__.__name__}(id={self.id})>"

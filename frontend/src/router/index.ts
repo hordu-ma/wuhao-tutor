@@ -188,18 +188,7 @@ const routes: RouteRecordRaw[] = [
     ],
   },
 
-  // 调试页面
-  {
-    path: "/debug",
-    name: "Debug",
-    component: () => import(/* webpackChunkName: "debug" */ "@/views/DebugView.vue"),
-    meta: {
-      title: "调试信息",
-      requiresAuth: false,
-      hideInMenu: true,
-      layout: "blank",
-    },
-  },
+
 
   // 404页面
   {
@@ -283,8 +272,8 @@ router.beforeEach(async (to, _from, next) => {
   }
   // 如果未明确设置，默认需要认证（除了特定的公开页面）
   else {
-    const publicPaths = ['/login', '/register', '/debug', '/404'];
-    const isPublicPath = publicPaths.includes(to.path) || to.path.includes('/debug');
+    const publicPaths = ['/login', '/register', '/404'];
+    const isPublicPath = publicPaths.includes(to.path);
 
     if (!isPublicPath) {
       // 默认需要认证
