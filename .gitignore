@@ -8,3 +8,48 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Development server logs and pids
+.dev-pids/
+backend.log
+frontend.log
+*.log
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Node modules (if any)
+node_modules/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment variables
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Coverage reports
+coverage/
+.coverage
+.nyc_output
+
+# Temporary files
+tmp/
+temp/
