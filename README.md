@@ -1,263 +1,206 @@
-# 五好伴学 (wuhao-tutor)
+# 五好伴学 (Wuhao Tutor)
 
-基于阿里云百炼智能体的K12学情管理系统
+基于阿里云百炼智能体的 K12 学情与智能学习支持平台
 
-## 🎯 项目概述
+## 🎯 核心定位
 
-**项目名称**: 五好伴学  
-**英文名称**: wuhao-tutor  
-**版本**: 0.1.0  
-**项目类型**: 基于阿里云百炼智能体的K12学情管理系统  
-**技术栈**: Python + FastAPI + PostgreSQL + Redis + 阿里云百炼 + Vue3 + 微信小程序  
+聚焦三个闭环功能：
 
-### 核心功能
+1. 智能作业批改 (Homework Correction)
+2. 学习问答互动 (Learning Q&A)
+3. 学情分析反馈 (Learning Analytics)
 
-- 🎯 **智能作业批改** - 基于百炼智能体的自动批改和分析
-- 📊 **个性化学情分析** - 智能识别知识薄弱点和学习模式
-- 🔄 **智能学习问答** - 基于学情数据的个性化AI交互助教
-- 🤖 **统一AI服务** - 所有AI功能通过百炼智能体统一提供
+## 🧱 技术栈
 
-## 🚀 快速开始
+| 层   | 主要技术                                                  |
+| ---- | --------------------------------------------------------- |
+| 后端 | Python 3.11, FastAPI, SQLAlchemy 2 (Async), Pydantic v2   |
+| 数据 | PostgreSQL (生产) / SQLite (开发), Redis(限流/缓存规划)   |
+| AI   | 阿里云百炼智能体统一封装                                  |
+| 前端 | Vue 3 + TypeScript + Vite + Element Plus + Tailwind       |
+| 运维 | Docker, docker-compose, Nginx, Prometheus(规划), uv(依赖) |
+| 质量 | Pytest, mypy, Black, isort                                |
 
-### 环境要求
-
-- **Python**: >= 3.11
-- **Node.js**: >= 18.0 (前端开发)
-- **PostgreSQL**: >= 14 (生产环境)
-- **Redis**: >= 6.0
-- **阿里云账号**: 用于百炼智能体访问
-
-### 1. 克隆项目
+## 🚀 快速开始（后端）
 
 ```bash
-git clone <repository-url>
+git clone <your-repo-url>
 cd wuhao-tutor
-```
-
-### 2. 安装依赖
-
-```bash
-# 使用 uv 安装Python依赖
 uv sync
-
-# 激活虚拟环境（可选）
-source .venv/bin/activate  # macOS/Linux
-```
-
-### 3. 环境配置
-
-```bash
-# 复制环境配置文件
 cp .env.example .env
-
-# 编辑配置文件
-vim .env
+uv run python scripts/diagnose.py
+uv run uvicorn src.main:app --reload
+# 浏览 http://localhost:8000/docs
 ```
 
-**重要环境变量**:
+最小必需环境变量（开发）：
+
 ```bash
 ENVIRONMENT=development
 DEBUG=true
 SQLALCHEMY_DATABASE_URI=sqlite+aiosqlite:///./wuhao_tutor_dev.db
-
-# 百炼智能体配置（可选）
-BAILIAN_APPLICATION_ID=your_application_id
-BAILIAN_API_KEY=sk-your_api_key
-
-# 数据库配置（生产环境）
-DATABASE_URL=postgresql+asyncpg://user:password@localhost/wuhao_tutor
-REDIS_URL=redis://localhost:6379
 ```
 
-### 4. 验证安装
+启用 AI 功能（可选）：
 
 ```bash
-# 运行诊断脚本
-uv run python scripts/diagnose.py
-
-# 预期输出：🟢 所有检查通过
+BAILIAN_API_KEY=sk-your-key
+BAILIAN_APPLICATION_ID=app-your-id
 ```
 
-### 5. 启动应用
-
-```bash
-# 开发服务器启动
-uv run uvicorn src.main:app --reload
-
-# 或者使用模块方式
-uv run python -m src.main
-```
-
-访问 http://localhost:8000/docs 查看API文档
-
-## 📋 项目状态
-
-### ✅ 已完成功能
-
-- **基础架构**: 100% ✅
-  - FastAPI应用框架
-  - SQLAlchemy 2.0异步ORM
-  - Pydantic v2数据验证
-  - 结构化日志系统
-
-- **核心服务**: 100% ✅
-  - 阿里云百炼智能体集成
-  - 用户认证和会话管理
-  - 学习问答AI助教
-  - 作业批改工作流程
-
-- **API接口**: 100% ✅
-  - RESTful API设计
-  - OpenAPI/Swagger文档
-  - 50个路由端点
-  - 完整的错误处理
-
-- **数据管理**: 100% ✅
-  - SQLite开发环境
-  - PostgreSQL生产支持
-  - Alembic数据库迁移
-  - Redis缓存系统
-
-- **性能和安全**: 100% ✅
-  - 性能监控系统
-  - 多层限流保护
-  - CORS和安全头配置
-  - 查询优化和缓存
-
-### 🔄 开发中功能
-
-- **前端界面**: 80% ✅
-  - Vue 3 + TypeScript项目架构 ✅
-  - 用户认证界面 ✅  
-  - 作业批改界面 ✅
-  - 学习问答界面 ✅
-  - 学情分析界面 ⏳
-
-## 🏗️ 项目架构
+## 📂 目录速览
 
 ```
 wuhao-tutor/
-├── src/                    # 源代码目录
-│   ├── api/               # API路由层
-│   │   └── v1/endpoints/  # v1版本API端点
-│   ├── core/              # 核心配置和工具
-│   ├── models/            # SQLAlchemy数据模型  
-│   ├── schemas/           # Pydantic数据模型
-│   ├── services/          # 业务逻辑层
-│   ├── repositories/      # 数据访问层
-│   ├── utils/             # 工具模块
-│   └── main.py           # 应用入口
-├── scripts/               # 自动化脚本
-│   └── diagnose.py       # 系统诊断脚本
-├── tests/                 # 测试目录
-├── frontend/              # 前端Vue3项目
-├── alembic/              # 数据库迁移
-├── .env                  # 环境配置
-└── pyproject.toml        # 项目配置
+├── src/                # 应用源代码
+│   ├── api/            # 路由与端点
+│   ├── core/           # 配置 / 安全 / 监控 / 性能
+│   ├── models/         # ORM 模型
+│   ├── repositories/   # 数据访问层 (Base + 业务仓储)
+│   ├── schemas/        # Pydantic 数据模型
+│   ├── services/       # 业务组合 & AI 封装
+│   └── utils/          # 工具函数
+├── frontend/           # 前端项目
+├── scripts/            # 初始化 / 迁移 / 运维脚本
+├── docs/               # 重构后的结构化文档
+├── tests/              # 测试代码
+└── alembic/            # 数据库迁移
 ```
 
-## 🔧 开发工具
+更多详见：`docs/ARCHITECTURE.md`
 
-### 诊断脚本
+## 🔐 安全与限流（摘要）
 
-运行综合诊断检查所有模块：
+- 多维限流：IP / 用户 / AI 服务 / 登录尝试
+- 安全头：CSP, HSTS(生产), X-Frame-Options, Permissions-Policy
+- 统一错误结构：`{ success, data?, error? }`
+- 不在日志输出敏感凭证
+
+详情：`docs/SECURITY.md`
+
+## 📊 可观测性（摘要）
+
+可用端点：
+
+- `/health` / `/health/live` / `/health/ready`
+- `/api/v1/health/performance`
+- `/api/v1/health/rate-limits`
+- `/api/v1/health/metrics`
+
+规划：Prometheus `/metrics`、Trace-ID、AI tokens 成本统计
+详情：`docs/OBSERVABILITY.md`
+
+## 🧪 测试
 
 ```bash
-uv run python scripts/diagnose.py
-```
-
-检查项目包括：
-- ✅ 模块导入测试
-- ✅ 配置加载验证  
-- ✅ FastAPI应用创建
-- ✅ 数据库连接测试
-- ✅ 服务初始化检查
-- ✅ 数据模型验证
-- ✅ Schema模型测试
-
-### 代码质量
-
-```bash
-# 代码格式化
-uv run black src/
-uv run isort src/
+# 单元 & 集成
+uv run pytest -q
 
 # 类型检查
 uv run mypy src/
 
-# 运行测试
-uv run pytest tests/
+# 格式化
+uv run black src/ && uv run isort src/
 ```
 
-## 📚 API文档
+测试策略：`docs/TESTING.md`
 
-启动应用后，访问以下端点：
+## 📚 API
 
-- **API文档**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
-- **健康检查**: http://localhost:8000/health
+运行后访问：
 
-### 主要API端点
+- 文档：`/docs` (Swagger)
+- ReDoc：`/redoc`
 
-- **认证**: `/api/v1/auth/`
-  - POST `/login` - 用户登录
-  - POST `/register` - 用户注册
-  - POST `/refresh` - 刷新令牌
+文档拆分：
 
-- **学习问答**: `/api/v1/learning/`
-  - POST `/ask` - 向AI提问
-  - GET `/sessions` - 获取会话列表
-  - GET `/questions` - 问答历史
+- 总览：`docs/api/overview.md`
+- 端点：`docs/api/endpoints.md`
+- 数据模型：`docs/api/models.md`
+- 错误码：`docs/api/errors.md`
+- SDK 示例：`docs/api/sdk-python.md` / `docs/api/sdk-js.md`
 
-- **作业批改**: `/api/v1/homework/`
-  - POST `/upload` - 上传作业
-  - GET `/{id}/correct` - 获取批改结果
+### 响应示例
 
-## 🚨 故障排除
-
-### 常见问题
-
-1. **配置错误**: 参考 [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
-2. **导入失败**: 使用 `uv run python -m src.main` 启动
-3. **数据库问题**: 检查SQLite文件权限
-4. **端口占用**: 使用 `--port 8001` 指定其他端口
-
-### 完全重置
-
-如果遇到无法解决的问题：
-
-```bash
-# 删除虚拟环境和数据库
-rm -rf .venv *.db
-
-# 重新安装
-uv sync
-
-# 重新运行诊断
-uv run python scripts/diagnose.py
+```json
+{
+    "success": true,
+    "data": { "id": "abc123", "name": "example" },
+    "message": "OK"
+}
 ```
 
-详细故障排除指南: [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+失败：
 
-## 🤝 贡献指南
+```json
+{
+    "success": false,
+    "error": { "code": "RESOURCE_NOT_FOUND", "message": "资源不存在" }
+}
+```
 
-1. Fork 项目
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`) 
-5. 打开 Pull Request
+## 🗂 文档导航
 
-## 📄 许可证
+| 主题             | 文件                         |
+| ---------------- | ---------------------------- |
+| 项目状态与里程碑 | docs/STATUS.md               |
+| 架构分层说明     | docs/ARCHITECTURE.md         |
+| 开发工作流       | docs/DEVELOPMENT.md          |
+| 数据访问与仓储   | docs/DATA-ACCESS.md          |
+| 部署与运维       | docs/DEPLOYMENT.md (待补)    |
+| 监控与指标       | docs/OBSERVABILITY.md        |
+| 安全基线         | docs/SECURITY.md             |
+| 数据迁移         | docs/MIGRATION.md            |
+| 前后端协作       | docs/FRONTEND-INTEGRATION.md |
+| 术语表           | docs/GLOSSARY.md             |
 
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情
+## 🛠 常用脚本
 
-## 📞 联系方式
+| 目的                   | 命令 (示例)                                           |
+| ---------------------- | ----------------------------------------------------- |
+| 诊断环境               | `uv run python scripts/diagnose.py`                   |
+| 初始化数据库           | `uv run python scripts/init_database.py`              |
+| 统一管理 (迁移/备份等) | `uv run python scripts/manage_db.py --help`           |
+| 性能监控工具           | `uv run python scripts/performance_monitor.py status` |
+| 环境变量模板管理       | `python scripts/env_manager.py`                       |
+| 部署管理               | `python scripts/deploy.py`                            |
 
-**项目维护者**: Liguo Ma  
-**邮箱**: maliguo@outlook.com  
-**项目地址**: [GitHub Repository]
+## 🧭 路线图（摘录）
+
+| 版本阶段 | 重点                            |
+| -------- | ------------------------------- |
+| 0.1.x    | 功能骨架 + 文档重构             |
+| 0.2.x    | 学情分析初版 + 覆盖率基线       |
+| 0.3.x    | 监控闭环（Prometheus / Trace）  |
+| 0.4.x    | 缓存与性能优化                  |
+| 1.0.0    | 稳定发布（冻结 API / 完整基线） |
+
+详情：`docs/STATUS.md`
+
+## 🤝 贡献
+
+1. Fork / Clone
+2. 新建分支：`feature/<name>` / `fix/<name>`
+3. 提交信息前缀：`feat|fix|docs|refactor|test|chore`
+4. 确保：类型检查 0 错误，测试通过，格式化完成
+5. 更新相关文档（必要时）
+6. 发起 PR（描述变更、影响、回滚方式）
+
+## 🔒 许可证
+
+MIT (见 `LICENSE`)
+
+## 📬 联系
+
+- 维护者: Liguo Ma
+- 邮箱: maliguo@outlook.com
+- （规划）GitHub Issues：用于反馈与跟踪
+
+## 🗓 元信息
+
+Last Updated: 2025-09-29
+当前状态：后端核心完成度 ~90%，学情分析/监控增强迭代中
 
 ---
 
-_最后更新时间: 2025-09-28_  
-_项目状态: 核心功能完成，前端开发中_
+_本 README 精简说明，深度信息请参见 docs 目录。_
