@@ -24,6 +24,7 @@ AsyncSessionLocal = async_sessionmaker(
     autoflush=False,
     bind=engine,
     class_=AsyncSession,
+    expire_on_commit=False,  # 防止在异步环境中访问已提交对象时出现问题
 )
 
 # 别名，为了兼容性
