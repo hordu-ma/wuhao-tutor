@@ -12,48 +12,28 @@
       <div class="error-info">
         <h1 class="error-code">404</h1>
         <h2 class="error-title">页面不存在</h2>
-        <p class="error-description">
-          抱歉，您访问的页面不存在或已被删除
-        </p>
+        <p class="error-description">抱歉，您访问的页面不存在或已被删除</p>
       </div>
 
       <!-- 操作按钮 -->
       <div class="error-actions">
-        <el-button
-          type="primary"
-          size="large"
-          @click="goHome"
-        >
+        <el-button type="primary" size="large" @click="goHome">
           返回首页
         </el-button>
-        <el-button
-          size="large"
-          @click="goBack"
-        >
-          返回上页
-        </el-button>
+        <el-button size="large" @click="goBack"> 返回上页 </el-button>
       </div>
 
       <!-- 建议链接 -->
       <div class="suggestions">
         <h3>您可能需要：</h3>
         <div class="suggestion-links">
-          <el-link
-            type="primary"
-            @click="$router.push('/dashboard')"
-          >
+          <el-link type="primary" @click="router.push('/dashboard')">
             仪表板
           </el-link>
-          <el-link
-            type="primary"
-            @click="$router.push('/learning')"
-          >
+          <el-link type="primary" @click="router.push('/learning')">
             学习问答
           </el-link>
-          <el-link
-            type="primary"
-            @click="$router.push('/homework')"
-          >
+          <el-link type="primary" @click="router.push('/homework')">
             作业批改
           </el-link>
         </div>
@@ -70,24 +50,24 @@
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
-import { WarningFilled } from '@element-plus/icons-vue'
+import { useRouter } from "vue-router";
+import { WarningFilled } from "@element-plus/icons-vue";
 
-const router = useRouter()
+const router = useRouter();
 
 // 返回首页
 const goHome = () => {
-  router.push('/dashboard')
-}
+  router.push("/dashboard");
+};
 
 // 返回上一页
 const goBack = () => {
   if (window.history.length > 1) {
-    router.go(-1)
+    router.go(-1);
   } else {
-    router.push('/dashboard')
+    router.push("/dashboard");
   }
-}
+};
 </script>
 
 <style lang="scss" scoped>
@@ -235,7 +215,11 @@ const goBack = () => {
 
 // 动画效果
 @keyframes bounce {
-  0%, 20%, 50%, 80%, 100% {
+  0%,
+  20%,
+  50%,
+  80%,
+  100% {
     transform: translateY(0);
   }
   40% {
@@ -247,7 +231,8 @@ const goBack = () => {
 }
 
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0px);
   }
   50% {

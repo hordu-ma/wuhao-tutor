@@ -346,11 +346,9 @@ import type {
   AskQuestionRequest,
   CreateSessionRequest,
   FeedbackRequest,
-} from "@/types/learning";
-import {
-  LEARNING_SUBJECT_OPTIONS,
   LearningSubjectOption,
 } from "@/types/learning";
+import { LEARNING_SUBJECT_OPTIONS, QuestionType } from "@/types/learning";
 
 // ========== 响应式数据 ==========
 
@@ -394,7 +392,7 @@ const newSessionRules = {
 };
 
 // 选项数据
-const subjectOptions = SUBJECT_OPTIONS;
+const subjectOptions = LEARNING_SUBJECT_OPTIONS;
 
 // 快捷问题
 const quickQuestions = [
@@ -409,12 +407,16 @@ const quickQuestions = [
 // ========== 计算属性和工具函数 ==========
 
 const getSubjectColor = (subject: string) => {
-  const option = subjectOptions.find((opt) => opt.value === subject);
+  const option = subjectOptions.find(
+    (opt: LearningSubjectOption) => opt.value === subject,
+  );
   return option?.color || "#gray";
 };
 
 const getSubjectLabel = (subject: string) => {
-  const option = subjectOptions.find((opt) => opt.value === subject);
+  const option = subjectOptions.find(
+    (opt: LearningSubjectOption) => opt.value === subject,
+  );
   return option?.label || subject;
 };
 

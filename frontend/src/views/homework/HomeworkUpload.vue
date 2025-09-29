@@ -40,7 +40,7 @@
                   style="width: 100%"
                 >
                   <el-option
-                    v-for="option in SUBJECT_OPTIONS"
+                    v-for="option in HOMEWORK_SUBJECT_OPTIONS"
                     :key="option.value"
                     :label="option.label"
                     :value="option.value"
@@ -208,13 +208,14 @@ import FileUpload from "@/components/FileUpload.vue";
 import type { FileUploadItem } from "@/components/FileUpload.vue";
 import { useHomeworkStore } from "@/stores/homework";
 import {
-  SUBJECT_OPTIONS,
+  HOMEWORK_SUBJECT_OPTIONS,
   GRADE_LEVEL_OPTIONS,
   STATUS_OPTIONS,
   type HomeworkSubmitRequest,
   type Subject,
   type GradeLevel,
   type HomeworkStatus,
+  type SubjectOption,
 } from "@/types/homework";
 
 const router = useRouter();
@@ -250,7 +251,7 @@ const canSubmit = computed(() => {
     form.grade_level &&
     fileList.value.length > 0 &&
     fileList.value.some(
-      (item) => item.status === "success" || item.status === "waiting"
+      (item) => item.status === "success" || item.status === "waiting",
     )
   );
 });
@@ -305,7 +306,7 @@ const handleSubmit = async () => {
         confirmButtonText: "确认",
         cancelButtonText: "取消",
         type: "info",
-      }
+      },
     );
 
     // 提交作业
@@ -344,8 +345,10 @@ const viewHomework = (homeworkId: string) => {
 };
 
 // 获取学科标签
-const getSubjectLabel = (subject: Subject): string => {
-  const option = SUBJECT_OPTIONS.find((opt) => opt.value === subject);
+const getSubjectLabel = (subject: Subject) => {
+  const option = HOMEWORK_SUBJECT_OPTIONS.find(
+    (opt: SubjectOption) => opt.value === subject,
+  );
   return option?.label || subject;
 };
 
@@ -357,7 +360,7 @@ const getStatusLabel = (status: HomeworkStatus): string => {
 
 // 获取状态标签类型
 const getStatusTagType = (
-  status: HomeworkStatus
+  status: HomeworkStatus,
 ): "success" | "primary" | "warning" | "info" | "danger" => {
   const typeMap: Record<
     HomeworkStatus,
