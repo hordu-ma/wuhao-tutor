@@ -188,6 +188,19 @@ const routes: RouteRecordRaw[] = [
     ],
   },
 
+  // 调试页面
+  {
+    path: "/debug",
+    name: "Debug",
+    component: () => import(/* webpackChunkName: "debug" */ "@/views/DebugView.vue"),
+    meta: {
+      title: "调试信息",
+      requiresAuth: false,
+      hideInMenu: true,
+      layout: "blank",
+    },
+  },
+
   // 404页面
   {
     path: "/:pathMatch(.*)*",
@@ -230,9 +243,10 @@ router.beforeEach(async (to, _from, next) => {
   const authStore = useAuthStore();
 
   // 检查路由是否需要认证
-  const requiresAuth = to.meta.requiresAuth !== false;
+  const requiresAuth = to.meta?.requiresAuth;
 
-  if (requiresAuth) {
+  // 如果明确设置为需要认证
+  if (requiresAuth === true) {
     // 需要认证的页面
     if (!authStore.isAuthenticated) {
       // 未登录，重定向到登录页
@@ -254,7 +268,9 @@ router.beforeEach(async (to, _from, next) => {
       });
       return;
     }
-  } else {
+  }
+  // 如果明确设置为不需要认证
+  else if (requiresAuth === false) {
     // 不需要认证的页面
     if (
       authStore.isAuthenticated &&
@@ -263,6 +279,34 @@ router.beforeEach(async (to, _from, next) => {
       // 已登录用户访问登录/注册页，重定向到仪表板
       next("/dashboard");
       return;
+    }
+  }
+  // 如果未明确设置，默认需要认证（除了特定的公开页面）
+  else {
+    const publicPaths = ['/login', '/register', '/debug', '/404'];
+    const isPublicPath = publicPaths.includes(to.path) || to.path.includes('/debug');
+
+    if (!isPublicPath) {
+      // 默认需要认证
+      if (!authStore.isAuthenticated) {
+        ElMessage.warning("请先登录");
+        next({
+          path: "/login",
+          query: { redirect: to.fullPath },
+        });
+        return;
+      }
+
+      // 验证token有效性
+      const isValid = await authStore.validateAuth();
+      if (!isValid) {
+        ElMessage.error("登录已过期，请重新登录");
+        next({
+          path: "/login",
+          query: { redirect: to.fullPath },
+        });
+        return;
+      }
     }
   }
 
