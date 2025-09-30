@@ -1,7 +1,17 @@
 {
   "pages": [
     "pages/index/index",
-    "pages/login/index"
+    "pages/login/index",
+    "pages/homework/list/index",
+    "pages/homework/detail/index",
+    "pages/homework/submit/index",
+    "pages/chat/index/index",
+    "pages/chat/detail/index",
+    "pages/analysis/report/index",
+    "pages/analysis/progress/index",
+    "pages/profile/index/index",
+    "pages/profile/settings/index",
+    "pages/profile/help/index"
   ],
   "window": {
     "backgroundTextStyle": "light",
@@ -9,8 +19,11 @@
     "navigationBarTitleText": "五好伴学",
     "navigationBarTextStyle": "white",
     "backgroundColor": "#f5f5f5",
-    "enablePullDownRefresh": false,
-    "onReachBottomDistance": 50
+    "enablePullDownRefresh": true,
+    "onReachBottomDistance": 50,
+    "backgroundColorTop": "#ffffff",
+    "backgroundColorBottom": "#ffffff",
+    "restartStrategy": "homePage"
   },
   "tabBar": {
     "color": "#999999",
@@ -18,12 +31,37 @@
     "backgroundColor": "#ffffff",
     "borderStyle": "black",
     "position": "bottom",
+    "custom": false,
     "list": [
       {
         "pagePath": "pages/index/index",
         "text": "首页",
         "iconPath": "assets/icons/home.png",
         "selectedIconPath": "assets/icons/home-active.png"
+      },
+      {
+        "pagePath": "pages/homework/list/index",
+        "text": "作业",
+        "iconPath": "assets/icons/homework.png",
+        "selectedIconPath": "assets/icons/homework-active.png"
+      },
+      {
+        "pagePath": "pages/chat/index/index",
+        "text": "问答",
+        "iconPath": "assets/icons/chat.png",
+        "selectedIconPath": "assets/icons/chat-active.png"
+      },
+      {
+        "pagePath": "pages/analysis/report/index",
+        "text": "报告",
+        "iconPath": "assets/icons/report.png",
+        "selectedIconPath": "assets/icons/report-active.png"
+      },
+      {
+        "pagePath": "pages/profile/index/index",
+        "text": "我的",
+        "iconPath": "assets/icons/profile.png",
+        "selectedIconPath": "assets/icons/profile-active.png"
       }
     ]
   },
@@ -45,22 +83,90 @@
     },
     "scope.record": {
       "desc": "语音问答功能需要使用录音权限"
+    },
+    "scope.userInfo": {
+      "desc": "获取您的微信信息，用于登录和个性化服务"
+    },
+    "scope.address": {
+      "desc": "获取您的通讯地址，用于学习资料邮寄"
     }
   },
-  "requiredBackgroundModes": [],
-  "plugins": {},
-  "preloadRule": {},
+  "requiredBackgroundModes": ["audio", "backgroundFetch"],
+  "requiredPrivateInfos": [
+    "getLocation",
+    "chooseLocation",
+    "chooseAddress",
+    "choosePoi",
+    "getFuzzyLocation"
+  ],
+  "plugins": {
+    "chatbot": {
+      "version": "1.0.0",
+      "provider": "wx8a0e8b1234567890"
+    }
+  },
+  "preloadRule": {
+    "pages/homework/list/index": {
+      "network": "all",
+      "packages": ["homework"]
+    },
+    "pages/chat/index/index": {
+      "network": "all",
+      "packages": ["chat"]
+    }
+  },
   "entryPagePath": "pages/index/index",
   "debug": false,
   "functionalPages": false,
-  "subpackages": [],
-  "workers": "",
+  "subpackages": [
+    {
+      "root": "subpackages/homework",
+      "name": "homework",
+      "pages": ["create/index", "correction/index", "history/index"]
+    },
+    {
+      "root": "subpackages/chat",
+      "name": "chat",
+      "pages": ["voice/index", "image/index", "history/index"]
+    },
+    {
+      "root": "subpackages/analysis",
+      "name": "analysis",
+      "pages": ["detail/index", "compare/index", "export/index"]
+    }
+  ],
+  "workers": "workers",
   "style": "v2",
-  "useExtendedLib": {},
-  "darkmode": false,
+  "useExtendedLib": {
+    "kbone": true,
+    "weui": true
+  },
+  "entranceDeclare": {
+    "locationMessage": {
+      "path": "pages/chat/index/index",
+      "query": "type=location"
+    }
+  },
+  "darkmode": true,
   "themeLocation": "theme.json",
   "lazyCodeLoading": "requiredComponents",
   "singlePage": {
     "navigationBarFit": "squeezed"
+  },
+  "supportedMaterials": {
+    "voiceToText": true
+  },
+  "serviceProviderTicket": "",
+  "embeddedAppIdList": [],
+  "halfPage": {
+    "firstPageNavigationStyle": "custom"
+  },
+  "debugOptions": {
+    "enableFPSPanel": false,
+    "enableProfilerPanel": false
+  },
+  "enablePassiveEvent": {
+    "touchstart": true,
+    "touchmove": true
   }
 }

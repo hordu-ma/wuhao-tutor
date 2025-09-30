@@ -1,5 +1,5 @@
 {
-  "description": "五好伴学小程序项目配置",
+  "description": "五好伴学 - K12 AI学情管理平台微信小程序",
   "packOptions": {
     "ignore": [
       {
@@ -69,17 +69,26 @@
   },
   "compileType": "miniprogram",
   "libVersion": "2.32.3",
-  "appid": "请替换为您的小程序AppID",
-  "projectname": "wuhao-tutor-miniprogram",
+  "appid": "wx2a8b340606664785",
+  "projectname": "五好伴学小程序",
   "debugOptions": {
     "hidedInDevtools": []
   },
-  "scripts": {},
+  "scripts": {
+    "beforeCompile": "",
+    "beforePreview": "",
+    "beforeUpload": ""
+  },
+  "cloudfunctionRoot": "cloudfunctions/",
+  "cloudbaseRoot": "cloudbase/",
   "staticServerOptions": {
     "baseURL": "",
     "servePath": ""
   },
   "isGameTourist": false,
+  "simulatorType": "wechat",
+  "simulatorPluginLibVersion": {},
+  "cloudfunctionTemplateRoot": "cloudfunctionTemplate",
   "condition": {
     "search": {
       "list": []
@@ -97,7 +106,32 @@
       "list": []
     },
     "miniprogram": {
-      "list": []
+      "list": [
+        {
+          "name": "作业列表页",
+          "pathName": "pages/homework/list/index",
+          "query": "",
+          "scene": null
+        },
+        {
+          "name": "问答页面",
+          "pathName": "pages/chat/index/index",
+          "query": "",
+          "scene": null
+        },
+        {
+          "name": "学习报告",
+          "pathName": "pages/analysis/report/index",
+          "query": "",
+          "scene": null
+        },
+        {
+          "name": "个人中心",
+          "pathName": "pages/profile/index/index",
+          "query": "",
+          "scene": null
+        }
+      ]
     }
   }
 }
