@@ -1,0 +1,84 @@
+<!--
+  角色标识组件模板
+  用于标识用户角色（学生、家长、老师）
+-->
+<view
+  class="role-badge role-badge--{{ type }} role-badge--{{ size }} role-badge--{{ role }} {{ customClass }} {{ clickable ? 'role-badge--clickable' : '' }}"
+  bind:tap="onTap"
+  bind:longpress="onLongPress"
+  style="
+    --role-color: {{ getRoleColor() }};
+    --role-bg-color: {{ getBgColor() }};
+    --role-light-color: {{ getLightColor() }};
+    --size-font: {{ getSizeConfig().fontSize }};
+    --size-padding: {{ getSizeConfig().padding }};
+    --size-icon: {{ getSizeConfig().iconSize }};
+    --size-height: {{ getSizeConfig().height }};
+    --size-avatar: {{ getSizeConfig().avatarSize }};
+  "
+>
+  <!-- 徽章样式 -->
+  <block wx:if="{{ type === 'badge' }}">
+    <!-- 图标 -->
+    <text
+      wx:if="{{ showIcon }}"
+      class="icon icon-{{ getIconName() }} role-badge__icon"
+    ></text>
+
+    <!-- 文字 -->
+    <text wx:if="{{ showText }}" class="role-badge__text">
+      {{ getDisplayText() }}
+    </text>
+
+    <!-- 在线状态指示器 -->
+    <view
+      wx:if="{{ showOnline }}"
+      class="role-badge__online-indicator {{ online ? 'role-badge__online-indicator--active' : '' }}"
+    ></view>
+  </block>
+
+  <!-- 标签样式 -->
+  <block wx:elif="{{ type === 'tag' }}">
+    <view class="role-badge__tag-content">
+      <!-- 图标 -->
+      <text
+        wx:if="{{ showIcon }}"
+        class="icon icon-{{ getIconName() }} role-badge__tag-icon"
+      ></text>
+
+      <!-- 文字 -->
+      <text wx:if="{{ showText }}" class="role-badge__tag-text">
+        {{ getDisplayText() }}
+      </text>
+    </view>
+
+    <!-- 在线状态指示器 -->
+    <view
+      wx:if="{{ showOnline }}"
+      class="role-badge__online-indicator role-badge__online-indicator--tag {{ online ? 'role-badge__online-indicator--active' : '' }}"
+    ></view>
+  </block>
+
+  <!-- 头像样式 -->
+  <block wx:elif="{{ type === 'avatar' }}">
+    <view class="role-badge__avatar">
+      <!-- 头像背景 -->
+      <view class="role-badge__avatar-bg">
+        <text
+          class="icon icon-{{ getIconName() }} role-badge__avatar-icon"
+        ></text>
+      </view>
+
+      <!-- 角色文字 -->
+      <text wx:if="{{ showText }}" class="role-badge__avatar-text">
+        {{ getDisplayText() }}
+      </text>
+
+      <!-- 在线状态指示器 -->
+      <view
+        wx:if="{{ showOnline }}"
+        class="role-badge__online-indicator role-badge__online-indicator--avatar {{ online ? 'role-badge__online-indicator--active' : '' }}"
+      ></view>
+    </view>
+  </block>
+</view>

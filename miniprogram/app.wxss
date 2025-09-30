@@ -1,5 +1,10 @@
 /* 五好伴学小程序全局样式 */
 
+/* 引入样式系统 */
+@import "styles/variables.wxss";
+@import "styles/layout.wxss";
+@import "assets/fonts/icons.wxss";
+
 /* 重置样式 */
 page {
   height: 100%;
