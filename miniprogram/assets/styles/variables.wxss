@@ -1,0 +1,338 @@
+/* assets/styles/variables.wxss */
+/* 全局CSS变量定义 */
+
+:root {
+  /* 主色调 */
+  --primary-color: #1890ff;
+  --primary-color-light: #40a9ff;
+  --primary-color-dark: #096dd9;
+  --primary-color-hover: #40a9ff;
+  --primary-color-active: #096dd9;
+
+  /* 辅助色 */
+  --secondary-color: #722ed1;
+  --secondary-color-light: #9254de;
+  --secondary-color-dark: #531dab;
+
+  /* 功能色 */
+  --success-color: #52c41a;
+  --success-color-light: #73d13d;
+  --success-color-dark: #389e0d;
+
+  --warning-color: #faad14;
+  --warning-color-light: #ffc53d;
+  --warning-color-dark: #d48806;
+
+  --error-color: #f5222d;
+  --error-color-light: #ff4d4f;
+  --error-color-dark: #cf1322;
+
+  --info-color: #1890ff;
+  --info-color-light: #40a9ff;
+  --info-color-dark: #096dd9;
+
+  /* 中性色 */
+  --text-color: #333333;
+  --text-color-primary: #333333;
+  --text-color-secondary: #666666;
+  --text-color-tertiary: #999999;
+  --text-color-placeholder: #cccccc;
+  --text-color-disabled: #bbbbbb;
+  --text-color-inverse: #ffffff;
+
+  /* 背景色 */
+  --background-color: #f5f5f5;
+  --background-color-light: #fafafa;
+  --background-color-dark: #f0f0f0;
+  --background-color-white: #ffffff;
+  --background-color-mask: rgba(0, 0, 0, 0.5);
+
+  /* 边框色 */
+  --border-color: #d9d9d9;
+  --border-color-light: #e8e8e8;
+  --border-color-dark: #bfbfbf;
+  --border-color-focus: #40a9ff;
+
+  /* 分割线颜色 */
+  --divider-color: #f0f0f0;
+  --divider-color-light: #f5f5f5;
+  --divider-color-dark: #e8e8e8;
+
+  /* 阴影 */
+  --box-shadow-light: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+  --box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+  --box-shadow-dark: 0 6rpx 16rpx rgba(0, 0, 0, 0.15);
+  --box-shadow-popup: 0 8rpx 24rpx rgba(0, 0, 0, 0.2);
+
+  /* 圆角 */
+  --border-radius-small: 4rpx;
+  --border-radius: 8rpx;
+  --border-radius-medium: 12rpx;
+  --border-radius-large: 16rpx;
+  --border-radius-xl: 24rpx;
+  --border-radius-round: 50%;
+
+  /* 间距 */
+  --spacing-xs: 8rpx;
+  --spacing-sm: 12rpx;
+  --spacing: 16rpx;
+  --spacing-md: 20rpx;
+  --spacing-lg: 24rpx;
+  --spacing-xl: 32rpx;
+  --spacing-xxl: 48rpx;
+
+  /* 字体大小 */
+  --font-size-xs: 20rpx;
+  --font-size-sm: 24rpx;
+  --font-size: 28rpx;
+  --font-size-md: 30rpx;
+  --font-size-lg: 32rpx;
+  --font-size-xl: 36rpx;
+  --font-size-xxl: 42rpx;
+  --font-size-title: 48rpx;
+
+  /* 字体粗细 */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* 行高 */
+  --line-height-tight: 1.2;
+  --line-height: 1.4;
+  --line-height-relaxed: 1.6;
+  --line-height-loose: 1.8;
+
+  /* Z-index层级 */
+  --z-index-dropdown: 10;
+  --z-index-sticky: 20;
+  --z-index-fixed: 30;
+  --z-index-modal-backdrop: 40;
+  --z-index-modal: 50;
+  --z-index-popover: 60;
+  --z-index-tooltip: 70;
+  --z-index-toast: 80;
+  --z-index-loading: 90;
+
+  /* 动画时长 */
+  --animation-duration-fast: 0.15s;
+  --animation-duration: 0.3s;
+  --animation-duration-slow: 0.5s;
+
+  /* 动画缓动函数 */
+  --animation-timing-ease: ease;
+  --animation-timing-ease-in: ease-in;
+  --animation-timing-ease-out: ease-out;
+  --animation-timing-ease-in-out: ease-in-out;
+  --animation-timing-cubic-bezier: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* 透明度 */
+  --opacity-disabled: 0.3;
+  --opacity-loading: 0.6;
+  --opacity-mask: 0.5;
+
+  /* 学科颜色 */
+  --subject-chinese: linear-gradient(135deg, #ff6b6b, #ee5a52);
+  --subject-math: linear-gradient(135deg, #4ecdc4, #44a08d);
+  --subject-english: linear-gradient(135deg, #45b7d1, #2196f3);
+  --subject-physics: linear-gradient(135deg, #96ceb4, #85c1e9);
+  --subject-chemistry: linear-gradient(135deg, #feca57, #ff9ff3);
+  --subject-biology: linear-gradient(135deg, #6c5ce7, #a29bfe);
+  --subject-history: linear-gradient(135deg, #fd79a8, #fdcb6e);
+  --subject-geography: linear-gradient(135deg, #55a3ff, #003d82);
+  --subject-politics: linear-gradient(135deg, #fd79a8, #e84393);
+
+  /* 状态颜色 */
+  --status-pending: #1890ff;
+  --status-in-progress: #faad14;
+  --status-completed: #52c41a;
+  --status-graded: #722ed1;
+  --status-overdue: #f5222d;
+
+  /* 难度颜色 */
+  --difficulty-easy: #52c41a;
+  --difficulty-medium: #faad14;
+  --difficulty-hard: #f5222d;
+
+  /* 成绩等级颜色 */
+  --grade-excellent: #52c41a;
+  --grade-good: #1890ff;
+  --grade-average: #faad14;
+  --grade-poor: #f5222d;
+
+  /* 头部高度 */
+  --header-height: 88rpx;
+  --nav-bar-height: 44px;
+  --status-bar-height: 20px;
+  --tab-bar-height: 98rpx;
+
+  /* 安全区域 */
+  --safe-area-inset-top: env(safe-area-inset-top);
+  --safe-area-inset-right: env(safe-area-inset-right);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom);
+  --safe-area-inset-left: env(safe-area-inset-left);
+
+  /* 容器最大宽度 */
+  --container-max-width: 750rpx;
+  --content-max-width: 686rpx;
+
+  /* 表单控件高度 */
+  --input-height: 80rpx;
+  --button-height: 80rpx;
+  --button-height-small: 56rpx;
+  --button-height-large: 96rpx;
+
+  /* 卡片样式 */
+  --card-background: #ffffff;
+  --card-border-radius: 16rpx;
+  --card-padding: 32rpx;
+  --card-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
+
+  /* 聊天样式 */
+  --chat-bubble-radius: 20rpx;
+  --chat-bubble-max-width: 480rpx;
+  --chat-avatar-size: 72rpx;
+  --chat-spacing: 24rpx;
+
+  /* 渐变背景 */
+  --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --gradient-success: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+  --gradient-warning: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+  --gradient-error: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+  --gradient-info: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+
+  /* 特殊效果 */
+  --blur-backdrop: blur(20rpx);
+  --transition-all: all var(--animation-duration) var(--animation-timing-ease);
+  --transition-transform: transform var(--animation-duration) var(--animation-timing-cubic-bezier);
+  --transition-opacity: opacity var(--animation-duration) var(--animation-timing-ease);
+
+  /* 网格系统 */
+  --grid-columns: 12;
+  --grid-gutter: 32rpx;
+  --grid-container-padding: 32rpx;
+
+  /* 断点 */
+  --breakpoint-xs: 480rpx;
+  --breakpoint-sm: 576rpx;
+  --breakpoint-md: 768rpx;
+  --breakpoint-lg: 992rpx;
+  --breakpoint-xl: 1200rpx;
+}
+
+/* 深色模式变量 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* 文字颜色调整 */
+    --text-color: #ffffff;
+    --text-color-primary: #ffffff;
+    --text-color-secondary: #cccccc;
+    --text-color-tertiary: #999999;
+    --text-color-placeholder: #666666;
+    --text-color-disabled: #555555;
+    --text-color-inverse: #333333;
+
+    /* 背景色调整 */
+    --background-color: #1a1a1a;
+    --background-color-light: #2a2a2a;
+    --background-color-dark: #0a0a0a;
+    --background-color-white: #2a2a2a;
+    --background-color-mask: rgba(0, 0, 0, 0.7);
+
+    /* 边框色调整 */
+    --border-color: #3a3a3a;
+    --border-color-light: #2a2a2a;
+    --border-color-dark: #4a4a4a;
+
+    /* 分割线颜色调整 */
+    --divider-color: #3a3a3a;
+    --divider-color-light: #2a2a2a;
+    --divider-color-dark: #4a4a4a;
+
+    /* 卡片背景调整 */
+    --card-background: #2a2a2a;
+    --card-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* 小屏幕适配 */
+@media (max-width: 375px) {
+  :root {
+    /* 字体大小适配 */
+    --font-size-xs: 18rpx;
+    --font-size-sm: 22rpx;
+    --font-size: 26rpx;
+    --font-size-md: 28rpx;
+    --font-size-lg: 30rpx;
+    --font-size-xl: 34rpx;
+    --font-size-xxl: 38rpx;
+    --font-size-title: 42rpx;
+
+    /* 间距适配 */
+    --spacing-xs: 6rpx;
+    --spacing-sm: 10rpx;
+    --spacing: 14rpx;
+    --spacing-md: 18rpx;
+    --spacing-lg: 22rpx;
+    --spacing-xl: 28rpx;
+    --spacing-xxl: 40rpx;
+
+    /* 卡片内边距适配 */
+    --card-padding: 24rpx;
+
+    /* 网格间距适配 */
+    --grid-gutter: 24rpx;
+    --grid-container-padding: 24rpx;
+  }
+}
+
+/* 高像素密度屏幕适配 */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  :root {
+    /* 边框宽度调整 */
+    --border-width: 0.5px;
+    --border-width-thick: 1px;
+  }
+}
+
+/* 横屏模式适配 */
+@media (orientation: landscape) {
+  :root {
+    /* 头部高度调整 */
+    --header-height: 64rpx;
+    --tab-bar-height: 80rpx;
+
+    /* 间距调整 */
+    --spacing-xl: 24rpx;
+    --spacing-xxl: 32rpx;
+  }
+}
+
+/* 无障碍模式 */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    /* 动画时长调整 */
+    --animation-duration-fast: 0.01s;
+    --animation-duration: 0.01s;
+    --animation-duration-slow: 0.01s;
+
+    /* 禁用过渡效果 */
+    --transition-all: none;
+    --transition-transform: none;
+    --transition-opacity: none;
+  }
+}
+
+/* 高对比度模式 */
+@media (prefers-contrast: high) {
+  :root {
+    /* 边框颜色增强 */
+    --border-color: #000000;
+    --border-color-light: #333333;
+    --border-color-dark: #000000;
+
+    /* 文字颜色增强 */
+    --text-color-secondary: #000000;
+    --text-color-tertiary: #333333;
+  }
+}

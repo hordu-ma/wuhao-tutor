@@ -1,0 +1,258 @@
+<!--pages/chat/index/index.wxml-->
+<view class="chat-container">
+  <!-- 头部区域 -->
+  <view class="chat-header">
+    <view class="header-content">
+      <image class="ai-avatar" src="/assets/images/ai-avatar.png" mode="aspectFill" />
+      <view class="header-info">
+        <text class="ai-name">五好AI助手</text>
+        <text class="ai-status" wx:if="{{isConnected}}">在线</text>
+        <text class="ai-status offline" wx:else>离线</text>
+      </view>
+    </view>
+    <view class="header-actions">
+      <van-icon name="setting-o" size="20" bindtap="onSettings" />
+    </view>
+  </view>
+
+  <!-- 聊天消息区域 -->
+  <scroll-view class="chat-messages"
+               scroll-y="{{true}}"
+               scroll-top="{{scrollTop}}"
+               scroll-with-animation="{{true}}"
+               refresher-enabled="{{true}}"
+               refresher-triggered="{{refreshing}}"
+               bindrefresherrefresh="onRefresh"
+               bindscrolltoupper="onLoadMore">
+
+    <!-- 历史消息加载 -->
+    <view class="load-history" wx:if="{{hasMore && messageList.length > 0}}">
+      <view class="load-history-btn" bindtap="onLoadHistory" wx:if="{{!loadingHistory}}">
+        <van-icon name="arrow-up" size="16" />
+        <text>查看更多历史消息</text>
+      </view>
+      <view class="load-history-loading" wx:else>
+        <van-loading size="16" />
+        <text>加载中...</text>
+      </view>
+    </view>
+
+    <!-- 欢迎消息 -->
+    <view class="welcome-message" wx:if="{{!messageList.length && !loading}}">
+      <image class="welcome-avatar" src="/assets/images/ai-avatar.png" mode="aspectFill" />
+      <view class="welcome-content">
+        <text class="welcome-title">你好！我是五好AI助手</text>
+        <text class="welcome-desc">我可以帮你解答学习中的各种问题，快来问我吧～</text>
+      </view>
+      <view class="quick-questions">
+        <text class="quick-title">你可以这样问我：</text>
+        <view class="question-list">
+          <view class="question-item"
+                wx:for="{{quickQuestions}}"
+                wx:key="*this"
+                bindtap="onQuickQuestion"
+                data-question="{{item}}">
+            {{item}}
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 消息列表 -->
+    <view class="message-list" wx:if="{{messageList.length > 0}}">
+      <chat-bubble
+        wx:for="{{messageList}}"
+        wx:key="id"
+        message="{{item}}"
+        bind:retry="onRetryMessage"
+        bind:copy="onCopyMessage"
+        bind:like="onLikeMessage" />
+    </view>
+
+    <!-- 加载状态 -->
+    <view class="typing-indicator" wx:if="{{isTyping}}">
+      <view class="typing-avatar">
+        <image src="/assets/images/ai-avatar.png" mode="aspectFill" />
+      </view>
+      <view class="typing-content">
+        <view class="typing-dots">
+          <view class="dot"></view>
+          <view class="dot"></view>
+          <view class="dot"></view>
+        </view>
+        <text class="typing-text">AI正在思考中...</text>
+      </view>
+    </view>
+
+    <!-- 占位区域，确保输入框不遮挡消息 -->
+    <view class="message-spacer"></view>
+  </scroll-view>
+
+  <!-- 输入区域 -->
+  <view class="chat-input-container">
+    <!-- 功能按钮区域 -->
+    <view class="input-tools" wx:if="{{showTools}}">
+      <view class="tool-item" bindtap="onSelectSubject">
+        <van-icon name="bookmark-o" size="20" />
+        <text>选择科目</text>
+      </view>
+      <view class="tool-item" bindtap="onUploadImage">
+        <van-icon name="photograph" size="20" />
+        <text>拍照提问</text>
+      </view>
+      <view class="tool-item" bindtap="onVoiceInput" wx:if="{{enableVoice}}">
+        <van-icon name="volume-o" size="20" />
+        <text>语音输入</text>
+      </view>
+      <view class="tool-item" bindtap="onShowHistory">
+        <van-icon name="clock-o" size="20" />
+        <text>历史记录</text>
+      </view>
+    </view>
+
+    <!-- 输入框区域 -->
+    <view class="input-area">
+      <view class="input-wrapper">
+        <view class="input-left">
+          <van-icon name="plus" size="20" bindtap="onToggleTools"
+                    class="{{showTools ? 'active' : ''}}" />
+        </view>
+
+        <view class="input-main">
+          <textarea class="input-text"
+                    placeholder="{{inputPlaceholder}}"
+                    value="{{inputText}}"
+                    bindinput="onInputChange"
+                    bindconfirm="onSendMessage"
+                    auto-height="{{true}}"
+                    show-confirm-bar="{{false}}"
+                    cursor-spacing="10"
+                    maxlength="{{maxInputLength}}"
+                    fixed="{{true}}" />
+
+          <!-- 字符计数 -->
+          <view class="char-count" wx:if="{{inputText.length > 0}}">
+            {{inputText.length}}/{{maxInputLength}}
+          </view>
+        </view>
+
+        <view class="input-right">
+          <!-- 语音按钮 -->
+          <view class="voice-btn"
+                wx:if="{{inputMode === 'voice'}}"
+                bindtouchstart="onVoiceStart"
+                bindtouchend="onVoiceEnd"
+                bindtouchcancel="onVoiceCancel">
+            <van-icon name="volume-o" size="20" color="{{isRecording ? '#1890ff' : '#666'}}" />
+          </view>
+
+          <!-- 发送按钮 -->
+          <view class="send-btn {{inputText.trim() ? 'active' : ''}}"
+                bindtap="onSendMessage"
+                wx:if="{{inputMode === 'text'}}">
+            <van-icon name="arrow" size="16" color="#fff" />
+          </view>
+
+          <!-- 模式切换按钮 -->
+          <view class="mode-toggle" bindtap="onToggleInputMode">
+            <van-icon name="{{inputMode === 'text' ? 'volume-o' : 'edit'}}" size="18" />
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 科目选择弹窗 -->
+  <van-popup show="{{showSubjectPopup}}"
+             position="bottom"
+             round="{{true}}"
+             bind:close="onCloseSubject">
+    <view class="subject-popup">
+      <view class="popup-header">
+        <text class="popup-title">选择科目</text>
+        <van-icon name="cross" bindtap="onCloseSubject" />
+      </view>
+      <view class="subject-list">
+        <view class="subject-item {{selectedSubject === item ? 'selected' : ''}}"
+              wx:for="{{subjectList}}"
+              wx:key="*this"
+              bindtap="onSubjectSelect"
+              data-subject="{{item}}">
+          <text class="subject-name">{{item}}</text>
+          <van-icon name="success" wx:if="{{selectedSubject === item}}" />
+        </view>
+      </view>
+    </view>
+  </van-popup>
+
+  <!-- 历史记录弹窗 -->
+  <van-popup show="{{showHistoryPopup}}"
+             position="right"
+             custom-style="width: 80%; height: 100%;"
+             bind:close="onCloseHistory">
+    <view class="history-popup">
+      <view class="popup-header">
+        <text class="popup-title">历史记录</text>
+        <van-icon name="cross" bindtap="onCloseHistory" />
+      </view>
+      <scroll-view class="history-list" scroll-y="{{true}}">
+        <view class="history-item"
+              wx:for="{{historyList}}"
+              wx:key="id"
+              bindtap="onHistorySelect"
+              data-session="{{item}}">
+          <view class="history-title">{{item.title || '对话记录'}}</view>
+          <view class="history-time">{{item.updateTime}}</view>
+          <view class="history-preview">{{item.lastMessage}}</view>
+        </view>
+
+        <empty-state wx:if="{{!historyList.length && !loadingHistory}}"
+                     type="history"
+                     title="暂无历史记录"
+                     description="开始你的第一次对话吧" />
+      </scroll-view>
+    </view>
+  </van-popup>
+
+  <!-- 图片上传弹窗 -->
+  <van-popup show="{{showImagePopup}}"
+             position="bottom"
+             round="{{true}}"
+             bind:close="onCloseImage">
+    <view class="image-popup">
+      <view class="popup-header">
+        <text class="popup-title">上传图片</text>
+        <van-icon name="cross" bindtap="onCloseImage" />
+      </view>
+      <view class="image-actions">
+        <view class="image-action" bindtap="onTakePhoto">
+          <van-icon name="photograph" size="24" />
+          <text>拍照</text>
+        </view>
+        <view class="image-action" bindtap="onChooseImage">
+          <van-icon name="photo-o" size="24" />
+          <text>从相册选择</text>
+        </view>
+      </view>
+    </view>
+  </van-popup>
+
+  <!-- 语音录制提示 -->
+  <view class="voice-recording" wx:if="{{isRecording}}">
+    <view class="recording-content">
+      <view class="recording-icon">
+        <van-icon name="volume-o" size="32" color="#1890ff" />
+      </view>
+      <text class="recording-text">正在录音...</text>
+      <text class="recording-tip">松开发送，上滑取消</text>
+    </view>
+  </view>
+
+  <!-- 全局加载遮罩 -->
+  <van-overlay show="{{globalLoading}}" z-index="1000">
+    <view class="loading-container">
+      <van-loading size="24" color="#fff" />
+      <text class="loading-text">{{loadingText}}</text>
+    </view>
+  </van-overlay>
+</view>
