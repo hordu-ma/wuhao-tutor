@@ -1,0 +1,326 @@
+/**
+ * 设计系统变量定义
+ * 五好伴学小程序统一设计规范
+ */
+
+/* ========== 颜色系统 ========== */
+:root {
+  /* 主色调 */
+  --primary-color: #1890ff;
+  --primary-color-light: #40a9ff;
+  --primary-color-dark: #096dd9;
+  --primary-color-disabled: #d9d9d9;
+
+  /* 功能色 */
+  --success-color: #52c41a;
+  --success-color-light: #73d13d;
+  --success-color-dark: #389e0d;
+  --success-color-bg: #f6ffed;
+
+  --warning-color: #faad14;
+  --warning-color-light: #ffc53d;
+  --warning-color-dark: #d48806;
+  --warning-color-bg: #fffbe6;
+
+  --error-color: #f5222d;
+  --error-color-light: #ff4d4f;
+  --error-color-dark: #cf1322;
+  --error-color-bg: #fff2f0;
+
+  --info-color: #1890ff;
+  --info-color-light: #40a9ff;
+  --info-color-dark: #096dd9;
+  --info-color-bg: #e6f7ff;
+
+  /* 中性色 */
+  --text-color: #000000;
+  --text-color-secondary: #333333;
+  --text-color-tertiary: #666666;
+  --text-color-quaternary: #999999;
+  --text-color-disabled: #cccccc;
+  --text-color-placeholder: #bfbfbf;
+
+  /* 背景色 */
+  --background-color: #ffffff;
+  --background-color-light: #fafafa;
+  --background-color-base: #f5f5f5;
+  --background-color-dark: #e8e8e8;
+
+  /* 边框色 */
+  --border-color-base: #d9d9d9;
+  --border-color-light: #e8e8e8;
+  --border-color-dark: #bfbfbf;
+  --border-color-split: #f0f0f0;
+
+  /* 阴影色 */
+  --shadow-color: rgba(0, 0, 0, 0.15);
+  --shadow-color-light: rgba(0, 0, 0, 0.08);
+  --shadow-color-dark: rgba(0, 0, 0, 0.25);
+}
+
+/* ========== 字体系统 ========== */
+:root {
+  /* 字体大小 */
+  --font-size-xs: 20rpx;      /* 10px */
+  --font-size-sm: 24rpx;      /* 12px */
+  --font-size-base: 28rpx;    /* 14px */
+  --font-size-md: 28rpx;      /* 14px */
+  --font-size-lg: 32rpx;      /* 16px */
+  --font-size-xl: 36rpx;      /* 18px */
+  --font-size-xxl: 40rpx;     /* 20px */
+  --font-size-xxxl: 48rpx;    /* 24px */
+
+  /* 标题字体大小 */
+  --font-size-h1: 48rpx;      /* 24px */
+  --font-size-h2: 40rpx;      /* 20px */
+  --font-size-h3: 36rpx;      /* 18px */
+  --font-size-h4: 32rpx;      /* 16px */
+  --font-size-h5: 28rpx;      /* 14px */
+  --font-size-h6: 24rpx;      /* 12px */
+
+  /* 字体粗细 */
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* 行高 */
+  --line-height-xs: 1.2;
+  --line-height-sm: 1.25;
+  --line-height-base: 1.5;
+  --line-height-md: 1.5;
+  --line-height-lg: 1.75;
+  --line-height-xl: 2;
+
+  /* 字体家族 */
+  --font-family-sans: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Segoe UI, Arial, Roboto, 'PingFang SC', 'miui', 'Hiragino Sans GB', 'Microsoft Yahei', sans-serif;
+  --font-family-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+}
+
+/* ========== 间距系统 ========== */
+:root {
+  /* 基础间距 */
+  --spacing-xs: 8rpx;         /* 4px */
+  --spacing-sm: 16rpx;        /* 8px */
+  --spacing-base: 24rpx;      /* 12px */
+  --spacing-md: 32rpx;        /* 16px */
+  --spacing-lg: 48rpx;        /* 24px */
+  --spacing-xl: 64rpx;        /* 32px */
+  --spacing-xxl: 96rpx;       /* 48px */
+  --spacing-xxxl: 128rpx;     /* 64px */
+
+  /* 页面间距 */
+  --page-padding-horizontal: 32rpx;    /* 16px */
+  --page-padding-vertical: 24rpx;      /* 12px */
+
+  /* 组件间距 */
+  --component-padding-xs: 16rpx;       /* 8px */
+  --component-padding-sm: 24rpx;       /* 12px */
+  --component-padding-base: 32rpx;     /* 16px */
+  --component-padding-lg: 48rpx;       /* 24px */
+  --component-padding-xl: 64rpx;       /* 32px */
+
+  /* 内容间距 */
+  --content-margin-xs: 8rpx;           /* 4px */
+  --content-margin-sm: 16rpx;          /* 8px */
+  --content-margin-base: 24rpx;        /* 12px */
+  --content-margin-lg: 32rpx;          /* 16px */
+  --content-margin-xl: 48rpx;          /* 24px */
+}
+
+/* ========== 尺寸系统 ========== */
+:root {
+  /* 边框半径 */
+  --border-radius-xs: 4rpx;            /* 2px */
+  --border-radius-sm: 8rpx;            /* 4px */
+  --border-radius-base: 12rpx;         /* 6px */
+  --border-radius-md: 16rpx;           /* 8px */
+  --border-radius-lg: 24rpx;           /* 12px */
+  --border-radius-xl: 32rpx;           /* 16px */
+  --border-radius-xxl: 48rpx;          /* 24px */
+  --border-radius-circle: 50%;
+
+  /* 边框宽度 */
+  --border-width-base: 1rpx;           /* 0.5px */
+  --border-width-thick: 2rpx;          /* 1px */
+
+  /* 高度系统 */
+  --height-xs: 48rpx;                  /* 24px */
+  --height-sm: 64rpx;                  /* 32px */
+  --height-base: 80rpx;                /* 40px */
+  --height-md: 96rpx;                  /* 48px */
+  --height-lg: 112rpx;                 /* 56px */
+  --height-xl: 128rpx;                 /* 64px */
+
+  /* 组件高度 */
+  --button-height-sm: 64rpx;           /* 32px */
+  --button-height-base: 80rpx;         /* 40px */
+  --button-height-lg: 96rpx;           /* 48px */
+
+  --input-height-sm: 64rpx;            /* 32px */
+  --input-height-base: 80rpx;          /* 40px */
+  --input-height-lg: 96rpx;            /* 48px */
+
+  /* 图标尺寸 */
+  --icon-size-xs: 24rpx;               /* 12px */
+  --icon-size-sm: 32rpx;               /* 16px */
+  --icon-size-base: 40rpx;             /* 20px */
+  --icon-size-md: 48rpx;               /* 24px */
+  --icon-size-lg: 64rpx;               /* 32px */
+  --icon-size-xl: 96rpx;               /* 48px */
+  --icon-size-xxl: 128rpx;             /* 64px */
+
+  /* 头像尺寸 */
+  --avatar-size-xs: 48rpx;             /* 24px */
+  --avatar-size-sm: 64rpx;             /* 32px */
+  --avatar-size-base: 80rpx;           /* 40px */
+  --avatar-size-lg: 128rpx;            /* 64px */
+  --avatar-size-xl: 192rpx;            /* 96px */
+}
+
+/* ========== 阴影系统 ========== */
+:root {
+  /* 基础阴影 */
+  --shadow-xs: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
+  --shadow-sm: 0 2rpx 12rpx rgba(0, 0, 0, 0.08);
+  --shadow-base: 0 4rpx 16rpx rgba(0, 0, 0, 0.12);
+  --shadow-md: 0 6rpx 20rpx rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 8rpx 24rpx rgba(0, 0, 0, 0.18);
+  --shadow-xl: 0 12rpx 32rpx rgba(0, 0, 0, 0.25);
+
+  /* 特殊阴影 */
+  --shadow-inner: inset 0 2rpx 4rpx rgba(0, 0, 0, 0.06);
+  --shadow-outline: 0 0 0 6rpx rgba(24, 144, 255, 0.2);
+  --shadow-none: none;
+
+  /* 卡片阴影 */
+  --card-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.09);
+  --card-shadow-hover: 0 4rpx 16rpx rgba(0, 0, 0, 0.12);
+
+  /* 弹窗阴影 */
+  --modal-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.15);
+  --popup-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.12);
+}
+
+/* ========== 动画系统 ========== */
+:root {
+  /* 动画时长 */
+  --animation-duration-fast: 0.1s;
+  --animation-duration-base: 0.2s;
+  --animation-duration-slow: 0.3s;
+
+  /* 动画曲线 */
+  --ease-base: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out-back: cubic-bezier(0.18, 0.89, 0.32, 1.28);
+  --ease-in-back: cubic-bezier(0.6, -0.28, 0.74, 0.05);
+  --ease-in-out-back: cubic-bezier(0.68, -0.55, 0.27, 1.55);
+
+  /* 过渡效果 */
+  --transition-base: all var(--animation-duration-base) var(--ease-base);
+  --transition-fast: all var(--animation-duration-fast) var(--ease-base);
+  --transition-slow: all var(--animation-duration-slow) var(--ease-base);
+}
+
+/* ========== Z-index系统 ========== */
+:root {
+  --z-index-base: 1;
+  --z-index-affix: 10;
+  --z-index-back-top: 40;
+  --z-index-picker: 50;
+  --z-index-popper: 1000;
+  --z-index-tooltip: 1060;
+  --z-index-modal-mask: 1000;
+  --z-index-modal: 1000;
+  --z-index-notification: 1010;
+  --z-index-message: 1010;
+  --z-index-popover: 1030;
+  --z-index-dropdown: 1050;
+  --z-index-toast: 2000;
+}
+
+/* ========== 断点系统 ========== */
+:root {
+  /* 屏幕断点 */
+  --screen-xs: 480rpx;                 /* 240px */
+  --screen-sm: 576rpx;                 /* 288px */
+  --screen-md: 768rpx;                 /* 384px */
+  --screen-lg: 992rpx;                 /* 496px */
+  --screen-xl: 1200rpx;                /* 600px */
+  --screen-xxl: 1600rpx;               /* 800px */
+
+  /* 容器最大宽度 */
+  --container-max-width-sm: 540rpx;    /* 270px */
+  --container-max-width-md: 720rpx;    /* 360px */
+  --container-max-width-lg: 960rpx;    /* 480px */
+  --container-max-width-xl: 1140rpx;   /* 570px */
+  --container-max-width-xxl: 1320rpx;  /* 660px */
+}
+
+/* ========== 教育主题色彩 ========== */
+:root {
+  /* 学科色彩 */
+  --subject-math: #ff6b6b;             /* 数学 - 红色 */
+  --subject-chinese: #4ecdc4;          /* 语文 - 青色 */
+  --subject-english: #45b7d1;          /* 英语 - 蓝色 */
+  --subject-physics: #96ceb4;          /* 物理 - 绿色 */
+  --subject-chemistry: #feca57;        /* 化学 - 黄色 */
+  --subject-biology: #48dbfb;          /* 生物 - 浅蓝 */
+  --subject-history: #ff9ff3;          /* 历史 - 粉色 */
+  --subject-geography: #54a0ff;        /* 地理 - 蓝色 */
+  --subject-politics: #5f27cd;         /* 政治 - 紫色 */
+
+  /* 角色色彩 */
+  --role-student: #1890ff;             /* 学生 - 蓝色 */
+  --role-parent: #52c41a;              /* 家长 - 绿色 */
+  --role-teacher: #faad14;             /* 老师 - 橙色 */
+
+  /* 状态色彩 */
+  --status-pending: #faad14;           /* 待处理 - 橙色 */
+  --status-processing: #1890ff;        /* 处理中 - 蓝色 */
+  --status-completed: #52c41a;         /* 已完成 - 绿色 */
+  --status-cancelled: #f5222d;         /* 已取消 - 红色 */
+  --status-draft: #d9d9d9;             /* 草稿 - 灰色 */
+
+  /* 等级色彩 */
+  --level-beginner: #52c41a;           /* 初级 - 绿色 */
+  --level-intermediate: #faad14;       /* 中级 - 橙色 */
+  --level-advanced: #f5222d;           /* 高级 - 红色 */
+  --level-expert: #722ed1;             /* 专家 - 紫色 */
+}
+
+/* ========== 深色模式变量 ========== */
+[data-theme="dark"] {
+  /* 主色调在深色模式下的调整 */
+  --primary-color: #177ddc;
+  --primary-color-light: #95de64;
+  --primary-color-dark: #0958d9;
+
+  /* 文字颜色 */
+  --text-color: #ffffff;
+  --text-color-secondary: #d9d9d9;
+  --text-color-tertiary: #bfbfbf;
+  --text-color-quaternary: #8c8c8c;
+  --text-color-disabled: #595959;
+
+  /* 背景色 */
+  --background-color: #141414;
+  --background-color-light: #1f1f1f;
+  --background-color-base: #262626;
+  --background-color-dark: #434343;
+
+  /* 边框色 */
+  --border-color-base: #434343;
+  --border-color-light: #303030;
+  --border-color-dark: #595959;
+  --border-color-split: #262626;
+
+  /* 功能色调整 */
+  --success-color: #73d13d;
+  --warning-color: #d89614;
+  --error-color: #ff7875;
+  --info-color: #177ddc;
+}
