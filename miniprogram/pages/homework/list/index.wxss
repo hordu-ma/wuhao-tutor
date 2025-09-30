@@ -1,0 +1,290 @@
+/* pages/homework/list/index.wxss */
+
+.homework-list-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: var(--background-color, #f5f5f5);
+}
+
+/* 筛选区域样式 */
+.filter-section {
+  background-color: #fff;
+  padding: 24rpx 32rpx 16rpx;
+  border-bottom: 2rpx solid #f0f0f0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.filter-tabs {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.filter-tab {
+  padding: 16rpx 24rpx;
+  border-radius: 32rpx;
+  font-size: 28rpx;
+  color: var(--text-color-secondary, #666);
+  background-color: transparent;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.filter-tab.active {
+  color: var(--primary-color, #1890ff);
+  background-color: var(--primary-color, #1890ff);
+  background-color: rgba(24, 144, 255, 0.1);
+  font-weight: 500;
+}
+
+.filter-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -20rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40rpx;
+  height: 4rpx;
+  background-color: var(--primary-color, #1890ff);
+  border-radius: 2rpx;
+}
+
+/* 滚动区域样式 */
+.homework-scroll {
+  flex: 1;
+  padding: 0 32rpx;
+}
+
+/* 作业列表样式 */
+.homework-list {
+  padding: 24rpx 0;
+}
+
+/* 加载更多样式 */
+.load-more {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 32rpx;
+  color: var(--text-color-secondary, #666);
+  font-size: 28rpx;
+}
+
+.load-more-loading {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.load-more-text {
+  color: var(--text-color-secondary, #666);
+  font-size: 28rpx;
+}
+
+/* 没有更多数据样式 */
+.no-more {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 32rpx;
+}
+
+.no-more-text {
+  color: var(--text-color-placeholder, #999);
+  font-size: 26rpx;
+}
+
+/* 浮动操作按钮样式 */
+.fab-container {
+  position: fixed;
+  bottom: 120rpx;
+  right: 32rpx;
+  z-index: 100;
+}
+
+.fab {
+  width: 112rpx;
+  height: 112rpx;
+  background: linear-gradient(135deg, var(--primary-color, #1890ff), #40a9ff);
+  border-radius: 56rpx;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 8rpx 24rpx rgba(24, 144, 255, 0.3);
+  transition: all 0.3s ease;
+}
+
+.fab:active {
+  transform: scale(0.95);
+  box-shadow: 0 4rpx 12rpx rgba(24, 144, 255, 0.2);
+}
+
+/* 筛选弹窗样式 */
+.filter-popup {
+  background-color: #fff;
+  border-radius: 24rpx 24rpx 0 0;
+  max-height: 80vh;
+}
+
+.filter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 32rpx;
+  border-bottom: 2rpx solid #f0f0f0;
+}
+
+.filter-title {
+  font-size: 32rpx;
+  font-weight: 500;
+  color: var(--text-color, #333);
+}
+
+.filter-content {
+  padding: 32rpx;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.filter-group {
+  margin-bottom: 48rpx;
+}
+
+.filter-group:last-child {
+  margin-bottom: 0;
+}
+
+.filter-label {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 500;
+  color: var(--text-color, #333);
+  margin-bottom: 24rpx;
+}
+
+.filter-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.filter-option {
+  padding: 16rpx 24rpx;
+  border: 2rpx solid var(--border-color, #d9d9d9);
+  border-radius: 32rpx;
+  font-size: 28rpx;
+  color: var(--text-color-secondary, #666);
+  background-color: #fff;
+  transition: all 0.3s ease;
+}
+
+.filter-option.selected {
+  border-color: var(--primary-color, #1890ff);
+  color: var(--primary-color, #1890ff);
+  background-color: rgba(24, 144, 255, 0.1);
+}
+
+.filter-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 24rpx;
+  padding: 32rpx;
+  border-top: 2rpx solid #f0f0f0;
+  background-color: #fff;
+}
+
+.filter-actions .van-button {
+  flex: 1;
+  height: 88rpx;
+  border-radius: 44rpx;
+  font-size: 30rpx;
+}
+
+/* 响应式适配 */
+@media (max-width: 375px) {
+  .filter-tab {
+    padding: 12rpx 16rpx;
+    font-size: 26rpx;
+  }
+
+  .homework-scroll {
+    padding: 0 24rpx;
+  }
+
+  .fab {
+    width: 96rpx;
+    height: 96rpx;
+    bottom: 100rpx;
+    right: 24rpx;
+  }
+}
+
+/* 深色模式适配 */
+@media (prefers-color-scheme: dark) {
+  .homework-list-container {
+    background-color: #1a1a1a;
+  }
+
+  .filter-section {
+    background-color: #2a2a2a;
+    border-bottom-color: #3a3a3a;
+  }
+
+  .filter-popup {
+    background-color: #2a2a2a;
+  }
+
+  .filter-header {
+    border-bottom-color: #3a3a3a;
+  }
+
+  .filter-actions {
+    background-color: #2a2a2a;
+    border-top-color: #3a3a3a;
+  }
+
+  .filter-option {
+    background-color: #2a2a2a;
+    border-color: #3a3a3a;
+    color: #ccc;
+  }
+}
+
+/* 加载动画 */
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.homework-list-container.loading {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* 滑动动画 */
+.filter-tab {
+  transform: translateY(0);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.filter-tab:hover {
+  transform: translateY(-2rpx);
+}
+
+/* 安全区域适配 */
+.homework-list-container {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.fab-container {
+  bottom: calc(120rpx + env(safe-area-inset-bottom));
+}

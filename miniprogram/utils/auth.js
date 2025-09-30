@@ -1,0 +1,662 @@
+// utils/auth.js
+// 用户认证管理工具
+
+const config = require('../config/index.js');
+const storage = require('./storage.js');
+
+/**
+ * 认证管理类
+ */
+class AuthManager {
+  constructor() {
+    this.tokenKey = config.auth.tokenKey;
+    this.userInfoKey = config.auth.userInfoKey;
+    this.roleKey = config.auth.roleKey;
+    this.checkInterval = config.auth.checkInterval;
+
+    // 当前用户信息缓存
+    this.currentUser = null;
+    this.currentToken = null;
+    this.currentRole = null;
+
+    // Token检查定时器
+    this.checkTimer = null;
+
+    // 初始化
+    this.init();
+  }
+
+  /**
+   * 初始化认证管理器
+   */
+  async init() {
+    try {
+      // 从本地存储恢复用户信息
+      await this.restoreUserSession();
+
+      // 启动Token检查定时器
+      this.startTokenCheck();
+
+      console.log('认证管理器初始化成功');
+    } catch (error) {
+      console.error('认证管理器初始化失败', error);
+    }
+  }
+
+  /**
+   * 从本地存储恢复用户会话
+   */
+  async restoreUserSession() {
+    try {
+      const token = await storage.get(this.tokenKey);
+      const userInfo = await storage.get(this.userInfoKey);
+      const role = await storage.get(this.roleKey);
+
+      if (token && userInfo) {
+        this.currentToken = token;
+        this.currentUser = userInfo;
+        this.currentRole = role || 'student';
+
+        console.log('用户会话恢复成功', {
+          userId: userInfo.id,
+          role: this.currentRole
+        });
+
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('恢复用户会话失败', error);
+      return false;
+    }
+  }
+
+  /**
+   * 微信登录
+   */
+  async wechatLogin() {
+    try {
+      // 1. 获取微信登录code
+      const loginResult = await this.getWechatLoginCode();
+
+      // 2. 获取用户信息授权
+      const userProfile = await this.getUserProfile();
+
+      // 3. 调用后端登录接口
+      const response = await this.callLoginAPI({
+        code: loginResult.code,
+        userInfo: userProfile.userInfo,
+        signature: userProfile.signature,
+        encryptedData: userProfile.encryptedData,
+        iv: userProfile.iv
+      });
+
+      if (response.success) {
+        const { token, userInfo, role } = response.data;
+
+        // 4. 保存登录信息
+        await this.saveUserSession(token, userInfo, role);
+
+        console.log('微信登录成功', { userId: userInfo.id, role });
+
+        return {
+          success: true,
+          data: { token, userInfo, role }
+        };
+      } else {
+        throw new Error(response.error?.message || '登录失败');
+      }
+    } catch (error) {
+      console.error('微信登录失败', error);
+
+      return {
+        success: false,
+        error: {
+          code: error.code || 'LOGIN_FAILED',
+          message: error.message || '登录失败，请重试'
+        }
+      };
+    }
+  }
+
+  /**
+   * 获取微信登录code
+   */
+  getWechatLoginCode() {
+    return new Promise((resolve, reject) => {
+      wx.login({
+        success: (res) => {
+          if (res.code) {
+            resolve(res);
+          } else {
+            reject(new Error('获取登录code失败'));
+          }
+        },
+        fail: (error) => {
+          reject(new Error(error.errMsg || '微信登录失败'));
+        }
+      });
+    });
+  }
+
+  /**
+   * 获取用户信息授权
+   */
+  getUserProfile() {
+    return new Promise((resolve, reject) => {
+      wx.getUserProfile({
+        desc: '用于完善用户资料',
+        success: (res) => {
+          resolve(res);
+        },
+        fail: (error) => {
+          // 用户拒绝授权的情况
+          if (error.errMsg && error.errMsg.includes('cancel')) {
+            reject(new Error('用户取消授权'));
+          } else {
+            reject(new Error(error.errMsg || '获取用户信息失败'));
+          }
+        }
+      });
+    });
+  }
+
+  /**
+   * 调用后端登录API
+   */
+  async callLoginAPI(loginData) {
+    try {
+      const response = await wx.request({
+        url: `${config.api.baseUrl}/api/${config.api.version}/auth/wechat-login`,
+        method: 'POST',
+        data: loginData,
+        header: {
+          'Content-Type': 'application/json',
+          'X-Client-Type': 'miniprogram',
+          'X-Client-Version': config.version
+        },
+        timeout: config.api.timeout
+      });
+
+      return new Promise((resolve, reject) => {
+        response.success = (res) => {
+          if (res.statusCode === 200) {
+            resolve(res.data);
+          } else {
+            reject(new Error(`HTTP ${res.statusCode}: ${res.data?.message || '请求失败'}`));
+          }
+        };
+
+        response.fail = (error) => {
+          reject(new Error(error.errMsg || '网络请求失败'));
+        };
+      });
+    } catch (error) {
+      throw new Error('调用登录API失败: ' + error.message);
+    }
+  }
+
+  /**
+   * 保存用户会话信息
+   */
+  async saveUserSession(token, userInfo, role = 'student') {
+    try {
+      // 保存到内存
+      this.currentToken = token;
+      this.currentUser = userInfo;
+      this.currentRole = role;
+
+      // 保存到本地存储
+      await Promise.all([
+        storage.set(this.tokenKey, token),
+        storage.set(this.userInfoKey, userInfo),
+        storage.set(this.roleKey, role)
+      ]);
+
+      console.log('用户会话保存成功');
+    } catch (error) {
+      console.error('保存用户会话失败', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 获取当前Token
+   */
+  async getToken() {
+    if (this.currentToken) {
+      return this.currentToken;
+    }
+
+    try {
+      const token = await storage.get(this.tokenKey);
+      this.currentToken = token;
+      return token;
+    } catch (error) {
+      console.error('获取Token失败', error);
+      return null;
+    }
+  }
+
+  /**
+   * 获取当前用户信息
+   */
+  async getUserInfo() {
+    if (this.currentUser) {
+      return this.currentUser;
+    }
+
+    try {
+      const userInfo = await storage.get(this.userInfoKey);
+      this.currentUser = userInfo;
+      return userInfo;
+    } catch (error) {
+      console.error('获取用户信息失败', error);
+      return null;
+    }
+  }
+
+  /**
+   * 获取当前用户角色
+   */
+  async getUserRole() {
+    if (this.currentRole) {
+      return this.currentRole;
+    }
+
+    try {
+      const role = await storage.get(this.roleKey);
+      this.currentRole = role || 'student';
+      return this.currentRole;
+    } catch (error) {
+      console.error('获取用户角色失败', error);
+      return 'student';
+    }
+  }
+
+  /**
+   * 更新用户信息
+   */
+  async updateUserInfo(newUserInfo) {
+    try {
+      // 合并新的用户信息
+      const updatedUserInfo = {
+        ...this.currentUser,
+        ...newUserInfo
+      };
+
+      // 更新内存和本地存储
+      this.currentUser = updatedUserInfo;
+      await storage.set(this.userInfoKey, updatedUserInfo);
+
+      console.log('用户信息更新成功');
+      return updatedUserInfo;
+    } catch (error) {
+      console.error('更新用户信息失败', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 切换用户角色
+   */
+  async switchRole(newRole) {
+    try {
+      if (!['student', 'parent', 'teacher'].includes(newRole)) {
+        throw new Error('不支持的用户角色');
+      }
+
+      this.currentRole = newRole;
+      await storage.set(this.roleKey, newRole);
+
+      console.log('用户角色切换成功', newRole);
+      return newRole;
+    } catch (error) {
+      console.error('切换用户角色失败', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 检查登录状态
+   */
+  async isLoggedIn() {
+    try {
+      const token = await this.getToken();
+      const userInfo = await this.getUserInfo();
+
+      return !!(token && userInfo);
+    } catch (error) {
+      console.error('检查登录状态失败', error);
+      return false;
+    }
+  }
+
+  /**
+   * 检查Token是否有效
+   */
+  async isTokenValid() {
+    try {
+      const token = await this.getToken();
+
+      if (!token) {
+        return false;
+      }
+
+      // 解析Token payload（简单的JWT解析）
+      const payload = this.parseJWT(token);
+
+      if (!payload || !payload.exp) {
+        return false;
+      }
+
+      // 检查是否过期（提前5分钟判断为过期）
+      const now = Math.floor(Date.now() / 1000);
+      const bufferTime = 5 * 60; // 5分钟缓冲
+
+      return payload.exp > (now + bufferTime);
+    } catch (error) {
+      console.error('检查Token有效性失败', error);
+      return false;
+    }
+  }
+
+  /**
+   * 简单的JWT解析
+   */
+  parseJWT(token) {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) {
+        return null;
+      }
+
+      const payload = parts[1];
+      const decoded = wx.base64ToArrayBuffer(payload);
+      const jsonStr = wx.arrayBufferToBase64(decoded);
+
+      return JSON.parse(atob(jsonStr));
+    } catch (error) {
+      console.error('JWT解析失败', error);
+      return null;
+    }
+  }
+
+  /**
+   * 刷新Token
+   */
+  async refreshToken() {
+    try {
+      const currentToken = await this.getToken();
+
+      if (!currentToken) {
+        throw new Error('没有有效的Token');
+      }
+
+      const response = await wx.request({
+        url: `${config.api.baseUrl}/api/${config.api.version}/auth/refresh-token`,
+        method: 'POST',
+        header: {
+          'Authorization': `Bearer ${currentToken}`,
+          'Content-Type': 'application/json',
+          'X-Client-Type': 'miniprogram',
+          'X-Client-Version': config.version
+        },
+        timeout: config.api.timeout
+      });
+
+      return new Promise((resolve, reject) => {
+        response.success = async (res) => {
+          if (res.statusCode === 200 && res.data.success) {
+            const { token, userInfo } = res.data.data;
+
+            // 更新Token和用户信息
+            await this.saveUserSession(token, userInfo, this.currentRole);
+
+            console.log('Token刷新成功');
+            resolve({ token, userInfo });
+          } else {
+            reject(new Error(res.data?.error?.message || 'Token刷新失败'));
+          }
+        };
+
+        response.fail = (error) => {
+          reject(new Error(error.errMsg || '网络请求失败'));
+        };
+      });
+    } catch (error) {
+      console.error('刷新Token失败', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 登出
+   */
+  async logout() {
+    try {
+      // 调用后端登出接口
+      try {
+        const token = await this.getToken();
+        if (token) {
+          await wx.request({
+            url: `${config.api.baseUrl}/api/${config.api.version}/auth/logout`,
+            method: 'POST',
+            header: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+        }
+      } catch (error) {
+        console.warn('调用后端登出接口失败', error);
+      }
+
+      // 清理本地数据
+      await this.clearUserSession();
+
+      console.log('用户登出成功');
+    } catch (error) {
+      console.error('登出失败', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 清理用户会话
+   */
+  async clearUserSession() {
+    try {
+      // 清理内存
+      this.currentToken = null;
+      this.currentUser = null;
+      this.currentRole = null;
+
+      // 清理本地存储
+      await Promise.all([
+        storage.remove(this.tokenKey),
+        storage.remove(this.userInfoKey),
+        storage.remove(this.roleKey)
+      ]);
+
+      // 停止Token检查
+      this.stopTokenCheck();
+
+      console.log('用户会话清理成功');
+    } catch (error) {
+      console.error('清理用户会话失败', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 启动Token检查定时器
+   */
+  startTokenCheck() {
+    if (this.checkTimer) {
+      return;
+    }
+
+    this.checkTimer = setInterval(async () => {
+      try {
+        const isValid = await this.isTokenValid();
+
+        if (!isValid) {
+          console.log('Token已过期，尝试刷新');
+
+          try {
+            await this.refreshToken();
+          } catch (error) {
+            console.error('Token刷新失败，用户需要重新登录', error);
+
+            // 清理会话并跳转登录
+            await this.clearUserSession();
+
+            wx.showModal({
+              title: '登录过期',
+              content: '您的登录已过期，请重新登录',
+              showCancel: false,
+              success: () => {
+                wx.redirectTo({
+                  url: '/pages/login/index'
+                });
+              }
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Token检查失败', error);
+      }
+    }, this.checkInterval);
+
+    console.log('Token检查定时器启动');
+  }
+
+  /**
+   * 停止Token检查定时器
+   */
+  stopTokenCheck() {
+    if (this.checkTimer) {
+      clearInterval(this.checkTimer);
+      this.checkTimer = null;
+      console.log('Token检查定时器停止');
+    }
+  }
+
+  /**
+   * 检查权限
+   */
+  async checkPermission(requiredRole) {
+    try {
+      const isLoggedIn = await this.isLoggedIn();
+
+      if (!isLoggedIn) {
+        return false;
+      }
+
+      const currentRole = await this.getUserRole();
+
+      // 定义角色权限级别
+      const roleLevel = {
+        'student': 1,
+        'parent': 2,
+        'teacher': 3,
+        'admin': 4
+      };
+
+      const currentLevel = roleLevel[currentRole] || 0;
+      const requiredLevel = roleLevel[requiredRole] || 0;
+
+      return currentLevel >= requiredLevel;
+    } catch (error) {
+      console.error('检查权限失败', error);
+      return false;
+    }
+  }
+
+  /**
+   * 获取用户头像URL
+   */
+  async getAvatarUrl() {
+    try {
+      const userInfo = await this.getUserInfo();
+      return userInfo?.avatarUrl || '/assets/images/default-avatar.png';
+    } catch (error) {
+      console.error('获取头像URL失败', error);
+      return '/assets/images/default-avatar.png';
+    }
+  }
+
+  /**
+   * 获取用户显示名称
+   */
+  async getDisplayName() {
+    try {
+      const userInfo = await this.getUserInfo();
+      return userInfo?.nickName || userInfo?.name || '用户';
+    } catch (error) {
+      console.error('获取显示名称失败', error);
+      return '用户';
+    }
+  }
+}
+
+// 创建单例实例
+const authManager = new AuthManager();
+
+// 导出常用方法
+module.exports = {
+  // 认证管理器实例
+  authManager,
+
+  // 常用方法快捷访问
+  wechatLogin: () => authManager.wechatLogin(),
+  logout: () => authManager.logout(),
+  getToken: () => authManager.getToken(),
+  getUserInfo: () => authManager.getUserInfo(),
+  getUserRole: () => authManager.getUserRole(),
+  updateUserInfo: (userInfo) => authManager.updateUserInfo(userInfo),
+  switchRole: (role) => authManager.switchRole(role),
+  isLoggedIn: () => authManager.isLoggedIn(),
+  isTokenValid: () => authManager.isTokenValid(),
+  refreshToken: () => authManager.refreshToken(),
+  checkPermission: (role) => authManager.checkPermission(role),
+  getAvatarUrl: () => authManager.getAvatarUrl(),
+  getDisplayName: () => authManager.getDisplayName(),
+
+  // 用于页面路由守卫
+  async requireLogin() {
+    const isLoggedIn = await authManager.isLoggedIn();
+    if (!isLoggedIn) {
+      wx.redirectTo({
+        url: '/pages/login/index'
+      });
+      return false;
+    }
+    return true;
+  },
+
+  // 用于权限检查的装饰器
+  requireRole(requiredRole) {
+    return async function (target, propertyKey, descriptor) {
+      const originalMethod = descriptor.value;
+
+      descriptor.value = async function (...args) {
+        const hasPermission = await authManager.checkPermission(requiredRole);
+
+        if (!hasPermission) {
+          wx.showToast({
+            title: '权限不足',
+            icon: 'error'
+          });
+          return;
+        }
+
+        return originalMethod.apply(this, args);
+      };
+
+      return descriptor;
+    };
+  }
+};
