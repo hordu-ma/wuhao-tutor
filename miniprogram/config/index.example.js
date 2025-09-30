@@ -1,78 +1,54 @@
 // 五好伴学小程序配置文件模板
 // 复制此文件为 index.js 并填入正确的配置值
+// Configuration Template - Copy this file to index.js and fill in actual values
 
-const config = {
-  // 环境配置
-  environment: 'development', // development | staging | production
-  debug: true,
-  version: '1.0.0',
+// 环境配置导入
+const developmentConfig = require('./environments/development.js');
+const stagingConfig = require('./environments/staging.js');
+const productionConfig = require('./environments/production.js');
 
-  // API 配置
-  api: {
-    // 后端 API 基础地址
-    baseUrl: 'https://localhost:8000', // 请替换为实际的后端地址
-    // API 版本
-    version: 'v1',
-    // 请求超时时间 (毫秒)
-    timeout: 10000,
-    // 重试次数
-    retryCount: 3,
-    // 重试间隔 (毫秒)
-    retryDelay: 1000,
+// 当前环境 - 可通过环境变量或手动设置
+// Current environment - can be set via environment variable or manually
+const currentEnv = process.env.NODE_ENV || 'development'; // development | staging | production
+
+// 环境配置映射
+const envConfigs = {
+  development: developmentConfig,
+  staging: stagingConfig,
+  production: productionConfig,
+};
+
+// 获取当前环境配置
+const envConfig = envConfigs[currentEnv] || developmentConfig;
+
+// 基础配置 - 所有环境通用
+const baseConfig = {
+  // 应用信息
+  app: {
+    name: '五好伴学',
+    version: '1.0.0',
+    description: 'K12 AI学情管理平台微信小程序',
+    author: 'Liguo Ma <maliguo@outlook.com>',
+    homepage: 'https://wuhao-tutor.com',
   },
 
-  // 文件上传配置
-  upload: {
-    // 阿里云 OSS 或其他云存储基础地址
-    ossBaseUrl: 'https://your-bucket.oss-cn-hangzhou.aliyuncs.com',
-    // 允许的文件类型
-    allowedTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
-    // 单个文件最大尺寸 (字节)
-    maxFileSize: 10 * 1024 * 1024, // 10MB
-    // 图片压缩质量 (0-1)
-    compressQuality: 0.8,
-    // 图片最大宽度
-    maxWidth: 1920,
-    // 图片最大高度
-    maxHeight: 1920,
-  },
-
-  // 缓存配置
-  cache: {
-    // 缓存前缀
-    prefix: 'wuhao_',
-    // 默认缓存时间 (毫秒)
-    defaultTTL: 5 * 60 * 1000, // 5分钟
-    // 用户信息缓存时间
-    userInfoTTL: 24 * 60 * 60 * 1000, // 24小时
-    // 静态数据缓存时间
-    staticDataTTL: 60 * 60 * 1000, // 1小时
-  },
-
-  // 用户认证配置
-  auth: {
-    // Token 存储键名
-    tokenKey: 'auth_token',
-    // 用户信息存储键名
-    userInfoKey: 'user_info',
-    // 用户角色存储键名
-    roleKey: 'user_role',
-    // Token 过期时间检查间隔 (毫秒)
-    checkInterval: 5 * 60 * 1000, // 5分钟
-  },
-
-  // 小程序特定配置
+  // 小程序基础信息
   miniprogram: {
-    // 小程序 AppID (需要替换)
-    appId: 'wxYOUR_APPID_HERE',
-    // 分享配置
+    // ⚠️ 重要：请替换为您的小程序 AppID
+    appId: 'wx2a8b340606664785', // 请替换为实际的小程序AppID
+    name: '五好伴学',
+    version: '1.0.0',
+
+    // 分享默认配置
     share: {
       title: '五好伴学 - AI智能学习助手',
       desc: '让学习更高效，让成长更快乐',
       imageUrl: '/assets/images/share-logo.png',
     },
-    // tabBar 配置
+
+    // 不同角色的 tabBar 配置
     tabBar: {
+      // 学生端 tabBar
       student: [
         {
           pagePath: 'pages/index/index',
@@ -105,6 +81,8 @@ const config = {
           selectedIconPath: '/assets/icons/profile-active.png',
         },
       ],
+
+      // 家长端 tabBar
       parent: [
         {
           pagePath: 'pages/index/index',
@@ -131,6 +109,8 @@ const config = {
           selectedIconPath: '/assets/icons/profile-active.png',
         },
       ],
+
+      // 教师端 tabBar
       teacher: [
         {
           pagePath: 'pages/index/index',
@@ -160,152 +140,233 @@ const config = {
     },
   },
 
+  // API 配置
+  api: {
+    // ⚠️ 重要：请替换为您的后端 API 地址
+    baseUrl: 'https://localhost:8000', // 请替换为实际的后端地址
+    version: 'v1',
+    timeout: 10000,
+    retryCount: 3,
+    retryDelay: 1000,
+  },
+
+  // 文件上传配置
+  upload: {
+    // ⚠️ 重要：请替换为您的文件上传服务地址
+    baseUrl: 'https://your-upload-service.com', // 请替换为实际的上传地址
+    allowedTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+    maxFileSize: 10 * 1024 * 1024, // 10MB
+    compressQuality: 0.8,
+    maxWidth: 1920,
+    maxHeight: 1920,
+  },
+
+  // 缓存配置
+  cache: {
+    prefix: 'wuhao_',
+    defaultTTL: 5 * 60 * 1000, // 5分钟
+    userInfoTTL: 24 * 60 * 60 * 1000, // 24小时
+    staticDataTTL: 60 * 60 * 1000, // 1小时
+  },
+
+  // 用户认证配置
+  auth: {
+    tokenKey: 'auth_token',
+    userInfoKey: 'user_info',
+    roleKey: 'user_role',
+    checkInterval: 5 * 60 * 1000, // 5分钟
+  },
+
   // UI 主题配置
   theme: {
-    // 主色调
     primaryColor: '#1890ff',
-    // 成功色
     successColor: '#52c41a',
-    // 警告色
     warningColor: '#faad14',
-    // 错误色
     errorColor: '#f5222d',
-    // 文字颜色
     textColor: '#333333',
-    // 次要文字颜色
     textColorSecondary: '#666666',
-    // 占位文字颜色
     textColorPlaceholder: '#999999',
-    // 背景颜色
     backgroundColor: '#f5f5f5',
-    // 边框颜色
     borderColor: '#d9d9d9',
-    // 圆角大小
     borderRadius: '8rpx',
-    // 阴影
     boxShadow: '0 2rpx 8rpx rgba(0, 0, 0, 0.1)',
   },
 
   // 功能开关
   features: {
-    // 语音输入
     voiceInput: true,
-    // 图片上传
     imageUpload: true,
-    // 离线模式
     offlineMode: false,
-    // 推送通知
     push: true,
-    // 分享功能
     share: true,
-    // 收藏功能
     favorite: true,
-    // 搜索功能
     search: true,
-    // 深色模式
     darkMode: false,
   },
 
   // 分页配置
   pagination: {
-    // 默认页面大小
     defaultPageSize: 20,
-    // 最大页面大小
     maxPageSize: 100,
-    // 加载更多阈值
     loadMoreThreshold: 3,
+  },
+
+  // 第三方服务配置
+  thirdParty: {
+    // ⚠️ 重要：请替换为您的实际服务密钥
+    map: {
+      key: 'YOUR_MAP_KEY_HERE', // 请替换为实际的地图服务密钥
+      type: 'tencent', // tencent | baidu | amap
+    },
+    speech: {
+      appId: 'YOUR_SPEECH_APPID_HERE', // 请替换为实际的语音服务AppID
+      appKey: 'YOUR_SPEECH_KEY_HERE', // 请替换为实际的语音服务密钥
+    },
+    analytics: {
+      appId: 'YOUR_ANALYTICS_APPID_HERE', // 请替换为实际的统计分析AppID
+    },
   },
 
   // 错误处理配置
   error: {
-    // 是否显示错误详情
     showDetails: true,
-    // 错误上报开关
     report: true,
-    // 错误上报地址
     reportUrl: '/api/v1/errors/report',
-    // 重试配置
     retry: {
-      // 网络错误重试次数
       networkRetryCount: 3,
-      // 服务器错误重试次数
       serverRetryCount: 1,
-      // 重试间隔倍数
       retryBackoffMultiplier: 2,
     },
   },
 
   // 性能监控配置
   performance: {
-    // 是否开启性能监控
     enabled: true,
-    // 采样率 (0-1)
     sampleRate: 0.1,
-    // 上报地址
     reportUrl: '/api/v1/performance/report',
-    // 监控指标
     metrics: {
-      // 页面加载时间
       pageLoadTime: true,
-      // API 请求时间
       apiRequestTime: true,
-      // 渲染时间
       renderTime: true,
-      // 内存使用
       memoryUsage: false,
     },
   },
 
   // 日志配置
   log: {
-    // 日志级别: 'debug' | 'info' | 'warn' | 'error'
     level: 'debug',
-    // 是否打印到控制台
     console: true,
-    // 是否上报服务器
     remote: false,
-    // 远程日志上报地址
     remoteUrl: '/api/v1/logs/report',
-    // 本地日志最大条数
     maxLocalLogs: 1000,
   },
 
   // 埋点配置
   analytics: {
-    // 是否开启埋点
     enabled: true,
-    // 埋点上报地址
     reportUrl: '/api/v1/analytics/report',
-    // 自动埋点事件
     autoTrack: {
-      // 页面访问
       pageView: true,
-      // 页面停留时间
       pageStayTime: true,
-      // 点击事件
       click: false,
-      // 分享事件
       share: true,
-      // 错误事件
       error: true,
     },
   },
 };
 
-// 根据环境动态调整配置
-if (config.environment === 'production') {
-  // 生产环境配置
-  config.debug = false;
-  config.log.level = 'warn';
-  config.log.console = false;
-  config.log.remote = true;
-  config.error.showDetails = false;
-  config.performance.sampleRate = 1.0;
-} else if (config.environment === 'staging') {
-  // 预发布环境配置
-  config.debug = false;
-  config.log.level = 'info';
-  config.performance.sampleRate = 0.5;
+// 合并环境配置和基础配置
+// Merge environment config with base config
+const config = {
+  ...baseConfig,
+  ...envConfig,
+  // 确保重要配置不被覆盖
+  app: { ...baseConfig.app, ...envConfig.app },
+  miniprogram: { ...baseConfig.miniprogram, ...envConfig.miniprogram },
+  api: { ...baseConfig.api, ...envConfig.api },
+  upload: { ...baseConfig.upload, ...envConfig.upload },
+  theme: { ...baseConfig.theme, ...envConfig.theme },
+  features: { ...baseConfig.features, ...envConfig.features },
+  thirdParty: { ...baseConfig.thirdParty, ...envConfig.thirdParty },
+};
+
+// 配置验证函数
+function validateConfig(config) {
+  const requiredFields = [
+    'miniprogram.appId',
+    'api.baseUrl',
+  ];
+
+  const missingFields = requiredFields.filter(field => {
+    const keys = field.split('.');
+    let value = config;
+    for (const key of keys) {
+      value = value[key];
+      if (value === undefined || value === null) {
+        return true;
+      }
+    }
+    return false;
+  });
+
+  if (missingFields.length > 0) {
+    console.warn('⚠️ 配置文件缺少必要字段:', missingFields);
+    console.warn('请检查 config/index.js 文件并补全配置');
+  }
+
+  // 检查是否使用了默认值
+  const defaultValues = [
+    'wx2a8b340606664785', // 默认AppID
+    'https://localhost:8000', // 默认API地址
+    'YOUR_MAP_KEY_HERE',
+    'YOUR_SPEECH_APPID_HERE',
+    'YOUR_ANALYTICS_APPID_HERE',
+  ];
+
+  const usedDefaults = [];
+  const configStr = JSON.stringify(config);
+  defaultValues.forEach(defaultValue => {
+    if (configStr.includes(defaultValue)) {
+      usedDefaults.push(defaultValue);
+    }
+  });
+
+  if (usedDefaults.length > 0) {
+    console.warn('⚠️ 检测到配置文件中仍使用默认值:');
+    usedDefaults.forEach(value => {
+      console.warn(`  - ${value}`);
+    });
+    console.warn('请替换为实际的配置值');
+  }
+
+  return missingFields.length === 0 && usedDefaults.length === 0;
 }
+
+// 开发环境下验证配置
+if (config.debug) {
+  validateConfig(config);
+}
+
+// 配置说明注释
+config._comments = {
+  setup: [
+    '📝 配置说明:',
+    '1. 复制 config/index.example.js 为 config/index.js',
+    '2. 替换 miniprogram.appId 为您的小程序AppID',
+    '3. 替换 api.baseUrl 为您的后端API地址',
+    '4. 根据需要配置第三方服务密钥',
+    '5. 根据环境调整相关配置项',
+    '',
+    '🔧 环境切换:',
+    '- 开发环境: NODE_ENV=development',
+    '- 预发布环境: NODE_ENV=staging',
+    '- 生产环境: NODE_ENV=production',
+    '',
+    '⚠️ 安全提醒:',
+    '- 不要在代码中硬编码敏感信息',
+    '- 不要提交包含真实密钥的配置文件',
+    '- 使用环境变量管理敏感配置',
+  ],
+};
 
 module.exports = config;

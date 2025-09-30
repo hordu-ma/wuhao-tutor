@@ -31,16 +31,19 @@
 ### 安装步骤
 
 1. **克隆项目**
+
 ```bash
 cd ~/my-devs/python/wuhao-tutor/miniprogram
 ```
 
 2. **安装依赖**
+
 ```bash
 npm install
 ```
 
 3. **配置环境**
+
 ```bash
 # 复制配置文件模板
 cp config/index.example.js config/index.js
@@ -49,6 +52,7 @@ cp config/index.example.js config/index.js
 ```
 
 4. **开启开发模式**
+
 ```bash
 npm run dev
 ```
@@ -137,15 +141,15 @@ style: 调整首页布局样式
 
 ## 📋 可用脚本
 
-| 命令 | 描述 |
-|------|------|
-| `npm run dev` | 开发模式构建 |
-| `npm run build` | 生产模式构建 |
-| `npm run lint` | 代码检查并自动修复 |
-| `npm run format` | 代码格式化 |
+| 命令                 | 描述               |
+| -------------------- | ------------------ |
+| `npm run dev`        | 开发模式构建       |
+| `npm run build`      | 生产模式构建       |
+| `npm run lint`       | 代码检查并自动修复 |
+| `npm run format`     | 代码格式化         |
 | `npm run type-check` | TypeScript类型检查 |
-| `npm run pre-commit` | 提交前完整检查 |
-| `npm run clean` | 清理构建文件 |
+| `npm run pre-commit` | 提交前完整检查     |
+| `npm run clean`      | 清理构建文件       |
 
 ## 🔧 配置说明
 
@@ -256,16 +260,19 @@ performance: {
 ### 开发流程
 
 1. **创建功能分支**
+
 ```bash
 git checkout -b feature/your-feature-name
 ```
 
 2. **开发并测试**
+
 ```bash
 npm run pre-commit  # 确保代码质量
 ```
 
 3. **提交代码**
+
 ```bash
 git commit -m "feat: 添加新功能描述"
 git push origin feature/your-feature-name
