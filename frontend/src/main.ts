@@ -105,9 +105,10 @@ function initApp() {
     console.error('❌ 应用启动失败:', error)
 
     // 显示错误信息到页面
-    const app = document.getElementById('app')
-    if (app) {
-      app.innerHTML = `
+    const appElement = document.getElementById('app')
+    if (appElement) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      appElement.innerHTML = `
         <div style="
           padding: 40px 20px;
           text-align: center;
@@ -118,7 +119,7 @@ function initApp() {
           <h2 style="color: #dc3545; margin-bottom: 16px;">应用启动失败</h2>
           <p style="color: #666; margin-bottom: 24px;">
             抱歉，应用无法正常启动。错误信息：<br>
-            <code style="background: #f8f9fa; padding: 4px 8px; border-radius: 4px;">${error.message}</code>
+            <code style="background: #f8f9fa; padding: 4px 8px; border-radius: 4px;">${errorMessage}</code>
           </p>
           <button onclick="location.reload()" style="
             background: #007bff;

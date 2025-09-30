@@ -1,0 +1,11 @@
+{
+  "usingComponents": {},
+  "navigationBarTitleText": "登录",
+  "navigationStyle": "custom",
+  "enablePullDownRefresh": false,
+  "onReachBottomDistance": 50,
+  "backgroundTextStyle": "light",
+  "backgroundColor": "#667eea",
+  "navigationBarBackgroundColor": "#667eea",
+  "navigationBarTextStyle": "white"
+}

@@ -1,0 +1,46 @@
+<!--pages/login/index.wxml - 五好伴学小程序登录页面模板-->
+<view class="container">
+  <view class="login-content">
+    <!-- Logo区域 -->
+    <view class="logo-section">
+      <image class="logo" src="/assets/images/logo.png" mode="aspectFit" />
+      <text class="app-name">五好伴学</text>
+      <text class="app-desc">AI智能学习助手</text>
+    </view>
+
+    <!-- 登录表单区域 -->
+    <view class="login-form">
+      <view class="welcome-text">
+        <text class="welcome-title">欢迎使用五好伴学</text>
+        <text class="welcome-desc">让学习更高效，让成长更快乐</text>
+      </view>
+
+      <!-- 微信登录按钮 -->
+      <button
+        class="login-btn"
+        type="primary"
+        loading="{{loading}}"
+        disabled="{{loading}}"
+        bind:tap="onWechatLogin"
+      >
+        <text wx:if="{{!loading}}">微信登录</text>
+        <text wx:else>登录中...</text>
+      </button>
+
+      <!-- 用户协议 -->
+      <view class="agreement">
+        <text class="agreement-text">
+          登录即表示同意
+          <text class="agreement-link">《用户协议》</text>
+          和
+          <text class="agreement-link">《隐私政策》</text>
+        </text>
+      </view>
+    </view>
+
+    <!-- 底部装饰 -->
+    <view class="footer">
+      <text class="footer-text">专业的K12学习管理平台</text>
+    </view>
+  </view>
+</view>
