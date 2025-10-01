@@ -1,349 +1,431 @@
-# 权限控制系统配置文档
+# TODO 2.4 权限控制系统完整指南
 
-## 🎯 概述
+## 概述
 
-本文档描述了微信小程序中实现的细粒度权限控制系统，包括角色管理、权限检查、页面守卫等核心功能。
+本文档详细介绍了微信小程序中完整的权限控制系统实现，包括页面级权限控制、功能模块权限验证、API调用权限管理、敏感操作二次确认机制以及友好的权限提示系统。
 
-## 📋 系统架构
+## 系统架构
 
 ### 核心组件
 
-1. **PermissionManager** (`utils/permission-manager.js`)
-   - 权限检查核心逻辑
-   - 权限缓存管理
-   - 动态权限验证
-   - 敏感操作确认
+1. **enhanced-page-guard.js** - 增强页面权限守卫
+2. **feature-permission-guard.js** - 功能级权限守卫
+3. **api-permission-guard.js** - API权限守卫
+4. **sensitive-operation-guard.js** - 敏感操作确认守卫
+5. **friendly-permission-dialog.js** - 友好权限提示系统
+6. **sensitive-confirm-modal** - 敏感操作确认组件
 
-2. **RoleManager** (`utils/role-manager.js`)
-   - 角色配置管理
-   - 角色切换功能
-   - 角色权限映射
+### 权限层级
 
-3. **RouteGuard** (`utils/route-guard.js`)
-   - 页面路由守卫
-   - 登录状态检查
-   - 权限拦截处理
-
-4. **Permission Config** (`utils/permission-config.js`)
-   - 权限配置映射
-   - 特殊权限规则
-   - 权限组合规则
-
-## 🔐 权限系统设计
-
-### 权限类型
-
-#### 基础功能权限
-- `homework.view` - 查看作业
-- `homework.submit` - 提交作业
-- `homework.correct` - 批改作业
-- `chat.ask` - AI提问
-- `analysis.view_self` - 查看个人分析
-
-#### 管理权限
-- `user.manage_students` - 管理学生
-- `homework.manage` - 作业管理
-- `analysis.view_all` - 查看所有分析
-
-#### 敏感权限
-- `homework.delete` - 删除作业
-- `admin.system_config` - 系统配置
-- `export.all_data` - 导出所有数据
-
-### 角色权限映射
-
-#### 学生 (Student)
-```javascript
-permissions: [
-  'homework.view',
-  'homework.submit', 
-  'chat.ask',
-  'analysis.view_self',
-  'profile.view_self'
-]
+```
+用户认证层
+    ↓
+角色权限层 (学生/家长/教师)
+    ↓
+页面访问权限层
+    ↓
+功能操作权限层
+    ↓
+API调用权限层
+    ↓
+敏感操作确认层
 ```
 
-#### 家长 (Parent)
-```javascript
-permissions: [
-  'homework.view_child',
-  'analysis.view_child',
-  'profile.view_family',
-  'stats.view_child'
-]
-```
+## 1. 页面级权限控制
 
-#### 教师 (Teacher)
-```javascript
-permissions: [
-  'homework.view_all',
-  'homework.correct',
-  'homework.manage',
-  'analysis.view_class',
-  'user.manage_students'
-]
-```
+### 功能特性
+- 基于角色的页面访问控制
+- 登录状态验证
+- 动态权限检查
+- 角色切换检测
 
-## 🛡️ 权限检查机制
-
-### 1. 基础权限检查
+### 使用方法
 
 ```javascript
-// 检查单个权限
-const canSubmit = await permissionManager.hasPermission('homework.submit');
+const { enhancedPageGuard } = require('../utils/enhanced-page-guard.js');
 
-// 检查权限组
-const hasBasicPermissions = await permissionManager.hasPermissionGroup('basic_student');
-```
-
-### 2. 页面级权限检查
-
-```javascript
-// 自动页面权限检查
-const authResult = await routeGuard.checkPageAuth();
-
-// 手动页面权限检查
-const canAccess = await permissionManager.checkPageAccess('pages/homework/submit/index');
-```
-
-### 3. 动态权限检查
-
-```javascript
-// 检查是否能访问特定资源
-const canViewChild = await permissionManager.checkDynamicPermission(
-  'analysis.view_child',
-  { studentId: 'child123' }
-);
-```
-
-### 4. 敏感操作确认
-
-```javascript
-// 敏感操作自动确认
-const confirmed = await permissionManager.confirmSensitiveOperation(
-  'homework.delete',
-  '删除作业是不可恢复的操作，确定要继续吗？'
-);
-```
-
-## 🚪 路由守卫使用
-
-### 页面守卫配置
-
-#### 方式1：使用创建器
-```javascript
-const protectedPage = routeGuard.createPageGuard({
-  requireRole: 'teacher',
-  
+// 方式1：使用守卫包装器
+const guardedPage = enhancedPageGuard.createGuardedPage({
+  data: {},
   onLoad() {
-    console.log('页面加载 - 已通过权限检查');
+    // 页面逻辑
+  }
+}, 'pages/homework/list/index');
+
+// 方式2：使用装饰器
+const { requirePermissions } = require('../utils/enhanced-page-guard.js');
+
+const protectedPage = requirePermissions(['homework.view'], ['teacher'])({
+  data: {},
+  onLoad() {
+    // 只有教师角色且拥有homework.view权限才能访问
   }
 });
-
-Page(protectedPage);
 ```
 
-#### 方式2：使用装饰器
-```javascript
-const decoratedPage = routeGuard.requireAuth('student')({
-  onLoad() {
-    console.log('学生页面加载');
-  }
-});
+### 配置示例
 
-Page(decoratedPage);
-```
-
-#### 方式3：手动检查
 ```javascript
-const manualCheckPage = {
-  async onLoad() {
-    const authResult = await routeGuard.checkAuth({
-      requireRole: 'parent'
-    });
-    
-    if (!authResult.success) {
-      return; // 权限检查失败，已处理跳转
-    }
-    
-    // 继续页面逻辑
-    console.log('家长页面加载');
+const PAGE_PERMISSION_CONFIG = {
+  'pages/homework/manage/index': {
+    permissions: ['homework.manage'],
+    roles: ['teacher'],
+    requireLogin: true,
+    description: '作业管理页面'
   }
 };
-
-Page(manualCheckPage);
 ```
 
-## 📄 页面权限配置
+## 2. 功能模块权限验证
 
-### 页面权限映射
+### 功能特性
+- 细粒度权限检查
+- 条件验证（时间限制、次数限制等）
+- 所有权验证
+- 文件类型和大小验证
+
+### 使用方法
+
 ```javascript
-const pagePermissionConfig = {
-  'pages/homework/submit/index': {
-    permissions: ['homework.submit'],
+const { featurePermissionGuard } = require('../utils/feature-permission-guard.js');
+
+// 检查功能权限
+async function submitHomework() {
+  const result = await featurePermissionGuard.checkFeaturePermission('homework.submit', {
+    homeworkId: 'hw_123'
+  });
+  
+  if (!result.success) {
+    featurePermissionGuard.handlePermissionFailure(result);
+    return;
+  }
+  
+  // 执行提交逻辑
+}
+
+// 便捷方法
+const canSubmit = await featurePermissionGuard.canSubmitHomework('hw_123');
+```
+
+### 配置示例
+
+```javascript
+const FEATURE_PERMISSION_CONFIG = {
+  'homework.submit': {
+    permission: 'homework.submit',
     roles: ['student'],
-    description: '作业提交页面'
-  },
-  'pages/analysis/progress/index': {
-    permissions: ['analysis.view_child'],
-    roles: ['parent', 'teacher'],
-    description: '学习进度分析'
+    conditions: {
+      timeRestriction: '06:00-23:00', // 时间限制
+      maxDaily: 10                    // 每日限制
+    },
+    errorMessage: '您没有提交作业的权限',
+    sensitive: true                   // 标记为敏感操作
   }
 };
 ```
 
-### 特殊权限规则
+## 3. API调用权限管理
+
+### 功能特性
+- HTTP方法和URL匹配
+- 请求拦截器
+- 响应拦截器
+- 资源所有权验证
+- 敏感API标记
+
+### 使用方法
+
 ```javascript
-const specialPermissionRules = {
-  // 动态权限
-  dynamic: {
-    'analysis.view_child': {
-      condition: 'isParentOfTarget',
-      description: '只能查看自己孩子的分析'
-    }
-  },
+const { apiPermissionGuard } = require('../utils/api-permission-guard.js');
+
+// 检查API权限
+async function callAPI() {
+  const result = await apiPermissionGuard.checkApiPermission('POST', '/homework', {
+    body: homeworkData
+  });
   
-  // 时间限制
-  timeRestricted: {
-    'homework.submit': {
-      timeRange: '06:00-23:00',
-      description: '作业提交时间限制'
-    }
+  if (!result.success) {
+    console.error('API权限检查失败:', result.message);
+    return;
+  }
+  
+  // 执行API调用
+}
+
+// 使用拦截器（自动检查）
+apiPermissionGuard.setupInterceptors();
+```
+
+### 配置示例
+
+```javascript
+const API_PERMISSION_CONFIG = {
+  'POST /homework': {
+    permission: 'homework.create',
+    roles: ['teacher'],
+    description: '创建作业'
+  },
+  'DELETE /homework/:id': {
+    permission: 'homework.delete',
+    roles: ['teacher', 'student'],
+    description: '删除作业',
+    sensitive: true                   // 敏感操作标记
   }
 };
 ```
 
-## 🔧 权限装饰器
+## 4. 敏感操作二次确认
 
-### 方法权限装饰器
+### 功能特性
+- 分级确认（简单确认、密码确认、理由确认）
+- 操作日志记录
+- 权限预检查
+- 资源所有权验证
+
+### 使用方法
+
 ```javascript
-class HomeworkService {
-  @permissionManager.requirePermission('homework.delete', {
-    showError: true,
-    requireConfirm: true
-  })
-  async deleteHomework(homeworkId) {
-    // 删除逻辑
+const { sensitiveOperationGuard } = require('../utils/sensitive-operation-guard.js');
+
+// 敏感操作确认
+async function deleteHomework(homeworkId) {
+  const result = await sensitiveOperationGuard.confirmSensitiveOperation(
+    'homework.delete',
+    {
+      homeworkId,
+      homeworkTitle: '数学作业1',
+      ownerId: 'teacher_123'
+    }
+  );
+  
+  if (!result.success) {
+    console.log('用户取消操作或权限不足');
+    return;
   }
+  
+  // 执行删除操作
+  await performDelete(homeworkId);
 }
 ```
 
-## 📊 权限缓存机制
+### 配置示例
 
-### 缓存策略
-- **缓存时间**: 5分钟
-- **缓存键**: `${userId}_${permission}`
-- **自动清理**: 缓存过期自动清理
-- **性能提升**: 平均提升90%检查速度
-
-### 缓存管理
 ```javascript
-// 清理特定用户缓存
-permissionManager.clearUserCache(userId);
-
-// 清理所有缓存
-permissionManager.clearAllCache();
-
-// 检查缓存状态
-const cacheInfo = permissionManager.getCacheInfo();
+const SENSITIVE_OPERATION_CONFIG = {
+  'homework.batch_delete': {
+    title: '批量删除作业',
+    message: '确认要删除选中的 {count} 个作业吗？删除后将无法恢复。',
+    requirePassword: true,            // 需要密码确认
+    requireReason: true,              // 需要理由说明
+    type: 'danger',                   // 危险级别
+    icon: 'delete'
+  }
+};
 ```
 
-## 🧪 测试与验证
+## 5. 友好权限提示系统
 
-### 自动化测试
+### 功能特性
+- 多种错误类型支持
+- 用户友好的提示信息
+- 操作指导和解决方案
+- 权限申请流程
+
+### 使用方法
+
 ```javascript
-// 运行权限系统测试
-const tester = new PermissionSystemTest();
-await tester.runAllTests();
+const { friendlyPermissionDialog } = require('../utils/friendly-permission-dialog.js');
 
-// 性能测试
-const perfTester = new PermissionPerformanceTest();
-await perfTester.testPermissionCheckPerformance();
+// 显示权限错误提示
+function handlePermissionError() {
+  friendlyPermissionDialog.showPermissionError('role_not_allowed', {
+    userRole: 'student',
+    requiredRoles: ['teacher'],
+    message: '此功能仅限教师使用'
+  });
+}
 ```
 
-### 测试覆盖范围
-- ✅ 基础权限检查
-- ✅ 角色权限验证
-- ✅ 页面访问控制
-- ✅ 动态权限检查
-- ✅ 敏感操作确认
-- ✅ 权限组验证
-- ✅ 缓存机制测试
-- ✅ 性能基准测试
+### 支持的错误类型
 
-## 🚨 安全注意事项
+- `not_logged_in` - 未登录
+- `role_not_allowed` - 角色权限不足
+- `permission_denied` - 基础权限被拒绝
+- `condition_failed` - 使用条件不满足
+- `time_restriction` - 时间限制
+- `daily_limit` - 次数限制
+- `not_owner` - 资源所有权问题
+- `network_error` - 网络错误
+- `server_error` - 服务器错误
 
-### 权限设计原则
-1. **最小权限原则**: 用户只获得完成任务所需的最小权限
-2. **权限分离**: 不同角色权限明确分离
-3. **敏感操作保护**: 重要操作需要二次确认
-4. **动态权限**: 基于资源所有权的动态权限检查
+## 6. 敏感操作确认组件
 
-### 安全检查清单
-- [ ] 禁止权限代码硬编码
-- [ ] 敏感操作必须二次确认
-- [ ] 权限检查不能绕过
-- [ ] 错误时默认拒绝访问
-- [ ] 权限变更需要重新登录
+### 组件特性
+- 支持密码验证
+- 支持理由输入
+- 实时表单验证
+- 自定义样式主题
 
-## 📈 性能优化
+### 使用方法
 
-### 缓存优化
-- 权限检查结果缓存5分钟
-- 用户角色信息缓存
-- 页面权限配置预加载
-
-### 批量检查
-```javascript
-// 批量权限检查
-const permissions = ['homework.view', 'homework.submit', 'chat.ask'];
-const results = await Promise.all(
-  permissions.map(perm => permissionManager.hasPermission(perm))
-);
+```wxml
+<sensitive-confirm-modal
+  show="{{showConfirmModal}}"
+  config="{{confirmConfig}}"
+  bind:confirm="onConfirmOperation"
+/>
 ```
 
-## 🔄 权限更新流程
+```javascript
+// 页面中使用
+data: {
+  showConfirmModal: false,
+  confirmConfig: {}
+},
 
-### 权限变更
-1. 修改 `permission-config.js` 中的配置
-2. 更新角色权限映射
-3. 运行权限测试验证
-4. 清理相关缓存
-5. 部署更新
+showSensitiveConfirm() {
+  this.setData({
+    showConfirmModal: true,
+    confirmConfig: {
+      title: '删除确认',
+      message: '确认要删除这个作业吗？',
+      requirePassword: true,
+      requireReason: false,
+      type: 'danger'
+    }
+  });
+},
 
-### 新增权限
-1. 在权限定义中添加新权限
-2. 配置角色权限映射
-3. 添加页面权限要求
-4. 编写权限测试用例
-5. 更新文档
+onConfirmOperation(e) {
+  const { confirmed, extraData } = e.detail;
+  if (confirmed) {
+    // 用户确认操作
+    console.log('密码:', extraData.password);
+    console.log('理由:', extraData.reason);
+  }
+  this.setData({ showConfirmModal: false });
+}
+```
 
-## 📚 API 参考
+## 完整使用示例
 
-### PermissionManager 主要方法
+### 作业管理页面示例
 
-- `hasPermission(permission, userId)` - 检查权限
-- `hasPermissionGroup(groupName, userId)` - 检查权限组
-- `checkPageAccess(pagePath, userId)` - 检查页面访问
-- `checkDynamicPermission(permission, resourceData)` - 动态权限检查
-- `confirmSensitiveOperation(permission, message)` - 敏感操作确认
+```javascript
+const { enhancedPageGuard } = require('../utils/enhanced-page-guard.js');
+const { featurePermissionGuard } = require('../utils/feature-permission-guard.js');
+const { sensitiveOperationGuard } = require('../utils/sensitive-operation-guard.js');
 
-### RouteGuard 主要方法
+const homeworkPage = enhancedPageGuard.createGuardedPage({
+  data: {
+    homeworkList: []
+  },
 
-- `checkPageAuth(pagePath, options)` - 页面权限检查
-- `createPageGuard(pageConfig)` - 创建页面守卫
-- `requireAuth(requireRole)` - 权限装饰器
+  async onDeleteHomework(e) {
+    const homeworkId = e.currentTarget.dataset.id;
+    
+    try {
+      // 1. 检查功能权限
+      const canDelete = await featurePermissionGuard.checkFeaturePermission(
+        'homework.delete',
+        { homeworkId }
+      );
+      
+      if (!canDelete.success) {
+        featurePermissionGuard.handlePermissionFailure(canDelete);
+        return;
+      }
 
-## 📝 更新日志
+      // 2. 敏感操作确认
+      const confirmResult = await sensitiveOperationGuard.confirmSensitiveOperation(
+        'homework.delete',
+        { homeworkId }
+      );
+      
+      if (!confirmResult.success) {
+        return;
+      }
 
-### v1.0.0 (2024-10-01)
-- ✅ 完成基础权限系统搭建
-- ✅ 实现角色权限映射
-- ✅ 完成页面权限守卫
-- ✅ 添加权限缓存机制
-- ✅ 实现敏感操作确认
-- ✅ 完成权限系统测试
+      // 3. 执行删除
+      await this.deleteHomeworkAPI(homeworkId);
+      this.refreshHomeworkList();
+      
+    } catch (error) {
+      friendlyPermissionDialog.showPermissionError('server_error', {
+        message: '删除失败，请稍后重试'
+      });
+    }
+  }
 
----
+}, 'pages/homework/manage/index');
+```
 
-**注意**: 权限系统是安全的核心，任何修改都需要经过充分测试验证。
+## 最佳实践
+
+### 1. 权限设计原则
+- **最小权限原则**: 用户只获得完成任务所需的最小权限
+- **角色分离**: 清晰定义不同角色的权限边界
+- **分层验证**: 在多个层面进行权限检查
+- **友好提示**: 提供清晰的错误信息和解决方案
+
+### 2. 性能优化
+- **权限缓存**: 合理使用缓存机制避免重复检查
+- **异步检查**: 使用异步方式进行权限验证
+- **批量验证**: 对多个权限进行批量检查
+- **懒加载**: 按需加载权限配置
+
+### 3. 安全考虑
+- **前后端双重验证**: 前端权限检查仅用于用户体验，后端必须再次验证
+- **敏感操作保护**: 对危险操作实施多重确认
+- **日志记录**: 记录所有权限相关操作
+- **定期审查**: 定期审查权限配置和使用情况
+
+### 4. 错误处理
+- **统一错误处理**: 使用统一的错误处理机制
+- **用户友好**: 提供易懂的错误信息
+- **操作指导**: 为用户提供解决问题的指导
+- **优雅降级**: 在权限不足时提供替代方案
+
+## 调试和测试
+
+### 调试模式
+```javascript
+// 启用调试模式
+enhancedPageGuard.enableDebugMode();
+featurePermissionGuard.enableDebugMode();
+
+// 获取调试信息
+const debugInfo = enhancedPageGuard.getDebugInfo();
+console.log('权限调试信息:', debugInfo);
+```
+
+### 权限测试
+```javascript
+// 测试页面权限
+const pageAccess = await enhancedPageGuard.checkFeaturePermission('view_analysis');
+
+// 测试功能权限
+const featureAccess = await featurePermissionGuard.checkFeaturePermission('homework.submit');
+
+// 测试敏感操作
+const sensitiveResult = await sensitiveOperationGuard.confirmSensitiveOperation('homework.delete');
+```
+
+## 总结
+
+TODO 2.4权限控制系统提供了完整的权限管理解决方案，包括：
+
+1. ✅ **页面级权限控制** - 实现基于角色和权限的页面访问控制
+2. ✅ **功能模块权限验证** - 提供细粒度的功能权限检查
+3. ✅ **API调用权限管理** - 建立API调用的权限验证层
+4. ✅ **敏感操作二次确认** - 为危险操作添加确认流程
+5. ✅ **友好权限提示** - 提供清晰的错误信息和用户引导
+
+该系统具有以下优势：
+- **模块化设计**: 各组件独立，易于维护和扩展
+- **配置驱动**: 通过配置文件管理权限规则
+- **用户友好**: 提供清晰的提示和指导
+- **安全可靠**: 多层权限验证，确保系统安全
+- **性能优化**: 合理的缓存和异步处理机制
+
+通过这套权限控制系统，可以有效保护应用的安全性，同时提供良好的用户体验。
