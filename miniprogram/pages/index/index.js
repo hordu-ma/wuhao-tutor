@@ -1,5 +1,8 @@
 // pages/index/index.js - 五好伴学小程序首页
 
+const { routeGuard } = require('../../utils/route-guard.js');
+const { authManager } = require('../../utils/auth.js');
+
 Page({
   data: {
     userInfo: null,
@@ -15,16 +18,30 @@ Page({
       todayStudyTime: 0,
     },
     loading: true,
+    isLoggedIn: false,
   },
 
-  onLoad() {
+  async onLoad() {
     console.log('首页加载');
-    this.initPage();
+    
+    // 检查登录状态，但不强制要求登录（首页可以部分访问）
+    const isLoggedIn = await authManager.isLoggedIn();
+    this.setData({ isLoggedIn });
+    
+    await this.initPage();
   },
 
-  onShow() {
+  async onShow() {
     console.log('首页显示');
-    this.refreshData();
+    
+    // 每次显示时检查登录状态
+    const isLoggedIn = await authManager.isLoggedIn();
+    if (isLoggedIn !== this.data.isLoggedIn) {
+      this.setData({ isLoggedIn });
+      await this.initPage(); // 登录状态变化时重新初始化
+    } else if (isLoggedIn) {
+      await this.refreshData();
+    }
   },
 
   onPullDownRefresh() {
@@ -52,12 +69,31 @@ Page({
     try {
       this.setData({ loading: true });
 
-      // 获取应用实例
-      const app = getApp();
+      if (this.data.isLoggedIn) {
+        // 已登录用户，加载完整功能
+        await this.initLoggedInUser();
+      } else {
+        // 未登录用户，显示引导页面
+        this.initGuestUser();
+      }
+    } catch (error) {
+      console.error('初始化页面失败:', error);
+      this.showError('页面加载失败，请重试');
+    } finally {
+      this.setData({ loading: false });
+    }
+  },
 
+  /**
+   * 初始化已登录用户
+   */
+  async initLoggedInUser() {
+    try {
       // 获取用户信息
-      const userInfo = app.getUserInfo ? app.getUserInfo() : null;
-      const role = app.getUserRole ? app.getUserRole() : null;
+      const [userInfo, role] = await Promise.all([
+        authManager.getUserInfo(),
+        authManager.getUserRole()
+      ]);
 
       if (userInfo && role) {
         this.setData({
@@ -72,18 +108,59 @@ Page({
         // 加载用户数据
         await this.loadUserData();
       } else {
-        // 跳转到登录页
-        wx.redirectTo({
-          url: '/pages/login/index',
-        });
-        return;
+        console.warn('获取用户信息失败，清理登录状态');
+        await authManager.clearUserSession();
+        this.setData({ isLoggedIn: false });
+        this.initGuestUser();
       }
     } catch (error) {
-      console.error('初始化页面失败:', error);
-      this.showError('页面加载失败，请重试');
-    } finally {
-      this.setData({ loading: false });
+      console.error('初始化已登录用户失败:', error);
+      // 出错时回退到游客模式
+      this.setData({ isLoggedIn: false });
+      this.initGuestUser();
     }
+  },
+
+  /**
+   * 初始化游客用户
+   */
+  initGuestUser() {
+    this.setData({
+      userInfo: null,
+      hasUserInfo: false,
+      role: null,
+      quickActions: [
+        {
+          id: 'login',
+          title: '立即登录',
+          icon: '/assets/icons/login.png',
+          path: '/pages/login/index',
+          color: '#1890ff',
+        },
+        {
+          id: 'demo',
+          title: '体验演示',
+          icon: '/assets/icons/demo.png',
+          action: 'showDemo',
+          color: '#52c41a',
+        }
+      ],
+      notifications: [
+        {
+          id: 'welcome',
+          type: 'info',
+          title: '欢迎使用五好伴学',
+          content: '登录后即可体验完整的AI学习功能',
+          time: new Date().toLocaleTimeString()
+        }
+      ],
+      stats: {
+        homeworkCount: 0,
+        questionCount: 0,
+        reportCount: 0,
+        todayStudyTime: 0,
+      }
+    });
   },
 
   /**

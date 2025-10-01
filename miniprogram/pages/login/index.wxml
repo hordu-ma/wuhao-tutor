@@ -15,17 +15,43 @@
         <text class="welcome-desc">让学习更高效，让成长更快乐</text>
       </view>
 
+      <!-- 网络状态提示 -->
+      <view wx:if="{{networkStatus !== 'connected'}}" class="network-warning">
+        <van-notice-bar
+          left-icon="warning-o"
+          text="网络连接不可用，请检查网络设置"
+          mode="closeable"
+          color="#ed6a0c"
+          background="#fffbe8"
+        />
+      </view>
+
+      <!-- 错误信息显示 -->
+      <view wx:if="{{loginError}}" class="error-section">
+        <view class="error-message">
+          <van-icon name="warning-o" color="#ee0a24" />
+          <text class="error-text">{{loginError}}</text>
+        </view>
+        <view class="error-actions">
+          <button class="retry-btn" size="mini" bind:tap="onRetryLogin">重试</button>
+          <button class="network-btn" size="mini" bind:tap="onCheckNetwork">网络设置</button>
+        </view>
+      </view>
+
       <!-- 微信登录按钮 -->
-      <button
+      <van-button
         class="login-btn"
         type="primary"
+        size="large"
+        round
         loading="{{loading}}"
-        disabled="{{loading}}"
-        bind:tap="onWechatLogin"
+        disabled="{{loading || networkStatus !== 'connected'}}"
+        bind:click="onWechatLogin"
+        loading-text="登录中..."
       >
-        <text wx:if="{{!loading}}">微信登录</text>
-        <text wx:else>登录中...</text>
-      </button>
+        <van-icon wx:if="{{!loading}}" name="wechat" />
+        微信登录
+      </van-button>
 
       <!-- 用户协议 -->
       <view class="agreement">

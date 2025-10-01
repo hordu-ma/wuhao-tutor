@@ -2,6 +2,7 @@
   "pages": [
     "pages/index/index",
     "pages/login/index",
+    "pages/role-selection/index",
     "pages/homework/list/index",
     "pages/homework/detail/index",
     "pages/homework/submit/index",

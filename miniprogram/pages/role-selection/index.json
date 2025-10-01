@@ -1,0 +1,15 @@
+{
+  "navigationBarTitleText": "选择角色",
+  "navigationBarBackgroundColor": "#1890ff",
+  "navigationBarTextStyle": "white",
+  "backgroundColor": "#f5f5f5",
+  "enablePullDownRefresh": false,
+  "disableScroll": false,
+  "usingComponents": {
+    "van-button": "@vant/weapp/button/index",
+    "van-icon": "@vant/weapp/icon/index",
+    "van-notice-bar": "@vant/weapp/notice-bar/index",
+    "van-loading": "@vant/weapp/loading/index",
+    "van-overlay": "@vant/weapp/overlay/index"
+  }
+}
