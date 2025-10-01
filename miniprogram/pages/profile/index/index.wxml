@@ -1,0 +1,168 @@
+<!-- pages/profile/index/index.wxml - 用户信息展示页面 -->
+
+<view class="container">
+  <!-- 加载状态 -->
+  <view class="loading-container" wx:if="{{loading}}">
+    <van-loading type="spinner" size="40rpx" color="#1890ff">
+      加载中...
+    </van-loading>
+  </view>
+
+  <!-- 主要内容 -->
+  <view class="content" wx:else>
+    <!-- 用户基本信息卡片 -->
+    <view class="info-card">
+      <!-- 头像和基本信息 -->
+      <view class="user-header">
+        <view class="avatar-section" bind:tap="onAvatarTap">
+          <image 
+            class="avatar" 
+            src="{{userInfo.avatarUrl || '/assets/images/default-avatar.png'}}" 
+            mode="aspectFill"
+          />
+          <view class="avatar-edit-hint">
+            <van-icon name="edit" size="24rpx" color="#fff" />
+          </view>
+        </view>
+        
+        <view class="user-info">
+          <view class="user-name">{{userInfo.name || userInfo.nickName || '未设置姓名'}}</view>
+          <view class="user-role">{{getRoleDisplayName(userRole)}}</view>
+          <view class="user-phone" wx:if="{{userInfo.phone}}">{{userInfo.phone}}</view>
+        </view>
+
+        <view class="edit-button" bind:tap="onEditProfile">
+          <van-icon name="edit" size="32rpx" color="#1890ff" />
+        </view>
+      </view>
+
+      <!-- 学校信息 -->
+      <view class="school-info" wx:if="{{userInfo.school || userInfo.grade_level || userInfo.class_name}}">
+        <view class="info-row" wx:if="{{userInfo.school}}">
+          <text class="label">学校</text>
+          <text class="value">{{userInfo.school}}</text>
+        </view>
+        <view class="info-row" wx:if="{{userInfo.grade_level}}">
+          <text class="label">年级</text>
+          <text class="value">{{userInfo.grade_level}}</text>
+        </view>
+        <view class="info-row" wx:if="{{userInfo.class_name}}">
+          <text class="label">班级</text>
+          <text class="value">{{userInfo.class_name}}</text>
+        </view>
+      </view>
+
+      <!-- 联系信息 -->
+      <view class="contact-info" wx:if="{{showContactInfo && userInfo.parent_contact}}">
+        <view class="info-row">
+          <text class="label">家长联系方式</text>
+          <text class="value">{{userInfo.parent_contact}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 统计信息卡片 -->
+    <view class="stats-card" wx:if="{{showStatsSection}}">
+      <view class="card-title">
+        <text>学习统计</text>
+        <van-icon name="bar-chart-o" size="32rpx" color="#1890ff" />
+      </view>
+      
+      <view class="stats-grid">
+        <view class="stat-item" bind:tap="onViewHomework">
+          <view class="stat-number">{{stats.homeworkCount}}</view>
+          <view class="stat-label">作业完成</view>
+        </view>
+        <view class="stat-item" bind:tap="onViewQuestions">
+          <view class="stat-number">{{stats.questionCount}}</view>
+          <view class="stat-label">问题解答</view>
+        </view>
+        <view class="stat-item" bind:tap="onViewReport">
+          <view class="stat-number">{{stats.studyDays}}</view>
+          <view class="stat-label">学习天数</view>
+        </view>
+      </view>
+
+      <view class="date-info">
+        <view class="date-item">
+          <text class="date-label">加入时间:</text>
+          <text class="date-value">{{stats.joinDate}}</text>
+        </view>
+        <view class="date-item">
+          <text class="date-label">最近登录:</text>
+          <text class="date-value">{{stats.lastLoginDate}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 快捷操作卡片 -->
+    <view class="actions-card">
+      <view class="card-title">
+        <text>快捷操作</text>
+        <van-icon name="apps-o" size="32rpx" color="#1890ff" />
+      </view>
+
+      <view class="action-list">
+        <view class="action-item" bind:tap="onEditProfile">
+          <view class="action-icon">
+            <van-icon name="edit" size="36rpx" color="#52c41a" />
+          </view>
+          <view class="action-content">
+            <view class="action-title">编辑资料</view>
+            <view class="action-desc">修改个人信息和头像</view>
+          </view>
+          <van-icon name="arrow" size="32rpx" color="#ccc" />
+        </view>
+
+        <view class="action-item" bind:tap="onSwitchRole">
+          <view class="action-icon">
+            <van-icon name="user-circle-o" size="36rpx" color="#1890ff" />
+          </view>
+          <view class="action-content">
+            <view class="action-title">切换角色</view>
+            <view class="action-desc">切换学生/家长/教师身份</view>
+          </view>
+          <van-icon name="arrow" size="32rpx" color="#ccc" />
+        </view>
+
+        <view class="action-item" bind:tap="onViewReport">
+          <view class="action-icon">
+            <van-icon name="chart-trending-o" size="36rpx" color="#faad14" />
+          </view>
+          <view class="action-content">
+            <view class="action-title">学习报告</view>
+            <view class="action-desc">查看详细的学情分析</view>
+          </view>
+          <van-icon name="arrow" size="32rpx" color="#ccc" />
+        </view>
+
+        <view class="action-item" bind:tap="onSettingsTap">
+          <view class="action-icon">
+            <van-icon name="setting-o" size="36rpx" color="#722ed1" />
+          </view>
+          <view class="action-content">
+            <view class="action-title">设置</view>
+            <view class="action-desc">隐私设置和应用偏好</view>
+          </view>
+          <van-icon name="arrow" size="32rpx" color="#ccc" />
+        </view>
+
+        <view class="action-item" bind:tap="onHelpTap">
+          <view class="action-icon">
+            <van-icon name="question-o" size="36rpx" color="#f5222d" />
+          </view>
+          <view class="action-content">
+            <view class="action-title">帮助中心</view>
+            <view class="action-desc">使用帮助和常见问题</view>
+          </view>
+          <van-icon name="arrow" size="32rpx" color="#ccc" />
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 刷新提示 -->
+  <view class="refresh-hint" wx:if="{{refreshing}}">
+    <van-toast id="van-toast" />
+  </view>
+</view>

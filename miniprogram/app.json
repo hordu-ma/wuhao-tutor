@@ -11,6 +11,7 @@
     "pages/analysis/report/index",
     "pages/analysis/progress/index",
     "pages/profile/index/index",
+    "pages/profile/edit/index",
     "pages/profile/settings/index",
     "pages/profile/help/index"
   ],
