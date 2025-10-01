@@ -1,0 +1,216 @@
+<!-- pages/profile/edit/index.wxml - 用户信息编辑页面 -->
+
+<view class="container">
+  <!-- 加载状态 -->
+  <view class="loading-container" wx:if="{{loading}}">
+    <van-loading type="spinner" size="40rpx" color="#1890ff">
+      加载中...
+    </van-loading>
+  </view>
+
+  <!-- 编辑表单 -->
+  <view class="form-container" wx:else>
+    <!-- 头像编辑 -->
+    <view class="form-section">
+      <view class="section-title">头像</view>
+      
+      <view class="avatar-edit-section">
+        <view class="avatar-container" bind:tap="onAvatarTap">
+          <image 
+            class="avatar-image" 
+            src="{{userInfo.avatarUrl || '/assets/images/default-avatar.png'}}" 
+            mode="aspectFill"
+          />
+          <view class="avatar-overlay" wx:if="{{uploadingAvatar}}">
+            <van-loading type="spinner" size="40rpx" color="#ffffff" />
+          </view>
+          <view class="avatar-edit-icon" wx:else>
+            <van-icon name="edit" size="24rpx" color="#fff" />
+          </view>
+        </view>
+        
+        <view class="avatar-tips">
+          <text class="tip-text">点击头像可更换或查看大图</text>
+          <text class="tip-desc">支持JPG、PNG格式，建议尺寸300x300像素</text>
+        </view>
+      </view>
+    </view>
+    <!-- 基本信息 -->
+    <view class="form-section">
+      <view class="section-title">基本信息</view>
+      
+      <!-- 姓名 -->
+      <view class="form-item">
+        <view class="form-label required">真实姓名</view>
+        <input 
+          class="form-input {{!validation.name.valid ? 'error' : ''}}"
+          type="text"
+          value="{{formData.name}}"
+          placeholder="请输入您的真实姓名"
+          maxlength="20"
+          data-field="name"
+          bindinput="onInput"
+        />
+        <view class="error-message" wx:if="{{!validation.name.valid}}">
+          {{validation.name.message}}
+        </view>
+      </view>
+
+      <!-- 昵称 -->
+      <view class="form-item">
+        <view class="form-label">昵称</view>
+        <input 
+          class="form-input {{!validation.nickname.valid ? 'error' : ''}}"
+          type="text"
+          value="{{formData.nickname}}"
+          placeholder="请输入昵称（可选）"
+          maxlength="15"
+          data-field="nickname"
+          bindinput="onInput"
+        />
+        <view class="error-message" wx:if="{{!validation.nickname.valid}}">
+          {{validation.nickname.message}}
+        </view>
+      </view>
+    </view>
+
+    <!-- 学习信息 -->
+    <view class="form-section">
+      <view class="section-title">学习信息</view>
+      
+      <!-- 学校 -->
+      <view class="form-item">
+        <view class="form-label">学校名称</view>
+        <input 
+          class="form-input"
+          type="text"
+          value="{{formData.school}}"
+          placeholder="请输入学校名称"
+          maxlength="50"
+          data-field="school"
+          bindinput="onInput"
+        />
+      </view>
+
+      <!-- 年级 -->
+      <view class="form-item">
+        <view class="form-label">年级</view>
+        <view class="picker-input" bind:tap="onGradePickerTap">
+          <text class="{{formData.grade_level ? 'picker-text' : 'picker-placeholder'}}">
+            {{getGradeDisplayText(formData.grade_level)}}
+          </text>
+          <van-icon name="arrow-down" size="32rpx" color="#ccc" />
+        </view>
+      </view>
+
+      <!-- 班级 -->
+      <view class="form-item">
+        <view class="form-label">班级</view>
+        <input 
+          class="form-input"
+          type="text"
+          value="{{formData.class_name}}"
+          placeholder="请输入班级（如：三年级2班）"
+          maxlength="20"
+          data-field="class_name"
+          bindinput="onInput"
+        />
+      </view>
+
+      <!-- 机构（教师角色显示） -->
+      <view class="form-item" wx:if="{{userRole === 'teacher'}}">
+        <view class="form-label">所属机构</view>
+        <input 
+          class="form-input"
+          type="text"
+          value="{{formData.institution}}"
+          placeholder="请输入所属教育机构"
+          maxlength="50"
+          data-field="institution"
+          bindinput="onInput"
+        />
+      </view>
+    </view>
+
+    <!-- 联系信息 -->
+    <view class="form-section">
+      <view class="section-title">联系信息</view>
+      
+      <!-- 家长联系方式 -->
+      <view class="form-item" wx:if="{{userRole === 'student'}}">
+        <view class="form-label">家长联系方式</view>
+        <input 
+          class="form-input {{!validation.parent_contact.valid ? 'error' : ''}}"
+          type="number"
+          value="{{formData.parent_contact}}"
+          placeholder="请输入家长手机号码"
+          maxlength="11"
+          data-field="parent_contact"
+          bindinput="onInput"
+        />
+        <view class="error-message" wx:if="{{!validation.parent_contact.valid}}">
+          {{validation.parent_contact.message}}
+        </view>
+      </view>
+    </view>
+
+    <!-- 操作按钮 -->
+    <view class="action-buttons">
+      <van-button 
+        type="default" 
+        size="large" 
+        bind:click="onReset"
+        disabled="{{!hasChanges}}"
+        custom-class="reset-button"
+      >
+        重置
+      </van-button>
+      
+      <van-button 
+        type="primary" 
+        size="large" 
+        bind:click="onSave"
+        loading="{{saving}}"
+        disabled="{{!hasChanges || saving}}"
+        custom-class="save-button"
+      >
+        {{saving ? '保存中...' : '保存'}}
+      </van-button>
+    </view>
+
+    <!-- 取消按钮 -->
+    <view class="cancel-section">
+      <van-button 
+        type="default" 
+        size="large" 
+        plain
+        bind:click="onCancel"
+        custom-class="cancel-button"
+      >
+        取消
+      </van-button>
+    </view>
+  </view>
+
+  <!-- 年级选择器 -->
+  <van-popup 
+    show="{{showGradePicker}}" 
+    position="bottom" 
+    custom-style="height: 40%;"
+    bind:close="onGradePickerCancel"
+  >
+    <van-picker
+      columns="{{gradeOptions}}"
+      bind:confirm="onGradePickerChange"
+      bind:cancel="onGradePickerCancel"
+      title="选择年级"
+      show-toolbar
+    />
+  </van-popup>
+
+  <!-- 更改提示 -->
+  <view class="changes-indicator" wx:if="{{hasChanges}}">
+    <view class="indicator-dot"></view>
+    <text>有未保存的更改</text>
+  </view>
+</view>

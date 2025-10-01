@@ -1,0 +1,335 @@
+/* pages/profile/edit/index.wxss - 用户信息编辑页面样式 */
+
+.container {
+  min-height: 100vh;
+  background-color: #f5f5f5;
+  padding-bottom: 120rpx;
+}
+
+/* 加载状态 */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 60vh;
+}
+
+/* 表单容器 */
+.form-container {
+  padding: 32rpx;
+}
+
+/* 表单区块 */
+.form-section {
+  background-color: #ffffff;
+  border-radius: 16rpx;
+  margin-bottom: 32rpx;
+  padding: 32rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333333;
+  margin-bottom: 32rpx;
+  padding-bottom: 16rpx;
+  border-bottom: 2rpx solid #f0f0f0;
+}
+
+/* 表单项 */
+.form-item {
+  margin-bottom: 32rpx;
+}
+
+.form-item:last-child {
+  margin-bottom: 0;
+}
+
+/* 头像编辑区域 */
+.avatar-edit-section {
+  display: flex;
+  align-items: center;
+  gap: 32rpx;
+}
+
+.avatar-container {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.avatar-image {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 80rpx;
+  border: 4rpx solid #e6f7ff;
+}
+
+.avatar-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  border-radius: 80rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-edit-icon {
+  position: absolute;
+  bottom: 8rpx;
+  right: 8rpx;
+  width: 48rpx;
+  height: 48rpx;
+  background-color: #1890ff;
+  border-radius: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3rpx solid #ffffff;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+}
+
+.avatar-tips {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.tip-text {
+  font-size: 28rpx;
+  color: #333333;
+  font-weight: 500;
+}
+
+.tip-desc {
+  font-size: 24rpx;
+  color: #999999;
+  line-height: 1.4;
+}
+
+.form-label {
+  font-size: 28rpx;
+  color: #333333;
+  margin-bottom: 16rpx;
+  position: relative;
+}
+
+.form-label.required::after {
+  content: '*';
+  color: #f5222d;
+  margin-left: 8rpx;
+}
+
+/* 输入框 */
+.form-input {
+  width: 100%;
+  height: 88rpx;
+  background-color: #fafafa;
+  border: 2rpx solid #e6e6e6;
+  border-radius: 12rpx;
+  padding: 0 24rpx;
+  font-size: 28rpx;
+  color: #333333;
+  box-sizing: border-box;
+}
+
+.form-input:focus {
+  border-color: #1890ff;
+  background-color: #ffffff;
+}
+
+.form-input.error {
+  border-color: #f5222d;
+  background-color: #fff2f0;
+}
+
+.form-input::placeholder {
+  color: #cccccc;
+}
+
+/* 选择器输入框 */
+.picker-input {
+  width: 100%;
+  height: 88rpx;
+  background-color: #fafafa;
+  border: 2rpx solid #e6e6e6;
+  border-radius: 12rpx;
+  padding: 0 24rpx;
+  font-size: 28rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+}
+
+.picker-input:active {
+  background-color: #f0f0f0;
+}
+
+.picker-text {
+  color: #333333;
+}
+
+.picker-placeholder {
+  color: #cccccc;
+}
+
+/* 错误信息 */
+.error-message {
+  color: #f5222d;
+  font-size: 24rpx;
+  margin-top: 8rpx;
+  padding-left: 8rpx;
+}
+
+/* 操作按钮 */
+.action-buttons {
+  position: fixed;
+  bottom: 120rpx;
+  left: 32rpx;
+  right: 32rpx;
+  display: flex;
+  gap: 24rpx;
+  background-color: #f5f5f5;
+  padding: 24rpx 0;
+  z-index: 100;
+}
+
+.reset-button {
+  flex: 1;
+  border-color: #d9d9d9 !important;
+  color: #666666 !important;
+}
+
+.save-button {
+  flex: 2;
+  background-color: #1890ff !important;
+}
+
+.cancel-section {
+  position: fixed;
+  bottom: 32rpx;
+  left: 32rpx;
+  right: 32rpx;
+  z-index: 100;
+}
+
+.cancel-button {
+  width: 100%;
+  border-color: #d9d9d9 !important;
+  color: #666666 !important;
+}
+
+/* 更改指示器 */
+.changes-indicator {
+  position: fixed;
+  top: 120rpx;
+  right: 32rpx;
+  background-color: #faad14;
+  color: #ffffff;
+  padding: 12rpx 20rpx;
+  border-radius: 20rpx;
+  font-size: 24rpx;
+  display: flex;
+  align-items: center;
+  z-index: 200;
+  box-shadow: 0 4rpx 12rpx rgba(250, 173, 20, 0.3);
+}
+
+.indicator-dot {
+  width: 12rpx;
+  height: 12rpx;
+  background-color: #ffffff;
+  border-radius: 50%;
+  margin-right: 12rpx;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* 选择器弹窗自定义样式 */
+.van-popup {
+  border-radius: 24rpx 24rpx 0 0;
+}
+
+.van-picker {
+  background-color: #ffffff;
+}
+
+/* 响应式适配 */
+@media (max-width: 750rpx) {
+  .form-container {
+    padding: 24rpx;
+  }
+  
+  .form-section {
+    padding: 24rpx;
+  }
+  
+  .action-buttons {
+    left: 24rpx;
+    right: 24rpx;
+    flex-direction: column;
+    gap: 16rpx;
+  }
+  
+  .cancel-section {
+    left: 24rpx;
+    right: 24rpx;
+  }
+}
+
+/* 深色模式支持 */
+@media (prefers-color-scheme: dark) {
+  .container {
+    background-color: #1a1a1a;
+  }
+  
+  .form-section {
+    background-color: #2a2a2a;
+  }
+  
+  .section-title {
+    color: #ffffff;
+    border-bottom-color: #3a3a3a;
+  }
+  
+  .form-label {
+    color: #ffffff;
+  }
+  
+  .form-input {
+    background-color: #3a3a3a;
+    border-color: #4a4a4a;
+    color: #ffffff;
+  }
+  
+  .form-input:focus {
+    background-color: #4a4a4a;
+  }
+  
+  .picker-input {
+    background-color: #3a3a3a;
+    border-color: #4a4a4a;
+  }
+  
+  .picker-text {
+    color: #ffffff;
+  }
+  
+  .action-buttons {
+    background-color: #1a1a1a;
+  }
+}

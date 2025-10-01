@@ -417,7 +417,7 @@ class AuthManager {
         method: 'POST',
         header: {
           'Authorization': `Bearer ${currentToken}`
-        }
+        },
         timeout: config.api.timeout || 10000
       });
 
@@ -604,6 +604,59 @@ class AuthManager {
       return '用户';
     }
   }
+
+  /**
+   * 更新用户信息到本地缓存
+   */
+  async updateUserInfo(userInfo) {
+    try {
+      if (!userInfo) {
+        throw new Error('用户信息不能为空');
+      }
+
+      // 合并现有信息
+      const currentInfo = await this.getUserInfo() || {};
+      const mergedInfo = {
+        ...currentInfo,
+        ...userInfo,
+        // 确保时间戳更新
+        lastUpdated: Date.now()
+      };
+
+      // 保存到本地存储
+      wx.setStorageSync('userInfo', mergedInfo);
+      
+      console.log('用户信息已更新到本地缓存', mergedInfo);
+      return mergedInfo;
+    } catch (error) {
+      console.error('更新用户信息失败', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 获取用户信息缓存时间
+   */
+  getUserInfoCacheTime() {
+    try {
+      const userInfo = wx.getStorageSync('userInfo');
+      return userInfo?.lastUpdated || 0;
+    } catch (error) {
+      console.error('获取缓存时间失败', error);
+      return 0;
+    }
+  }
+
+  /**
+   * 检查用户信息是否需要刷新（超过1小时）
+   */
+  needsUserInfoRefresh() {
+    const cacheTime = this.getUserInfoCacheTime();
+    const now = Date.now();
+    const oneHour = 60 * 60 * 1000;
+    
+    return (now - cacheTime) > oneHour;
+  }
 }
 
 // 创建单例实例
@@ -640,7 +693,7 @@ module.exports = {
       return false;
     }
     return true;
-  }
+  },
 
   // 用于权限检查的装饰器
   requireRole(requiredRole) {
