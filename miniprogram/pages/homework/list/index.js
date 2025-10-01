@@ -1,5 +1,8 @@
 // pages/homework/list/index.js
 
+const { routeGuard } = require('../../../utils/route-guard.js');
+const { permissionManager } = require('../../../utils/permission-manager.js');
+const { roleManager } = require('../../../utils/role-manager.js');
 const app = getApp();
 const config = require('../../../config/index.js');
 const api = require('../../../utils/api.js');
@@ -32,6 +35,13 @@ Page({
     userRole: '',
     userInfo: null,
 
+    // 权限状态
+    canView: false,
+    canSubmit: false,
+    canCorrect: false,
+    canManage: false,
+    canCreate: false,
+
     // 筛选相关
     showFilterPopup: false,
     selectedSubject: '',
@@ -54,11 +64,35 @@ Page({
   /**
    * 生命周期函数--监听页面加载
    */
-  onLoad(options) {
+  async onLoad(options) {
     console.log('作业列表页面加载', options);
 
-    // 获取用户信息
-    this.getUserInfo();
+    // 执行路由守卫检查
+    const guardResult = await routeGuard.checkPageAuth();
+    if (!guardResult.success) {
+      // 路由守卫失败，页面不应该继续加载
+      return;
+    }
+
+    // 检查页面访问权限
+    const canAccess = await permissionManager.checkPageAccess('pages/homework/list/index');
+    if (!canAccess) {
+      wx.showModal({
+        title: '访问受限',
+        content: '您当前的角色无权访问作业列表',
+        showCancel: false,
+        success: () => {
+          wx.switchTab({
+            url: '/pages/index/index'
+          });
+        }
+      });
+      return;
+    }
+
+    // 获取用户信息和权限
+    await this.getUserInfo();
+    await this.checkUserPermissions();
 
     // 处理页面参数
     if (options.tab) {
@@ -164,6 +198,51 @@ Page({
       wx.redirectTo({
         url: '/pages/login/index'
       });
+    }
+  },
+
+  /**
+   * 检查用户权限
+   */
+  async checkUserPermissions() {
+    try {
+      const canView = await permissionManager.hasPermission('homework.view');
+      const canSubmit = await permissionManager.hasPermission('homework.submit');
+      const canCorrect = await permissionManager.hasPermission('homework.correct');
+      const canManage = await permissionManager.hasPermission('homework.manage');
+      const canCreate = await permissionManager.hasPermission('homework.create');
+
+      this.setData({
+        canView,
+        canSubmit,
+        canCorrect,
+        canManage,
+        canCreate
+      });
+
+      console.log('用户权限检查结果', {
+        canView, canSubmit, canCorrect, canManage, canCreate
+      });
+
+      // 如果连基本查看权限都没有，禁止访问
+      if (!canView) {
+        wx.showModal({
+          title: '权限不足',
+          content: '您没有查看作业的权限',
+          showCancel: false,
+          success: () => {
+            wx.switchTab({
+              url: '/pages/index/index'
+            });
+          }
+        });
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('检查用户权限失败', error);
+      return false;
     }
   },
 
@@ -366,6 +445,26 @@ Page({
 
     console.log('提交作业', homework);
 
+    // 检查提交权限
+    const canSubmit = await permissionManager.hasPermission('homework.submit');
+    if (!canSubmit) {
+      wx.showToast({
+        title: '您没有提交作业的权限',
+        icon: 'none'
+      });
+      return;
+    }
+
+    // 检查时间限制
+    const timeValid = permissionManager.checkTimeRestriction('06:00-23:00');
+    if (!timeValid) {
+      wx.showToast({
+        title: '作业提交时间限制：06:00-23:00',
+        icon: 'none'
+      });
+      return;
+    }
+
     try {
       // 显示加载提示
       wx.showLoading({
@@ -412,13 +511,15 @@ Page({
   /**
    * 创建作业（教师功能）
    */
-  onCreateHomework() {
+  async onCreateHomework() {
     console.log('创建作业');
 
-    if (this.data.userRole !== 'teacher') {
+    // 检查创建权限
+    const canCreate = await permissionManager.hasPermission('homework.create');
+    if (!canCreate) {
       wx.showToast({
-        title: '权限不足',
-        icon: 'error'
+        title: '您没有创建作业的权限',
+        icon: 'none'
       });
       return;
     }

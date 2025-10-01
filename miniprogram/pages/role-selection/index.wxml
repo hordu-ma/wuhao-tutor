@@ -1,0 +1,147 @@
+<!--pages/role-selection/index.wxml - 角色选择页面模板-->
+<view class="container">
+  <!-- 头部区域 -->
+  <view class="header">
+    <view class="welcome-section">
+      <image 
+        class="avatar" 
+        src="{{userInfo.avatarUrl || '/assets/images/default-avatar.png'}}" 
+        mode="aspectFill"
+      />
+      <text class="welcome-text">欢迎，{{userInfo.nickName}}!</text>
+      <text class="subtitle">请选择您的角色以获得个性化体验</text>
+    </view>
+  </view>
+
+  <!-- 角色选择区域 -->
+  <view class="role-selection">
+    <view class="roles-container">
+      <view 
+        wx:for="{{roles}}" 
+        wx:key="key"
+        class="role-card {{selectedRole === item.key ? 'selected' : ''}}"
+        style="border-color: {{selectedRole === item.key ? item.color : '#e8e8e8'}}"
+        data-role="{{item.key}}"
+        bind:tap="onRoleSelect"
+      >
+        <!-- 角色图标和颜色背景 -->
+        <view class="role-icon-container" style="background-color: {{item.bgColor}}">
+          <van-icon 
+            name="{{item.icon}}" 
+            size="40px" 
+            color="{{item.color}}"
+          />
+        </view>
+
+        <!-- 角色信息 -->
+        <view class="role-info">
+          <view class="role-header">
+            <text class="role-name">{{item.name}}</text>
+            <van-icon 
+              wx:if="{{selectedRole === item.key}}"
+              name="success" 
+              size="18px" 
+              color="{{item.color}}"
+              class="selected-icon"
+            />
+          </view>
+          <text class="role-description">{{item.description}}</text>
+          
+          <!-- 特性列表 -->
+          <view class="features-list">
+            <view 
+              wx:for="{{item.features}}" 
+              wx:for-item="feature"
+              wx:key="*this"
+              class="feature-item"
+            >
+              <van-icon name="check" size="12px" color="{{item.color}}" />
+              <text class="feature-text">{{feature}}</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 详情按钮 -->
+        <view class="role-actions">
+          <van-button
+            size="mini"
+            type="info"
+            plain
+            data-role="{{item.key}}"
+            bind:tap="onViewRoleDetails"
+            catch:tap="true"
+          >
+            详情
+          </van-button>
+        </view>
+
+        <!-- 选中状态指示器 -->
+        <view wx:if="{{selectedRole === item.key}}" class="selection-indicator">
+          <view class="indicator-dot" style="background-color: {{item.color}}"></view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 当前角色提示 -->
+  <view wx:if="{{currentRole}}" class="current-role-tip">
+    <van-notice-bar
+      left-icon="info-o"
+      text="当前角色：{{getRoleName(currentRole)}}，您可以重新选择角色"
+      mode="closeable"
+      color="#1890ff"
+      background="#e6f7ff"
+    />
+  </view>
+
+  <!-- 操作按钮区域 -->
+  <view class="actions">
+    <van-button
+      type="primary"
+      size="large"
+      round
+      loading="{{loading}}"
+      disabled="{{loading || !selectedRole}}"
+      bind:click="onConfirmRole"
+      custom-class="confirm-btn"
+    >
+      <van-icon wx:if="{{!loading}}" name="arrow" />
+      {{currentRole && currentRole !== selectedRole ? '切换角色' : '确认选择'}}
+    </van-button>
+
+    <!-- 跳过选择按钮（仅在首次选择时显示） -->
+    <van-button
+      wx:if="{{!currentRole}}"
+      type="default"
+      size="large"
+      plain
+      loading="{{loading}}"
+      disabled="{{loading}}"
+      bind:click="onSkipSelection"
+      custom-class="skip-btn"
+    >
+      跳过，使用默认角色
+    </van-button>
+  </view>
+
+  <!-- 角色说明 -->
+  <view class="role-explanation">
+    <view class="explanation-card">
+      <view class="explanation-header">
+        <van-icon name="question-o" size="16px" color="#666" />
+        <text class="explanation-title">角色说明</text>
+      </view>
+      <text class="explanation-text">
+        不同角色将看到不同的功能界面和内容。您随时可以在个人设置中切换角色。
+      </text>
+    </view>
+  </view>
+</view>
+
+<!-- 加载遮罩 -->
+<van-overlay show="{{loading}}" z-index="1000">
+  <view class="loading-container">
+    <van-loading size="32px" color="#1890ff" />
+    <text class="loading-text">正在设置...</text>
+  </view>
+</van-overlay>

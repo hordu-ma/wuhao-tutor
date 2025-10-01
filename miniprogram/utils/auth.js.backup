@@ -142,7 +142,7 @@ class AuthManager {
           } else {
             reject(new Error('获取登录code失败'));
           }
-        },
+        }
         fail: (error) => {
           reject(new Error(error.errMsg || '微信登录失败'));
         }
