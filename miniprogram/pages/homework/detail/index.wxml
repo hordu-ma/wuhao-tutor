@@ -1,0 +1,225 @@
+<!--pages/homework/detail/index.wxml - 作业详情页面模板-->
+<view class="homework-detail-container">
+  <!-- 加载状态 -->
+  <view wx:if="{{loading}}" class="loading-container">
+    <van-loading type="spinner" size="24px" />
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <!-- 错误状态 -->
+  <view wx:elif="{{error}}" class="error-container">
+    <van-icon name="warning-o" size="48px" color="#f5222d" />
+    <text class="error-text">{{error}}</text>
+    <van-button type="primary" size="small" bind:click="refreshData">重试</van-button>
+  </view>
+
+  <!-- 主要内容 -->
+  <scroll-view wx:else class="detail-scroll" scroll-y="{{true}}" refresher-enabled="{{true}}"
+               refresher-triggered="{{refreshing}}" bindrefresherrefresh="onPullDownRefresh">
+    
+    <!-- 作业基本信息 -->
+    <view class="homework-info-section">
+      <view class="homework-header">
+        <view class="homework-title-row">
+          <text class="homework-title">{{homework.title}}</text>
+          <view class="homework-status status-{{homework.status}}">
+            {{homework.status === 'pending' ? '待完成' : 
+              homework.status === 'submitted' ? '已提交' : 
+              homework.status === 'corrected' ? '已批改' : '已逾期'}}
+          </view>
+        </view>
+        
+        <view class="homework-meta">
+          <view class="meta-item">
+            <van-icon name="bookmark-o" size="16px" color="#666" />
+            <text class="meta-text">{{homework.subject}}</text>
+          </view>
+          <view class="meta-item">
+            <van-icon name="user-o" size="16px" color="#666" />
+            <text class="meta-text">{{homework.teacherName}}</text>
+          </view>
+          <view class="meta-item">
+            <van-icon name="clock-o" size="16px" color="#666" />
+            <text class="meta-text">截止：{{formatTime(homework.deadline)}}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 难度和分数 -->
+      <view class="homework-stats">
+        <view class="stat-item">
+          <text class="stat-label">难度</text>
+          <view class="difficulty difficulty-{{homework.difficulty}}">
+            {{homework.difficulty === 'easy' ? '简单' : 
+              homework.difficulty === 'medium' ? '中等' : '困难'}}
+          </view>
+        </view>
+        <view class="stat-item">
+          <text class="stat-label">总分</text>
+          <text class="stat-value">{{homework.totalScore}}分</text>
+        </view>
+        <view class="stat-item" wx:if="{{userRole === 'teacher'}}">
+          <text class="stat-label">提交情况</text>
+          <text class="stat-value">{{homework.submissionCount}}/{{homework.totalStudents}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 作业描述 -->
+    <view class="homework-description-section">
+      <view class="section-header">
+        <van-icon name="description" size="20px" color="#1890ff" />
+        <text class="section-title">作业描述</text>
+      </view>
+      <view class="section-content">
+        <text class="description-text">{{homework.description}}</text>
+      </view>
+    </view>
+
+    <!-- 作业要求 -->
+    <view class="homework-requirements-section" wx:if="{{homework.requirements && homework.requirements.length > 0}}">
+      <view class="section-header">
+        <van-icon name="completed" size="20px" color="#1890ff" />
+        <text class="section-title">作业要求</text>
+      </view>
+      <view class="section-content">
+        <view class="requirement-list">
+          <view class="requirement-item" wx:for="{{homework.requirements}}" wx:key="*this">
+            <view class="requirement-dot"></view>
+            <text class="requirement-text">{{item}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 附件列表 -->
+    <view class="homework-attachments-section" wx:if="{{homework.attachments && homework.attachments.length > 0}}">
+      <view class="section-header">
+        <van-icon name="file-o" size="20px" color="#1890ff" />
+        <text class="section-title">相关附件</text>
+      </view>
+      <view class="section-content">
+        <view class="attachment-list">
+          <view class="attachment-item" wx:for="{{homework.attachments}}" wx:key="id"
+                data-attachment="{{item}}" bind:tap="onDownloadAttachment">
+            <view class="attachment-icon">
+              <van-icon name="file-{{item.type}}-o" size="24px" color="#faad14" />
+            </view>
+            <view class="attachment-info">
+              <text class="attachment-name">{{item.name}}</text>
+              <text class="attachment-size">{{formatFileSize(item.size)}}</text>
+            </view>
+            <van-icon name="arrow" size="16px" color="#ccc" />
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 我的提交 (学生端) -->
+    <view class="submission-section" wx:if="{{userRole === 'student'}}">
+      <view class="section-header">
+        <van-icon name="edit" size="20px" color="#1890ff" />
+        <text class="section-title">我的提交</text>
+      </view>
+      <view class="section-content">
+        <view wx:if="{{hasSubmission}}" class="submission-info">
+          <view class="submission-header">
+            <text class="submission-status">已提交</text>
+            <text class="submission-time">{{formatTime(submission.submittedAt)}}</text>
+          </view>
+          <view class="submission-content" bind:tap="onViewSubmission">
+            <text class="submission-text">{{submission.content}}</text>
+            <view wx:if="{{submission.attachments && submission.attachments.length > 0}}" 
+                  class="submission-attachments">
+              <text class="attachment-count">包含 {{submission.attachments.length}} 个附件</text>
+            </view>
+            <van-icon name="arrow" size="16px" color="#ccc" />
+          </view>
+        </view>
+        <view wx:else class="no-submission">
+          <van-icon name="info-o" size="32px" color="#faad14" />
+          <text class="no-submission-text">还未提交作业</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 批改结果 -->
+    <view class="correction-section" wx:if="{{hasCorrection}}">
+      <view class="section-header">
+        <van-icon name="certificate" size="20px" color="#1890ff" />
+        <text class="section-title">批改结果</text>
+      </view>
+      <view class="section-content">
+        <view class="correction-score">
+          <text class="score-label">得分</text>
+          <text class="score-value">{{correction.score}}/{{correction.totalScore}}</text>
+          <text class="score-grade grade-{{correction.grade}}">{{correction.grade}}</text>
+        </view>
+        <view class="correction-comment">
+          <text class="comment-label">教师评语</text>
+          <text class="comment-text">{{correction.comment}}</text>
+        </view>
+        <view wx:if="{{correction.corrections && correction.corrections.length > 0}}" 
+              class="correction-details">
+          <text class="details-label">详细批改</text>
+          <view class="correction-list">
+            <view class="correction-item" wx:for="{{correction.corrections}}" wx:key="questionNo">
+              <view class="correction-header">
+                <text class="question-no">第{{item.questionNo}}题</text>
+                <view class="correction-result {{item.isCorrect ? 'correct' : 'incorrect'}}">
+                  <van-icon name="{{item.isCorrect ? 'success' : 'cross'}}" 
+                            size="16px" color="{{item.isCorrect ? '#52c41a' : '#f5222d'}}" />
+                  <text class="result-text">{{item.isCorrect ? '正确' : '错误'}}</text>
+                </view>
+              </view>
+              <text wx:if="{{item.comment}}" class="correction-comment-text">{{item.comment}}</text>
+              <view class="correction-score-info">
+                <text class="score-info">得分：{{item.score}}/{{item.totalScore}}</text>
+              </view>
+            </view>
+          </view>
+        </view>
+        <view class="correction-time">
+          <text class="time-text">批改时间：{{formatTime(correction.correctedAt)}}</text>
+        </view>
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 底部操作栏 -->
+  <view class="action-bar">
+    <!-- 学生操作 -->
+    <block wx:if="{{userRole === 'student'}}">
+      <van-button wx:if="{{!hasSubmission && homework.status === 'pending'}}" 
+                  type="primary" size="large" round block
+                  bind:click="onSubmitHomework">
+        提交作业
+      </van-button>
+      <view wx:elif="{{hasSubmission}}" class="submitted-actions">
+        <van-button type="default" size="large" round
+                    bind:click="onViewSubmission">
+          查看提交
+        </van-button>
+        <van-button wx:if="{{homework.status === 'pending'}}" 
+                    type="primary" size="large" round
+                    bind:click="onSubmitHomework">
+          重新提交
+        </van-button>
+      </view>
+    </block>
+
+    <!-- 教师操作 -->
+    <block wx:if="{{userRole === 'teacher'}}">
+      <view class="teacher-actions">
+        <van-button type="default" size="large" round
+                    bind:click="onEditHomework">
+          编辑作业
+        </van-button>
+        <van-button type="primary" size="large" round
+                    bind:click="onCorrectHomework">
+          批改作业
+        </van-button>
+      </view>
+    </block>
+  </view>
+</view>

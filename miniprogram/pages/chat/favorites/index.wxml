@@ -1,0 +1,221 @@
+<!--pages/chat/favorites/index.wxml - 问答收藏管理页面模板-->
+<view class="favorites-container">
+  <!-- 页面头部 -->
+  <view class="header">
+    <view class="title">我的收藏</view>
+    <view class="subtitle">{{categories.find(c => c.id === currentCategory).count}} 个收藏</view>
+  </view>
+
+  <!-- 分类导航 -->
+  <scroll-view scroll-x class="category-nav">
+    <view class="category-list">
+      <view wx:for="{{categories}}" wx:key="id"
+            class="category-item {{currentCategory === item.id ? 'active' : ''}}"
+            data-category-id="{{item.id}}"
+            bind:tap="onCategoryTap">
+        <van-icon name="{{item.icon}}" size="20px" />
+        <text class="category-name">{{item.name}}</text>
+        <view class="category-count">{{item.count}}</view>
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 搜索和工具栏 -->
+  <view class="toolbar">
+    <view class="search-box">
+      <van-search 
+        value="{{searchKeyword}}"
+        placeholder="搜索收藏内容..."
+        shape="round"
+        bind:input="onSearchInput"
+        bind:clear="onSearchClear"
+      />
+    </view>
+    
+    <view class="actions">
+      <van-button round size="small" bind:tap="onShowSortMenu">
+        <van-icon name="exchange" />
+        排序
+      </van-button>
+      
+      <van-button wx:if="!selectionMode" round size="small" bind:tap="toggleSelectionMode">
+        <van-icon name="checked" />
+        选择
+      </van-button>
+      
+      <van-button wx:else round size="small" type="primary" bind:tap="toggleSelectionMode">
+        取消
+      </van-button>
+    </view>
+  </view>
+
+  <!-- 批量操作栏 -->
+  <view wx:if="{{selectionMode}}" class="batch-toolbar">
+    <view class="selected-count">已选择 {{selectedItems.length}} 项</view>
+    <view class="batch-actions">
+      <van-button size="small" bind:tap="batchRemove">
+        <van-icon name="delete-o" />
+        取消收藏
+      </van-button>
+      <van-button size="small" bind:tap="batchExport">
+        <van-icon name="share-o" />
+        导出
+      </van-button>
+    </view>
+  </view>
+
+  <!-- 内容区域 -->
+  <view class="content">
+    <!-- 加载状态 -->
+    <van-loading wx:if="{{loading}}" type="spinner" text-color="#999">
+      正在加载收藏...
+    </van-loading>
+
+    <!-- 收藏列表 -->
+    <view wx:elif="{{favoritesList.length > 0}}" class="favorites-list">
+      <view wx:for="{{favoritesList}}" wx:key="id" 
+            class="favorite-item {{selectedItems.includes(item.id) ? 'selected' : ''}}" 
+            data-item="{{item}}"
+            bind:tap="onFavoriteItemTap"
+            bind:longpress="onFavoriteItemLongPress">
+        
+        <!-- 选择框 -->
+        <view wx:if="{{selectionMode}}" class="selection-box">
+          <van-checkbox value="{{selectedItems.includes(item.id)}}" />
+        </view>
+
+        <!-- 主要内容 -->
+        <view class="item-content">
+          <!-- 头部信息 -->
+          <view class="item-header">
+            <view class="tags">
+              <view class="subject-tag subject-{{item.subject}}">
+                {{getSubjectName(item.subject)}}
+              </view>
+              <view class="type-tag">
+                {{getQuestionTypeName(item.questionType)}}
+              </view>
+              <view wx:for="{{item.tags}}" wx:key="*this" wx:for-item="tag" class="custom-tag">
+                {{tag}}
+              </view>
+            </view>
+            
+            <view class="meta-info">
+              <van-icon name="star" color="#ffd700" size="16px" />
+              <text class="time">{{formatTime(item.favoriteAt)}}</text>
+            </view>
+          </view>
+
+          <!-- 问题内容 -->
+          <view class="question-content">
+            <view class="question-text">{{item.question}}</view>
+          </view>
+
+          <!-- 答案预览 -->
+          <view class="answer-preview">
+            <text class="answer-text">{{item.answer}}</text>
+          </view>
+
+          <!-- 笔记内容 -->
+          <view wx:if="{{item.notes}}" class="notes-content">
+            <van-icon name="edit" size="14px" color="#666" />
+            <text class="notes-text">{{item.notes}}</text>
+          </view>
+
+          <!-- 底部信息 -->
+          <view class="item-footer">
+            <view class="stats">
+              <view class="stat-item">
+                <van-icon name="eye-o" size="12px" />
+                <text>{{item.viewCount}}</text>
+              </view>
+              <view class="stat-item">
+                <van-icon name="share-o" size="12px" />
+                <text>{{item.shareCount}}</text>
+              </view>
+            </view>
+            
+            <view class="quick-actions">
+              <van-icon name="chat-o" size="16px" />
+              <text>重新提问</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 右侧箭头 -->
+        <view wx:if="{{!selectionMode}}" class="item-arrow">
+          <van-icon name="arrow" />
+        </view>
+      </view>
+
+      <!-- 加载更多 -->
+      <view wx:if="{{hasMore}}" class="load-more">
+        <van-loading wx:if="{{loadingMore}}" type="spinner" size="16px">
+          加载中...
+        </van-loading>
+        <text wx:else class="load-more-text">上拉加载更多</text>
+      </view>
+      
+      <view wx:else class="no-more">
+        <van-icon name="checked" color="#ddd" />
+        没有更多收藏了
+      </view>
+    </view>
+
+    <!-- 空状态 -->
+    <view wx:else class="empty-state">
+      <van-icon name="star-o" size="60px" color="#ddd" />
+      <view class="empty-text">暂无收藏内容</view>
+      <view class="empty-tips">在问答对话中点击收藏按钮即可添加收藏</view>
+      <van-button round type="primary" size="small" 
+                  bind:tap="onGoToChat">
+        去提问
+      </van-button>
+    </view>
+  </view>
+
+  <!-- 错误提示 -->
+  <van-toast id="van-toast" />
+  
+  <!-- 排序菜单 -->
+  <van-action-sheet show="{{showSortMenu}}" title="选择排序方式" bind:close="{{() => setData({showSortMenu: false})}}">
+    <view class="sort-options">
+      <view class="sort-item" data-sort-by="time" data-sort-order="desc" bind:tap="onSortSelect">
+        <van-icon name="clock-o" />
+        <text>按收藏时间（最新）</text>
+        <van-icon wx:if="{{sortBy === 'time' && sortOrder === 'desc'}}" name="success" color="#1989fa" />
+      </view>
+      
+      <view class="sort-item" data-sort-by="time" data-sort-order="asc" bind:tap="onSortSelect">
+        <van-icon name="clock-o" />
+        <text>按收藏时间（最旧）</text>
+        <van-icon wx:if="{{sortBy === 'time' && sortOrder === 'asc'}}" name="success" color="#1989fa" />
+      </view>
+      
+      <view class="sort-item" data-sort-by="subject" data-sort-order="asc" bind:tap="onSortSelect">
+        <van-icon name="apps-o" />
+        <text>按学科分类</text>
+        <van-icon wx:if="{{sortBy === 'subject'}}" name="success" color="#1989fa" />
+      </view>
+      
+      <view class="sort-item" data-sort-by="length" data-sort-order="desc" bind:tap="onSortSelect">
+        <van-icon name="notes-o" />
+        <text>按内容长度</text>
+        <van-icon wx:if="{{sortBy === 'length'}}" name="success" color="#1989fa" />
+      </view>
+    </view>
+  </van-action-sheet>
+
+  <!-- 分享选项 -->
+  <van-action-sheet show="{{showShareOptions}}" title="分享收藏" bind:close="{{() => setData({showShareOptions: false})}}">
+    <view class="share-options">
+      <view wx:for="{{shareOptions}}" wx:key="id" 
+            class="share-item" 
+            data-option="{{item}}"
+            bind:tap="onShareOptionSelect">
+        <van-icon name="{{item.icon}}" size="24px" />
+        <text>{{item.name}}</text>
+      </view>
+    </view>
+  </van-action-sheet>
+</view>

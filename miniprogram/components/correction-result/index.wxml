@@ -1,0 +1,161 @@
+<!--components/correction-result/index.wxml - 批改结果展示组件模板-->
+<view class="correction-result {{customClass}} mode-{{mode}}">
+  
+  <!-- 概要模式 -->
+  <view wx:if="{{mode === 'summary'}}" class="summary-mode">
+    <view class="score-summary">
+      <text class="score-text">{{processedCorrection.score}}/{{processedCorrection.totalScore}}</text>
+      <view class="grade-badge" style="background-color: {{gradeInfo.color}}20; color: {{gradeInfo.color}};">
+        {{gradeInfo.level}}
+      </view>
+    </view>
+    <text class="summary-description">{{gradeInfo.description}}</text>
+  </view>
+
+  <!-- 紧凑模式 -->
+  <view wx:elif="{{mode === 'compact'}}" class="compact-mode">
+    <view class="compact-header">
+      <view class="score-info">
+        <text class="score-value">{{processedCorrection.score}}/{{processedCorrection.totalScore}}</text>
+        <view class="grade-tag" style="background-color: {{gradeInfo.color}}; color: #fff;">
+          {{gradeInfo.level}}
+        </view>
+      </view>
+      <text class="correct-rate">正确率 {{statistics.correctRate}}%</text>
+    </view>
+    
+    <view wx:if="{{showComment && processedCorrection.comment}}" class="compact-comment">
+      <text class="comment-text">{{processedCorrection.comment}}</text>
+    </view>
+  </view>
+
+  <!-- 详细模式 -->
+  <view wx:else class="detailed-mode">
+    
+    <!-- 成绩头部 -->
+    <view class="score-header">
+      <view class="score-main">
+        <view class="score-circle">
+          <view class="score-progress" style="background: conic-gradient({{gradeInfo.color}} {{scorePercentage}}%, #f0f0f0 {{scorePercentage}}%);">
+            <view class="score-inner">
+              <text class="score-number">{{processedCorrection.score}}</text>
+              <text class="score-divider">/</text>
+              <text class="score-total">{{processedCorrection.totalScore}}</text>
+            </view>
+          </view>
+        </view>
+        
+        <view class="score-info">
+          <view class="grade-display">
+            <text class="grade-level" style="color: {{gradeInfo.color}};">{{gradeInfo.level}}</text>
+            <text class="grade-description">{{gradeInfo.description}}</text>
+          </view>
+          <text class="score-percentage">{{scorePercentage}}%</text>
+        </view>
+      </view>
+      
+      <view class="correction-meta">
+        <text class="correction-time">批改时间：{{formattedTime}}</text>
+        <text class="teacher-name" wx:if="{{processedCorrection.teacherName}}">
+          批改老师：{{processedCorrection.teacherName}}
+        </text>
+      </view>
+    </view>
+
+    <!-- 统计信息 -->
+    <view class="statistics-section">
+      <view class="stat-item">
+        <text class="stat-value">{{statistics.totalQuestions}}</text>
+        <text class="stat-label">总题数</text>
+      </view>
+      <view class="stat-item correct">
+        <text class="stat-value">{{statistics.correctCount}}</text>
+        <text class="stat-label">正确</text>
+      </view>
+      <view class="stat-item incorrect">
+        <text class="stat-value">{{statistics.incorrectCount}}</text>
+        <text class="stat-label">错误</text>
+      </view>
+      <view class="stat-item rate">
+        <text class="stat-value">{{statistics.correctRate}}%</text>
+        <text class="stat-label">正确率</text>
+      </view>
+    </view>
+
+    <!-- 教师评语 -->
+    <view wx:if="{{showComment && processedCorrection.comment}}" class="comment-section">
+      <view class="comment-header">
+        <van-icon name="chat-o" size="20px" color="#1890ff" />
+        <text class="comment-title">教师评语</text>
+        <van-icon name="arrow" size="16px" color="#ccc" bind:tap="onViewCommentDetail" />
+      </view>
+      <view class="comment-content">
+        <text class="comment-text">{{processedCorrection.comment}}</text>
+      </view>
+    </view>
+
+    <!-- 题目详情 -->
+    <view wx:if="{{showQuestions && processedCorrection.corrections && processedCorrection.corrections.length > 0}}" 
+          class="questions-section">
+      <view class="questions-header">
+        <view class="header-left">
+          <van-icon name="edit" size="20px" color="#1890ff" />
+          <text class="questions-title">题目详情</text>
+        </view>
+        <view class="toggle-btn" bind:tap="onToggleExpanded">
+          <text class="toggle-text">{{expanded ? '收起' : '展开'}}</text>
+          <van-icon name="{{expanded ? 'arrow-up' : 'arrow-down'}}" size="16px" color="#666" />
+        </view>
+      </view>
+      
+      <view wx:if="{{expanded}}" class="questions-list">
+        <view class="question-item" 
+              wx:for="{{processedCorrection.corrections}}" 
+              wx:key="questionNo"
+              data-question="{{item}}"
+              bind:tap="onViewQuestionDetail">
+          
+          <view class="question-header">
+            <view class="question-number">
+              <text class="number-text">{{item.questionNo}}</text>
+            </view>
+            
+            <view class="question-result">
+              <van-icon 
+                name="{{item.isCorrect ? 'success' : 'cross'}}" 
+                size="20px" 
+                color="{{item.isCorrect ? '#52c41a' : '#f5222d'}}" 
+              />
+              <text class="result-text {{item.isCorrect ? 'correct' : 'incorrect'}}">
+                {{item.isCorrect ? '正确' : '错误'}}
+              </text>
+            </view>
+            
+            <view class="question-score">
+              <text class="score-text">{{item.score}}/{{item.totalScore}}</text>
+            </view>
+          </view>
+          
+          <view wx:if="{{item.comment}}" class="question-comment">
+            <text class="question-comment-text">{{item.comment}}</text>
+          </view>
+          
+          <view wx:if="{{item.analysis}}" class="question-analysis">
+            <text class="analysis-label">解析：</text>
+            <text class="analysis-text">{{item.analysis}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 操作按钮 -->
+    <view class="action-section">
+      <van-button size="small" type="default" bind:click="onShareScore">
+        分享成绩
+      </van-button>
+      <van-button size="small" type="primary" bind:click="onViewCommentDetail">
+        查看详情
+      </van-button>
+    </view>
+  </view>
+</view>

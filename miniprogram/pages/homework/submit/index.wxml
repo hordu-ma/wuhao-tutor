@@ -1,0 +1,199 @@
+<!--pages/homework/submit/index.wxml - 作业提交页面模板-->
+<view class="submit-container">
+  <!-- 加载状态 -->
+  <view wx:if="{{loading}}" class="loading-container">
+    <van-loading type="spinner" size="24px" />
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <!-- 主要内容 -->
+  <scroll-view wx:else class="submit-scroll" scroll-y="{{true}}" 
+               refresher-enabled="{{true}}" refresher-triggered="{{refreshing}}"
+               bindrefresherrefresh="onPullDownRefresh">
+    
+    <!-- 作业信息 -->
+    <view class="homework-info-section">
+      <view class="homework-header">
+        <text class="homework-title">{{homework.title}}</text>
+        <view class="homework-meta">
+          <text class="subject-tag">{{homework.subject}}</text>
+          <text class="deadline-text">截止：{{homework.deadline}}</text>
+        </view>
+      </view>
+      
+      <view class="homework-description">
+        <text class="description-text">{{homework.description}}</text>
+      </view>
+      
+      <!-- 作业要求 -->
+      <view wx:if="{{homework.requirements && homework.requirements.length > 0}}" 
+            class="homework-requirements">
+        <text class="requirements-title">作业要求：</text>
+        <view class="requirements-list">
+          <view class="requirement-item" wx:for="{{homework.requirements}}" wx:key="*this">
+            <text class="requirement-text">• {{item}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 提交类型选择 -->
+    <view class="submit-type-section">
+      <view class="section-header">
+        <text class="section-title">提交方式</text>
+      </view>
+      <view class="submit-type-tabs">
+        <view class="type-tab {{submitType === 'text' ? 'active' : ''}}"
+              data-type="text" bind:tap="onSubmitTypeChange">
+          <van-icon name="edit" size="20px" />
+          <text class="tab-text">文字提交</text>
+        </view>
+        <view class="type-tab {{submitType === 'image' ? 'active' : ''}}"
+              data-type="image" bind:tap="onSubmitTypeChange">
+          <van-icon name="photo-o" size="20px" />
+          <text class="tab-text">图片提交</text>
+        </view>
+        <view class="type-tab {{submitType === 'mixed' ? 'active' : ''}}"
+              data-type="mixed" bind:tap="onSubmitTypeChange">
+          <van-icon name="apps-o" size="20px" />
+          <text class="tab-text">混合提交</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 文字提交区域 -->
+    <view wx:if="{{submitType === 'text' || submitType === 'mixed'}}" 
+          class="text-submit-section">
+      <view class="section-header">
+        <text class="section-title">作业内容</text>
+        <view class="word-count">
+          <text class="count-text {{wordCount < minWordCount ? 'insufficient' : wordCount > maxWordCount ? 'exceeded' : 'normal'}}">
+            {{wordCount}}/{{maxWordCount}}
+          </text>
+        </view>
+      </view>
+      
+      <view class="text-input-container">
+        <textarea 
+          class="text-input"
+          placeholder="请输入作业内容，包括解题过程、思路分析等..."
+          value="{{textContent}}"
+          maxlength="{{maxWordCount}}"
+          bindinput="onTextInput"
+          show-confirm-bar="{{false}}"
+          adjust-position="{{false}}"
+        />
+        
+        <!-- 文字错误提示 -->
+        <view wx:if="{{errors.text}}" class="error-message">
+          <van-icon name="warning-o" size="16px" color="#f5222d" />
+          <text class="error-text">{{errors.text}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 图片提交区域 -->
+    <view wx:if="{{submitType === 'image' || submitType === 'mixed'}}" 
+          class="image-submit-section">
+      <view class="section-header">
+        <text class="section-title">作业图片</text>
+        <text class="image-count">{{imageList.length}}/{{maxImageCount}}</text>
+      </view>
+      
+      <view class="image-container">
+        <!-- 图片列表 -->
+        <view class="image-list">
+          <view class="image-item" wx:for="{{imageList}}" wx:key="url">
+            <image 
+              class="image-preview"
+              src="{{item.url}}"
+              mode="aspectFill"
+              data-index="{{index}}"
+              bind:tap="onPreviewImage"
+            />
+            <view class="image-actions">
+              <view class="delete-btn" data-index="{{index}}" bind:tap="onDeleteImage">
+                <van-icon name="cross" size="16px" color="#fff" />
+              </view>
+            </view>
+          </view>
+        </view>
+        
+        <!-- 添加图片按钮 -->
+        <view wx:if="{{imageList.length < maxImageCount}}" class="add-image-container">
+          <view class="add-image-btn" bind:tap="onChooseImage">
+            <van-icon name="plus" size="32px" color="#ccc" />
+            <text class="add-text">选择图片</text>
+          </view>
+          <view class="camera-btn" bind:tap="onTakePhoto">
+            <van-icon name="photograph" size="32px" color="#ccc" />
+            <text class="add-text">拍照</text>
+          </view>
+        </view>
+      </view>
+      
+      <!-- 图片提示 -->
+      <view class="image-tips">
+        <text class="tips-text">• 支持JPG、PNG格式，单张图片不超过10MB</text>
+        <text class="tips-text">• 请确保图片清晰，字迹工整易读</text>
+        <text class="tips-text">• 建议按题目顺序上传</text>
+      </view>
+    </view>
+
+    <!-- 预览模式 -->
+    <view wx:if="{{previewMode}}" class="preview-section">
+      <view class="section-header">
+        <text class="section-title">提交预览</text>
+        <van-button size="mini" type="default" bind:click="onTogglePreview">
+          退出预览
+        </van-button>
+      </view>
+      <view class="preview-content">
+        <view wx:if="{{textContent}}" class="preview-text">
+          <text class="preview-text-content">{{textContent}}</text>
+        </view>
+        <view wx:if="{{imageList.length > 0}}" class="preview-images">
+          <image 
+            wx:for="{{imageList}}" 
+            wx:key="url"
+            class="preview-image"
+            src="{{item.url}}"
+            mode="widthFix"
+          />
+        </view>
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 底部操作栏 -->
+  <view class="action-bar">
+    <view class="action-left">
+      <van-button type="default" size="large" bind:click="onSaveDraft">
+        保存草稿
+      </van-button>
+      <van-button wx:if="{{!previewMode}}" type="default" size="large" bind:click="onTogglePreview">
+        预览
+      </van-button>
+    </view>
+    <view class="action-right">
+      <van-button 
+        type="primary" 
+        size="large" 
+        loading="{{isSubmitting}}"
+        loading-text="提交中..."
+        bind:click="onSubmitHomework"
+      >
+        提交作业
+      </van-button>
+    </view>
+  </view>
+</view>
+
+<!-- 提交确认弹窗 -->
+<van-dialog
+  id="van-dialog"
+  confirm-button-color="#1890ff"
+/>
+
+<!-- 全局提示 -->
+<van-toast id="van-toast" />
