@@ -1,6 +1,8 @@
 // pages/homework/list/index.js
+// pages/homework/list/index.js - 作业列表页面（增强权限控制）
 
-const { routeGuard } = require('../../../utils/route-guard.js');
+const { createGuardedPage } = require('../../../utils/enhanced-page-guard.js');
+const { featurePermissionGuard } = require('../../../utils/feature-permission-guard.js');
 const { permissionManager } = require('../../../utils/permission-manager.js');
 const { roleManager } = require('../../../utils/role-manager.js');
 const app = getApp();
@@ -9,7 +11,7 @@ const api = require('../../../utils/api.js');
 const auth = require('../../../utils/auth.js');
 const utils = require('../../../utils/utils.js');
 
-Page({
+const pageObject = {
   /**
    * 页面的初始数据
    */
@@ -31,9 +33,11 @@ Page({
     hasMore: true,
     total: 0,
 
-    // 用户信息
+    // 用户信息和权限（将由页面守卫注入）
     userRole: '',
     userInfo: null,
+    userPermissions: [],
+    canPerformActions: {},
 
     // 权限状态
     canView: false,
@@ -41,6 +45,9 @@ Page({
     canCorrect: false,
     canManage: false,
     canCreate: false,
+    canSubmitHomework: false,
+    canCorrectHomework: false,
+    canManageHomework: false,
 
     // 筛选相关
     showFilterPopup: false,
@@ -62,37 +69,13 @@ Page({
   },
 
   /**
-   * 生命周期函数--监听页面加载
+   * 生命周期函数--监听页面加载（增强权限控制）
    */
   async onLoad(options) {
     console.log('作业列表页面加载', options);
 
-    // 执行路由守卫检查
-    const guardResult = await routeGuard.checkPageAuth();
-    if (!guardResult.success) {
-      // 路由守卫失败，页面不应该继续加载
-      return;
-    }
-
-    // 检查页面访问权限
-    const canAccess = await permissionManager.checkPageAccess('pages/homework/list/index');
-    if (!canAccess) {
-      wx.showModal({
-        title: '访问受限',
-        content: '您当前的角色无权访问作业列表',
-        showCancel: false,
-        success: () => {
-          wx.switchTab({
-            url: '/pages/index/index'
-          });
-        }
-      });
-      return;
-    }
-
-    // 获取用户信息和权限
-    await this.getUserInfo();
-    await this.checkUserPermissions();
+    // 增强的页面守卫已在 createGuardedPage 中自动执行
+    // 此时 userPermissions、userRole、canPerformActions 已注入到页面数据中
 
     // 处理页面参数
     if (options.tab) {
@@ -106,6 +89,9 @@ Page({
         selectedSubject: options.subject
       });
     }
+
+    // 获取用户信息和权限（从守卫结果中获取）
+    await this.initUserPermissions();
 
     // 加载作业列表
     this.loadHomeworkList(true);
@@ -178,26 +164,39 @@ Page({
   },
 
   /**
-   * 获取用户信息
+   * 初始化用户权限（从守卫结果获取）
    */
-  async getUserInfo() {
+  async initUserPermissions() {
     try {
-      const userInfo = await auth.getUserInfo();
-      const userRole = await auth.getUserRole();
+      // 从页面守卫注入的数据中获取权限信息
+      const permissions = this.data.userPermissions || [];
+      const role = this.data.userRole || '';
+      const actions = this.data.canPerformActions || {};
 
+      // 设置权限状态
       this.setData({
-        userInfo,
-        userRole
+        canView: permissions.includes('homework.view') || permissions.includes('homework.view_all'),
+        canSubmit: permissions.includes('homework.submit'),
+        canCorrect: permissions.includes('homework.correct'),
+        canManage: permissions.includes('homework.manage'),
+        canCreate: permissions.includes('homework.create'),
+        
+        // 从 actions 中获取
+        canSubmitHomework: actions.canSubmitHomework || false,
+        canCorrectHomework: actions.canCorrectHomework || false,
+        canManageHomework: actions.canManageHomework || false
       });
 
-      console.log('用户信息获取成功', { userInfo, userRole });
+      console.log('用户权限初始化完成', {
+        role,
+        permissions: this.data.canView ? '可查看' : '不可查看',
+        canSubmit: this.data.canSubmit,
+        canCorrect: this.data.canCorrect,
+        canManage: this.data.canManage
+      });
+
     } catch (error) {
-      console.error('获取用户信息失败', error);
-
-      // 如果获取用户信息失败，跳转到登录页面
-      wx.redirectTo({
-        url: '/pages/login/index'
-      });
+      console.error('初始化用户权限失败:', error);
     }
   },
 
@@ -648,5 +647,116 @@ Page({
   onRetry() {
     console.log('重试加载');
     this.loadHomeworkList(true);
+  },
+
+  /**
+   * 作业操作 - 增强权限检查
+   */
+  async onHomeworkAction(e) {
+    const { action, homeworkId, ownerId, classId } = e.currentTarget.dataset;
+    
+    try {
+      let permissionResult;
+      
+      switch (action) {
+        case 'submit':
+          permissionResult = await featurePermissionGuard.canSubmitHomework(homeworkId);
+          if (permissionResult.success) {
+            this.navigateToSubmit(homeworkId);
+          } else {
+            featurePermissionGuard.handlePermissionFailure(permissionResult);
+          }
+          break;
+          
+        case 'correct':
+          permissionResult = await featurePermissionGuard.canCorrectHomework(homeworkId, classId);
+          if (permissionResult.success) {
+            this.navigateToCorrect(homeworkId);
+          } else {
+            featurePermissionGuard.handlePermissionFailure(permissionResult);
+          }
+          break;
+          
+        case 'delete':
+          permissionResult = await featurePermissionGuard.canDeleteHomework(homeworkId, ownerId);
+          if (permissionResult.success) {
+            this.deleteHomework(homeworkId);
+          } else {
+            featurePermissionGuard.handlePermissionFailure(permissionResult);
+          }
+          break;
+          
+        case 'view':
+        default:
+          this.navigateToDetail(homeworkId);
+          break;
+      }
+      
+    } catch (error) {
+      console.error('作业操作失败:', error);
+      errorToast.show('操作失败，请稍后重试');
+    }
+  },
+
+  /**
+   * 跳转到作业提交页面
+   */
+  navigateToSubmit(homeworkId) {
+    wx.navigateTo({
+      url: `/pages/homework/submit/index?id=${homeworkId}`
+    });
+  },
+
+  /**
+   * 跳转到作业批改页面
+   */
+  navigateToCorrect(homeworkId) {
+    wx.navigateTo({
+      url: `/pages/homework/correct/index?id=${homeworkId}`
+    });
+  },
+
+  /**
+   * 跳转到作业详情页面
+   */
+  navigateToDetail(homeworkId) {
+    wx.navigateTo({
+      url: `/pages/homework/detail/index?id=${homeworkId}`
+    });
+  },
+
+  /**
+   * 删除作业（已经通过权限检查和用户确认）
+   */
+  async deleteHomework(homeworkId) {
+    try {
+      wx.showLoading({
+        title: '删除中...',
+        mask: true
+      });
+
+      const response = await api.delete(`/homework/${homeworkId}`);
+      
+      if (response.success) {
+        wx.showToast({
+          title: '删除成功',
+          icon: 'success'
+        });
+        
+        // 刷新列表
+        this.loadHomeworkList(true);
+      } else {
+        throw new Error(response.message || '删除失败');
+      }
+      
+    } catch (error) {
+      console.error('删除作业失败:', error);
+      errorToast.show('删除失败，请稍后重试');
+    } finally {
+      wx.hideLoading();
+    }
   }
-});
+};
+
+// 应用增强的页面守卫
+Page(createGuardedPage(pageObject, 'pages/homework/list/index'));

@@ -14,6 +14,16 @@ function getApiClient() {
   return apiClient;
 }
 
+// 延迟加载安全系统以避免循环依赖
+let securitySystem = null;
+function getSecuritySystem() {
+  if (!securitySystem) {
+    const { accountSecuritySystem } = require('./account-security-system.js');
+    securitySystem = accountSecuritySystem;
+  }
+  return securitySystem;
+}
+
 /**
  * 认证管理类
  */
@@ -93,26 +103,48 @@ class AuthManager {
       // 2. 获取用户信息授权
       const userProfile = await this.getUserProfile();
 
-      // 3. 调用后端登录接口
-      const response = await this.callLoginAPI({
+      // 3. 准备登录数据
+      const loginData = {
         code: loginResult.code,
         userInfo: userProfile.userInfo,
         signature: userProfile.signature,
         encryptedData: userProfile.encryptedData,
-        iv: userProfile.iv
-      });
+        iv: userProfile.iv,
+        deviceInfo: await this.getDeviceInfo(),
+        loginMethod: 'wechat',
+        timestamp: Date.now()
+      };
+
+      // 4. 调用后端登录接口
+      const response = await this.callLoginAPI(loginData);
 
       if (response.success) {
-        const { token, userInfo, role } = response.data;
+        const { token, userInfo, role, refreshToken } = response.data;
 
-        // 4. 保存登录信息
+        // 5. 执行安全登录流程
+        const securitySystem = getSecuritySystem();
+        const secureLoginResult = await securitySystem.performSecureLogin({
+          token,
+          userInfo,
+          role,
+          refreshToken,
+          deviceInfo: loginData.deviceInfo,
+          loginMethod: 'wechat'
+        });
+
+        if (!secureLoginResult.success) {
+          throw new Error(secureLoginResult.message || '安全验证失败');
+        }
+
+        // 6. 保存登录信息
         await this.saveUserSession(token, userInfo, role);
 
         console.log('微信登录成功', { userId: userInfo.id, role });
 
         return {
           success: true,
-          data: { token, userInfo, role }
+          data: { token, userInfo, role },
+          securityInfo: secureLoginResult.securityInfo
         };
       } else {
         throw new Error(response.error?.message || '登录失败');
@@ -443,26 +475,27 @@ class AuthManager {
    */
   async logout() {
     try {
-      // 调用后端登出接口
-      try {
-        const token = await this.getToken();
-        if (token) {
-          await getApiClient().request({
-            url: '/auth/logout',
-            method: 'POST',
-            timeout: 5000 // 登出请求使用较短超时
-          });
-        }
-      } catch (error) {
-        console.warn('调用后端登出接口失败', error);
+      // 使用安全退出系统
+      const securitySystem = getSecuritySystem();
+      const logoutResult = await securitySystem.performSecureLogout({
+        method: 'normal',
+        reason: 'user_initiated',
+        cleanupLevel: 'standard'
+      });
+
+      if (logoutResult.success) {
+        console.log('用户登出成功');
+      } else {
+        console.warn('安全退出过程中遇到问题，但本地状态已清理');
       }
 
-      // 清理本地数据
-      await this.clearUserSession();
-
-      console.log('用户登出成功');
+      return logoutResult;
     } catch (error) {
       console.error('登出失败', error);
+      
+      // 如果安全退出失败，执行基础清理
+      await this.clearUserSession();
+      
       throw error;
     }
   }
@@ -606,31 +639,26 @@ class AuthManager {
   }
 
   /**
-   * 更新用户信息到本地缓存
+   * 获取设备信息
+   * @returns {Promise<Object>} 设备信息
    */
-  async updateUserInfo(userInfo) {
+  async getDeviceInfo() {
     try {
-      if (!userInfo) {
-        throw new Error('用户信息不能为空');
-      }
-
-      // 合并现有信息
-      const currentInfo = await this.getUserInfo() || {};
-      const mergedInfo = {
-        ...currentInfo,
-        ...userInfo,
-        // 确保时间戳更新
-        lastUpdated: Date.now()
+      const systemInfo = wx.getSystemInfoSync();
+      return {
+        brand: systemInfo.brand,
+        model: systemInfo.model,
+        system: systemInfo.system,
+        version: systemInfo.version,
+        platform: systemInfo.platform,
+        screenWidth: systemInfo.screenWidth,
+        screenHeight: systemInfo.screenHeight,
+        language: systemInfo.language,
+        wechatVersion: systemInfo.version
       };
-
-      // 保存到本地存储
-      wx.setStorageSync('userInfo', mergedInfo);
-      
-      console.log('用户信息已更新到本地缓存', mergedInfo);
-      return mergedInfo;
     } catch (error) {
-      console.error('更新用户信息失败', error);
-      throw error;
+      console.error('获取设备信息失败', error);
+      return {};
     }
   }
 
