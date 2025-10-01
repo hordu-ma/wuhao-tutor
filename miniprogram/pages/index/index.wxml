@@ -1,5 +1,11 @@
 <!--pages/index/index.wxml - 五好伴学小程序首页模板-->
 <view class="container">
+  <!-- 刷新状态指示器 -->
+  <view wx:if="{{refreshing}}" class="refresh-indicator">
+    <van-loading type="spinner" size="16px" />
+    <text class="refresh-text">正在刷新...</text>
+  </view>
+
   <!-- 加载状态 -->
   <view wx:if="{{loading}}" class="loading">
     <van-loading type="spinner" size="24px" />
@@ -76,19 +82,41 @@
     <!-- 消息通知区域 -->
     <view class="notifications-section" wx:if="{{notifications.length > 0}}">
       <view class="section-header flex-between">
-        <text class="section-title font-bold">最新消息</text>
-        <text class="more-btn text-primary" bind:tap="onMoreNotificationsTap">查看更多</text>
+        <view class="notifications-title-wrapper flex">
+          <text class="section-title font-bold">最新消息</text>
+          <view wx:if="{{unreadNotificationCount > 0}}" class="unread-badge">
+            {{unreadNotificationCount}}
+          </view>
+        </view>
+        <view class="notifications-actions flex">
+          <text 
+            wx:if="{{unreadNotificationCount > 0}}" 
+            class="mark-all-btn text-secondary text-sm"
+            bind:tap="markAllNotificationsRead"
+          >
+            全部已读
+          </text>
+          <text class="more-btn text-primary" bind:tap="onMoreNotificationsTap">查看更多</text>
+        </view>
       </view>
       <view class="notifications-list">
         <view
-          class="notification-item card"
+          class="notification-item card {{!item.isRead ? 'unread' : ''}}"
           wx:for="{{notifications}}"
           wx:key="id"
           data-notification="{{item}}"
           bind:tap="onNotificationTap"
         >
           <view class="notification-header flex-between">
-            <text class="notification-title font-bold">{{item.title}}</text>
+            <view class="notification-title-wrapper flex">
+              <text class="notification-title font-bold">{{item.title}}</text>
+              <view wx:if="{{item.priority === 'high'}}" class="priority-badge high">
+                紧急
+              </view>
+              <view wx:elif="{{item.priority === 'medium'}}" class="priority-badge medium">
+                重要
+              </view>
+            </view>
             <view class="notification-meta flex">
               <view wx:if="{{!item.isRead}}" class="unread-dot bg-error"></view>
               <text class="notification-time text-secondary text-sm">
@@ -97,12 +125,111 @@
             </view>
           </view>
           <text class="notification-content text-secondary">{{item.content}}</text>
+          <view class="notification-footer flex-between">
+            <text class="notification-sender text-secondary text-sm">来自: {{item.sender}}</text>
+            <van-icon wx:if="{{!item.isRead}}" name="arrow" size="12px" color="#999" />
+          </view>
         </view>
       </view>
     </view>
 
-    <!-- 学习建议区域 (仅学生可见) -->
-    <view class="suggestions-section" wx:if="{{role === 'student'}}">
+    <!-- 个性化推荐区域 -->
+    <view class="recommendations-section" wx:if="{{recommendations.length > 0}}">
+      <view class="section-header">
+        <text class="section-title font-bold">为您推荐</text>
+      </view>
+      <view class="recommendations-list">
+        <view
+          class="recommendation-item card"
+          wx:for="{{recommendations}}"
+          wx:key="id"
+          data-recommendation="{{item}}"
+          bind:tap="onRecommendationTap"
+        >
+          <view class="recommendation-header flex">
+            <view class="recommendation-icon" style="background-color: {{item.color}}20">
+              <van-icon name="{{item.icon}}" size="20px" color="{{item.color}}" />
+            </view>
+            <view class="recommendation-content">
+              <text class="recommendation-title font-bold">{{item.title}}</text>
+              <text class="recommendation-text text-secondary">{{item.content}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 待办事项区域 -->
+    <view class="todo-section" wx:if="{{todoItems.length > 0}}">
+      <view class="section-header">
+        <text class="section-title font-bold">待办事项</text>
+      </view>
+      <view class="todo-list">
+        <view
+          class="todo-item card"
+          wx:for="{{todoItems}}"
+          wx:key="id"
+          data-todo="{{item}}"
+          bind:tap="onTodoItemTap"
+        >
+          <view class="todo-header flex-between">
+            <view class="todo-content">
+              <text class="todo-title font-bold">{{item.title}}</text>
+              <text class="todo-description text-secondary">{{item.description}}</text>
+              <view class="todo-meta flex">
+                <text class="todo-deadline text-sm" 
+                      style="color: {{item.priority === 'high' ? '#f5222d' : item.priority === 'medium' ? '#faad14' : '#52c41a'}}">
+                  {{item.deadline}}
+                </text>
+                <view class="todo-priority {{item.priority}}-priority">
+                  {{item.priority === 'high' ? '紧急' : item.priority === 'medium' ? '一般' : '不急'}}
+                </view>
+              </view>
+            </view>
+            <view class="todo-actions">
+              <van-button
+                wx:if="{{!item.completed}}"
+                type="primary"
+                size="mini"
+                round
+                data-todo="{{item}}"
+                bind:tap="onCompleteTodoItem"
+              >
+                完成
+              </van-button>
+              <van-icon wx:else name="success" size="24px" color="#52c41a" />
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 最近活动区域 -->
+    <view class="activities-section" wx:if="{{recentActivities.length > 0}}">
+      <view class="section-header">
+        <text class="section-title font-bold">最近活动</text>
+      </view>
+      <view class="activities-list">
+        <view
+          class="activity-item"
+          wx:for="{{recentActivities}}"
+          wx:key="id"
+          data-activity="{{item}}"
+          bind:tap="onActivityTap"
+        >
+          <view class="activity-icon">
+            <van-icon name="{{item.icon}}" size="16px" color="#1890ff" />
+          </view>
+          <view class="activity-content">
+            <text class="activity-title">{{item.title}}</text>
+            <text class="activity-time text-secondary text-sm">{{item.time}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 学习建议区域 (仅学生可见) - 保留原有功能但简化 -->
+    <view class="suggestions-section" wx:if="{{role === 'student' && recommendations.length === 0}}">
       <view class="section-header">
         <text class="section-title font-bold">AI学习建议</text>
       </view>
