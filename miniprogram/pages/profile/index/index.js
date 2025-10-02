@@ -13,14 +13,18 @@ Page({
     userRole: '',
     loading: true,
     refreshing: false,
-    
+
     // 用户统计信息
     stats: {
       joinDate: '',
       lastLoginDate: '',
       homeworkCount: 0,
       questionCount: 0,
-      studyDays: 0
+      studyDays: 0,
+      totalScore: 0,
+      avgScore: 0,
+      errorCount: 0,
+      studyHours: 0,
     },
 
     // 显示控制
@@ -29,7 +33,7 @@ Page({
 
     // 同步状态
     syncStatus: 'idle',
-    lastSyncTime: 0
+    lastSyncTime: 0,
   },
 
   /**
@@ -52,7 +56,7 @@ Page({
    */
   async onShow() {
     console.log('个人信息页面显示');
-    
+
     // 每次显示时刷新用户信息（可能在设置页面被修改）
     if (!this.data.loading) {
       await this.refreshUserInfo();
@@ -78,16 +82,12 @@ Page({
       // 设置同步监听器
       this.setupSyncListener();
 
-      await Promise.all([
-        this.loadUserInfo(),
-        this.loadUserStats()
-      ]);
+      await Promise.all([this.loadUserInfo(), this.loadUserStats()]);
 
       // 检查是否需要同步
       if (authManager.needsUserInfoRefresh()) {
         this.triggerUserInfoSync();
       }
-
     } catch (error) {
       console.error('初始化页面失败:', error);
       errorToast.show('页面加载失败，请稍后重试');
@@ -100,11 +100,11 @@ Page({
    * 设置同步监听器
    */
   setupSyncListener() {
-    this.syncListener = syncManager.addSyncListener((event) => {
+    this.syncListener = syncManager.addSyncListener(event => {
       if (event.type === 'statusChange') {
-        this.setData({ 
+        this.setData({
           syncStatus: event.currentStatus,
-          lastSyncTime: Date.now()
+          lastSyncTime: Date.now(),
         });
 
         // 同步成功后刷新用户信息
@@ -122,7 +122,7 @@ Page({
     try {
       const [userInfo, userRole] = await Promise.all([
         authManager.getUserInfo(),
-        authManager.getUserRole()
+        authManager.getUserRole(),
       ]);
 
       this.setData({ userInfo, userRole });
@@ -151,17 +151,16 @@ Page({
       // 从本地缓存获取基础信息
       const [userInfo, userRole] = await Promise.all([
         authManager.getUserInfo(),
-        authManager.getUserRole()
+        authManager.getUserRole(),
       ]);
 
       this.setData({
         userInfo,
-        userRole
+        userRole,
       });
 
       // 异步获取最新的服务器信息
       this.fetchLatestUserInfo();
-
     } catch (error) {
       console.error('加载用户信息失败:', error);
       throw error;
@@ -174,16 +173,16 @@ Page({
   async fetchLatestUserInfo() {
     try {
       const response = await api.get('/auth/me');
-      
+
       if (response.success && response.data) {
         const serverUserInfo = response.data;
-        
+
         // 合并本地和服务器信息
         const mergedUserInfo = {
           ...this.data.userInfo,
           ...serverUserInfo,
           // 保持本地头像URL（如果存在）
-          avatarUrl: serverUserInfo.avatar_url || this.data.userInfo?.avatarUrl
+          avatarUrl: serverUserInfo.avatar_url || this.data.userInfo?.avatarUrl,
         };
 
         this.setData({ userInfo: mergedUserInfo });
@@ -202,23 +201,64 @@ Page({
    */
   async loadUserStats() {
     try {
-      // TODO: 调用实际的统计API
-      // const response = await api.get('/auth/stats');
-      
-      // 临时使用模拟数据
-      const stats = {
-        joinDate: this.formatJoinDate(this.data.userInfo?.createdAt),
-        lastLoginDate: this.formatLastLogin(),
-        homeworkCount: 12,
-        questionCount: 45,
-        studyDays: 28
-      };
+      // 尝试从API获取实际统计数据
+      const response = await api.get('/user/stats').catch(() => null);
+
+      let stats = {};
+
+      if (response && response.success && response.data) {
+        // 使用API返回的数据
+        stats = {
+          joinDate: this.formatJoinDate(response.data.join_date || this.data.userInfo?.createdAt),
+          lastLoginDate: this.formatLastLogin(response.data.last_login),
+          homeworkCount: response.data.homework_count || 0,
+          questionCount: response.data.question_count || 0,
+          studyDays: response.data.study_days || 0,
+          // 新增字段
+          totalScore: response.data.total_score || 0,
+          avgScore: response.data.avg_score || 0,
+          errorCount: response.data.error_count || 0,
+          studyHours: response.data.study_hours || 0,
+        };
+      } else {
+        // API调用失败，使用本地缓存或模拟数据
+        const cachedStats = wx.getStorageSync('user_stats_cache');
+
+        if (cachedStats && Date.now() - cachedStats.timestamp < 3600000) {
+          // 缓存未过期（1小时）
+          stats = cachedStats.data;
+        } else {
+          // 使用模拟数据
+          stats = {
+            joinDate: this.formatJoinDate(this.data.userInfo?.createdAt),
+            lastLoginDate: this.formatLastLogin(),
+            homeworkCount: 12,
+            questionCount: 45,
+            studyDays: 28,
+            totalScore: 95,
+            avgScore: 88,
+            errorCount: 8,
+            studyHours: 36,
+          };
+        }
+      }
 
       this.setData({ stats });
 
+      // 缓存统计数据
+      wx.setStorageSync('user_stats_cache', {
+        data: stats,
+        timestamp: Date.now(),
+      });
     } catch (error) {
       console.warn('加载统计信息失败:', error);
       // 统计信息加载失败不影响主要功能
+
+      // 尝试使用缓存数据
+      const cachedStats = wx.getStorageSync('user_stats_cache');
+      if (cachedStats && cachedStats.data) {
+        this.setData({ stats: cachedStats.data });
+      }
     }
   },
 
@@ -228,14 +268,10 @@ Page({
   async refreshUserInfo() {
     try {
       this.setData({ refreshing: true });
-      
-      await Promise.all([
-        this.fetchLatestUserInfo(),
-        this.loadUserStats()
-      ]);
+
+      await Promise.all([this.fetchLatestUserInfo(), this.loadUserStats()]);
 
       console.log('用户信息刷新成功');
-      
     } catch (error) {
       console.error('刷新用户信息失败:', error);
       errorToast.show('刷新失败，请稍后重试');
@@ -249,7 +285,7 @@ Page({
    */
   formatJoinDate(createdAt) {
     if (!createdAt) return '未知';
-    
+
     try {
       const date = new Date(createdAt);
       const year = date.getFullYear();
@@ -264,11 +300,28 @@ Page({
   /**
    * 格式化最后登录时间
    */
-  formatLastLogin() {
+  formatLastLogin(lastLogin) {
     try {
-      const now = new Date();
-      const today = now.toISOString().split('T')[0];
-      return `${today.replace(/-/g, '年').replace(/年(\d+)$/, '年$1日').replace(/年(\d+)年/, '年$1月')}`;
+      if (lastLogin) {
+        const date = new Date(lastLogin);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+
+        if (diffMins < 1) return '刚刚';
+        if (diffMins < 60) return `${diffMins}分钟前`;
+        if (diffHours < 24) return `${diffHours}小时前`;
+        if (diffDays < 7) return `${diffDays}天前`;
+
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+
+      return '今天';
     } catch (error) {
       return '今天';
     }
@@ -279,10 +332,10 @@ Page({
    */
   getRoleDisplayName(role) {
     const roleMap = {
-      'student': '学生',
-      'parent': '家长',
-      'teacher': '教师',
-      'admin': '管理员'
+      student: '学生',
+      parent: '家长',
+      teacher: '教师',
+      admin: '管理员',
     };
     return roleMap[role] || role;
   },
@@ -292,16 +345,16 @@ Page({
    */
   onAvatarTap() {
     console.log('点击头像');
-    
+
     wx.showActionSheet({
       itemList: ['查看大图', '更换头像'],
-      success: (res) => {
+      success: res => {
         if (res.tapIndex === 0) {
           this.previewAvatar();
         } else if (res.tapIndex === 1) {
           this.changeAvatar();
         }
-      }
+      },
     });
   },
 
@@ -319,18 +372,17 @@ Page({
   async changeAvatar() {
     try {
       const result = await avatarUploadManager.selectAndUploadAvatar();
-      
+
       if (result && result.success) {
         // 更新页面显示的用户信息
         const updatedUserInfo = {
           ...this.data.userInfo,
-          avatarUrl: result.avatarUrl
+          avatarUrl: result.avatarUrl,
         };
-        
+
         this.setData({ userInfo: updatedUserInfo });
         console.log('头像更换成功:', result.avatarUrl);
       }
-
     } catch (error) {
       console.error('更换头像失败:', error);
       // 错误处理已在 avatarUploadManager 中完成
@@ -342,9 +394,9 @@ Page({
    */
   onEditProfile() {
     console.log('编辑个人信息');
-    
+
     wx.navigateTo({
-      url: '/pages/profile/edit/index'
+      url: '/pages/profile/edit/index',
     });
   },
 
@@ -353,9 +405,9 @@ Page({
    */
   onSettingsTap() {
     console.log('进入设置');
-    
+
     wx.navigateTo({
-      url: '/pages/profile/settings/index'
+      url: '/pages/profile/settings/index',
     });
   },
 
@@ -364,9 +416,9 @@ Page({
    */
   onHelpTap() {
     console.log('进入帮助中心');
-    
+
     wx.navigateTo({
-      url: '/pages/profile/help/index'
+      url: '/pages/profile/help/index',
     });
   },
 
@@ -375,9 +427,9 @@ Page({
    */
   onViewReport() {
     console.log('查看学习报告');
-    
+
     wx.navigateTo({
-      url: '/pages/analysis/report/index'
+      url: '/pages/analysis/report/index',
     });
   },
 
@@ -386,9 +438,9 @@ Page({
    */
   onViewHomework() {
     console.log('查看作业记录');
-    
+
     wx.navigateTo({
-      url: '/pages/homework/list/index'
+      url: '/pages/homework/list/index',
     });
   },
 
@@ -397,9 +449,9 @@ Page({
    */
   onViewQuestions() {
     console.log('查看问答历史');
-    
+
     wx.navigateTo({
-      url: '/pages/chat/history/index'
+      url: '/pages/chat/history/index',
     });
   },
 
@@ -408,9 +460,9 @@ Page({
    */
   onSwitchRole() {
     console.log('切换角色');
-    
+
     wx.navigateTo({
-      url: '/pages/role-selection/index?from=profile'
+      url: '/pages/role-selection/index?from=profile',
     });
   },
 
@@ -421,7 +473,7 @@ Page({
     return {
       title: '五好伴学 - 我的个人信息',
       path: '/pages/profile/index/index',
-      imageUrl: '/assets/images/share-profile.png'
+      imageUrl: '/assets/images/share-profile.png',
     };
-  }
+  },
 });

@@ -144,39 +144,102 @@
 }
 
 .stats-grid {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16rpx;
   margin-bottom: 32rpx;
 }
 
 .stat-item {
-  flex: 1;
-  text-align: center;
-  padding: 24rpx 16rpx;
-  background-color: #fafafa;
-  border-radius: 12rpx;
-  margin: 0 8rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32rpx 16rpx;
+  background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
+  border-radius: 16rpx;
+  border: 1rpx solid #ebeef5;
+  transition: all 0.3s ease;
 }
 
-.stat-item:first-child {
-  margin-left: 0;
+.stat-item:active {
+  transform: scale(0.95);
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
 }
 
-.stat-item:last-child {
-  margin-right: 0;
+.stat-icon {
+  margin-bottom: 12rpx;
 }
 
 .stat-number {
   font-size: 48rpx;
   font-weight: bold;
-  color: #1890ff;
+  color: #1a1a1a;
   line-height: 1.2;
+  margin: 8rpx 0;
 }
 
 .stat-label {
   font-size: 24rpx;
+  color: #999999;
+}
+
+/* 成绩统计 */
+.score-stats {
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 32rpx;
+  padding: 24rpx;
+  background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+  border-radius: 16rpx;
+}
+
+.score-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.score-label {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  font-size: 24rpx;
   color: #666666;
-  margin-top: 8rpx;
+}
+
+.score-value {
+  font-size: 48rpx;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.score-value.primary {
+  color: #667eea;
+}
+
+.score-value.danger {
+  color: #ff6b6b;
+}
+
+.score-progress {
+  height: 8rpx;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4rpx;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  border-radius: 4rpx;
+  transition: width 0.3s ease;
+}
+
+.score-tips {
+  font-size: 20rpx;
+  color: #999999;
+  margin-top: 4rpx;
 }
 
 .date-info {
@@ -263,21 +326,21 @@
     flex-direction: column;
     gap: 16rpx;
   }
-  
+
   .stat-item {
     margin: 0;
   }
-  
+
   .user-header {
     flex-direction: column;
     text-align: center;
   }
-  
+
   .avatar-section {
     margin-right: 0;
     margin-bottom: 24rpx;
   }
-  
+
   .edit-button {
     position: absolute;
     top: 0;
@@ -290,23 +353,23 @@
   .container {
     background-color: #1a1a1a;
   }
-  
+
   .info-card,
   .stats-card,
   .actions-card {
     background-color: #2a2a2a;
   }
-  
+
   .user-name {
     color: #ffffff;
   }
-  
+
   .info-row .value,
   .action-title,
   .date-value {
     color: #ffffff;
   }
-  
+
   .info-row .label,
   .stat-label,
   .action-desc,

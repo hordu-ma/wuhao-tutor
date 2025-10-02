@@ -1,0 +1,222 @@
+/* 帮助中心页面样式 */
+
+.help-container {
+  min-height: 100vh;
+  background: #f5f7fa;
+  padding-bottom: 120rpx;
+}
+
+/* 搜索框 */
+.search-section {
+  padding: 24rpx 32rpx;
+  background: #ffffff;
+}
+
+/* 快捷入口 */
+.quick-access {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24rpx;
+  padding: 32rpx;
+  background: #ffffff;
+  margin-top: 16rpx;
+}
+
+.quick-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.quick-icon {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  background: rgba(102, 126, 234, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quick-label {
+  font-size: 24rpx;
+  color: #666666;
+}
+
+/* 分组标题 */
+.section-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #1a1a1a;
+  padding: 32rpx 32rpx 24rpx;
+}
+
+/* 常见问题 */
+.faq-section {
+  margin-top: 16rpx;
+  background: #ffffff;
+}
+
+.faq-list {
+  padding: 0 32rpx;
+}
+
+.faq-item {
+  padding: 32rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.faq-item:last-child {
+  border-bottom: none;
+}
+
+.faq-question {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  font-size: 30rpx;
+  color: #1a1a1a;
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+.faq-answer {
+  margin-top: 16rpx;
+  padding: 24rpx;
+  background: #f5f7fa;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  color: #666666;
+  line-height: 1.8;
+}
+
+.faq-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16rpx;
+}
+
+.faq-category {
+  flex: 1;
+}
+
+.faq-helpful {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.helpful-text {
+  font-size: 24rpx;
+  color: #999999;
+}
+
+/* 空状态 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24rpx;
+  padding: 80rpx 0;
+}
+
+/* 功能教程 */
+.tutorial-section {
+  margin-top: 16rpx;
+  background: #ffffff;
+}
+
+.tutorial-list {
+  padding: 0 32rpx;
+}
+
+.tutorial-item {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.tutorial-item:last-child {
+  border-bottom: none;
+}
+
+.tutorial-cover {
+  width: 120rpx;
+  height: 90rpx;
+  border-radius: 8rpx;
+  background: #f0f0f0;
+}
+
+.tutorial-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.tutorial-title {
+  font-size: 30rpx;
+  color: #1a1a1a;
+  font-weight: 500;
+}
+
+.tutorial-meta {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.tutorial-duration {
+  font-size: 24rpx;
+  color: #999999;
+}
+
+/* 联系我们 */
+.contact-section {
+  margin-top: 16rpx;
+  background: #ffffff;
+}
+
+.contact-card {
+  padding: 0 32rpx;
+}
+
+.contact-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 32rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.contact-item:last-child {
+  border-bottom: none;
+}
+
+.contact-left {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  flex: 1;
+}
+
+.contact-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.contact-label {
+  font-size: 28rpx;
+  color: #666666;
+}
+
+.contact-value {
+  font-size: 30rpx;
+  color: #1a1a1a;
+  font-weight: 500;
+}

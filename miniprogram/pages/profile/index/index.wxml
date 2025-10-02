@@ -70,19 +70,58 @@
       
       <view class="stats-grid">
         <view class="stat-item" bind:tap="onViewHomework">
+          <view class="stat-icon">
+            <van-icon name="completed" size="36rpx" color="#667eea" />
+          </view>
           <view class="stat-number">{{stats.homeworkCount}}</view>
           <view class="stat-label">作业完成</view>
         </view>
         <view class="stat-item" bind:tap="onViewQuestions">
+          <view class="stat-icon">
+            <van-icon name="chat-o" size="36rpx" color="#f093fb" />
+          </view>
           <view class="stat-number">{{stats.questionCount}}</view>
           <view class="stat-label">问题解答</view>
         </view>
         <view class="stat-item" bind:tap="onViewReport">
+          <view class="stat-icon">
+            <van-icon name="calendar-o" size="36rpx" color="#4facfe" />
+          </view>
           <view class="stat-number">{{stats.studyDays}}</view>
           <view class="stat-label">学习天数</view>
         </view>
+        <view class="stat-item">
+          <view class="stat-icon">
+            <van-icon name="clock-o" size="36rpx" color="#fa709a" />
+          </view>
+          <view class="stat-number">{{stats.studyHours}}</view>
+          <view class="stat-label">学习时长(h)</view>
+        </view>
       </view>
 
+      <!-- 成绩统计 -->
+      <view class="score-stats">
+        <view class="score-item">
+          <view class="score-label">
+            <van-icon name="star" size="24rpx" color="#ffd700" />
+            <text>平均分</text>
+          </view>
+          <view class="score-value primary">{{stats.avgScore}}</view>
+          <view class="score-progress">
+            <view class="progress-bar" style="width: {{stats.avgScore}}%;"></view>
+          </view>
+        </view>
+        <view class="score-item">
+          <view class="score-label">
+            <van-icon name="bookmark-o" size="24rpx" color="#ff6b6b" />
+            <text>错题数</text>
+          </view>
+          <view class="score-value danger">{{stats.errorCount}}</view>
+          <view class="score-tips">点击查看错题本</view>
+        </view>
+      </view>
+
+      <!-- 日期信息 -->
       <view class="date-info">
         <view class="date-item">
           <text class="date-label">加入时间:</text>

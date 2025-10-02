@@ -1,0 +1,216 @@
+<!--设置页面-->
+<view class="settings-container">
+  <!-- 页面标题 -->
+  <view class="page-header">
+    <text class="page-title">设置</text>
+  </view>
+
+  <!-- 设置内容 -->
+  <view class="settings-content">
+    <!-- 通知设置 -->
+    <view class="settings-section">
+      <view class="section-title">通知设置</view>
+      
+      <view class="setting-item">
+        <view class="item-left">
+          <van-icon name="volume-o" size="20px" color="#667eea" />
+          <text class="item-label">消息通知</text>
+        </view>
+        <van-switch 
+          checked="{{settings.notification}}" 
+          size="24px"
+          bind:change="onNotificationChange"
+        />
+      </view>
+
+      <view class="setting-item">
+        <view class="item-left">
+          <van-icon name="bell" size="20px" color="#667eea" />
+          <text class="item-label">作业提醒</text>
+        </view>
+        <van-switch 
+          checked="{{settings.homeworkReminder}}" 
+          size="24px"
+          bind:change="onHomeworkReminderChange"
+        />
+      </view>
+
+      <view class="setting-item">
+        <view class="item-left">
+          <van-icon name="comment-o" size="20px" color="#667eea" />
+          <text class="item-label">问答回复通知</text>
+        </view>
+        <van-switch 
+          checked="{{settings.qaNotification}}" 
+          size="24px"
+          bind:change="onQaNotificationChange"
+        />
+      </view>
+    </view>
+
+    <!-- 隐私设置 -->
+    <view class="settings-section">
+      <view class="section-title">隐私设置</view>
+      
+      <view class="setting-item" bindtap="onPrivacyPolicy">
+        <view class="item-left">
+          <van-icon name="shield-o" size="20px" color="#667eea" />
+          <text class="item-label">隐私政策</text>
+        </view>
+        <van-icon name="arrow" size="16px" color="#cccccc" />
+      </view>
+
+      <view class="setting-item" bindtap="onUserAgreement">
+        <view class="item-left">
+          <van-icon name="description-o" size="20px" color="#667eea" />
+          <text class="item-label">用户协议</text>
+        </view>
+        <van-icon name="arrow" size="16px" color="#cccccc" />
+      </view>
+
+      <view class="setting-item">
+        <view class="item-left">
+          <van-icon name="eye-o" size="20px" color="#667eea" />
+          <text class="item-label">学习记录可见</text>
+        </view>
+        <van-switch 
+          checked="{{settings.recordVisible}}" 
+          size="24px"
+          bind:change="onRecordVisibleChange"
+        />
+      </view>
+    </view>
+
+    <!-- 缓存管理 -->
+    <view class="settings-section">
+      <view class="section-title">存储管理</view>
+      
+      <view class="setting-item" bindtap="onClearCache">
+        <view class="item-left">
+          <van-icon name="delete-o" size="20px" color="#667eea" />
+          <text class="item-label">清除缓存</text>
+        </view>
+        <view class="item-right">
+          <text class="cache-size">{{cacheSize}}</text>
+          <van-icon name="arrow" size="16px" color="#cccccc" />
+        </view>
+      </view>
+
+      <view class="setting-item" bindtap="onDataManagement">
+        <view class="item-left">
+          <van-icon name="records" size="20px" color="#667eea" />
+          <text class="item-label">数据管理</text>
+        </view>
+        <van-icon name="arrow" size="16px" color="#cccccc" />
+      </view>
+    </view>
+
+    <!-- 学习设置 -->
+    <view class="settings-section">
+      <view class="section-title">学习设置</view>
+      
+      <view class="setting-item" bindtap="onDifficultyLevel">
+        <view class="item-left">
+          <van-icon name="chart-trending-o" size="20px" color="#667eea" />
+          <text class="item-label">默认难度</text>
+        </view>
+        <view class="item-right">
+          <text class="value-text">{{settings.defaultDifficulty}}</text>
+          <van-icon name="arrow" size="16px" color="#cccccc" />
+        </view>
+      </view>
+
+      <view class="setting-item">
+        <view class="item-left">
+          <van-icon name="wap-home-o" size="20px" color="#667eea" />
+          <text class="item-label">自动保存草稿</text>
+        </view>
+        <van-switch 
+          checked="{{settings.autoSaveDraft}}" 
+          size="24px"
+          bind:change="onAutoSaveDraftChange"
+        />
+      </view>
+
+      <view class="setting-item">
+        <view class="item-left">
+          <van-icon name="underway-o" size="20px" color="#667eea" />
+          <text class="item-label">学习提醒</text>
+        </view>
+        <van-switch 
+          checked="{{settings.studyReminder}}" 
+          size="24px"
+          bind:change="onStudyReminderChange"
+        />
+      </view>
+    </view>
+
+    <!-- 其他设置 -->
+    <view class="settings-section">
+      <view class="section-title">其他</view>
+      
+      <view class="setting-item" bindtap="onCheckUpdate">
+        <view class="item-left">
+          <van-icon name="upgrade" size="20px" color="#667eea" />
+          <text class="item-label">检查更新</text>
+        </view>
+        <view class="item-right">
+          <text class="value-text">{{appVersion}}</text>
+          <van-icon name="arrow" size="16px" color="#cccccc" />
+        </view>
+      </view>
+
+      <view class="setting-item" bindtap="onFeedback">
+        <view class="item-left">
+          <van-icon name="chat-o" size="20px" color="#667eea" />
+          <text class="item-label">意见反馈</text>
+        </view>
+        <van-icon name="arrow" size="16px" color="#cccccc" />
+      </view>
+
+      <view class="setting-item" bindtap="onAbout">
+        <view class="item-left">
+          <van-icon name="info-o" size="20px" color="#667eea" />
+          <text class="item-label">关于我们</text>
+        </view>
+        <van-icon name="arrow" size="16px" color="#cccccc" />
+      </view>
+    </view>
+
+    <!-- 退出登录 -->
+    <view class="logout-section">
+      <van-button 
+        type="danger" 
+        block 
+        round
+        bindtap="onLogout"
+      >
+        退出登录
+      </van-button>
+    </view>
+  </view>
+</view>
+
+<!-- 难度选择弹窗 -->
+<van-action-sheet
+  show="{{showDifficultySheet}}"
+  actions="{{difficultyOptions}}"
+  bind:close="onCloseDifficultySheet"
+  bind:select="onSelectDifficulty"
+  cancel-text="取消"
+/>
+
+<!-- 确认对话框 -->
+<van-dialog
+  use-slot
+  title="{{dialogTitle}}"
+  show="{{showDialog}}"
+  confirm-button-text="确定"
+  cancel-button-text="取消"
+  bind:confirm="onDialogConfirm"
+  bind:cancel="onDialogCancel"
+>
+  <view class="dialog-content">
+    <text>{{dialogContent}}</text>
+  </view>
+</van-dialog>
