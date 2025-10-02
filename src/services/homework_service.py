@@ -5,38 +5,51 @@
 
 import asyncio
 import json
-from typing import List, Optional, Dict, Any, Tuple
+import os
+import tempfile
+import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
-import uuid
-import tempfile
-import os
+from typing import Any, Dict, List, Optional, Tuple
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete, func, and_, or_
-from sqlalchemy.orm import selectinload
 from fastapi import UploadFile
+from sqlalchemy import and_, delete, func, or_, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
+from src.core.config import settings
+from src.core.exceptions import AIServiceError, DatabaseError, ValidationError
+from src.core.logging import get_logger
 from src.models.homework import (
-    Homework, HomeworkSubmission, HomeworkImage, HomeworkReview,
-    SubmissionStatus, ReviewStatus
+    Homework,
+    HomeworkImage,
+    HomeworkReview,
+    HomeworkSubmission,
+    ReviewStatus,
+    SubmissionStatus,
 )
 from src.models.user import User
-from src.schemas.homework import (
-    HomeworkCreate, HomeworkUpdate, HomeworkResponse,
-    HomeworkSubmissionCreate, HomeworkSubmissionUpdate, HomeworkSubmissionResponse,
-    HomeworkReviewCreate, HomeworkReviewResponse,
-    HomeworkQuery, SubmissionQuery, PaginationParams,
-    KnowledgePointAnalysis, ImprovementSuggestion, QuestionReview
-)
 from src.schemas.common import PaginatedResponse, PaginationInfo
+from src.schemas.homework import (
+    HomeworkCreate,
+    HomeworkQuery,
+    HomeworkResponse,
+    HomeworkReviewCreate,
+    HomeworkReviewResponse,
+    HomeworkSubmissionCreate,
+    HomeworkSubmissionResponse,
+    HomeworkSubmissionUpdate,
+    HomeworkUpdate,
+    ImprovementSuggestion,
+    KnowledgePointAnalysis,
+    PaginationParams,
+    QuestionReview,
+    SubmissionQuery,
+)
 from src.services.bailian_service import BailianService, ChatMessage, MessageRole
-from src.utils.ocr import AliCloudOCRService, OCRType
-from src.utils.file_upload import FileUploadService
 from src.utils.cache import cache, cache_manager
-from src.core.config import settings
-from src.core.logging import get_logger
-from src.core.exceptions import AIServiceError, DatabaseError, ValidationError
+from src.utils.file_upload import FileUploadService
+from src.utils.ocr import AliCloudOCRService, OCRType
 
 logger = get_logger(__name__)
 
@@ -48,7 +61,7 @@ class HomeworkService:
         self,
         bailian_service: Optional[BailianService] = None,
         ocr_service: Optional[AliCloudOCRService] = None,
-        file_service: Optional[FileUploadService] = None
+        file_service: Optional[FileUploadService] = None,
     ):
         """
         初始化作业服务
@@ -59,8 +72,8 @@ class HomeworkService:
             file_service: 文件上传服务实例
         """
         from src.services.bailian_service import get_bailian_service
-        from src.utils.ocr import get_ocr_service
         from src.utils.file_upload import get_file_upload_service
+        from src.utils.ocr import get_ocr_service
 
         self.bailian_service = bailian_service or get_bailian_service()
         self.ocr_service = ocr_service or get_ocr_service()
@@ -75,7 +88,7 @@ class HomeworkService:
         session: AsyncSession,
         homework_data: HomeworkCreate,
         creator_id: Optional[uuid.UUID] = None,
-        creator_name: Optional[str] = None
+        creator_name: Optional[str] = None,
     ) -> Homework:
         """
         创建作业模板
@@ -105,7 +118,7 @@ class HomeworkService:
                 creator_id=creator_id,
                 creator_name=creator_name,
                 is_active=True,
-                is_template=True
+                is_template=True,
             )
 
             session.add(homework)
@@ -124,9 +137,7 @@ class HomeworkService:
             raise DatabaseError(f"创建作业模板失败: {e}")
 
     async def get_homework(
-        self,
-        session: AsyncSession,
-        homework_id: uuid.UUID
+        self, session: AsyncSession, homework_id: uuid.UUID
     ) -> Optional[Homework]:
         """
         获取作业模板
@@ -152,7 +163,7 @@ class HomeworkService:
         self,
         session: AsyncSession,
         query_params: HomeworkQuery,
-        pagination: PaginationParams
+        pagination: PaginationParams,
     ) -> PaginatedResponse:
         """
         查询作业列表
@@ -174,7 +185,9 @@ class HomeworkService:
             if query_params.homework_type:
                 conditions.append(Homework.homework_type == query_params.homework_type)
             if query_params.difficulty_level:
-                conditions.append(Homework.difficulty_level == query_params.difficulty_level)
+                conditions.append(
+                    Homework.difficulty_level == query_params.difficulty_level
+                )
             if query_params.grade_level:
                 conditions.append(Homework.grade_level == query_params.grade_level)
             if query_params.creator_id:
@@ -185,7 +198,7 @@ class HomeworkService:
                 conditions.append(
                     or_(
                         Homework.title.contains(query_params.keyword),
-                        Homework.description.contains(query_params.keyword)
+                        Homework.description.contains(query_params.keyword),
                     )
                 )
 
@@ -198,8 +211,14 @@ class HomeworkService:
             offset = (pagination.page - 1) * pagination.size
 
             # 安全获取排序列
-            sort_column = getattr(Homework, pagination.sort_by or "created_at", Homework.created_at)
-            order_clause = sort_column.desc() if pagination.sort_order == "desc" else sort_column.asc()
+            sort_column = getattr(
+                Homework, pagination.sort_by or "created_at", Homework.created_at
+            )
+            order_clause = (
+                sort_column.desc()
+                if pagination.sort_order == "desc"
+                else sort_column.asc()
+            )
 
             stmt = (
                 select(Homework)
@@ -214,16 +233,14 @@ class HomeworkService:
 
             # 创建分页信息
             pagination_info = PaginationInfo.create(
-                total=total or 0,
-                page=pagination.page,
-                size=pagination.size
+                total=total or 0, page=pagination.page, size=pagination.size
             )
 
             return PaginatedResponse(
                 data=[HomeworkResponse.from_orm(hw) for hw in homeworks],
                 pagination=pagination_info,
                 success=True,
-                message="查询作业列表成功"
+                message="查询作业列表成功",
             )
 
         except Exception as e:
@@ -239,7 +256,7 @@ class HomeworkService:
         session: AsyncSession,
         submission_data: HomeworkSubmissionCreate,
         student_id: uuid.UUID,
-        student_name: str
+        student_name: str,
     ) -> HomeworkSubmission:
         """
         创建作业提交
@@ -259,14 +276,14 @@ class HomeworkService:
             if not homework:
                 raise ValidationError("作业不存在")
 
-            if not getattr(homework, 'is_active', True):
+            if not getattr(homework, "is_active", True):
                 raise ValidationError("作业已停用")
 
             # 检查是否已经提交过
             existing_stmt = select(HomeworkSubmission).where(
                 and_(
                     HomeworkSubmission.homework_id == submission_data.homework_id,
-                    HomeworkSubmission.student_id == student_id
+                    HomeworkSubmission.student_id == student_id,
                 )
             )
             existing_result = await session.execute(existing_stmt)
@@ -282,7 +299,7 @@ class HomeworkService:
                 submission_note=submission_data.submission_note,
                 completion_time=submission_data.completion_time,
                 status=SubmissionStatus.UPLOADED,
-                submitted_at=datetime.now()
+                submitted_at=datetime.now(),
             )
 
             session.add(submission)
@@ -290,7 +307,7 @@ class HomeworkService:
             await session.refresh(submission)
 
             # 更新作业提交统计
-            await self._update_homework_stats(session, getattr(homework, 'id'))
+            await self._update_homework_stats(session, getattr(homework, "id"))
 
             logger.info(f"作业提交创建成功: {submission.id}")
             return submission
@@ -306,7 +323,7 @@ class HomeworkService:
         self,
         session: AsyncSession,
         submission_id: uuid.UUID,
-        image_files: List[UploadFile]
+        image_files: List[UploadFile],
     ) -> List[HomeworkImage]:
         """
         上传作业图片
@@ -331,8 +348,7 @@ class HomeworkService:
             for i, image_file in enumerate(image_files):
                 # 上传文件
                 file_info = await self.file_service.save_upload_file(
-                    image_file,
-                    subfolder="homework"
+                    image_file, subfolder="homework"
                 )
 
                 # 创建图片记录
@@ -347,7 +363,7 @@ class HomeworkService:
                     image_height=file_info.height,
                     display_order=i,
                     is_primary=(i == 0),  # 第一张图片设为主图
-                    is_processed=False
+                    is_processed=False,
                 )
 
                 session.add(homework_image)
@@ -356,7 +372,9 @@ class HomeworkService:
             await session.commit()
 
             # 异步处理OCR
-            asyncio.create_task(self._process_images_ocr(submission_id, uploaded_images))
+            asyncio.create_task(
+                self._process_images_ocr(submission_id, uploaded_images)
+            )
 
             logger.info(f"作业图片上传成功: {len(uploaded_images)}张")
             return uploaded_images
@@ -369,9 +387,7 @@ class HomeworkService:
             raise DatabaseError(f"上传作业图片失败: {e}")
 
     async def _process_images_ocr(
-        self,
-        submission_id: uuid.UUID,
-        images: List[HomeworkImage]
+        self, submission_id: uuid.UUID, images: List[HomeworkImage]
     ):
         """
         异步处理图片OCR识别
@@ -394,9 +410,7 @@ class HomeworkService:
                 logger.error(f"OCR处理失败: {e}")
 
     async def _process_single_image_ocr(
-        self,
-        session: AsyncSession,
-        image: HomeworkImage
+        self, session: AsyncSession, image: HomeworkImage
     ):
         """
         处理单张图片的OCR识别
@@ -420,7 +434,7 @@ class HomeworkService:
             ocr_result = await self.ocr_service.auto_recognize(
                 image_path=file_path,
                 ocr_type=OCRType.GENERAL,  # 可以根据作业类型选择
-                enhance=True
+                enhance=True,
             )
 
             # 更新图片记录
@@ -432,14 +446,16 @@ class HomeworkService:
                     ocr_confidence=ocr_result.confidence,
                     ocr_data=ocr_result.to_dict(),
                     ocr_processed_at=datetime.now(),
-                    is_processed=True
+                    is_processed=True,
                 )
             )
 
             await session.execute(stmt)
             await session.commit()
 
-            logger.info(f"图片OCR处理完成: {image.id}, 置信度: {ocr_result.confidence:.2f}")
+            logger.info(
+                f"图片OCR处理完成: {image.id}, 置信度: {ocr_result.confidence:.2f}"
+            )
 
         except Exception as e:
             logger.error(f"图片OCR处理失败: {e}")
@@ -450,18 +466,14 @@ class HomeworkService:
                 .where(HomeworkImage.id == image.id)
                 .values(
                     processing_error=str(e),
-                    is_processed=True  # 标记为已处理，避免重复处理
+                    is_processed=True,  # 标记为已处理，避免重复处理
                 )
             )
 
             await session.execute(stmt)
             await session.commit()
 
-    async def _trigger_ai_review(
-        self,
-        session: AsyncSession,
-        submission_id: uuid.UUID
-    ):
+    async def _trigger_ai_review(self, session: AsyncSession, submission_id: uuid.UUID):
         """
         触发AI批改
 
@@ -474,7 +486,7 @@ class HomeworkService:
             stmt = select(HomeworkImage).where(
                 and_(
                     HomeworkImage.submission_id == submission_id,
-                    HomeworkImage.is_processed == False
+                    HomeworkImage.is_processed == False,
                 )
             )
             result = await session.execute(stmt)
@@ -507,10 +519,7 @@ class HomeworkService:
     # ============================================================================
 
     async def start_ai_review(
-        self,
-        session: AsyncSession,
-        submission_id: uuid.UUID,
-        max_score: float = 100.0
+        self, session: AsyncSession, submission_id: uuid.UUID, max_score: float = 100.0
     ) -> HomeworkReview:
         """
         开始AI批改
@@ -535,7 +544,7 @@ class HomeworkService:
                 review_type="ai_auto",
                 status=ReviewStatus.IN_PROGRESS,
                 started_at=datetime.now(),
-                max_score=max_score
+                max_score=max_score,
             )
 
             session.add(review)
@@ -546,23 +555,73 @@ class HomeworkService:
             review_data = await self._prepare_ai_review_data(session, submission)
 
             # 调用百炼AI进行批改
-            from typing import Dict, Any, List, Union
             from dataclasses import asdict
+            from typing import Any, Dict, List, Union
+
+            # 构建专业的K12批改System Prompt
+            system_prompt = """你是一位经验丰富的K12教育专家,负责批改学生作业。
+
+# 批改标准
+1. 答案正确性: 准确判断答案是否正确
+2. 解题过程: 评估解题步骤的完整性和逻辑性
+3. 知识点掌握: 分析学生对相关知识点的理解程度
+4. 常见错误: 识别典型错误并给出纠正建议
+
+# 输出格式
+请以JSON格式输出批改结果(不要包含markdown代码块标记):
+{
+  "total_score": 85,
+  "accuracy_rate": 0.85,
+  "overall_comment": "整体完成较好,但部分知识点需加强",
+  "strengths": ["计算准确", "步骤完整"],
+  "weaknesses": ["概念理解有偏差", "书写不够规范"],
+  "suggestions": ["多做类似题目巩固", "注意答题格式"],
+  "knowledge_point_analysis": [
+    {
+      "name": "一元二次方程",
+      "mastery_level": "good",
+      "score": 8,
+      "max_score": 10
+    }
+  ],
+  "question_reviews": [
+    {
+      "question_number": 1,
+      "score": 10,
+      "max_score": 10,
+      "is_correct": true,
+      "comment": "解答正确,步骤清晰"
+    }
+  ],
+  "confidence_score": 0.9,
+  "model_version": "bailian-v1"
+}
+
+# 字段说明
+- total_score: 总分(0-满分)
+- accuracy_rate: 正确率(0-1小数)
+- mastery_level: 掌握程度,可选值: "excellent"(优秀) | "good"(良好) | "fair"(一般) | "poor"(较差)
+- confidence_score: AI置信度(0-1)
+
+# 批改原则
+- 鼓励为主,指出问题同时给予肯定
+- 建议具体可操作,避免空泛评价
+- 关注学习过程,不仅关注结果
+- 语言简洁友好,适合学生理解
+
+请严格按照JSON格式输出,不要添加任何额外说明文字。"""
 
             messages: List[Union[Dict[str, str], ChatMessage]] = [
-                ChatMessage(
-                    role=MessageRole.SYSTEM,
-                    content="你是一个专业的作业批改助手，请仔细分析学生提交的作业，给出准确的评分和建议。"
-                ),
+                ChatMessage(role=MessageRole.SYSTEM, content=system_prompt),
                 ChatMessage(
                     role=MessageRole.USER,
-                    content=f"请批改以下作业，满分为{max_score}分：\n{json.dumps(review_data, ensure_ascii=False)}"
-                )
+                    content=f"请批改以下作业，满分为{max_score}分：\n{json.dumps(review_data, ensure_ascii=False)}",
+                ),
             ]
             ai_result = await self.bailian_service.chat_completion(messages=messages)
 
             # 处理AI批改结果
-            review_id = getattr(review, 'id')
+            review_id = getattr(review, "id")
             # 将AI响应转换为字典格式
             ai_result_dict = asdict(ai_result)
 
@@ -578,9 +637,9 @@ class HomeworkService:
             # 更新批改状态为失败
             try:
                 # 检查review是否已定义并且不为None
-                review_var = locals().get('review')
+                review_var = locals().get("review")
                 if review_var is not None:
-                    review_id = getattr(review_var, 'id')
+                    review_id = getattr(review_var, "id")
                     await self._mark_review_failed(session, review_id, str(e))
             except Exception as mark_error:
                 logger.error(f"标记批改失败时发生错误: {mark_error}")
@@ -588,9 +647,7 @@ class HomeworkService:
             raise AIServiceError(f"AI批改失败: {e}")
 
     async def _prepare_ai_review_data(
-        self,
-        session: AsyncSession,
-        submission: HomeworkSubmission
+        self, session: AsyncSession, submission: HomeworkSubmission
     ) -> Dict[str, Any]:
         """
         准备AI批改所需的数据
@@ -607,16 +664,18 @@ class HomeworkService:
             homework = submission.homework
 
             # 获取图片和OCR文本
-            images_stmt = select(HomeworkImage).where(
-                HomeworkImage.submission_id == submission.id
-            ).order_by(HomeworkImage.display_order)
+            images_stmt = (
+                select(HomeworkImage)
+                .where(HomeworkImage.submission_id == submission.id)
+                .order_by(HomeworkImage.display_order)
+            )
             images_result = await session.execute(images_stmt)
             images = images_result.scalars().all()
 
             # 合并OCR文本
             ocr_texts = []
             for image in images:
-                ocr_text = getattr(image, 'ocr_text', None)
+                ocr_text = getattr(image, "ocr_text", None)
                 if ocr_text and str(ocr_text).strip():
                     ocr_texts.append(str(ocr_text).strip())
 
@@ -632,7 +691,7 @@ class HomeworkService:
                 "student_work_text": combined_text,
                 "submission_note": submission.submission_note,
                 "completion_time": submission.completion_time,
-                "image_count": len(images)
+                "image_count": len(images),
             }
 
         except Exception as e:
@@ -640,10 +699,7 @@ class HomeworkService:
             raise
 
     async def _process_ai_review_result(
-        self,
-        session: AsyncSession,
-        review_id: uuid.UUID,
-        ai_result: Dict[str, Any]
+        self, session: AsyncSession, review_id: uuid.UUID, ai_result: Dict[str, Any]
     ):
         """
         处理AI批改结果
@@ -691,7 +747,7 @@ class HomeworkService:
                     ai_confidence_score=ai_result.get("confidence_score"),
                     ai_processing_tokens=ai_result.get("tokens_used"),
                     quality_score=quality_score,
-                    needs_manual_review=needs_manual_review
+                    needs_manual_review=needs_manual_review,
                 )
             )
 
@@ -707,14 +763,16 @@ class HomeworkService:
                     accuracy_rate=accuracy_rate,
                     ai_review_data=ai_result,
                     weak_knowledge_points=knowledge_point_analysis,
-                    improvement_suggestions=suggestions
+                    improvement_suggestions=suggestions,
                 )
             )
 
             await session.execute(submission_stmt)
             await session.commit()
 
-            logger.info(f"AI批改结果处理完成: 分数={total_score}, 质量分={quality_score:.2f}")
+            logger.info(
+                f"AI批改结果处理完成: 分数={total_score}, 质量分={quality_score:.2f}"
+            )
 
         except Exception as e:
             await session.rollback()
@@ -772,10 +830,7 @@ class HomeworkService:
             return 0.5  # 返回中等质量分数
 
     async def _mark_review_failed(
-        self,
-        session: AsyncSession,
-        review_id: uuid.UUID,
-        error_message: str
+        self, session: AsyncSession, review_id: uuid.UUID, error_message: str
     ):
         """
         标记批改失败
@@ -792,7 +847,7 @@ class HomeworkService:
                 .values(
                     status=ReviewStatus.FAILED,
                     completed_at=datetime.now(),
-                    error_message=error_message
+                    error_message=error_message,
                 )
             )
 
@@ -807,9 +862,7 @@ class HomeworkService:
     # ============================================================================
 
     async def get_submission(
-        self,
-        session: AsyncSession,
-        submission_id: uuid.UUID
+        self, session: AsyncSession, submission_id: uuid.UUID
     ) -> Optional[HomeworkSubmission]:
         """
         获取作业提交
@@ -822,7 +875,9 @@ class HomeworkService:
             提交对象或None
         """
         try:
-            stmt = select(HomeworkSubmission).where(HomeworkSubmission.id == submission_id)
+            stmt = select(HomeworkSubmission).where(
+                HomeworkSubmission.id == submission_id
+            )
             result = await session.execute(stmt)
             return result.scalar_one_or_none()
 
@@ -831,9 +886,7 @@ class HomeworkService:
             raise DatabaseError(f"获取作业提交失败: {e}")
 
     async def get_submission_with_details(
-        self,
-        session: AsyncSession,
-        submission_id: uuid.UUID
+        self, session: AsyncSession, submission_id: uuid.UUID
     ) -> Optional[HomeworkSubmission]:
         """
         获取带详情的作业提交
@@ -851,7 +904,7 @@ class HomeworkService:
                 .options(
                     selectinload(HomeworkSubmission.homework),
                     selectinload(HomeworkSubmission.images),
-                    selectinload(HomeworkSubmission.reviews)
+                    selectinload(HomeworkSubmission.reviews),
                 )
                 .where(HomeworkSubmission.id == submission_id)
             )
@@ -864,9 +917,7 @@ class HomeworkService:
             raise DatabaseError(f"获取作业提交详情失败: {e}")
 
     async def _update_homework_stats(
-        self,
-        session: AsyncSession,
-        homework_id: uuid.UUID
+        self, session: AsyncSession, homework_id: uuid.UUID
     ):
         """
         更新作业统计信息
@@ -877,13 +928,10 @@ class HomeworkService:
         """
         try:
             # 计算提交统计
-            stats_stmt = (
-                select(
-                    func.count(HomeworkSubmission.id).label('total_submissions'),
-                    func.avg(HomeworkSubmission.total_score).label('avg_score')
-                )
-                .where(HomeworkSubmission.homework_id == homework_id)
-            )
+            stats_stmt = select(
+                func.count(HomeworkSubmission.id).label("total_submissions"),
+                func.avg(HomeworkSubmission.total_score).label("avg_score"),
+            ).where(HomeworkSubmission.homework_id == homework_id)
 
             result = await session.execute(stats_stmt)
             stats = result.first()
@@ -895,7 +943,7 @@ class HomeworkService:
                     .where(Homework.id == homework_id)
                     .values(
                         total_submissions=stats.total_submissions or 0,
-                        avg_score=stats.avg_score
+                        avg_score=stats.avg_score,
                     )
                 )
                 await session.execute(update_stmt)
@@ -910,10 +958,7 @@ class HomeworkService:
     # ============================================================================
 
     async def update_homework(
-        self,
-        session: AsyncSession,
-        homework_id: str,
-        update_data: Dict[str, Any]
+        self, session: AsyncSession, homework_id: str, update_data: Dict[str, Any]
     ) -> Homework:
         """
         更新作业模板
@@ -955,7 +1000,7 @@ class HomeworkService:
         student_id: str,
         filters: Optional[Dict[str, Any]] = None,
         page: int = 1,
-        size: int = 20
+        size: int = 20,
     ) -> PaginatedResponse:
         """
         获取学生的作业提交列表
@@ -972,37 +1017,53 @@ class HomeworkService:
         """
         try:
             # 构建查询
-            query = select(HomeworkSubmission).where(
-                HomeworkSubmission.student_id == student_id
-            ).options(selectinload(HomeworkSubmission.homework))
+            query = (
+                select(HomeworkSubmission)
+                .where(HomeworkSubmission.student_id == student_id)
+                .options(selectinload(HomeworkSubmission.homework))
+            )
 
             # 应用过滤条件
             if filters:
-                if filters.get('status'):
-                    query = query.where(HomeworkSubmission.status == filters['status'])
-                if filters.get('subject'):
-                    query = query.join(Homework).where(Homework.subject == filters['subject'])
-                if filters.get('homework_type'):
-                    query = query.join(Homework).where(Homework.homework_type == filters['homework_type'])
+                if filters.get("status"):
+                    query = query.where(HomeworkSubmission.status == filters["status"])
+                if filters.get("subject"):
+                    query = query.join(Homework).where(
+                        Homework.subject == filters["subject"]
+                    )
+                if filters.get("homework_type"):
+                    query = query.join(Homework).where(
+                        Homework.homework_type == filters["homework_type"]
+                    )
 
             # 计算总数
             count_query = select(func.count(HomeworkSubmission.id)).where(
                 HomeworkSubmission.student_id == student_id
             )
             if filters:
-                if filters.get('status'):
-                    count_query = count_query.where(HomeworkSubmission.status == filters['status'])
-                if filters.get('subject'):
-                    count_query = count_query.join(Homework).where(Homework.subject == filters['subject'])
-                if filters.get('homework_type'):
-                    count_query = count_query.join(Homework).where(Homework.homework_type == filters['homework_type'])
+                if filters.get("status"):
+                    count_query = count_query.where(
+                        HomeworkSubmission.status == filters["status"]
+                    )
+                if filters.get("subject"):
+                    count_query = count_query.join(Homework).where(
+                        Homework.subject == filters["subject"]
+                    )
+                if filters.get("homework_type"):
+                    count_query = count_query.join(Homework).where(
+                        Homework.homework_type == filters["homework_type"]
+                    )
 
             total_result = await session.execute(count_query)
             total = total_result.scalar()
 
             # 分页
             offset = (page - 1) * size
-            query = query.order_by(HomeworkSubmission.created_at.desc()).offset(offset).limit(size)
+            query = (
+                query.order_by(HomeworkSubmission.created_at.desc())
+                .offset(offset)
+                .limit(size)
+            )
 
             result = await session.execute(query)
             submissions = result.scalars().all()
@@ -1012,16 +1073,14 @@ class HomeworkService:
 
             # 创建分页信息
             pagination_info = PaginationInfo.create(
-                total=total or 0,
-                page=page,
-                size=size
+                total=total or 0, page=page, size=size
             )
 
             return PaginatedResponse(
                 data=items,
                 pagination=pagination_info,
                 success=True,
-                message="获取提交列表成功"
+                message="获取提交列表成功",
             )
 
         except Exception as e:
@@ -1033,7 +1092,7 @@ class HomeworkService:
         session: AsyncSession,
         student_id: str,
         subject: Optional[str] = None,
-        days: int = 30
+        days: int = 30,
     ) -> Dict[str, Any]:
         """
         获取作业统计信息
@@ -1052,16 +1111,16 @@ class HomeworkService:
 
             # 基础统计查询
             query = select(
-                func.count(HomeworkSubmission.id).label('total_submissions'),
+                func.count(HomeworkSubmission.id).label("total_submissions"),
                 func.count(
-                    func.case((HomeworkSubmission.status == 'reviewed', 1))
-                ).label('completed_submissions'),
-                func.avg(HomeworkSubmission.total_score).label('avg_score'),
-                func.avg(HomeworkSubmission.accuracy_rate).label('avg_accuracy')
+                    func.case((HomeworkSubmission.status == "reviewed", 1))
+                ).label("completed_submissions"),
+                func.avg(HomeworkSubmission.total_score).label("avg_score"),
+                func.avg(HomeworkSubmission.accuracy_rate).label("avg_accuracy"),
             ).where(
                 and_(
                     HomeworkSubmission.student_id == student_id,
-                    HomeworkSubmission.created_at >= cutoff_date
+                    HomeworkSubmission.created_at >= cutoff_date,
                 )
             )
 
@@ -1072,25 +1131,28 @@ class HomeworkService:
             stats = result.first()
 
             # 学科分布统计
-            subject_query = select(
-                Homework.subject,
-                func.count(HomeworkSubmission.id).label('count'),
-                func.avg(HomeworkSubmission.total_score).label('avg_score')
-            ).select_from(
-                HomeworkSubmission.join(Homework)
-            ).where(
-                and_(
-                    HomeworkSubmission.student_id == student_id,
-                    HomeworkSubmission.created_at >= cutoff_date
+            subject_query = (
+                select(
+                    Homework.subject,
+                    func.count(HomeworkSubmission.id).label("count"),
+                    func.avg(HomeworkSubmission.total_score).label("avg_score"),
                 )
-            ).group_by(Homework.subject)
+                .select_from(HomeworkSubmission.join(Homework))
+                .where(
+                    and_(
+                        HomeworkSubmission.student_id == student_id,
+                        HomeworkSubmission.created_at >= cutoff_date,
+                    )
+                )
+                .group_by(Homework.subject)
+            )
 
             subject_result = await session.execute(subject_query)
             subject_stats = [
                 {
-                    'subject': row.subject,
-                    'count': row.count,
-                    'avg_score': round(row.avg_score, 2) if row.avg_score else None
+                    "subject": row.subject,
+                    "count": row.count,
+                    "avg_score": round(row.avg_score, 2) if row.avg_score else None,
                 }
                 for row in subject_result
             ]
@@ -1098,30 +1160,36 @@ class HomeworkService:
             # 安全处理统计结果
             if not stats:
                 return {
-                    'period_days': days,
-                    'total_submissions': 0,
-                    'completed_submissions': 0,
-                    'completion_rate': 0.0,
-                    'avg_score': None,
-                    'avg_accuracy': None,
-                    'subject_stats': [],
-                    'recent_trends': []
+                    "period_days": days,
+                    "total_submissions": 0,
+                    "completed_submissions": 0,
+                    "completion_rate": 0.0,
+                    "avg_score": None,
+                    "avg_accuracy": None,
+                    "subject_stats": [],
+                    "recent_trends": [],
                 }
 
             total_submissions = stats.total_submissions or 0
             completed_submissions = stats.completed_submissions or 0
 
             return {
-                'period_days': days,
-                'total_submissions': total_submissions,
-                'completed_submissions': completed_submissions,
-                'completion_rate': round(
-                    (completed_submissions / total_submissions * 100)
-                    if total_submissions else 0, 2
+                "period_days": days,
+                "total_submissions": total_submissions,
+                "completed_submissions": completed_submissions,
+                "completion_rate": round(
+                    (
+                        (completed_submissions / total_submissions * 100)
+                        if total_submissions
+                        else 0
+                    ),
+                    2,
                 ),
-                'avg_score': round(stats.avg_score, 2) if stats.avg_score else None,
-                'avg_accuracy': round(stats.avg_accuracy, 2) if stats.avg_accuracy else None,
-                'subject_distribution': subject_stats
+                "avg_score": round(stats.avg_score, 2) if stats.avg_score else None,
+                "avg_accuracy": (
+                    round(stats.avg_accuracy, 2) if stats.avg_accuracy else None
+                ),
+                "subject_distribution": subject_stats,
             }
 
         except Exception as e:

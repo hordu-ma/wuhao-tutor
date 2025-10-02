@@ -10,7 +10,7 @@ const config = {
   // API 配置
   api: {
     // 后端 API 基础地址
-    baseUrl: 'https://localhost:8000', // 请替换为实际的后端地址
+    baseUrl: 'http://localhost:8000', // 开发环境使用http协议
     // API 版本
     version: 'v1',
     // 请求超时时间 (毫秒)
