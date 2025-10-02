@@ -14,28 +14,34 @@
 ## 🚨 当前状态快照 (2025-10-02 19:45)
 
 ### 正在进行的工作
+
 - **任务**: Phase 2 Analytics API 测试验证
-- **进度**: 1/5 测试通过，4项失败
+- **进度**: 1/5 测试通过，4 项失败
 - **阻塞问题**: `answers` 表不存在 - 数据库迁移未完成
 
 ### 核心问题诊断
+
 ```
 sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: answers
 ```
 
-**根本原因**: 
+**根本原因**:
+
 1. Answer 模型已定义 (`src/models/__init__.py`)，表名为 `answers`
 2. Alembic 迁移已启动但**未完成** (INFO 日志显示进程中断)
 3. 测试脚本依赖 `answers` 表存储 AI 生成的回答数据
 
 ### 待执行操作 (系统修复后)
+
 1. **完成数据库迁移**:
+
    ```bash
    uv run alembic current              # 检查当前迁移版本
    uv run alembic upgrade head         # 应用所有迁移
    ```
 
 2. **验证表创建**:
+
    ```bash
    sqlite3 wuhao_tutor_dev.db ".tables"  # 确认 answers 表存在
    ```
@@ -46,24 +52,29 @@ sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: answe
    ```
 
 ### Phase 2 已完成的工作
+
 ✅ **代码实现** (100%):
-- `src/services/analytics_service.py` (368 行) - 3个API方法
-- `src/api/v1/endpoints/analytics.py` (200 行) - REST端点
+
+- `src/services/analytics_service.py` (368 行) - 3 个 API 方法
+- `src/api/v1/endpoints/analytics.py` (200 行) - REST 端点
 - `src/services/learning_service.py` - 增加 `_update_session_stats()` 方法
 - `scripts/test_phase2_analytics.py` (334 行) - 综合测试脚本
 
-✅ **错误修复** (21个编译错误):
-- Service 初始化问题 (3处)
-- SQLAlchemy Column 对象处理 (10处)
-- UUID 类型转换 (5处)
-- 方法签名错误 (3处)
+✅ **错误修复** (21 个编译错误):
+
+- Service 初始化问题 (3 处)
+- SQLAlchemy Column 对象处理 (10 处)
+- UUID 类型转换 (5 处)
+- 方法签名错误 (3 处)
 
 ✅ **文档创建**:
+
 - `PHASE2_TEST_FIX_REPORT.md` - 错误修复详细报告
 - `PHASE2_TEST_GUIDE.md` - 测试执行指南
 - `PHASE2_COMPLETION_SUMMARY.md` - 阶段完成总结
 
 ### 测试结果快照
+
 ```
 学习统计API: ✅ 通过
 用户统计API: ❌ 失败 (answers表不存在)
@@ -75,15 +86,18 @@ Session统计更新: ❌ 失败 (answers表不存在)
 ```
 
 ### 技术债务记录
+
 1. **数据库模型与迁移不同步** (P0 - Critical)
+
    - 影响: 所有依赖 Answer 模型的功能无法测试
-   - 修复时间: 5-10分钟 (运行 alembic upgrade)
+   - 修复时间: 5-10 分钟 (运行 alembic upgrade)
 
 2. **测试数据创建逻辑**
    - `create_test_data()` 假设 Answer 表存在
    - 需要确保表创建后再运行测试
 
 ### 环境信息
+
 - Python: 3.12.11 (uv 管理)
 - 数据库: SQLite (`wuhao_tutor_dev.db`)
 - 分支: `feature/miniprogram-init`
@@ -560,18 +574,21 @@ curl http://localhost:8000/api/v1/homework/submissions/{id}
 ### ✅ 完成情况 (2025-10-02 19:45)
 
 **代码实现**: ✅ 100% 完成
-- ✅ `src/services/analytics_service.py` - 368行，3个核心方法
-- ✅ `src/api/v1/endpoints/analytics.py` - 200行，3个REST端点
-- ✅ `src/services/learning_service.py` - 新增 `_update_session_stats()` 方法
-- ✅ `scripts/test_phase2_analytics.py` - 334行综合测试脚本
 
-**错误修复**: ✅ 21个编译错误全部修复
-- Service初始化问题 (3处)
-- SQLAlchemy Column对象处理 (10处)  
-- UUID类型转换 (5处)
-- 方法签名错误 (3处)
+- ✅ `src/services/analytics_service.py` - 368 行，3 个核心方法
+- ✅ `src/api/v1/endpoints/analytics.py` - 200 行，3 个 REST 端点
+- ✅ `src/services/learning_service.py` - 新增 `_update_session_stats()` 方法
+- ✅ `scripts/test_phase2_analytics.py` - 334 行综合测试脚本
+
+**错误修复**: ✅ 21 个编译错误全部修复
+
+- Service 初始化问题 (3 处)
+- SQLAlchemy Column 对象处理 (10 处)
+- UUID 类型转换 (5 处)
+- 方法签名错误 (3 处)
 
 **测试状态**: � 1/5 通过 (阻塞: 数据库迁移未完成)
+
 ```
 ✅ 学习统计API测试通过
 ❌ 用户统计API (answers表不存在)
@@ -580,11 +597,13 @@ curl http://localhost:8000/api/v1/homework/submissions/{id}
 ❌ 数据完整性验证 (answers表不存在)
 ```
 
-**阻塞问题**: 
+**阻塞问题**:
+
 - `sqlalchemy.exc.OperationalError: no such table: answers`
-- Alembic迁移启动但进程中断，未完成表创建
+- Alembic 迁移启动但进程中断，未完成表创建
 
 **恢复步骤**:
+
 1. 运行 `uv run alembic upgrade head` 完成迁移
 2. 验证 `answers` 表创建成功
 3. 重新执行 `uv run python scripts/test_phase2_analytics.py`
@@ -625,41 +644,48 @@ async def ask_question(...):
 #### ✅ Step 2.2: Analytics 后端实现 (已完成)
 
 **实现文件**:
-- ✅ `src/api/v1/endpoints/analytics.py` (200行)
-- ✅ `src/services/analytics_service.py` (368行)
+
+- ✅ `src/api/v1/endpoints/analytics.py` (200 行)
+- ✅ `src/services/analytics_service.py` (368 行)
 - ✅ 已注册到主路由 (`src/api/v1/api.py`)
 
 **核心 API 实现**:
 
 ✅ **GET /api/v1/analytics/learning-stats**
+
 ```python
 async def get_learning_stats(
     time_range: Literal["7d", "30d", "all"] = "30d",
     analytics_service: AnalyticsService = Depends(get_analytics_service)
 ) -> DataResponse[LearningStatsResponse]
 ```
+
 - 聚合 homework_submissions、questions、chat_sessions 数据
-- 支持 7天/30天/全部 时间范围
+- 支持 7 天/30 天/全部 时间范围
 - 返回学习天数、问题数、作业数、平均分
 
 ✅ **GET /api/v1/analytics/user/stats**
+
 ```python
 async def get_user_stats(
     analytics_service: AnalyticsService = Depends(get_analytics_service)
 ) -> DataResponse[UserStatsResponse]
 ```
+
 - 返回用户加入日期、最后活动时间
 - 统计作业数、问题数、学习天数
 
 ✅ **GET /api/v1/analytics/knowledge-map**
+
 ```python
 async def get_knowledge_map(
     subject: Optional[str] = None,
     analytics_service: AnalyticsService = Depends(get_analytics_service)
 ) -> DataResponse[KnowledgeMapResponse]
 ```
+
 - 分析知识点掌握情况
-- 支持按学科筛选（math/chinese/english等）
+- 支持按学科筛选（math/chinese/english 等）
 - 基于问答记录推断知识点掌握度
 
 **数据来源实现**:
@@ -668,26 +694,27 @@ async def get_knowledge_map(
 class AnalyticsService:
     def __init__(self, db: AsyncSession):
         self.db = db
-    
+
     async def get_learning_stats(self, user_id: UUID, time_range: str):
         # ✅ 已实现：多表JOIN聚合
         # - homework_submissions (作业统计)
-        # - questions + answers (问答统计)  
+        # - questions + answers (问答统计)
         # - chat_sessions (会话统计)
-        
+
     async def get_user_stats(self, user_id: UUID):
         # ✅ 已实现：用户维度统计
-        
+
     async def get_knowledge_map(self, user_id: UUID, subject: Optional[str]):
         # ✅ 已实现：知识点分析
         # 基于 Answer.related_topics 字段提取知识点
 ```
 
 **验收标准**:
-- ✅ 3个 API 端点全部实现
+
+- ✅ 3 个 API 端点全部实现
 - ✅ 类型注解完整 (Pydantic v2 Schema)
 - ✅ 依赖注入模式 (get_analytics_service)
-- 🔄 小程序集成测试 (待Phase 3)
+- 🔄 小程序集成测试 (待 Phase 3)
 - 🔄 数据准确性验证 (测试中断)
 
 ```python
@@ -758,6 +785,7 @@ class AnalyticsService:
 **当前状态**: ⚠️ 迁移启动但未完成
 
 **已执行**:
+
 - ✅ 所有 Model 定义已存在 (`src/models/`)
 - ✅ Answer 模型已定义 (`__tablename__ = "answers"`)
 - ✅ Alembic 配置正确 (`alembic.ini` + `alembic/env.py`)
@@ -785,14 +813,16 @@ make db-backup
 ```
 
 **Model 确认**:
-- ✅ User: 用户基本信息 (phone, role, school_name等)
-- ✅ ChatSession: 会话管理 (question_count, total_tokens等)
-- ✅ Question: 问题记录 (content, subject, grade等)
-- ✅ Answer: 答案记录 (content, model_name, tokens_used等) **← 表缺失**
-- ✅ HomeworkSubmission: 作业提交 (file_url, score等)
-- ✅ HomeworkTemplate: 作业模板 (title, requirements等)
+
+- ✅ User: 用户基本信息 (phone, role, school_name 等)
+- ✅ ChatSession: 会话管理 (question_count, total_tokens 等)
+- ✅ Question: 问题记录 (content, subject, grade 等)
+- ✅ Answer: 答案记录 (content, model_name, tokens_used 等) **← 表缺失**
+- ✅ HomeworkSubmission: 作业提交 (file_url, score 等)
+- ✅ HomeworkTemplate: 作业模板 (title, requirements 等)
 
 **阻塞影响**:
+
 - 无法执行 Phase 2 测试脚本
 - Analytics API 中依赖 Answer 表的查询会失败
 - LearningService 的 `_update_session_stats()` 无法验证
@@ -1372,29 +1402,32 @@ uv run pytest tests/unit/test_homework_service.py -v
 
 ### 最近更新历史
 
-| 日期 | 时间 | 事件 | 状态 | 说明 |
-|------|------|------|------|------|
-| 2025-10-02 | 19:45 | **Phase 2 测试中断** | ⚠️ | 数据库迁移未完成，answers表缺失 |
-| 2025-10-02 | 18:30 | Phase 2 代码完成 | ✅ | Analytics后端实现，21个错误修复完成 |
-| 2025-10-02 | 16:00 | Phase 2 开发启动 | 🔄 | 开始数据持久化完善工作 |
-| 2025-10-02 | 14:00 | Phase 1 完成验收 | ✅ | 作业批改功能完整跑通 |
+| 日期       | 时间  | 事件                 | 状态 | 说明                                  |
+| ---------- | ----- | -------------------- | ---- | ------------------------------------- |
+| 2025-10-02 | 19:45 | **Phase 2 测试中断** | ⚠️   | 数据库迁移未完成，answers 表缺失      |
+| 2025-10-02 | 18:30 | Phase 2 代码完成     | ✅   | Analytics 后端实现，21 个错误修复完成 |
+| 2025-10-02 | 16:00 | Phase 2 开发启动     | 🔄   | 开始数据持久化完善工作                |
+| 2025-10-02 | 14:00 | Phase 1 完成验收     | ✅   | 作业批改功能完整跑通                  |
 
 ### 当前中断详情 (2025-10-02 19:45)
 
 **中断原因**: 系统进程中断，Alembic 迁移未完成
 
 **影响范围**:
+
 - `answers` 表未创建
-- Phase 2 测试 1/5 通过 (4项失败)
+- Phase 2 测试 1/5 通过 (4 项失败)
 - 无法完成 Phase 2 验收
 
 **恢复路径**:
+
 1. 运行 `uv run alembic upgrade head` 完成迁移
 2. 验证 `answers` 表创建成功
 3. 重新执行 `uv run python scripts/test_phase2_analytics.py`
 4. 生成 `PHASE2_TEST_RESULTS.md` 测试报告
 
 **相关文档**:
+
 - 📄 `PHASE2_RECOVERY_GUIDE.md` - 详细恢复指南
 - 📄 `PHASE2_STATUS_SNAPSHOT.md` - 状态快照
 - 📄 `PHASE2_TEST_FIX_REPORT.md` - 错误修复报告
