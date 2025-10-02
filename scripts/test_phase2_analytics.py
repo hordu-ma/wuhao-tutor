@@ -38,7 +38,7 @@ async def create_test_data():
         if not test_user:
             # 创建测试用户
             test_user = User(
-                id=uuid.uuid4(),
+                id=str(uuid.uuid4()),
                 phone="13800138000",
                 password_hash="test_hash",
                 name="测试学生",
@@ -56,7 +56,7 @@ async def create_test_data():
         return test_user.id
 
 
-async def test_learning_stats(user_id: uuid.UUID):
+async def test_learning_stats(user_id: str):
     """测试学习统计API"""
     print("\n🧪 测试 1: 学习统计数据")
     print("=" * 50)
@@ -96,7 +96,7 @@ async def test_learning_stats(user_id: uuid.UUID):
             return False
 
 
-async def test_user_stats(user_id: uuid.UUID):
+async def test_user_stats(user_id: str):
     """测试用户统计API"""
     print("\n🧪 测试 2: 用户统计数据")
     print("=" * 50)
@@ -128,7 +128,7 @@ async def test_user_stats(user_id: uuid.UUID):
             return False
 
 
-async def test_knowledge_map(user_id: uuid.UUID):
+async def test_knowledge_map(user_id: str):
     """测试知识图谱API"""
     print("\n🧪 测试 3: 知识图谱数据")
     print("=" * 50)
