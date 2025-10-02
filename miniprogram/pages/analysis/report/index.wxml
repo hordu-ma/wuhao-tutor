@@ -1,0 +1,216 @@
+<!--学习报告页面-->
+<view class="report-container">
+  <!-- 页面头部 -->
+  <view class="page-header">
+    <view class="header-content">
+      <text class="page-title">学习报告</text>
+      <text class="page-subtitle">全面了解您的学习状况</text>
+    </view>
+    <view class="header-actions">
+      <button class="action-btn" bindtap="onShareReport">
+        <van-icon name="share-o" size="20px" />
+      </button>
+    </view>
+  </view>
+
+  <!-- 时间范围选择 -->
+  <view class="time-filter">
+    <van-dropdown-menu>
+      <van-dropdown-item value="{{timeRange}}" options="{{timeRangeOptions}}" bind:change="onTimeRangeChange" />
+    </van-dropdown-menu>
+  </view>
+
+  <!-- 加载状态 -->
+  <view wx:if="{{loading}}" class="loading-container">
+    <van-loading type="spinner" size="40px">加载中...</van-loading>
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:elif="{{!hasData}}" class="empty-container">
+    <van-empty description="暂无学习数据" />
+    <view class="empty-tip">完成作业或提问后，这里将展示您的学习报告</view>
+  </view>
+
+  <!-- 报告内容 -->
+  <view wx:else class="report-content">
+    <!-- 学习概览 -->
+    <view class="section overview-section">
+      <view class="section-header">
+        <text class="section-title">学习概览</text>
+        <text class="section-subtitle">最近{{timeRangeText}}的学习数据</text>
+      </view>
+      
+      <van-grid column-num="2" border="{{false}}" gutter="12rpx">
+        <van-grid-item>
+          <view class="stat-card">
+            <view class="stat-icon study-time-icon">
+              <van-icon name="clock-o" size="24px" />
+            </view>
+            <view class="stat-content">
+              <text class="stat-value">{{analytics.total_sessions}}</text>
+              <text class="stat-label">学习会话</text>
+            </view>
+          </view>
+        </van-grid-item>
+
+        <van-grid-item>
+          <view class="stat-card">
+            <view class="stat-icon question-icon">
+              <van-icon name="chat-o" size="24px" />
+            </view>
+            <view class="stat-content">
+              <text class="stat-value">{{analytics.total_questions}}</text>
+              <text class="stat-label">总提问数</text>
+            </view>
+          </view>
+        </van-grid-item>
+
+        <van-grid-item>
+          <view class="stat-card">
+            <view class="stat-icon rating-icon">
+              <van-icon name="star-o" size="24px" />
+            </view>
+            <view class="stat-content">
+              <text class="stat-value">{{analytics.avg_rating}}</text>
+              <text class="stat-label">平均评分</text>
+            </view>
+          </view>
+        </van-grid-item>
+
+        <van-grid-item>
+          <view class="stat-card">
+            <view class="stat-icon feedback-icon">
+              <van-icon name="thumb-circle-o" size="24px" />
+            </view>
+            <view class="stat-content">
+              <text class="stat-value">{{analytics.positive_feedback_rate}}%</text>
+              <text class="stat-label">好评率</text>
+            </view>
+          </view>
+        </van-grid-item>
+      </van-grid>
+    </view>
+
+    <!-- 学科统计 -->
+    <view class="section subject-section" wx:if="{{analytics.subject_stats.length > 0}}">
+      <view class="section-header">
+        <text class="section-title">学科分析</text>
+        <text class="section-subtitle">各学科学习情况对比</text>
+      </view>
+
+      <view class="chart-container">
+        <ec-canvas id="subjectChart" canvas-id="subjectChart" ec="{{ subjectChartEc }}"></ec-canvas>
+      </view>
+
+      <!-- 学科列表 -->
+      <view class="subject-list">
+        <view class="subject-item" wx:for="{{analytics.subject_stats}}" wx:key="subject">
+          <view class="subject-info">
+            <text class="subject-name">{{item.subject_name}}</text>
+            <text class="subject-count">{{item.question_count}} 个问题</text>
+          </view>
+          <view class="subject-stats">
+            <text class="subject-difficulty">难度 {{item.avg_difficulty}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 学习模式 -->
+    <view class="section pattern-section">
+      <view class="section-header">
+        <text class="section-title">学习模式</text>
+        <text class="section-subtitle">了解您的学习习惯</text>
+      </view>
+
+      <view class="pattern-cards">
+        <view class="pattern-card">
+          <view class="pattern-label">最活跃时段</view>
+          <view class="pattern-value">{{learningPattern.most_active_hour}}:00</view>
+        </view>
+
+        <view class="pattern-card">
+          <view class="pattern-label">最活跃日</view>
+          <view class="pattern-value">{{learningPattern.most_active_day_text}}</view>
+        </view>
+
+        <view class="pattern-card">
+          <view class="pattern-label">平均会话时长</view>
+          <view class="pattern-value">{{learningPattern.avg_session_length}} 分钟</view>
+        </view>
+
+        <view class="pattern-card">
+          <view class="pattern-label">偏好难度</view>
+          <view class="pattern-value">{{learningPattern.preferred_difficulty_text}}</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 改进建议 -->
+    <view class="section suggestions-section" wx:if="{{analytics.improvement_suggestions.length > 0}}">
+      <view class="section-header">
+        <text class="section-title">改进建议</text>
+        <text class="section-subtitle">AI 为您提供的学习建议</text>
+      </view>
+
+      <view class="suggestions-list">
+        <view class="suggestion-item" wx:for="{{analytics.improvement_suggestions}}" wx:key="index">
+          <view class="suggestion-icon">
+            <van-icon name="bulb-o" color="#ff9800" size="20px" />
+          </view>
+          <text class="suggestion-text">{{item}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 知识缺口 -->
+    <view class="section gaps-section" wx:if="{{analytics.knowledge_gaps.length > 0}}">
+      <view class="section-header">
+        <text class="section-title">知识薄弱点</text>
+        <text class="section-subtitle">需要加强的知识点</text>
+      </view>
+
+      <view class="gaps-list">
+        <van-tag 
+          wx:for="{{analytics.knowledge_gaps}}" 
+          wx:key="index"
+          type="warning" 
+          size="large"
+          class="gap-tag"
+        >
+          {{item}}
+        </van-tag>
+      </view>
+    </view>
+
+    <!-- 知识点掌握度雷达图 (如果后端支持) -->
+    <view class="section knowledge-section" wx:if="{{knowledgePoints.length > 0}}">
+      <view class="section-header">
+        <text class="section-title">知识点掌握度</text>
+        <text class="section-subtitle">各知识点掌握情况分析</text>
+      </view>
+
+      <view class="chart-container">
+        <ec-canvas id="knowledgeChart" canvas-id="knowledgeChart" ec="{{ knowledgeChartEc }}"></ec-canvas>
+      </view>
+
+      <!-- 知识点列表 -->
+      <view class="knowledge-list">
+        <view class="knowledge-item" wx:for="{{knowledgePoints}}" wx:key="name">
+          <view class="knowledge-info">
+            <text class="knowledge-name">{{item.name}}</text>
+            <view class="knowledge-bar">
+              <view class="knowledge-progress" style="width: {{item.mastery}}%"></view>
+            </view>
+          </view>
+          <text class="knowledge-value">{{item.mastery}}%</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 最后更新时间 -->
+    <view class="report-footer">
+      <text class="update-time">更新于 {{formattedUpdateTime}}</text>
+    </view>
+  </view>
+</view>

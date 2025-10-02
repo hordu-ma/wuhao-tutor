@@ -1,0 +1,10 @@
+<!-- ECharts Canvas 组件 -->
+<canvas 
+  canvas-id="{{ canvasId }}" 
+  id="{{ canvasId }}"
+  class="ec-canvas"
+  disable-scroll="{{ disableScroll }}"
+  bindtouchstart="{{ ec.touchStart }}"
+  bindtouchmove="{{ ec.touchMove }}"
+  bindtouchend="{{ ec.touchEnd }}"
+></canvas>

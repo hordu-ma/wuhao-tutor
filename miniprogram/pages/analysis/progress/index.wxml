@@ -1,0 +1,286 @@
+<!--学习进度页面-->
+<view class="progress-container">
+  <!-- 页面头部 -->
+  <view class="page-header">
+    <view class="header-content">
+      <text class="page-title">学习进度</text>
+      <text class="page-subtitle">记录您的每一步成长</text>
+    </view>
+  </view>
+
+  <!-- 加载状态 -->
+  <view wx:if="{{loading}}" class="loading-container">
+    <van-loading type="spinner" size="40px">加载中...</van-loading>
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:elif="{{!hasData}}" class="empty-container">
+    <van-empty description="暂无学习记录" />
+    <view class="empty-tip">开始学习后，这里将展示您的学习进度</view>
+  </view>
+
+  <!-- 进度内容 -->
+  <view wx:else class="progress-content">
+    <!-- 学习概览卡片 -->
+    <view class="section stats-section">
+      <view class="stats-grid">
+        <!-- 连续学习天数 -->
+        <view class="stat-item highlight">
+          <view class="stat-icon-wrapper">
+            <van-icon name="fire-o" size="32px" color="#ff6b6b" />
+          </view>
+          <view class="stat-content">
+            <text class="stat-value">{{streakDays}}</text>
+            <text class="stat-label">连续学习天数</text>
+          </view>
+        </view>
+
+        <!-- 总学习天数 -->
+        <view class="stat-item">
+          <view class="stat-icon-wrapper">
+            <van-icon name="calendar-o" size="28px" color="#4ecb73" />
+          </view>
+          <view class="stat-content">
+            <text class="stat-value">{{totalDays}}</text>
+            <text class="stat-label">总学习天数</text>
+          </view>
+        </view>
+
+        <!-- 本周学习时长 -->
+        <view class="stat-item">
+          <view class="stat-icon-wrapper">
+            <van-icon name="clock-o" size="28px" color="#667eea" />
+          </view>
+          <view class="stat-content">
+            <text class="stat-value">{{weeklyHours}}</text>
+            <text class="stat-label">本周学习(小时)</text>
+          </view>
+        </view>
+
+        <!-- 本周完成作业 -->
+        <view class="stat-item">
+          <view class="stat-icon-wrapper">
+            <van-icon name="todo-list-o" size="28px" color="#ffa502" />
+          </view>
+          <view class="stat-content">
+            <text class="stat-value">{{weeklyHomework}}</text>
+            <text class="stat-label">本周作业数</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 学习趋势图表 -->
+    <view class="section chart-section">
+      <view class="section-header">
+        <text class="section-title">学习趋势</text>
+        <view class="chart-tabs">
+          <view 
+            class="chart-tab {{chartType === 'time' ? 'active' : ''}}"
+            bindtap="onChartTypeChange"
+            data-type="time"
+          >
+            学习时长
+          </view>
+          <view 
+            class="chart-tab {{chartType === 'homework' ? 'active' : ''}}"
+            bindtap="onChartTypeChange"
+            data-type="homework"
+          >
+            作业完成
+          </view>
+        </view>
+      </view>
+
+      <view class="chart-container">
+        <ec-canvas id="trendChart" canvas-id="trendChart" ec="{{ trendChartEc }}"></ec-canvas>
+      </view>
+    </view>
+
+    <!-- 学习活跃度热力图 -->
+    <view class="section heatmap-section">
+      <view class="section-header">
+        <text class="section-title">学习活跃度</text>
+        <text class="section-subtitle">最近90天学习记录</text>
+      </view>
+
+      <view class="heatmap-container">
+        <!-- TODO: 实现日历热力图 -->
+        <view class="heatmap-placeholder">
+          <van-icon name="chart-trending-o" size="48px" color="#cccccc" />
+          <text class="placeholder-text">热力图开发中...</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 学习时间轴 -->
+    <view class="section timeline-section">
+      <view class="section-header">
+        <text class="section-title">学习记录</text>
+        <text class="section-subtitle">最近的学习活动</text>
+      </view>
+
+      <view class="timeline-container">
+        <view class="timeline-item" wx:for="{{timelineData}}" wx:key="id">
+          <view class="timeline-dot {{item.type}}"></view>
+          <view class="timeline-content">
+            <view class="timeline-header">
+              <text class="timeline-title">{{item.title}}</text>
+              <text class="timeline-time">{{item.time}}</text>
+            </view>
+            <view class="timeline-body">
+              <text class="timeline-desc">{{item.description}}</text>
+              <view class="timeline-stats" wx:if="{{item.stats}}">
+                <text class="timeline-stat" wx:for="{{item.stats}}" wx:key="label" wx:for-item="stat">
+                  {{stat.label}}: {{stat.value}}
+                </text>
+              </view>
+            </view>
+          </view>
+        </view>
+
+        <!-- 加载更多 -->
+        <view class="load-more" wx:if="{{hasMore}}">
+          <van-button 
+            plain 
+            size="small" 
+            loading="{{loadingMore}}"
+            bindtap="onLoadMore"
+          >
+            {{loadingMore ? '加载中...' : '加载更多'}}
+          </van-button>
+        </view>
+
+        <!-- 没有更多 -->
+        <view class="no-more" wx:if="{{!hasMore && timelineData.length > 0}}">
+          <text>没有更多记录了</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 学习目标 -->
+    <view class="section goals-section">
+      <view class="section-header">
+        <text class="section-title">学习目标</text>
+        <view class="header-action" bindtap="onAddGoal">
+          <van-icon name="plus" size="20px" />
+          <text>添加目标</text>
+        </view>
+      </view>
+
+      <view class="goals-list" wx:if="{{goals.length > 0}}">
+        <view class="goal-item" wx:for="{{goals}}" wx:key="id">
+          <view class="goal-header">
+            <text class="goal-title">{{item.title}}</text>
+            <view class="goal-actions">
+              <van-icon name="edit" size="18px" bindtap="onEditGoal" data-id="{{item.id}}" />
+            </view>
+          </view>
+          <view class="goal-progress">
+            <van-progress 
+              percentage="{{item.progress}}" 
+              stroke-width="8"
+              color="{{item.progress >= 100 ? '#4ecb73' : '#667eea'}}"
+              inactive-color="#f0f0f0"
+            />
+          </view>
+          <view class="goal-info">
+            <text class="goal-current">{{item.current}} / {{item.target}} {{item.unit}}</text>
+            <text class="goal-deadline">截止: {{item.deadline}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="goals-empty" wx:else>
+        <van-empty description="还没有设置学习目标" />
+        <van-button type="primary" size="small" bindtap="onAddGoal">
+          设置第一个目标
+        </van-button>
+      </view>
+    </view>
+
+    <!-- 学习洞察 -->
+    <view class="section insights-section">
+      <view class="section-header">
+        <text class="section-title">学习洞察</text>
+        <text class="section-subtitle">AI 为您分析学习习惯</text>
+      </view>
+
+      <view class="insights-list">
+        <view class="insight-item" wx:for="{{insights}}" wx:key="index">
+          <view class="insight-icon">
+            <van-icon name="{{item.icon}}" size="24px" color="{{item.color}}" />
+          </view>
+          <view class="insight-content">
+            <text class="insight-title">{{item.title}}</text>
+            <text class="insight-desc">{{item.description}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>
+
+<!-- 添加/编辑目标弹窗 -->
+<van-popup show="{{showGoalDialog}}" bind:close="onCloseGoalDialog" position="bottom" round>
+  <view class="goal-dialog">
+    <view class="dialog-header">
+      <text class="dialog-title">{{goalDialogTitle}}</text>
+      <van-icon name="cross" size="20px" bindtap="onCloseGoalDialog" />
+    </view>
+    
+    <view class="dialog-content">
+      <van-field
+        label="目标名称"
+        value="{{goalForm.title}}"
+        placeholder="请输入目标名称"
+        bind:change="onGoalFieldChange"
+        data-field="title"
+      />
+      
+      <van-field
+        label="目标数量"
+        value="{{goalForm.target}}"
+        type="number"
+        placeholder="请输入目标数量"
+        bind:change="onGoalFieldChange"
+        data-field="target"
+      />
+      
+      <van-field
+        label="单位"
+        value="{{goalForm.unit}}"
+        placeholder="如: 道题、小时等"
+        bind:change="onGoalFieldChange"
+        data-field="unit"
+      />
+      
+      <van-field
+        label="截止日期"
+        value="{{goalForm.deadline}}"
+        placeholder="请选择截止日期"
+        readonly
+        clickable
+        bind:click="onSelectDeadline"
+      />
+    </view>
+
+    <view class="dialog-footer">
+      <van-button type="default" size="large" bindtap="onCloseGoalDialog">
+        取消
+      </van-button>
+      <van-button type="primary" size="large" bindtap="onSaveGoal">
+        保存
+      </van-button>
+    </view>
+  </view>
+</van-popup>
+
+<!-- 日期选择器 -->
+<van-calendar 
+  show="{{showCalendar}}" 
+  bind:close="onCloseCalendar"
+  bind:confirm="onConfirmDate"
+  min-date="{{minDate}}"
+  max-date="{{maxDate}}"
+/>
