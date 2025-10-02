@@ -9,9 +9,10 @@ from datetime import datetime
 
 from sqlalchemy import (
     Boolean, Column, Integer, String, Text, Float, DateTime,
-    ForeignKey, UniqueConstraint, Index
+    ForeignKey, UniqueConstraint, Index, JSON
 )
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+import uuid as python_uuid
 from sqlalchemy.orm import relationship
 
 from .base import BaseModel
@@ -120,7 +121,7 @@ class Homework(BaseModel):
     )
 
     knowledge_points = Column(
-        JSONB,
+        JSON,
         nullable=True,
         comment="知识点列表（JSON格式）"
     )
@@ -140,7 +141,7 @@ class Homework(BaseModel):
 
     # 创建者信息
     creator_id = Column(
-        UUID(as_uuid=True),
+        String(36),
         ForeignKey("users.id"),
         nullable=True,
         index=True,
@@ -208,7 +209,7 @@ class HomeworkSubmission(BaseModel):
 
     # 关联信息
     homework_id = Column(
-        UUID(as_uuid=True),
+        String(36),
         ForeignKey("homework.id"),
         nullable=False,
         index=True,
@@ -216,7 +217,7 @@ class HomeworkSubmission(BaseModel):
     )
 
     student_id = Column(
-        UUID(as_uuid=True),
+        String(36),
         ForeignKey("users.id"),
         nullable=False,
         index=True,
@@ -278,27 +279,27 @@ class HomeworkSubmission(BaseModel):
 
     # AI批改结果
     ai_review_data = Column(
-        JSONB,
+        JSON,
         nullable=True,
         comment="AI批改详细数据（JSON格式）"
     )
 
     # 学习分析
     weak_knowledge_points = Column(
-        JSONB,
+        JSON,
         nullable=True,
         comment="薄弱知识点（JSON格式）"
     )
 
     improvement_suggestions = Column(
-        JSONB,
+        JSON,
         nullable=True,
         comment="改进建议（JSON格式）"
     )
 
     # 元数据
     device_info = Column(
-        JSONB,
+        JSON,
         nullable=True,
         comment="提交设备信息（JSON格式）"
     )
@@ -368,7 +369,7 @@ class HomeworkImage(BaseModel):
 
     # 关联信息
     submission_id = Column(
-        UUID(as_uuid=True),
+        String(36),
         ForeignKey("homework_submissions.id"),
         nullable=False,
         index=True,
@@ -448,7 +449,7 @@ class HomeworkImage(BaseModel):
     )
 
     ocr_data = Column(
-        JSONB,
+        JSON,
         nullable=True,
         comment="OCR详细数据（JSON格式）"
     )
@@ -508,7 +509,7 @@ class HomeworkReview(BaseModel):
 
     # 关联信息
     submission_id = Column(
-        UUID(as_uuid=True),
+        String(36),
         ForeignKey("homework_submissions.id"),
         nullable=False,
         index=True,
@@ -524,7 +525,7 @@ class HomeworkReview(BaseModel):
     )
 
     reviewer_id = Column(
-        UUID(as_uuid=True),
+        String(36),
         ForeignKey("users.id"),
         nullable=True,
         comment="人工批改者ID"
@@ -591,39 +592,39 @@ class HomeworkReview(BaseModel):
     )
 
     strengths = Column(
-        JSONB,
+        JSON,
         nullable=True,
         comment="优点列表（JSON格式）"
     )
 
     weaknesses = Column(
-        JSONB,
+        JSON,
         nullable=True,
         comment="不足列表（JSON格式）"
     )
 
     suggestions = Column(
-        JSONB,
+        JSON,
         nullable=True,
         comment="改进建议（JSON格式）"
     )
 
     # 知识点分析
     knowledge_point_analysis = Column(
-        JSONB,
+        JSON,
         nullable=True,
         comment="知识点分析（JSON格式）"
     )
 
     difficulty_analysis = Column(
-        JSONB,
+        JSON,
         nullable=True,
         comment="难度分析（JSON格式）"
     )
 
     # 题目级别评价
     question_reviews = Column(
-        JSONB,
+        JSON,
         nullable=True,
         comment="题目级别评价（JSON格式）"
     )
@@ -669,7 +670,7 @@ class HomeworkReview(BaseModel):
     )
 
     error_details = Column(
-        JSONB,
+        JSON,
         nullable=True,
         comment="错误详情（JSON格式）"
     )
