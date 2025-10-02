@@ -1,10 +1,10 @@
 # 五好伴学 - AI 助手上下文指南
 
-> **🤖 AI 助手必读**  
+> **🤖 AI 助手必读**
 > 本文档是与 AI 助手交互的核心上下文文件，包含项目关键信息、技术架构、开发约定和常用命令。
 
-**最后更新**: 2024-12-19  
-**项目版本**: 0.1.0 (Alpha)
+**最后更新**: 2025-10-02
+**项目版本**: 0.2.0 (Beta)
 
 ---
 
@@ -25,9 +25,11 @@
 
 ### 当前状态
 
-- **开发阶段**: Alpha (后端核心 ~90% 完成)
-- **主要任务**: 学情分析模块深化、监控体系完善
-- **技术债务**: 测试覆盖率需提升、前端部分功能待完成
+- **开发阶段**: Beta (Phase 2 完成，Phase 3 进行中)
+- **Phase 1**: ✅ 核心功能打通 (作业批改功能)
+- **Phase 2**: ✅ 数据持久化完善 (Analytics API + 数据库迁移)
+- **Phase 3**: 🔄 前后端联调 (进行中)
+- **技术债务**: 测试覆盖率需提升至80%+、前端集成测试待完成
 
 ---
 
@@ -295,10 +297,18 @@ uv run python scripts/performance_monitor.py status
 ### 核心文档
 
 - **本文档** (`AI-CONTEXT.md`) - AI 助手快速上下文
+- `README.md` - 项目主页
+- `MVP-DEVELOPMENT-PLAN.md` - MVP 开发计划
+- `docs/README.md` - 📚 文档导航中心
 - `docs/ARCHITECTURE.md` - 详细架构设计
 - `docs/DEVELOPMENT.md` - 完整开发工作流
 - `docs/SECURITY.md` - 安全策略与实践
 - `docs/TESTING.md` - 测试策略与规范
+
+### 开发指南文档
+
+- `docs/development/LEARNING_GUIDE.md` - 学习指南
+- `docs/development/WECHAT_MINIPROGRAM_DEVELOPMENT_GUIDE.md` - 小程序开发指南
 
 ### API 文档
 
@@ -306,6 +316,11 @@ uv run python scripts/performance_monitor.py status
 - `docs/api/endpoints.md` - 端点详细说明
 - `docs/api/models.md` - 数据模型
 - `docs/api/errors.md` - 错误码说明
+
+### 历史文档
+
+- `docs/history/phase1/` - Phase 1 完成总结
+- `docs/history/phase2/` - Phase 2 完成总结 (推荐阅读)
 
 ### 运维文档
 

@@ -1,211 +1,302 @@
-# 五好伴学文档索引 (Documentation Hub)
+# 五好伴学项目文档导航
 
-本目录提供项目的结构化文档入口，聚焦“清晰、可维护、单一职责”。所有文档均为中文版本。
-若需英文版，可在未来添加 `docs/en/` 结构。
+> **📚 项目文档中心**
+> 本文档提供项目所有文档的导航和快速访问
 
----
-
-## 🗂 文档结构总览
-
-| 分类             | 文件                      | 说明                             |
-| ---------------- | ------------------------- | -------------------------------- |
-| 项目总览         | `README.md` (项目根)      | 对外首要入口（被精简）           |
-| 状态与版本       | `STATUS.md`               | 项目阶段、完成度、里程碑         |
-| 变更记录         | `CHANGELOG.md`            | 语义化版本历史（待初始化）       |
-| 架构             | `ARCHITECTURE.md`         | 系统分层、技术栈、关键流程       |
-| 开发工作流       | `DEVELOPMENT.md`          | 环境、依赖、运行、提交流程、规范 |
-| 测试策略         | `TESTING.md`              | 单元 / 集成 / 性能 / 验收策略    |
-| 部署与运维       | `DEPLOYMENT.md`           | 多环境、Docker、启动、回滚       |
-| 安全与合规       | `SECURITY.md`             | 安全头、限流、密钥、风险控制     |
-| 监控与观测       | `OBSERVABILITY.md`        | 指标、限流状态、慢查询、缓存命中 |
-| 数据访问         | `DATA-ACCESS.md`          | 仓储层抽象、与缓存/监控协同      |
-| 术语表           | `GLOSSARY.md`             | 统一业务与技术术语               |
-| 前后端协作       | `FRONTEND-INTEGRATION.md` | 接口契约、错误约定、节流策略     |
-| 数据迁移         | `MIGRATION.md`            | Alembic / 版本迁移 / 回滚        |
-| API 文档（分拆） | `api/overview.md` 等      | 认证、端点、模型、错误、SDK      |
-| 历史归档         | `history/`                | 旧阶段总结、废弃设计说明         |
-
-> 说明：原 `docs/task-5.x-summary.md` 系列已归档，不再直接暴露于主导航。仅保留用于回溯。具体归档路径：`docs/history/`，原文件名（如 `task-5.2-summary.md`）保持不变，用于历史追踪与审计。
+**最后更新**: 2025-10-02
+**文档版本**: v2.0
 
 ---
 
-## 🔧 使用建议
+## 🎯 快速开始
 
-1. 新成员阅读顺序：`ARCHITECTURE` → `DEVELOPMENT` → `API/overview` → `DATA-ACCESS` → `TESTING`
-2. 运维/部署相关：重点阅读 `DEPLOYMENT`、`SECURITY`、`OBSERVABILITY`
-3. 快速定位问题：
-    - 启动/环境问题 → 根目录 `TROUBLESHOOTING.md`
-    - 性能异常 → `OBSERVABILITY.md`
-    - 数据结构或查询策略 → `DATA-ACCESS.md`
-4. 增量功能开发：
-    - 新增 API → 同步更新 `api/endpoints.md` 与 `api/models.md`
-    - 新增领域术语 → 更新 `GLOSSARY.md`
-    - 发布版本 → 更新 `CHANGELOG.md` + `STATUS.md`
+### 新手入门
 
----
+1. 阅读 [项目主页](../README.md) - 了解项目概况
+2. 查看 [AI助手上下文](../AI-CONTEXT.md) - AI开发助手必读
+3. 参考 [开发指南](DEVELOPMENT.md) - 完整开发工作流
 
-## 📌 统一约定（全局）
+### 开发者
 
-| 维度         | 约定                                                               |
-| ------------ | ------------------------------------------------------------------ |
-| 时间格式     | `YYYY-MM-DD`                                                       |
-| 版本格式     | 语义化版本：`MAJOR.MINOR.PATCH`；开发中使用 `0.x`                  |
-| 接口前缀     | `/api/v1`                                                          |
-| 响应结构     | `{ success: bool, data?: T, error?: { code, message, details? } }` |
-| 限流分类     | `per_ip` / `per_user` / `ai_service` / `login`                     |
-| 指标命名     | `snake_case`（如：`request_count`, `p95_latency_ms`）              |
-| 术语规范     | 统一参见 `GLOSSARY.md`                                             |
-| 代码风格     | Python: Black(88)；TS: Prettier(printWidth=100)                    |
-| Git 提交前缀 | feat / fix / docs / style / refactor / test / chore                |
-| 异常处理     | 不使用裸 `except:`；分类捕获并记录上下文                           |
+1. [MVP开发计划](../MVP-DEVELOPMENT-PLAN.md) - 当前开发计划和进度
+2. [API文档](api/overview.md) - 接口规范和示例
+3. [架构设计](ARCHITECTURE.md) - 系统架构详解
 
 ---
 
-## 🧭 导航索引
+## 📁 文档结构
 
-### 1. 核心理解
-
-- 系统分层与边界 → `ARCHITECTURE.md`
-- 术语、业务域 → `GLOSSARY.md`
-
-### 2. 开发生命周期
-
-- 环境搭建与依赖 → `DEVELOPMENT.md`
-- 数据迁移、数据库策略 → `MIGRATION.md`
-- 数据访问抽象 → `DATA-ACCESS.md`
-
-### 3. API
-
-- 总览与认证 → `api/overview.md`
-- 端点与调用示例 → `api/endpoints.md`
-- 数据模型与模式 → `api/models.md`
-- 错误与错误码 → `api/errors.md`
-- SDK 示例（Python/JS）→ `api/sdk-python.md` / `api/sdk-js.md`
-
-### 4. 质量保障
-
-- 测试矩阵与运行方式 → `TESTING.md`
-- 性能与观测指标 → `OBSERVABILITY.md`
-- 安全策略与合规基线 → `SECURITY.md`
-
-### 5. 交付与运维
-
-- 部署矩阵、分环境策略 → `DEPLOYMENT.md`
-- 监控与巡检 → `OBSERVABILITY.md`
-- 发布与版本迭代 → `CHANGELOG.md`
-- 里程碑进度 → `STATUS.md`
-
-### 6. 协作与前后端
-
-- 接口契约与错误处理规范 → `FRONTEND-INTEGRATION.md`
+```
+docs/
+├── README.md                    # 本文档（导航）
+├── api/                         # API接口文档
+├── architecture/                # 架构设计文档
+├── development/                 # 开发指南
+│   ├── LEARNING_GUIDE.md       # 学习指南
+│   └── WECHAT_MINIPROGRAM_DEVELOPMENT_GUIDE.md  # 小程序开发
+├── history/                     # 历史文档
+│   ├── phase1/                 # Phase 1 文档
+│   └── phase2/                 # Phase 2 文档
+└── [核心文档]                   # 下方列出
+```
 
 ---
 
-## 🛡 安全最小清单（快速参考）
+## 📖 核心文档
 
-| 项       | 要求                                              |
-| -------- | ------------------------------------------------- |
-| 环境变量 | 不提交敏感值；使用模板管理                        |
-| 密钥管理 | 通过脚本生成与轮换（详见 `SECURITY.md`）          |
-| CORS     | 白名单配置（生产）                                |
-| 安全头   | 强 CSP、HSTS、X-Frame-Options、Permissions-Policy |
-| 限流     | 多维：IP / 用户 / 登录 / AI 服务                  |
-| 日志     | 不记录敏感明文（token、密码、密钥）               |
+### 项目基础
 
----
+- **[项目主页](../README.md)** ⭐ - 项目入口，功能特性，快速开始
+- **[AI助手上下文](../AI-CONTEXT.md)** - AI开发助手上下文指南
+- **[MVP开发计划](../MVP-DEVELOPMENT-PLAN.md)** - 当前开发计划和里程碑
 
-## 📈 指标与监控入口
+### 架构与设计
 
-| 类别     | 说明             | 入口                                     |
-| -------- | ---------------- | ---------------------------------------- |
-| 健康检查 | 存活 / 就绪      | `/health` `/health/live` `/health/ready` |
-| 性能监控 | 延迟/吞吐/慢端点 | `/api/v1/health/performance`             |
-| 限流状态 | 当前策略与计数   | `/api/v1/health/rate-limits`             |
-| 聚合指标 | 综合统计         | `/api/v1/health/metrics`                 |
-| 数据查询 | 慢查询、缓存命中 | 详见 `OBSERVABILITY.md`                  |
+- **[系统架构](ARCHITECTURE.md)** - 分层架构，技术栈，设计模式
+- **[数据访问层](DATA-ACCESS.md)** - 数据库设计，ORM使用
+- **[前端集成](FRONTEND-INTEGRATION.md)** - 前后端集成方案
 
----
+### 开发指南
 
-## 📜 文档维护策略
+- **[开发工作流](DEVELOPMENT.md)** - 完整开发流程和最佳实践
+- **[测试指南](TESTING.md)** - 测试策略，单元测试，集成测试
+- **[数据库迁移](MIGRATION.md)** - Alembic迁移管理
 
-| 场景         | 要求                                               |
-| ------------ | -------------------------------------------------- |
-| 新增模块     | 更新架构图 & `ARCHITECTURE.md`                     |
-| 新增 API     | 同步 `api/endpoints.md` + 模型                     |
-| 性能调优     | 更新 `OBSERVABILITY.md` → 增加指标说明             |
-| 发布版本     | 更新 `CHANGELOG.md` + `STATUS.md`                  |
-| 安全策略变更 | 优先更新 `SECURITY.md` 再引用到其他文档            |
-| 废弃功能     | 标注 `[DEPRECATED: <日期>]` 并迁移到附录或 history |
+### 部署运维
+
+- **[部署指南](DEPLOYMENT.md)** - 部署策略，Docker配置
+- **[可观测性](OBSERVABILITY.md)** - 监控，日志，性能指标
+- **[安全策略](SECURITY.md)** - 安全基线，最佳实践
+
+### 项目管理
+
+- **[项目状态](STATUS.md)** - 版本规划，里程碑，技术债务
+- **[术语表](GLOSSARY.md)** - 项目术语和概念定义
 
 ---
 
-## 🧪 新成员 30 分钟上手脚本建议
+## 🔌 API 文档
 
-| 步骤 | 操作                                              | 目标             |
-| ---- | ------------------------------------------------- | ---------------- |
-| 1    | 阅读 `ARCHITECTURE.md`                            | 建立系统心智模型 |
-| 2    | `uv sync && uv run uvicorn src.main:app --reload` | 启动后端         |
-| 3    | 浏览 Swagger (`/docs`)                            | 熟悉 API 分区    |
-| 4    | 运行 `uv run pytest -q`                           | 确认测试通过     |
-| 5    | 查看 `/api/v1/health/performance`                 | 校验监控工作     |
-| 6    | 阅读 `DATA-ACCESS.md`                             | 理解数据访问约定 |
-| 7    | 若做前端：查 `FRONTEND-INTEGRATION.md`            | 建立接口契约共识 |
+完整的 REST API 文档，包含接口规范、请求响应示例、错误码说明：
 
----
-
-## 🔄 与归档（history）策略
-
-历史阶段任务总结、实验性设计、一次性评估类文档迁入：
-`docs/history/`
-仅做回溯参考，不再更新，不出现在主导航。引用时加注释：
-
-> （来源：history/…，仅供历史追溯）
+- **[API概览](api/overview.md)** - API设计原则，认证方式
+- **[API端点](api/endpoints.md)** - 详细端点列表和使用说明
+- **[数据模型](api/models.md)** - 请求响应数据结构
+- **[错误码](api/errors.md)** - 错误码定义和处理建议
+- **[JavaScript SDK](api/sdk-js.md)** - 前端SDK使用
+- **[Python SDK](api/sdk-python.md)** - Python客户端SDK
 
 ---
 
-## 🧩 常见改动标签（建议）
+## 🏗️ 开发指南
 
-| 标签        | 用途示例            |
-| ----------- | ------------------- |
-| [ADD]       | 新增文件或大段内容  |
-| [UPDATE]    | 更新现有内容        |
-| [REVISE]    | 调整结构/表达更清晰 |
-| [FIX]       | 修正文档错误        |
-| [DEPRECATE] | 标记废弃            |
-| [MOVE]      | 文件迁移或重命名    |
+### 通用指南
 
----
+- **[学习指南](development/LEARNING_GUIDE.md)** - 通过项目学习现代Python开发
+- **[小程序开发指南](development/WECHAT_MINIPROGRAM_DEVELOPMENT_GUIDE.md)** - 微信小程序完整开发流程
 
-## ✅ 当前文档重构状态（第一轮完成）
+### 专题指南
 
-| 文件             | 状态    | 说明                  |
-| ---------------- | ------- | --------------------- |
-| 本索引           | ✅      | 已完成                |
-| DEPLOYMENT.md    | ✅      | Docker 配置已迁移     |
-| ARCHITECTURE.md  | ✅      | 包含百炼集成详细信息  |
-| DEVELOPMENT.md   | ✅      | 开发环境配置完善      |
-| API 拆分         | ✅      | 已拆分为模块化文件    |
-| 旧文件清理       | ✅      | dev-guide.md 等已删除 |
-| 原 task-5.x 系列 | ✅ 归档 | 已排除主导航          |
-| 规范化核对       | ⏳      | 术语与模型统一进行中  |
+- [开发环境搭建](DEVELOPMENT.md#环境搭建)
+- [代码规范](DEVELOPMENT.md#代码规范)
+- [Git工作流](DEVELOPMENT.md#git工作流)
+- [性能优化](OBSERVABILITY.md#性能优化)
 
 ---
 
-## 📬 反馈与改进
+## 📚 历史文档
 
-若发现：
+项目各个开发阶段的完整文档和总结报告：
 
-- 内容过时
-- 链接失效
-- 结构不佳
-- 术语不一致
+### Phase 1: 核心功能打通 ✅
 
-请：
+**完成时间**: 2025-10-02
+**主要成果**: 作业批改功能完整实现
 
-1. 新建 Issue（分类：`docs`）
-2. 或直接提交 PR（附 `[docs]` 前缀说明范围）
+- [Phase 1 目录](history/phase1/README.md)
+- [完成总结](history/phase1/PHASE1_COMPLETION_SUMMARY.md)
+- [作业批改模块修复报告](history/phase1/HOMEWORK_REPAIR_REPORT.md)
+
+### Phase 2: 数据持久化完善 ✅
+
+**完成时间**: 2025-10-02
+**主要成果**: Analytics后端实现，数据库迁移完成
+
+- [Phase 2 目录](history/phase2/README.md) ⭐ 推荐阅读
+- [最终总结](history/phase2/PHASE2_FINAL_SUMMARY.md) - 完整总结
+- [测试结果](history/phase2/PHASE2_TEST_RESULTS.md) - 详细测试报告
+- [其他文档](history/phase2/) - 共8个专题文档
 
 ---
 
-_Last Updated: 2025-09-29 (文档骨架初始版本)_
-_维护责任人：项目开发团队_
+## 🎓 按场景查找文档
+
+### 我想了解项目
+
+1. 阅读 [README.md](../README.md) - 项目概览
+2. 查看 [ARCHITECTURE.md](ARCHITECTURE.md) - 技术架构
+3. 参考 [STATUS.md](STATUS.md) - 项目状态
+
+### 我想开始开发
+
+1. [开发指南](DEVELOPMENT.md) - 环境搭建和工作流
+2. [API文档](api/overview.md) - 接口规范
+3. [测试指南](TESTING.md) - 测试要求
+
+### 我想部署项目
+
+1. [部署指南](DEPLOYMENT.md) - 部署流程
+2. [安全策略](SECURITY.md) - 安全配置
+3. [可观测性](OBSERVABILITY.md) - 监控配置
+
+### 我遇到了问题
+
+1. [开发指南](DEVELOPMENT.md#故障排查) - 常见问题
+2. [历史文档](history/) - 查看历史问题解决方案
+3. [GitHub Issues](../../issues) - 提交问题
+
+### 我想学习技术
+
+1. [学习指南](development/LEARNING_GUIDE.md) - 系统学习路径
+2. [架构设计](ARCHITECTURE.md) - 设计模式和最佳实践
+3. [历史文档](history/) - 实际问题解决案例
+
+---
+
+## 🔍 按主题查找
+
+### 后端开发
+
+- [系统架构](ARCHITECTURE.md)
+- [API设计](api/overview.md)
+- [数据访问](DATA-ACCESS.md)
+- [安全策略](SECURITY.md)
+
+### 前端开发
+
+- [前端集成](FRONTEND-INTEGRATION.md)
+- [小程序开发](development/WECHAT_MINIPROGRAM_DEVELOPMENT_GUIDE.md)
+- [API文档](api/endpoints.md)
+
+### 数据库
+
+- [数据访问层](DATA-ACCESS.md)
+- [数据库迁移](MIGRATION.md)
+- [Phase 2 总结](history/phase2/PHASE2_FINAL_SUMMARY.md#数据库表结构)
+
+### 测试
+
+- [测试指南](TESTING.md)
+- [Phase 2 测试报告](history/phase2/PHASE2_TEST_RESULTS.md)
+
+### 运维
+
+- [部署指南](DEPLOYMENT.md)
+- [可观测性](OBSERVABILITY.md)
+- [安全策略](SECURITY.md)
+
+---
+
+## 📝 文档规范
+
+### 文档命名
+
+- 核心文档: `UPPERCASE.md` (如 `README.md`)
+- 专题文档: `lowercase-with-dash.md` (如 `quick-start.md`)
+- Phase文档: `PHASE{N}_DESCRIPTION.md` (如 `PHASE1_COMPLETION_SUMMARY.md`)
+
+### 文档结构
+
+```markdown
+# 文档标题
+
+> 简短描述
+
+**元信息**: 创建时间、状态等
+
+## 主要内容
+
+...
+
+## 相关文档
+
+...
+```
+
+### 文档更新
+
+- 重要文档应包含"最后更新"时间
+- Phase完成后文档移至 `history/` 目录
+- 文档链接使用相对路径
+
+---
+
+## 🤝 贡献文档
+
+### 如何贡献
+
+1. 发现文档问题或缺失
+2. 创建 Issue 说明问题
+3. 提交 Pull Request 修复
+
+### 文档审核标准
+
+- ✅ 内容准确完整
+- ✅ 格式规范统一
+- ✅ 链接有效可用
+- ✅ 示例代码可运行
+
+---
+
+## 📞 获取帮助
+
+### 文档相关问题
+
+- **GitHub Issues**: [提交Issue](../../issues)
+- **维护者**: Liguo Ma <maliguo@outlook.com>
+
+### 技术支持
+
+- **API文档**: http://localhost:8000/docs (开发环境)
+- **项目Wiki**: [GitHub Wiki](../../wiki)
+
+---
+
+## 🔗 外部资源
+
+### 技术文档
+
+- [FastAPI官方文档](https://fastapi.tiangolo.com/)
+- [SQLAlchemy 2.0文档](https://docs.sqlalchemy.org/en/20/)
+- [Vue 3文档](https://cn.vuejs.org/)
+- [微信小程序文档](https://developers.weixin.qq.com/miniprogram/dev/framework/)
+
+### 学习资源
+
+- [Python最佳实践](https://docs.python-guide.org/)
+- [TypeScript手册](https://www.typescriptlang.org/docs/)
+- [阿里云百炼文档](https://help.aliyun.com/zh/model-studio/)
+
+---
+
+## 📈 文档统计
+
+- **总文档数**: 30+
+- **API文档**: 6个
+- **开发指南**: 10+
+- **历史文档**: 10+ (Phase 1 & Phase 2)
+- **最后更新**: 2025-10-02
+
+---
+
+**💡 提示**:
+
+- 从 [README.md](../README.md) 开始
+- AI开发必读 [AI-CONTEXT.md](../AI-CONTEXT.md)
+- 当前计划 [MVP-DEVELOPMENT-PLAN.md](../MVP-DEVELOPMENT-PLAN.md)
+
+---
+
+**文档维护**: 项目团队
+**问题反馈**: [GitHub Issues](../../issues)
+**最后更新**: 2025-10-02

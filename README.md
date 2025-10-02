@@ -8,7 +8,7 @@
 ![Python](https://img.shields.io/badge/python-3.11+-blue.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)
 ![Vue](https://img.shields.io/badge/Vue-3.4+-4FC08D.svg)
-![Status](https://img.shields.io/badge/status-Alpha-orange.svg)
+![Status](https://img.shields.io/badge/status-Beta-green.svg)
 
 ## ✨ 核心特性
 
@@ -273,23 +273,27 @@ docker-compose ps
 
 ## 📖 文档
 
-| 文档                             | 说明               |
-| -------------------------------- | ------------------ |
-| [架构设计](docs/ARCHITECTURE.md) | 系统分层与模块设计 |
-| [开发指南](docs/DEVELOPMENT.md)  | 详细开发工作流     |
-| [API文档](docs/api/)             | 接口规范与示例     |
-| [安全策略](docs/SECURITY.md)     | 安全基线与实践     |
-| [部署指南](docs/DEPLOYMENT.md)   | 部署策略与流程     |
-| [项目状态](docs/STATUS.md)       | 版本规划与里程碑   |
+| 文档                                                                   | 说明               |
+| ---------------------------------------------------------------------- | ------------------ |
+| [📚 文档导航](docs/README.md)                                          | **文档中心入口**   |
+| [🤖 AI助手上下文](AI-CONTEXT.md)                                       | AI开发助手必读     |
+| [📋 MVP开发计划](MVP-DEVELOPMENT-PLAN.md)                              | 当前开发计划       |
+| [架构设计](docs/ARCHITECTURE.md)                                       | 系统分层与模块设计 |
+| [开发指南](docs/DEVELOPMENT.md)                                        | 详细开发工作流     |
+| [API文档](docs/api/)                                                   | 接口规范与示例     |
+| [学习指南](docs/development/LEARNING_GUIDE.md)                         | 学习现代Python开发 |
+| [小程序开发](docs/development/WECHAT_MINIPROGRAM_DEVELOPMENT_GUIDE.md) | 微信小程序指南     |
+| [历史文档](docs/history/)                                              | Phase 1/2 完成总结 |
 
 ## 🗓️ 版本规划
 
-| 版本  | 状态    | 主要特性                      |
-| ----- | ------- | ----------------------------- |
-| 0.1.x | 🔄 当前 | 功能骨架 + 文档重构           |
-| 0.2.x | 📋 规划 | 学情分析深化 + 测试覆盖率基线 |
-| 0.3.x | 📋 规划 | 监控闭环 + 缓存层优化         |
-| 1.0.0 | 🎯 目标 | 稳定发布版本                  |
+| 版本  | 状态    | 主要特性                |
+| ----- | ------- | ----------------------- |
+| 0.1.x | ✅ 完成 | Phase 1: 核心功能打通   |
+| 0.2.x | ✅ 完成 | Phase 2: 数据持久化完善 |
+| 0.3.x | 🔄 当前 | Phase 3: 前后端联调     |
+| 0.4.x | 📋 规划 | Phase 4: MVP 基线测试   |
+| 1.0.0 | 🎯 目标 | 稳定发布版本            |
 
 ## 🤝 贡献指南
 
