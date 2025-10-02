@@ -5,48 +5,22 @@ API v1 路由集合
 
 from fastapi import APIRouter
 
-from src.api.v1.endpoints import auth, learning, homework, file, health
+from src.api.v1.endpoints import analytics, auth, file, health, homework, learning
 
 # 创建API路由器
 api_router = APIRouter()
 
 # 注册各模块路由
-api_router.include_router(
-    auth.router,
-    prefix="/auth",
-    tags=["认证"]
-)
+api_router.include_router(auth.router, prefix="/auth", tags=["认证"])
 
-api_router.include_router(
-    learning.router,
-    prefix="/learning",
-    tags=["学习问答"]
-)
+api_router.include_router(learning.router, prefix="/learning", tags=["学习问答"])
 
-api_router.include_router(
-    homework.router,
-    tags=["作业批改"]
-)
+api_router.include_router(homework.router, tags=["作业批改"])
 
-api_router.include_router(
-    file.router,
-    tags=["文件管理"]
-)
+api_router.include_router(analytics.router, tags=["学情分析"])
 
-api_router.include_router(
-    health.router,
-    tags=["健康检查"]
-)
+api_router.include_router(file.router, tags=["文件管理"])
 
-# TODO: 添加其他模块路由
-# api_router.include_router(
-#     users.router,
-#     prefix="/users",
-#     tags=["用户管理"]
-# )
-#
-# api_router.include_router(
-#     analytics.router,
-#     prefix="/analytics",
+api_router.include_router(health.router, tags=["健康检查"])
 #     tags=["学情分析"]
 # )
