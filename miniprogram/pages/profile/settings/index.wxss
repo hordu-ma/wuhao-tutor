@@ -1,0 +1,122 @@
+/* 设置页面样式 */
+
+.settings-container {
+  min-height: 100vh;
+  background: #f5f7fa;
+  padding-bottom: 120rpx;
+}
+
+/* 页面标题 */
+.page-header {
+  padding: 40rpx 32rpx 24rpx;
+  background: #ffffff;
+}
+
+.page-title {
+  font-size: 48rpx;
+  font-weight: bold;
+  color: #1a1a1a;
+}
+
+/* 设置内容 */
+.settings-content {
+  padding: 0 32rpx;
+}
+
+/* 设置分组 */
+.settings-section {
+  margin-top: 24rpx;
+  background: #ffffff;
+  border-radius: 16rpx;
+  padding: 0 32rpx;
+  overflow: hidden;
+}
+
+.section-title {
+  font-size: 28rpx;
+  color: #999999;
+  padding: 24rpx 0 16rpx;
+  font-weight: 500;
+}
+
+/* 设置项 */
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 32rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.setting-item:last-child {
+  border-bottom: none;
+}
+
+.item-left {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  flex: 1;
+}
+
+.item-label {
+  font-size: 30rpx;
+  color: #1a1a1a;
+}
+
+.item-right {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.value-text {
+  font-size: 28rpx;
+  color: #999999;
+}
+
+.cache-size {
+  font-size: 28rpx;
+  color: #667eea;
+  font-weight: 500;
+}
+
+/* 退出登录 */
+.logout-section {
+  margin-top: 48rpx;
+  padding: 0 32rpx;
+}
+
+/* 对话框内容 */
+.dialog-content {
+  padding: 32rpx;
+  font-size: 28rpx;
+  color: #666666;
+  line-height: 1.6;
+  text-align: center;
+}
+
+/* 暗黑模式适配（可选） */
+@media (prefers-color-scheme: dark) {
+  .settings-container {
+    background: #1a1a1a;
+  }
+
+  .page-header,
+  .settings-section {
+    background: #2a2a2a;
+  }
+
+  .page-title,
+  .item-label {
+    color: #ffffff;
+  }
+
+  .section-title {
+    color: #999999;
+  }
+
+  .setting-item {
+    border-bottom-color: #3a3a3a;
+  }
+}

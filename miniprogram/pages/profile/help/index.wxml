@@ -1,0 +1,173 @@
+<!--帮助中心页面-->
+<view class="help-container">
+  <!-- 搜索框 -->
+  <view class="search-section">
+    <van-search
+      value="{{searchKeyword}}"
+      placeholder="搜索常见问题"
+      bind:change="onSearchChange"
+      bind:search="onSearch"
+      bind:clear="onSearchClear"
+    />
+  </view>
+
+  <!-- 快捷入口 -->
+  <view class="quick-access" wx:if="{{!searchKeyword}}">
+    <view class="quick-item" bindtap="onQuickAccess" data-type="getting-started">
+      <view class="quick-icon">
+        <van-icon name="guide-o" size="32px" color="#667eea" />
+      </view>
+      <text class="quick-label">新手指南</text>
+    </view>
+
+    <view class="quick-item" bindtap="onQuickAccess" data-type="video-tutorial">
+      <view class="quick-icon">
+        <van-icon name="video-o" size="32px" color="#4ecb73" />
+      </view>
+      <text class="quick-label">视频教程</text>
+    </view>
+
+    <view class="quick-item" bindtap="onQuickAccess" data-type="feedback">
+      <view class="quick-icon">
+        <van-icon name="chat-o" size="32px" color="#ffa502" />
+      </view>
+      <text class="quick-label">在线客服</text>
+    </view>
+
+    <view class="quick-item" bindtap="onQuickAccess" data-type="faq">
+      <view class="quick-icon">
+        <van-icon name="question-o" size="32px" color="#ff6b6b" />
+      </view>
+      <text class="quick-label">常见问题</text>
+    </view>
+  </view>
+
+  <!-- 常见问题列表 -->
+  <view class="faq-section">
+    <view class="section-title" wx:if="{{!searchKeyword}}">常见问题</view>
+    <view class="section-title" wx:else>搜索结果 ({{filteredFaqs.length}})</view>
+
+    <view class="faq-list">
+      <view 
+        class="faq-item" 
+        wx:for="{{filteredFaqs}}" 
+        wx:key="id"
+        bindtap="onFaqItemTap"
+        data-id="{{item.id}}"
+      >
+        <view class="faq-question">
+          <van-icon name="help-o" size="16px" color="#667eea" />
+          <text>{{item.question}}</text>
+        </view>
+        
+        <view class="faq-answer" wx:if="{{expandedFaqId === item.id}}">
+          <text>{{item.answer}}</text>
+        </view>
+
+        <view class="faq-footer">
+          <view class="faq-category">
+            <van-tag plain type="primary" size="medium">{{item.category}}</van-tag>
+          </view>
+          <view class="faq-helpful" wx:if="{{expandedFaqId === item.id}}">
+            <text class="helpful-text">这个回答有帮助吗？</text>
+            <van-icon 
+              name="like-o" 
+              size="18px" 
+              color="{{item.liked ? '#667eea' : '#cccccc'}}"
+              bindtap="onLikeFaq"
+              data-id="{{item.id}}"
+            />
+          </view>
+        </view>
+      </view>
+
+      <!-- 空状态 -->
+      <view class="empty-state" wx:if="{{filteredFaqs.length === 0}}">
+        <van-empty description="没有找到相关问题" />
+        <van-button 
+          type="primary" 
+          size="small" 
+          round
+          bindtap="onContactSupport"
+        >
+          联系客服
+        </van-button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 功能教程 -->
+  <view class="tutorial-section" wx:if="{{!searchKeyword}}">
+    <view class="section-title">功能教程</view>
+
+    <view class="tutorial-list">
+      <view 
+        class="tutorial-item" 
+        wx:for="{{tutorials}}" 
+        wx:key="id"
+        bindtap="onTutorialTap"
+        data-id="{{item.id}}"
+      >
+        <image class="tutorial-cover" src="{{item.cover}}" mode="aspectFill" />
+        <view class="tutorial-info">
+          <text class="tutorial-title">{{item.title}}</text>
+          <view class="tutorial-meta">
+            <van-icon name="tv-o" size="14px" color="#999999" />
+            <text class="tutorial-duration">{{item.duration}}</text>
+          </view>
+        </view>
+        <van-icon name="arrow" size="16px" color="#cccccc" />
+      </view>
+    </view>
+  </view>
+
+  <!-- 联系我们 -->
+  <view class="contact-section" wx:if="{{!searchKeyword}}">
+    <view class="section-title">联系我们</view>
+
+    <view class="contact-card">
+      <view class="contact-item" bindtap="onCopyWechat">
+        <view class="contact-left">
+          <van-icon name="wechat" size="24px" color="#09bb07" />
+          <view class="contact-info">
+            <text class="contact-label">微信客服</text>
+            <text class="contact-value">wuhao-service</text>
+          </view>
+        </view>
+        <van-button size="small" plain type="primary">复制</van-button>
+      </view>
+
+      <view class="contact-item" bindtap="onCallPhone">
+        <view class="contact-left">
+          <van-icon name="phone-o" size="24px" color="#667eea" />
+          <view class="contact-info">
+            <text class="contact-label">客服电话</text>
+            <text class="contact-value">400-888-6666</text>
+          </view>
+        </view>
+        <van-button size="small" plain type="primary">拨打</van-button>
+      </view>
+
+      <view class="contact-item" bindtap="onSendEmail">
+        <view class="contact-left">
+          <van-icon name="envelop-o" size="24px" color="#ffa502" />
+          <view class="contact-info">
+            <text class="contact-label">客服邮箱</text>
+            <text class="contact-value">support@wuhao-tutor.com</text>
+          </view>
+        </view>
+        <van-button size="small" plain type="primary">发送</van-button>
+      </view>
+
+      <view class="contact-item">
+        <view class="contact-left">
+          <van-icon name="clock-o" size="24px" color="#4ecb73" />
+          <view class="contact-info">
+            <text class="contact-label">服务时间</text>
+            <text class="contact-value">工作日 9:00-18:00</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>
