@@ -8,16 +8,19 @@
 
 ## 🚨 当前状态
 
-**阻塞问题**: 
+**阻塞问题**:
+
 ```
 sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: answers
 ```
 
 **根本原因**:
+
 - Alembic 数据库迁移启动但进程中断
 - `answers` 表未创建，导致测试脚本 4/5 失败
 
 **测试结果**:
+
 - ✅ 学习统计 API: 通过
 - ❌ 用户统计 API: 失败 (answers 表不存在)
 - ❌ 知识图谱 API: 失败 (answers 表不存在)
@@ -45,6 +48,7 @@ uv run alembic upgrade head
 ```
 
 **预期输出**:
+
 ```
 INFO  [alembic.runtime.migration] Running upgrade ... -> ..., create answers table
 INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
@@ -68,6 +72,7 @@ sqlite3 wuhao_tutor_dev.db ".schema answers"
 ```
 
 **预期表结构**:
+
 ```sql
 CREATE TABLE answers (
     id TEXT NOT NULL,
@@ -99,6 +104,7 @@ uv run python scripts/test_phase2_analytics.py
 ```
 
 **预期结果**: ✅ 5/5 测试通过
+
 ```
 学习统计API: ✅ 通过
 用户统计API: ✅ 通过
@@ -169,6 +175,7 @@ EOF
 **症状**: `alembic upgrade head` 报错
 
 **排查步骤**:
+
 ```bash
 # 检查 Alembic 配置
 cat alembic.ini | grep sqlalchemy.url
@@ -181,11 +188,13 @@ uv run alembic history --verbose
 ```
 
 **可能原因**:
+
 - 数据库文件锁定 (其他进程占用)
 - 迁移文件损坏
 - Python 环境问题
 
 **解决方案**:
+
 ```bash
 # 如果数据库锁定，重启终端或杀死占用进程
 lsof | grep wuhao_tutor_dev.db
@@ -205,6 +214,7 @@ uv sync
 **症状**: 表创建成功但测试仍报错
 
 **排查步骤**:
+
 ```bash
 # 检查测试脚本是否使用正确的数据库
 cat scripts/test_phase2_analytics.py | grep DATABASE
@@ -217,6 +227,7 @@ uv run python scripts/test_phase2_analytics.py --verbose
 ```
 
 **可能原因**:
+
 - 测试使用了不同的数据库文件
 - Model 定义与表结构不匹配
 - 外键约束问题
@@ -228,6 +239,7 @@ uv run python scripts/test_phase2_analytics.py --verbose
 **症状**: 测试通过但运行很慢
 
 **排查步骤**:
+
 ```bash
 # 检查数据库索引
 sqlite3 wuhao_tutor_dev.db "SELECT * FROM sqlite_master WHERE type='index';"
@@ -240,6 +252,7 @@ ls -lh wuhao_tutor_dev.db
 ```
 
 **优化建议**:
+
 - 添加必要的数据库索引
 - 优化 Analytics Service 的 SQL 查询
 - 考虑添加缓存层
@@ -260,10 +273,12 @@ ls -lh wuhao_tutor_dev.db
 Phase 2 测试通过后:
 
 1. **标记 Phase 2 完成**
+
    - 在 MVP-DEVELOPMENT-PLAN.md 中更新状态
    - 创建 Git commit: `feat: complete Phase 2 - Analytics backend`
 
 2. **准备进入 Phase 3: 前后端联调**
+
    - 启动后端开发服务器
    - 启动前端开发服务器 (Web + 小程序)
    - 测试端到端集成

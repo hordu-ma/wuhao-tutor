@@ -1,6 +1,6 @@
 # Phase 2 恢复命令速查卡
 
-> 系统修复后的快速恢复命令 - 5分钟完成
+> 系统修复后的快速恢复命令 - 5 分钟完成
 
 ---
 
@@ -18,12 +18,14 @@ uv run python scripts/test_phase2_analytics.py
 ## 📋 分步执行
 
 ### Step 1: 完成数据库迁移
+
 ```bash
 cd /Users/liguoma/my-devs/python/wuhao-tutor
 uv run alembic upgrade head
 ```
 
 ### Step 2: 验证表创建
+
 ```bash
 # 检查所有表
 sqlite3 wuhao_tutor_dev.db ".tables"
@@ -33,6 +35,7 @@ sqlite3 wuhao_tutor_dev.db ".schema answers"
 ```
 
 ### Step 3: 运行测试
+
 ```bash
 uv run python scripts/test_phase2_analytics.py
 ```
@@ -42,12 +45,14 @@ uv run python scripts/test_phase2_analytics.py
 ## ✅ 成功标志
 
 ### Alembic 迁移成功
+
 ```
 INFO  [alembic.runtime.migration] Running upgrade ... -> ..., create answers table
 INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
 ```
 
 ### 表创建成功
+
 ```sql
 CREATE TABLE answers (
     id TEXT NOT NULL,
@@ -60,6 +65,7 @@ CREATE TABLE answers (
 ```
 
 ### 测试全部通过
+
 ```
 学习统计API: ✅ 通过
 用户统计API: ✅ 通过
@@ -76,17 +82,20 @@ Session统计更新: ✅ 通过
 ## 🔍 快速诊断
 
 ### 检查迁移状态
+
 ```bash
 uv run alembic current
 uv run alembic history
 ```
 
 ### 检查数据库连接
+
 ```bash
 sqlite3 wuhao_tutor_dev.db "SELECT COUNT(*) FROM sqlite_master WHERE type='table';"
 ```
 
 ### 检查 Python 环境
+
 ```bash
 uv run python --version
 uv sync
@@ -97,18 +106,21 @@ uv sync
 ## 📝 测试通过后
 
 ### 生成测试报告
+
 ```bash
 # 基于测试输出手动创建或编辑
 code PHASE2_TEST_RESULTS.md
 ```
 
 ### 更新 Git 状态
+
 ```bash
 git add .
 git commit -m "test: Phase 2 testing complete - all 5 tests passed"
 ```
 
 ### 准备 Phase 3
+
 ```bash
 # 启动后端
 ./scripts/start-dev.sh
@@ -125,6 +137,7 @@ cd frontend && npm run dev
 ## 🚨 故障排查
 
 ### 迁移失败
+
 ```bash
 # 检查数据库锁定
 lsof | grep wuhao_tutor_dev.db
@@ -137,6 +150,7 @@ uv run alembic upgrade head
 ```
 
 ### 测试仍失败
+
 ```bash
 # 查看详细错误
 uv run python scripts/test_phase2_analytics.py --verbose
@@ -155,7 +169,7 @@ uv run python -c "from src.models import Answer; print(Answer.__tablename__)"
 - **详细指南**: `PHASE2_RECOVERY_GUIDE.md` (完整故障排查)
 - **状态快照**: `PHASE2_STATUS_SNAPSHOT.md` (当前状态摘要)
 - **测试指南**: `PHASE2_TEST_GUIDE.md` (测试说明)
-- **错误修复**: `PHASE2_TEST_FIX_REPORT.md` (21个错误详解)
+- **错误修复**: `PHASE2_TEST_FIX_REPORT.md` (21 个错误详解)
 
 ---
 
