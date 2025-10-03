@@ -1,7 +1,7 @@
 // pages/homework/submit/index.js - 作业提交页面
 
 const { authManager } = require('../../../utils/auth.js');
-const api = require('../../../utils/api.js');
+const homeworkAPI = require('../../../api/homework.js');
 const utils = require('../../../utils/utils.js');
 
 Page({
@@ -131,35 +131,41 @@ Page({
     try {
       this.setData({ loading: true });
 
-      // TODO: 调用API获取作业信息
-      // const response = await api.getHomeworkDetail(homeworkId);
+      // 调用API获取作业模板详情
+      const response = await homeworkAPI.getTemplateDetail(homeworkId);
 
-      // 模拟数据
-      const homework = {
-        id: homeworkId,
-        title: '数学第三章函数练习',
-        subject: '数学',
-        description: '完成课本第45-50页的练习题，重点掌握二次函数的图像和性质。',
-        requirements: [
-          '独立完成所有题目',
-          '写出详细的解题步骤',
-          '对于错题要标注原因',
-          '字迹工整，格式规范',
-        ],
-        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        allowedTypes: ['text', 'image'], // 允许的提交类型
-        minWords: 50,
-        maxWords: 2000,
-      };
+      if (response.success && response.data) {
+        const homework = {
+          id: response.data.id,
+          title: response.data.name,
+          subject: response.data.subject,
+          description: response.data.description,
+          requirements: response.data.requirements || [],
+          deadline: response.data.deadline,
+          allowedTypes: ['text', 'image'],
+          minWords: response.data.min_words || 50,
+          maxWords: response.data.max_words || 2000,
+          maxScore: response.data.max_score || 100,
+        };
 
-      this.setData({
-        homework,
-        minWordCount: homework.minWords || 50,
-        maxWordCount: homework.maxWords || 2000,
-      });
+        this.setData({
+          homework,
+          minWordCount: homework.minWords,
+          maxWordCount: homework.maxWords,
+        });
+      } else {
+        throw new Error(response.message || '加载作业信息失败');
+      }
     } catch (error) {
       console.error('加载作业信息失败:', error);
-      throw error;
+      wx.showToast({
+        title: error.message || '加载失败',
+        icon: 'error',
+      });
+      // 等待提示显示后返回上一页
+      setTimeout(() => {
+        wx.navigateBack();
+      }, 1500);
     } finally {
       this.setData({ loading: false });
     }
@@ -170,22 +176,33 @@ Page({
    */
   async loadExistingSubmission(homeworkId) {
     try {
-      // TODO: 调用API获取已有提交记录
-      // const response = await api.getHomeworkSubmission(homeworkId);
+      // 获取该作业的提交记录
+      const response = await homeworkAPI.getSubmissions({
+        template_id: homeworkId,
+        page: 1,
+        size: 1,
+      });
 
-      // 模拟数据 - 如果有已提交的作业，可以编辑
-      const existingSubmission = null;
+      if (response.success && response.data && response.data.length > 0) {
+        const existingSubmission = response.data[0];
 
-      if (existingSubmission) {
-        this.setData({
-          textContent: existingSubmission.content || '',
-          imageList: existingSubmission.images || [],
-          fileList: existingSubmission.files || [],
-        });
-        this.updateWordCount();
+        // 如果状态是pending或failed，允许重新编辑
+        if (existingSubmission.status === 'pending' || existingSubmission.status === 'failed') {
+          this.setData({
+            textContent: existingSubmission.content || '',
+            imageList: existingSubmission.images || [],
+          });
+          this.updateWordCount();
+
+          wx.showToast({
+            title: '已加载上次提交内容',
+            icon: 'success',
+          });
+        }
       }
     } catch (error) {
       console.error('加载提交记录失败:', error);
+      // 不影响主流程，静默失败
     }
   },
 
@@ -376,43 +393,56 @@ Page({
     try {
       this.setData({ isSubmitting: true });
 
-      const { homework, textContent, imageList, userInfo } = this.data;
+      const { homework, textContent, imageList, userInfo, submitType } = this.data;
 
-      // 构建提交数据
-      const submissionData = {
-        homeworkId: homework.id,
-        studentId: userInfo.id,
-        content: textContent.trim(),
-        images: imageList,
-        submittedAt: new Date().toISOString(),
-      };
+      let submissionResult = null;
 
-      // TODO: 上传图片和提交数据
-      // await this.uploadImages();
-      // const response = await api.submitHomework(submissionData);
+      // 根据提交类型调用不同的API
+      if (submitType === 'image' || (submitType === 'mixed' && imageList.length > 0)) {
+        // 图片提交
+        submissionResult = await this.submitWithImages();
+      } else {
+        // 纯文本提交
+        submissionResult = await this.submitWithText();
+      }
 
-      // 模拟提交成功
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      if (submissionResult && submissionResult.success) {
+        // 提交成功，显示成功提示
+        wx.showToast({
+          title: '提交成功',
+          icon: 'success',
+          duration: 2000,
+        });
 
-      wx.showToast({
-        title: '提交成功',
-        icon: 'success',
-      });
-
-      // 返回上一页并刷新
-      setTimeout(() => {
-        const pages = getCurrentPages();
-        if (pages.length > 1) {
-          const prevPage = pages[pages.length - 2];
-          prevPage.setData({ needRefresh: true });
-        }
-        wx.navigateBack();
-      }, 1500);
+        // 跳转到批改结果页面或返回列表
+        setTimeout(() => {
+          const submissionId = submissionResult.data.id;
+          if (submissionId) {
+            // 跳转到详情页查看批改结果
+            wx.redirectTo({
+              url: `/pages/homework/detail/index?id=${submissionId}`,
+            });
+          } else {
+            // 返回上一页
+            const pages = getCurrentPages();
+            if (pages.length > 1) {
+              const prevPage = pages[pages.length - 2];
+              if (prevPage.refreshData) {
+                prevPage.refreshData();
+              }
+            }
+            wx.navigateBack();
+          }
+        }, 1500);
+      } else {
+        throw new Error(submissionResult?.message || '提交失败');
+      }
     } catch (error) {
       console.error('提交作业失败:', error);
-      wx.showToast({
-        title: '提交失败，请重试',
-        icon: 'error',
+      wx.showModal({
+        title: '提交失败',
+        content: error.message || '网络错误，请重试',
+        showCancel: false,
       });
     } finally {
       this.setData({ isSubmitting: false });
@@ -457,55 +487,67 @@ Page({
   },
 
   /**
-   * 上传图片
+   * 文本提交
    */
-  async uploadImages() {
-    // TODO: 实现图片上传逻辑
-    const { imageList } = this.data;
-    const uploadedUrls = [];
+  async submitWithText() {
+    const { homework, textContent, userInfo } = this.data;
 
-    for (let i = 0; i < imageList.length; i++) {
-      const image = imageList[i];
-      if (image.url.startsWith('http')) {
-        uploadedUrls.push(image.url);
-        continue;
-      }
+    const submitData = {
+      template_id: homework.id,
+      student_name: userInfo.name || userInfo.username || '学生',
+      content: textContent.trim(),
+    };
 
-      // 上传本地图片
-      const uploadResult = await this.uploadSingleImage(image.url);
-      uploadedUrls.push(uploadResult.url);
-    }
-
-    return uploadedUrls;
+    return await homeworkAPI.submitHomeworkText(submitData);
   },
 
   /**
-   * 上传单张图片
+   * 图片提交
    */
-  uploadSingleImage(filePath) {
-    return new Promise((resolve, reject) => {
-      wx.uploadFile({
-        url: `${api.baseURL}/upload/image`,
-        filePath: filePath,
-        name: 'file',
-        header: {
-          Authorization: `Bearer ${authManager.getToken()}`,
-        },
-        success: res => {
-          try {
-            const result = JSON.parse(res.data);
-            if (result.success) {
-              resolve({ url: result.data.url });
-            } else {
-              reject(new Error(result.message));
-            }
-          } catch (error) {
-            reject(error);
-          }
-        },
-        fail: reject,
-      });
+  async submitWithImages() {
+    const { homework, imageList, textContent, userInfo } = this.data;
+
+    // 获取第一张图片作为主提交
+    const firstImage = imageList[0];
+
+    if (!firstImage || !firstImage.url) {
+      throw new Error('请至少上传一张图片');
+    }
+
+    const additionalInfo = textContent.trim() || undefined;
+
+    // 提交第一张图片
+    const result = await homeworkAPI.submitHomeworkImage({
+      template_id: homework.id,
+      student_name: userInfo.name || userInfo.username || '学生',
+      filePath: firstImage.url,
+      additional_info: additionalInfo,
+      onProgress: (progress) => {
+        console.log('上传进度:', progress);
+        // 可以在这里更新UI显示上传进度
+      },
     });
+
+    // 如果有多张图片，继续提交剩余图片
+    if (imageList.length > 1) {
+      const remainingImages = imageList.slice(1);
+      const filePaths = remainingImages.map(img => img.url);
+
+      // 后台继续上传剩余图片（不阻塞返回）
+      homeworkAPI.submitHomeworkImages({
+        template_id: homework.id,
+        student_name: userInfo.name || userInfo.username || '学生',
+        filePaths,
+        additional_info: `附加图片 (${remainingImages.length}张)`,
+        onProgress: (progress) => {
+          console.log('批量上传进度:', progress);
+        },
+      }).catch(error => {
+        console.error('批量上传失败:', error);
+      });
+    }
+
+    return result;
   },
 
   /**
@@ -522,7 +564,7 @@ Page({
         savedAt: new Date().toISOString(),
       };
 
-      // TODO: 保存草稿到本地或服务器
+      // 保存草稿到本地存储
       wx.setStorageSync(`homework_draft_${homework.id}`, draftData);
 
       wx.showToast({
@@ -535,6 +577,39 @@ Page({
         title: '保存失败',
         icon: 'error',
       });
+    }
+  },
+
+  /**
+   * 加载草稿
+   */
+  loadDraft() {
+    try {
+      const { homework } = this.data;
+      const draftData = wx.getStorageSync(`homework_draft_${homework.id}`);
+
+      if (draftData) {
+        wx.showModal({
+          title: '发现草稿',
+          content: '是否加载上次保存的草稿？',
+          success: (res) => {
+            if (res.confirm) {
+              this.setData({
+                textContent: draftData.content || '',
+                imageList: draftData.images || [],
+              });
+              this.updateWordCount();
+
+              wx.showToast({
+                title: '草稿已加载',
+                icon: 'success',
+              });
+            }
+          },
+        });
+      }
+    } catch (error) {
+      console.error('加载草稿失败:', error);
     }
   },
 

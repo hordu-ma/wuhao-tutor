@@ -1,7 +1,7 @@
 // pages/homework/detail/index.js - 作业详情页面
 
 const { authManager } = require('../../../utils/auth.js');
-const api = require('../../../utils/api.js');
+const homeworkAPI = require('../../../api/homework.js');
 const utils = require('../../../utils/utils.js');
 
 Page({
@@ -19,13 +19,17 @@ Page({
     // 加载状态
     loading: true,
 
-    // 提交状态
+    // 提交详情（包含批改状态）
     submission: null,
     hasSubmission: false,
 
     // 批改结果
     correction: null,
     hasCorrection: false,
+
+    // 批改状态轮询
+    isPolling: false,
+    pollingTimer: null,
 
     // 权限控制
     canSubmit: false,
@@ -122,125 +126,120 @@ Page({
     try {
       this.setData({ loading: true, error: null });
 
-      // TODO: 调用API获取作业详情
-      // const response = await api.getHomeworkDetail(homeworkId);
+      // 调用API获取作业提交详情
+      const response = await homeworkAPI.getSubmissionDetail(homeworkId);
 
-      // 模拟数据
-      const homework = {
-        id: homeworkId,
-        title: '数学第三章函数练习',
-        subject: '数学',
-        description: '完成课本第45-50页的练习题，重点掌握二次函数的图像和性质。',
-        requirements: [
-          '独立完成所有题目',
-          '写出详细的解题步骤',
-          '对于错题要标注原因',
-          '字迹工整，格式规范',
-        ],
-        difficulty: 'medium',
-        totalScore: 100,
-        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        teacherName: '李老师',
-        teacherId: 'teacher_001',
-        attachments: [
-          {
-            id: 'att_001',
-            name: '练习题参考答案.pdf',
-            url: '/files/answer_reference.pdf',
-            size: '2.5MB',
-            type: 'pdf',
-          },
-        ],
-        status: 'pending', // pending, submitted, corrected, overdue
-        submissionCount: 0,
-        totalStudents: 30,
-      };
+      if (response.success && response.data) {
+        const submission = response.data;
 
-      this.setData({ homework });
+        this.setData({
+          submission,
+          hasSubmission: true,
+        });
 
-      // 加载提交记录和批改结果
-      await Promise.all([this.loadSubmission(homeworkId), this.loadCorrection(homeworkId)]);
+        // 如果批改正在进行中，启动轮询
+        if (submission.status === 'processing' || submission.status === 'pending') {
+          this.startPolling(homeworkId);
+        } else if (submission.status === 'completed') {
+          // 批改已完成，加载批改结果
+          await this.loadCorrection(homeworkId);
+        }
+      } else {
+        throw new Error(response.message || '加载作业详情失败');
+      }
     } catch (error) {
       console.error('加载作业详情失败:', error);
-      this.setData({ error: '加载失败，请重试' });
+      this.setData({ error: error.message || '加载失败，请重试' });
     } finally {
       this.setData({ loading: false });
     }
   },
 
   /**
-   * 加载提交记录
+   * 开始轮询批改状态
    */
-  async loadSubmission(homeworkId) {
-    try {
-      if (this.data.userRole !== 'student') return;
+  startPolling(submissionId) {
+    if (this.data.isPolling) return;
 
-      // TODO: 调用API获取提交记录
-      // const response = await api.getHomeworkSubmission(homeworkId);
+    console.log('开始轮询批改状态:', submissionId);
+    this.setData({ isPolling: true });
 
-      // 模拟数据
-      const submission = {
-        id: 'sub_001',
-        homeworkId: homeworkId,
-        studentId: this.data.userInfo?.id,
-        content: '我的作业答案...',
-        attachments: [
-          {
-            id: 'img_001',
-            name: '作业答案1.jpg',
-            url: '/images/homework_1.jpg',
-            type: 'image',
-          },
-        ],
-        submittedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-        status: 'submitted', // submitted, corrected
-      };
+    const poll = async () => {
+      try {
+        const response = await homeworkAPI.getSubmissionDetail(submissionId);
 
+        if (response.success && response.data) {
+          const submission = response.data;
+          this.setData({ submission });
+
+          if (submission.status === 'completed') {
+            // 批改完成，加载批改结果
+            console.log('批改完成，加载批改结果');
+            await this.loadCorrection(submissionId);
+            this.stopPolling();
+
+            wx.showToast({
+              title: '批改完成',
+              icon: 'success',
+            });
+          } else if (submission.status === 'failed') {
+            // 批改失败
+            console.log('批改失败');
+            this.stopPolling();
+
+            wx.showToast({
+              title: '批改失败，请重试',
+              icon: 'error',
+            });
+          } else {
+            // 继续轮询
+            this.data.pollingTimer = setTimeout(poll, 3000);
+          }
+        }
+      } catch (error) {
+        console.error('轮询批改状态失败:', error);
+        // 继续轮询
+        this.data.pollingTimer = setTimeout(poll, 3000);
+      }
+    };
+
+    // 开始轮询
+    poll();
+  },
+
+  /**
+   * 停止轮询
+   */
+  stopPolling() {
+    console.log('停止轮询批改状态');
+
+    if (this.data.pollingTimer) {
+      clearTimeout(this.data.pollingTimer);
       this.setData({
-        submission,
-        hasSubmission: true,
+        pollingTimer: null,
+        isPolling: false,
       });
-    } catch (error) {
-      console.error('加载提交记录失败:', error);
     }
   },
 
   /**
    * 加载批改结果
    */
-  async loadCorrection(homeworkId) {
+  async loadCorrection(submissionId) {
     try {
-      // TODO: 调用API获取批改结果
-      // const response = await api.getHomeworkCorrection(homeworkId);
+      const response = await homeworkAPI.getCorrectionResult(submissionId);
 
-      // 模拟数据
-      const correction = {
-        id: 'cor_001',
-        homeworkId: homeworkId,
-        teacherId: 'teacher_001',
-        score: 85,
-        totalScore: 100,
-        grade: 'B',
-        comment: '整体完成得不错，解题思路清晰。第3题的计算有小错误，需要注意细心。继续保持！',
-        corrections: [
-          {
-            questionNo: 3,
-            isCorrect: false,
-            comment: '计算错误：应该是x²+2x-3，你写成了x²+2x-2',
-            score: 8,
-            totalScore: 10,
-          },
-        ],
-        correctedAt: new Date(Date.now() - 0.5 * 24 * 60 * 60 * 1000).toISOString(),
-      };
-
-      this.setData({
-        correction,
-        hasCorrection: true,
-      });
+      if (response.success && response.data) {
+        this.setData({
+          correction: response.data,
+          hasCorrection: true,
+        });
+      } else {
+        console.log('暂无批改结果:', response.message);
+      }
     } catch (error) {
       console.error('加载批改结果失败:', error);
+      // 批改结果可能还未生成，不显示错误
     }
   },
 
@@ -248,95 +247,165 @@ Page({
    * 刷新数据
    */
   async refreshData() {
-    const { homework } = this.data;
-    if (homework?.id) {
-      await this.loadHomeworkDetail(homework.id);
+    const { submission } = this.data;
+    if (submission?.id) {
+      await this.loadHomeworkDetail(submission.id);
     }
   },
 
   /**
-   * 提交作业
+   * 页面卸载时清理轮询
    */
-  onSubmitHomework() {
-    const { homework } = this.data;
-    wx.navigateTo({
-      url: `/pages/homework/submit/index?homeworkId=${homework.id}`,
-    });
+  onUnload() {
+    this.stopPolling();
   },
 
   /**
-   * 查看提交详情
+   * 页面隐藏时停止轮询
    */
-  onViewSubmission() {
+  onHide() {
+    this.stopPolling();
+  },
+
+  /**
+   * 重新提交作业
+   */
+  onResubmitHomework() {
     const { submission } = this.data;
-    if (!submission) return;
 
-    // 显示提交详情
-    wx.navigateTo({
-      url: `/pages/homework/submission/detail?id=${submission.id}`,
-    });
-  },
-
-  /**
-   * 编辑作业
-   */
-  onEditHomework() {
-    const { homework } = this.data;
-    wx.navigateTo({
-      url: `/pages/homework/edit/index?id=${homework.id}`,
-    });
-  },
-
-  /**
-   * 批改作业
-   */
-  onCorrectHomework() {
-    const { homework } = this.data;
-    wx.navigateTo({
-      url: `/pages/homework/correct/index?id=${homework.id}`,
-    });
-  },
-
-  /**
-   * 下载附件
-   */
-  onDownloadAttachment(e) {
-    const { attachment } = e.currentTarget.dataset;
-
-    wx.showLoading({ title: '下载中...' });
-
-    wx.downloadFile({
-      url: attachment.url,
-      success: res => {
-        wx.hideLoading();
-        if (res.statusCode === 200) {
-          wx.openDocument({
-            filePath: res.tempFilePath,
-            showMenu: true,
+    wx.showModal({
+      title: '重新提交',
+      content: '确定要重新提交作业吗？',
+      success: (res) => {
+        if (res.confirm) {
+          wx.navigateTo({
+            url: `/pages/homework/submit/index?homeworkId=${submission.template_id || submission.homework_id}`,
           });
         }
       },
-      fail: error => {
-        wx.hideLoading();
-        console.error('下载失败:', error);
-        wx.showToast({
-          title: '下载失败',
-          icon: 'error',
+    });
+  },
+
+  /**
+   * 查看原始图片
+   */
+  onViewOriginalImage() {
+    const { submission } = this.data;
+    if (!submission || !submission.file_url) return;
+
+    wx.previewImage({
+      current: submission.file_url,
+      urls: [submission.file_url],
+    });
+  },
+
+  /**
+   * 手动刷新批改结果
+   */
+  async onRefreshCorrection() {
+    const { submission } = this.data;
+
+    if (submission.status === 'processing' || submission.status === 'pending') {
+      wx.showToast({
+        title: '批改进行中，请稍候...',
+        icon: 'loading',
+        duration: 2000,
+      });
+
+      // 重新启动轮询
+      this.stopPolling();
+      this.startPolling(submission.id);
+    } else if (submission.status === 'completed') {
+      // 重新加载批改结果
+      await this.loadCorrection(submission.id);
+
+      wx.showToast({
+        title: '刷新成功',
+        icon: 'success',
+      });
+    }
+  },
+
+  /**
+   * 返回作业列表
+   */
+  onBackToList() {
+    wx.navigateBack({
+      delta: 1,
+      fail: () => {
+        wx.switchTab({
+          url: '/pages/homework/list/index',
         });
       },
     });
   },
 
   /**
-   * 预览图片
+   * 分享批改结果
    */
-  onPreviewImage(e) {
-    const { url, urls } = e.currentTarget.dataset;
+  onShareResult() {
+    const { correction } = this.data;
 
-    wx.previewImage({
-      current: url,
-      urls: urls || [url],
+    if (!correction) {
+      wx.showToast({
+        title: '暂无批改结果',
+        icon: 'none',
+      });
+      return;
+    }
+
+    // 生成分享图片或跳转到分享页面
+    wx.showToast({
+      title: '分享功能开发中',
+      icon: 'none',
     });
+  },
+
+  /**
+   * 获取批改状态文本
+   */
+  getStatusText(status) {
+    const statusMap = {
+      pending: '等待批改',
+      processing: '批改中',
+      completed: '已完成',
+      failed: '批改失败',
+    };
+    return statusMap[status] || '未知状态';
+  },
+
+  /**
+   * 获取批改状态颜色
+   */
+  getStatusColor(status) {
+    const colorMap = {
+      pending: '#faad14',
+      processing: '#1890ff',
+      completed: '#52c41a',
+      failed: '#f5222d',
+    };
+    return colorMap[status] || '#999999';
+  },
+
+  /**
+   * 格式化分数显示
+   */
+  formatScore(score, maxScore) {
+    if (score === undefined || score === null) return '-';
+    return `${score}/${maxScore || 100}`;
+  },
+
+  /**
+   * 获取等级
+   */
+  getGrade(score, maxScore = 100) {
+    const percentage = (score / maxScore) * 100;
+
+    if (percentage >= 90) return 'A';
+    if (percentage >= 80) return 'B';
+    if (percentage >= 70) return 'C';
+    if (percentage >= 60) return 'D';
+    return 'E';
   },
 
   /**

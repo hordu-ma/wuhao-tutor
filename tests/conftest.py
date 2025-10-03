@@ -5,12 +5,18 @@
 
 import asyncio
 import os
+import sys
+from pathlib import Path
 import pytest
 import pytest_asyncio
 from typing import AsyncGenerator, Generator
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
+
+# 添加项目根目录到路径
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
 
 # 设置测试环境
 os.environ["ENVIRONMENT"] = "testing"
