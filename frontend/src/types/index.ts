@@ -185,6 +185,11 @@ export interface ChatMessage {
   attachments?: MessageAttachment[];
   created_at: string;
   is_helpful?: boolean;
+  // 添加用于聊天界面显示的属性
+  type: "user" | "ai";
+  status: "sending" | "sent" | "failed";
+  timestamp: Date;
+  subject?: string;
 }
 
 /** 消息附件 */

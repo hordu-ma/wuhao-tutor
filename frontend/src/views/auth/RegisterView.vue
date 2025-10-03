@@ -25,9 +25,9 @@
 
         <el-form-item prop="email">
           <el-input
-            v-model="registerForm.email"
-            placeholder="邮箱地址"
-            prefix-icon="Message"
+            v-model="registerForm.phone"
+            placeholder="手机号码"
+            prefix-icon="Iphone"
             clearable
           />
         </el-form-item>
@@ -157,6 +157,7 @@ import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { ElMessage, ElNotification } from "element-plus";
 import type { FormInstance, FormRules } from "element-plus";
+import type { UserRole } from "@/types";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -167,9 +168,10 @@ const registerFormRef = ref<FormInstance>();
 // 注册表单数据
 const registerForm = reactive({
   username: "",
-  email: "",
+  phone: "",
   password: "",
   confirmPassword: "",
+  verificationCode: "",
   role: "student",
   agreement: false,
 });
@@ -261,11 +263,12 @@ const handleRegister = async () => {
 
     // 准备注册数据
     const registerData = {
-      username: registerForm.username,
-      email: registerForm.email,
+      phone: registerForm.phone,
+      name: registerForm.username,
       password: registerForm.password,
-      confirm_password: registerForm.confirmPassword,
-      role: registerForm.role,
+      password_confirm: registerForm.confirmPassword,
+      verification_code: registerForm.verificationCode,
+      role: registerForm.role as UserRole,
     };
 
     // 调用注册接口
