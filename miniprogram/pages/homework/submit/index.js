@@ -3,6 +3,7 @@
 const { authManager } = require('../../../utils/auth.js');
 const homeworkAPI = require('../../../api/homework.js');
 const utils = require('../../../utils/utils.js');
+const imageProcessor = require('../../../utils/image-processor.js');
 
 Page({
   /**
@@ -45,6 +46,11 @@ Page({
     wordCount: 0,
     minWordCount: 50,
     maxWordCount: 2000,
+
+    // 图片处理状态
+    imageProcessing: false,
+    compressionProgress: 0,
+    showCompressionDialog: false,
   },
 
   /**
@@ -265,7 +271,7 @@ Page({
   /**
    * 选择图片
    */
-  onChooseImage() {
+  async onChooseImage() {
     const { imageList, maxImageCount } = this.data;
     const remainCount = maxImageCount - imageList.length;
 
@@ -281,15 +287,8 @@ Page({
       count: remainCount,
       mediaType: ['image'],
       sourceType: ['album', 'camera'],
-      success: res => {
-        const newImages = res.tempFiles.map(file => ({
-          url: file.tempFilePath,
-          size: file.size,
-        }));
-
-        this.setData({
-          imageList: [...imageList, ...newImages],
-        });
+      success: async (res) => {
+        await this.processSelectedImages(res.tempFiles);
       },
       fail: error => {
         console.error('选择图片失败:', error);
@@ -328,7 +327,7 @@ Page({
   /**
    * 拍照
    */
-  onTakePhoto() {
+  async onTakePhoto() {
     const { imageList, maxImageCount } = this.data;
 
     if (imageList.length >= maxImageCount) {
@@ -343,15 +342,8 @@ Page({
       count: 1,
       mediaType: ['image'],
       sourceType: ['camera'],
-      success: res => {
-        const newImage = {
-          url: res.tempFiles[0].tempFilePath,
-          size: res.tempFiles[0].size,
-        };
-
-        this.setData({
-          imageList: [...imageList, newImage],
-        });
+      success: async (res) => {
+        await this.processSelectedImages(res.tempFiles);
       },
       fail: error => {
         console.error('拍照失败:', error);
@@ -361,6 +353,118 @@ Page({
         });
       },
     });
+  },
+
+  /**
+   * 处理选中的图片
+   */
+  async processSelectedImages(tempFiles) {
+    try {
+      this.setData({
+        imageProcessing: true,
+        showCompressionDialog: true,
+        compressionProgress: 0
+      });
+
+      const { imageList } = this.data;
+      const processedImages = [];
+
+      for (let i = 0; i < tempFiles.length; i++) {
+        const file = tempFiles[i];
+
+        // 更新进度
+        const progress = Math.round(((i + 1) / tempFiles.length) * 100);
+        this.setData({ compressionProgress: progress });
+
+        try {
+          // 检查是否需要压缩
+          const shouldCompressResult = await imageProcessor.shouldCompress(file.tempFilePath, {
+            maxWidth: 1080,
+            maxHeight: 1920,
+            maxSizeKB: 500
+          });
+
+          let finalPath = file.tempFilePath;
+          let finalSize = file.size;
+
+          if (shouldCompressResult.shouldCompress) {
+            // 压缩图片
+            const compressResult = await imageProcessor.compressImage(file.tempFilePath, {
+              maxWidth: 1080,
+              maxHeight: 1920,
+              quality: 0.8,
+              maxSizeKB: 500
+            });
+
+            if (compressResult.success) {
+              finalPath = compressResult.compressedPath;
+              finalSize = compressResult.compressedSize;
+
+              console.log(`图片压缩成功: ${imageProcessor.formatFileSize(compressResult.originalSize)} -> ${imageProcessor.formatFileSize(compressResult.compressedSize)} (压缩率: ${compressResult.compressionRatio}%)`);
+            } else {
+              console.warn('图片压缩失败，使用原图:', compressResult.error);
+            }
+          }
+
+          // 矫正图片方向
+          const correctedPath = await imageProcessor.correctImageOrientation(finalPath);
+
+          // 生成预览信息
+          const previewInfo = await imageProcessor.generatePreviewInfo(correctedPath);
+
+          processedImages.push({
+            url: correctedPath,
+            size: finalSize,
+            originalSize: file.size,
+            width: previewInfo.width,
+            height: previewInfo.height,
+            formattedSize: previewInfo.formattedSize,
+            compressed: shouldCompressResult.shouldCompress,
+          });
+
+        } catch (error) {
+          console.error('处理图片失败:', error);
+          // 处理失败时使用原图
+          processedImages.push({
+            url: file.tempFilePath,
+            size: file.size,
+            originalSize: file.size,
+            compressed: false,
+            error: error.message,
+          });
+        }
+      }
+
+      // 更新图片列表
+      this.setData({
+        imageList: [...imageList, ...processedImages],
+        imageProcessing: false,
+        showCompressionDialog: false,
+        compressionProgress: 0,
+      });
+
+      // 显示处理结果
+      const compressedCount = processedImages.filter(img => img.compressed).length;
+      if (compressedCount > 0) {
+        wx.showToast({
+          title: `已优化${compressedCount}张图片`,
+          icon: 'success',
+        });
+      }
+
+    } catch (error) {
+      console.error('批量处理图片失败:', error);
+      this.setData({
+        imageProcessing: false,
+        showCompressionDialog: false,
+        compressionProgress: 0,
+      });
+
+      wx.showToast({
+        title: '图片处理失败',
+        icon: 'error',
+      });
+    }
   },
 
   /**
@@ -621,6 +725,86 @@ Page({
       title: message,
       icon: 'error',
       duration: 2000,
+    });
+  },
+
+  /**
+   * 重新压缩单张图片
+   */
+  async onRecompressImage(e) {
+    const { index } = e.currentTarget.dataset;
+    const { imageList } = this.data;
+
+    if (!imageList[index]) return;
+
+    const image = imageList[index];
+
+    try {
+      wx.showLoading({ title: '重新优化中...' });
+
+      const compressResult = await imageProcessor.compressImage(image.url, {
+        maxWidth: 800,
+        maxHeight: 1200,
+        quality: 0.6,
+        maxSizeKB: 300
+      });
+
+      if (compressResult.success) {
+        // 更新图片信息
+        const updatedImage = {
+          ...image,
+          url: compressResult.compressedPath,
+          size: compressResult.compressedSize,
+          compressed: true,
+          formattedSize: imageProcessor.formatFileSize(compressResult.compressedSize),
+        };
+
+        const newImageList = [...imageList];
+        newImageList[index] = updatedImage;
+
+        this.setData({ imageList: newImageList });
+
+        wx.hideLoading();
+        wx.showToast({
+          title: '优化成功',
+          icon: 'success',
+        });
+      }
+    } catch (error) {
+      console.error('重新压缩失败:', error);
+      wx.hideLoading();
+      wx.showToast({
+        title: '优化失败',
+        icon: 'error',
+      });
+    }
+  },
+
+  /**
+   * 查看图片详情
+   */
+  onViewImageInfo(e) {
+    const { index } = e.currentTarget.dataset;
+    const { imageList } = this.data;
+    const image = imageList[index];
+
+    if (!image) return;
+
+    const info = [
+      `尺寸: ${image.width || '未知'} × ${image.height || '未知'}`,
+      `大小: ${image.formattedSize || imageProcessor.formatFileSize(image.size)}`,
+      `状态: ${image.compressed ? '已优化' : '原图'}`,
+    ];
+
+    if (image.originalSize && image.originalSize !== image.size) {
+      const ratio = Math.round(((image.originalSize - image.size) / image.originalSize) * 100);
+      info.push(`压缩率: ${ratio}%`);
+    }
+
+    wx.showModal({
+      title: '图片信息',
+      content: info.join('\n'),
+      showCancel: false,
     });
   },
 });
