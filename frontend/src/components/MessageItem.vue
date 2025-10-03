@@ -1,10 +1,12 @@
+<!-- MessageItem Component for Chat Messages -->
 <template>
   <div
     class="message-item mb-6 flex"
     :class="{
       'justify-end': message.type === 'user',
       'justify-start': message.type === 'ai',
-      'opacity-50': message.is_processing,
+      'opacity-75': message.is_processing,
+      'animate-pulse': message.is_processing,
     }"
   >
     <!-- AI头像 -->
@@ -28,11 +30,13 @@
     >
       <!-- 消息头部信息 -->
       <div
-        v-if="showMessageInfo"
+        v-if="showMessageInfo || showTimestamp"
         class="message-header px-4 py-2 border-b border-gray-100 text-xs text-gray-500 flex items-center justify-between"
       >
         <div class="flex items-center space-x-3">
-          <span>{{ formatTime(message.timestamp) }}</span>
+          <span v-if="showTimestamp || showMessageInfo" class="timestamp">
+            {{ formatTime(message.timestamp) }}
+          </span>
 
           <!-- 问题类型标签 -->
           <el-tag
@@ -56,16 +60,33 @@
         <!-- 处理状态 -->
         <div
           v-if="message.is_processing"
-          class="flex items-center text-blue-500"
+          class="flex items-center text-blue-500 animate-pulse"
         >
           <el-icon class="animate-spin mr-1"><Loading /></el-icon>
-          <span>处理中...</span>
+          <span>AI正在思考...</span>
         </div>
 
         <!-- 错误状态 -->
         <div v-else-if="message.error" class="flex items-center text-red-500">
           <el-icon class="mr-1"><Warning /></el-icon>
           <span>{{ message.error }}</span>
+          <el-button
+            type="text"
+            size="small"
+            @click="$emit('retry', message.id)"
+            class="ml-2 text-red-500 hover:text-red-600"
+          >
+            重试
+          </el-button>
+        </div>
+
+        <!-- 发送状态 -->
+        <div
+          v-else-if="message.type === 'user'"
+          class="flex items-center text-green-500"
+        >
+          <el-icon class="mr-1"><Select /></el-icon>
+          <span>已发送</span>
         </div>
       </div>
 
@@ -118,189 +139,207 @@
           </div>
 
           <!-- AI回答 */
+          <!-- AI回答 -->
           <div v-else class="ai-message">
-            <!-- Markdown渲染 -->
-          <div
-            v-if="renderedContent"
-            class="prose prose-sm max-w-none"
-            v-html="renderedContent"
-          />
+            <!-- 打字机效果 -->
+            <div v-if="isTyping && !renderedContent" class="typing-animation">
+              <span
+                v-for="(char, index) in displayedContent"
+                :key="index"
+                :style="{ animationDelay: `${index * 30}ms` }"
+                class="typed-char"
+                >{{ char }}</span
+              >
+              <span v-if="showCursor" class="typing-cursor animate-pulse"
+                >|</span
+              >
+            </div>
 
-          <!-- 纯文本fallback -->
-          <pre v-else class="whitespace-pre-wrap font-sans leading-relaxed">{{
-            message.content
-          }}</pre>
+            <!-- Markdown渲染 -->
+            <div
+              v-else-if="renderedContent"
+              class="prose prose-sm max-w-none markdown-content"
+              v-html="renderedContent"
+            />
+
+            <!-- 纯文本fallback -->
+            <pre v-else class="whitespace-pre-wrap font-sans leading-relaxed">{{
+              message.content
+            }}</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- 消息操作栏 -->
+      <div
+        v-if="!message.is_processing && message.type === 'ai' && !message.error"
+        class="message-actions px-4 py-2 border-t border-gray-100 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors"
+      >
+        <div class="flex items-center space-x-2">
+          <!-- 复制按钮 -->
+          <el-button
+            type="text"
+            size="small"
+            @click="handleCopy"
+            class="text-gray-500 hover:text-blue-500"
+          >
+            <el-icon class="mr-1"><CopyDocument /></el-icon>
+            复制
+          </el-button>
+
+          <!-- 重新生成按钮 -->
+          <el-button
+            type="text"
+            size="small"
+            @click="handleRegenerate"
+            class="text-gray-500 hover:text-green-500"
+          >
+            <el-icon class="mr-1"><Refresh /></el-icon>
+            重新生成
+          </el-button>
+
+          <!-- 反馈按钮 -->
+          <el-button
+            type="text"
+            size="small"
+            @click="showFeedback = true"
+            class="text-gray-500 hover:text-orange-500"
+          >
+            <el-icon class="mr-1"><Star /></el-icon>
+            评价
+          </el-button>
+        </div>
+
+        <!-- 快速反馈 -->
+        <div class="flex items-center space-x-1">
+          <el-button
+            type="text"
+            size="small"
+            @click="submitQuickFeedback(true)"
+            :class="
+              quickFeedback === true
+                ? 'text-green-500'
+                : 'text-gray-400 hover:text-green-500'
+            "
+          >
+            <el-icon><Select /></el-icon>
+          </el-button>
+          <el-button
+            type="text"
+            size="small"
+            @click="submitQuickFeedback(false)"
+            :class="
+              quickFeedback === false
+                ? 'text-red-500'
+                : 'text-gray-400 hover:text-red-500'
+            "
+          >
+            <el-icon><CloseBold /></el-icon>
+          </el-button>
         </div>
       </div>
     </div>
 
-    <!-- 消息操作栏 -->
-    <div
-      v-if="!message.is_processing && message.type === 'ai'"
-      class="message-actions px-4 py-2 border-t border-gray-100 flex items-center justify-between"
+    <!-- 用户头像 -->
+    <div v-if="message.type === 'user'" class="avatar flex-shrink-0 ml-3">
+      <div
+        class="w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-blue-500 flex items-center justify-center"
+      >
+        <el-icon class="text-white text-sm">
+          <User />
+        </el-icon>
+      </div>
+    </div>
+
+    <!-- 反馈对话框 -->
+    <el-dialog
+      v-model="showFeedback"
+      title="评价回答质量"
+      width="400px"
+      :close-on-click-modal="false"
     >
-      <div class="flex items-center space-x-2">
-        <!-- 复制按钮 -->
-        <el-button
-          type="text"
-          size="small"
-          @click="handleCopy"
-          class="text-gray-500 hover:text-blue-500"
-        >
-          <el-icon class="mr-1"><CopyDocument /></el-icon>
-          复制
-        </el-button>
+      <el-form :model="feedbackForm" label-width="80px">
+        <el-form-item label="评分">
+          <el-rate
+            v-model="feedbackForm.rating"
+            :max="5"
+            show-text
+            :texts="['很差', '一般', '还行', '不错', '很好']"
+          />
+        </el-form-item>
 
-        <!-- 重新生成按钮 -->
-        <el-button
-          type="text"
-          size="small"
-          @click="handleRegenerate"
-          class="text-gray-500 hover:text-green-500"
-        >
-          <el-icon class="mr-1"><Refresh /></el-icon>
-          重新生成
-        </el-button>
+        <el-form-item label="是否有帮助">
+          <el-radio-group v-model="feedbackForm.is_helpful">
+            <el-radio :label="true">有帮助</el-radio>
+            <el-radio :label="false">没帮助</el-radio>
+          </el-radio-group>
+        </el-form-item>
 
-        <!-- 反馈按钮 -->
-        <el-button
-          type="text"
-          size="small"
-          @click="showFeedback = true"
-          class="text-gray-500 hover:text-orange-500"
-        >
-          <el-icon class="mr-1"><Star /></el-icon>
-          评价
-        </el-button>
-      </div>
+        <el-form-item label="具体反馈">
+          <el-input
+            v-model="feedbackForm.feedback"
+            type="textarea"
+            :rows="3"
+            placeholder="请描述具体的问题或建议（可选）"
+            maxlength="500"
+            show-word-limit
+          />
+        </el-form-item>
+      </el-form>
 
-      <!-- 快速反馈 -->
-      <div class="flex items-center space-x-1">
-        <el-button
-          type="text"
-          size="small"
-          @click="submitQuickFeedback(true)"
-          :class="
-            quickFeedback === true
-              ? 'text-green-500'
-              : 'text-gray-400 hover:text-green-500'
-          "
-        >
-          <el-icon><Select /></el-icon>
-        </el-button>
-        <el-button
-          type="text"
-          size="small"
-          @click="submitQuickFeedback(false)"
-          :class="
-            quickFeedback === false
-              ? 'text-red-500'
-              : 'text-gray-400 hover:text-red-500'
-          "
-        >
-          <el-icon><CloseBold /></el-icon>
-        </el-button>
-      </div>
-    </div>
-  </div>
+      <template #footer>
+        <div class="flex justify-end space-x-3">
+          <el-button @click="showFeedback = false">取消</el-button>
+          <el-button
+            type="primary"
+            @click="submitFeedback"
+            :loading="isSubmittingFeedback"
+          >
+            提交反馈
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
 
-  <!-- 用户头像 -->
-  <div v-if="message.type === 'user'" class="avatar flex-shrink-0 ml-3">
-    <div
-      class="w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-blue-500 flex items-center justify-center"
+    <!-- 图片预览对话框 -->
+    <el-dialog
+      v-model="showImagePreview"
+      :title="`图片预览 (${currentImageIndex + 1}/${message.image_urls?.length || 0})`"
+      width="80%"
+      align-center
+      class="image-preview-dialog"
     >
-      <el-icon class="text-white text-sm">
-        <User />
-      </el-icon>
-    </div>
+      <div class="text-center">
+        <img
+          v-if="previewImageUrl"
+          :src="previewImageUrl"
+          :alt="'预览图片'"
+          class="max-w-full max-h-96 object-contain rounded-lg"
+        />
+      </div>
+
+      <template #footer>
+        <div class="flex justify-center space-x-3">
+          <el-button
+            :disabled="currentImageIndex === 0"
+            @click="switchPreviewImage(-1)"
+          >
+            <el-icon><ArrowLeft /></el-icon>
+            上一张
+          </el-button>
+          <el-button
+            :disabled="
+              currentImageIndex >= (message.image_urls?.length || 0) - 1
+            "
+            @click="switchPreviewImage(1)"
+          >
+            下一张
+            <el-icon><ArrowRight /></el-icon>
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
-
-  <!-- 反馈对话框 -->
-  <el-dialog
-    v-model="showFeedback"
-    title="评价回答质量"
-    width="400px"
-    :close-on-click-modal="false"
-  >
-    <el-form :model="feedbackForm" label-width="80px">
-      <el-form-item label="评分">
-        <el-rate
-          v-model="feedbackForm.rating"
-          :max="5"
-          show-text
-          :texts="['很差', '一般', '还行', '不错', '很好']"
-        />
-      </el-form-item>
-
-      <el-form-item label="是否有帮助">
-        <el-radio-group v-model="feedbackForm.is_helpful">
-          <el-radio :label="true">有帮助</el-radio>
-          <el-radio :label="false">没帮助</el-radio>
-        </el-radio-group>
-      </el-form-item>
-
-      <el-form-item label="具体反馈">
-        <el-input
-          v-model="feedbackForm.feedback"
-          type="textarea"
-          :rows="3"
-          placeholder="请描述具体的问题或建议（可选）"
-          maxlength="500"
-          show-word-limit
-        />
-      </el-form-item>
-    </el-form>
-
-    <template #footer>
-      <div class="flex justify-end space-x-3">
-        <el-button @click="showFeedback = false">取消</el-button>
-        <el-button
-          type="primary"
-          @click="submitFeedback"
-          :loading="isSubmittingFeedback"
-        >
-          提交反馈
-        </el-button>
-      </div>
-    </template>
-  </el-dialog>
-
-  <!-- 图片预览对话框 -->
-  <el-dialog
-    v-model="showImagePreview"
-    :title="`图片预览 (${currentImageIndex + 1}/${message.image_urls?.length || 0})`"
-    width="80%"
-    align-center
-    class="image-preview-dialog"
-  >
-    <div class="text-center">
-      <img
-        v-if="previewImageUrl"
-        :src="previewImageUrl"
-        :alt="'预览图片'"
-        class="max-w-full max-h-96 object-contain rounded-lg"
-      />
-    </div>
-
-    <template #footer>
-      <div class="flex justify-center space-x-3">
-        <el-button
-          :disabled="currentImageIndex === 0"
-          @click="switchPreviewImage(-1)"
-        >
-          <el-icon><ArrowLeft /></el-icon>
-          上一张
-        </el-button>
-        <el-button
-          :disabled="currentImageIndex >= (message.image_urls?.length || 0) - 1"
-          @click="switchPreviewImage(1)"
-        >
-          下一张
-          <el-icon><ArrowRight /></el-icon>
-        </el-button>
-      </div>
-    </template>
-  </el-dialog>
 </template>
 
 <script setup lang="ts">
@@ -336,18 +375,21 @@ import {
 interface Props {
   message: ChatMessage;
   showMessageInfo?: boolean;
+  showTimestamp?: boolean;
 }
 
 interface Emits {
   (e: "feedback", feedback: FeedbackRequest): void;
   (e: "copy", content: string): void;
   (e: "regenerate", questionId: string): void;
+  (e: "retry", messageId: string): void;
 }
 
 // ========== Props和Emits ==========
 
 const props = withDefaults(defineProps<Props>(), {
   showMessageInfo: true,
+  showTimestamp: false,
 });
 
 const emit = defineEmits<Emits>();
@@ -361,6 +403,9 @@ const currentImageIndex = ref(0);
 const isSubmittingFeedback = ref(false);
 const quickFeedback = ref<boolean | null>(null);
 const renderedContent = ref("");
+const isTyping = ref(false);
+const displayedContent = ref("");
+const showCursor = ref(true);
 
 // 反馈表单数据
 const feedbackForm = reactive({
@@ -523,12 +568,59 @@ const switchPreviewImage = (direction: number) => {
   }
 };
 
+// 打字机效果
+const startTypingEffect = () => {
+  if (props.message.type !== "ai" || !props.message.content) return;
+
+  isTyping.value = true;
+  displayedContent.value = "";
+  let index = 0;
+  const content = props.message.content;
+
+  const typeInterval = setInterval(() => {
+    if (index < content.length) {
+      displayedContent.value += content[index];
+      index++;
+    } else {
+      clearInterval(typeInterval);
+      isTyping.value = false;
+      // 打字完成后渲染Markdown
+      renderMarkdown(content).then((html) => {
+        renderedContent.value = html;
+      });
+    }
+  }, 30);
+
+  // 光标闪烁
+  const cursorInterval = setInterval(() => {
+    showCursor.value = !showCursor.value;
+  }, 500);
+
+  // 清理
+  setTimeout(
+    () => {
+      clearInterval(cursorInterval);
+      showCursor.value = false;
+    },
+    content.length * 30 + 1000,
+  );
+};
+
 // ========== 生命周期 ==========
 
 onMounted(async () => {
   // 渲染AI消息的Markdown内容
   if (props.message.type === "ai" && props.message.content) {
-    renderedContent.value = await renderMarkdown(props.message.content);
+    // 如果是新消息，使用打字机效果
+    if (
+      props.message.timestamp &&
+      new Date(props.message.timestamp).getTime() > Date.now() - 5000
+    ) {
+      startTypingEffect();
+    } else {
+      // 历史消息直接渲染
+      renderedContent.value = await renderMarkdown(props.message.content);
+    }
   }
 });
 </script>
@@ -539,11 +631,36 @@ onMounted(async () => {
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     overflow: hidden;
-    transition: all 0.2s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: messageSlideIn 0.4s ease-out;
 
     &:hover {
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+      transform: translateY(-1px);
     }
+  }
+
+  .timestamp {
+    font-weight: 500;
+    padding: 2px 6px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+  }
+
+  .typing-animation {
+    .typed-char {
+      animation: fadeInChar 0.1s ease-out forwards;
+      opacity: 0;
+    }
+
+    .typing-cursor {
+      color: #3b82f6;
+      font-weight: bold;
+    }
+  }
+
+  .markdown-content {
+    animation: fadeIn 0.3s ease-out;
   }
 
   .user-message {
@@ -618,17 +735,37 @@ onMounted(async () => {
 
 // 动画
 .message-item {
-  animation: fadeInUp 0.3s ease-out;
+  animation: messageSlideIn 0.4s ease-out;
 }
 
-@keyframes fadeInUp {
+@keyframes messageSlideIn {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fadeInChar {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 </style>

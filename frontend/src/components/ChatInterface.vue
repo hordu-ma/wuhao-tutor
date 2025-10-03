@@ -108,37 +108,114 @@
 
             <!-- 快捷问题 -->
             <div class="quick-questions max-w-2xl mx-auto">
-              <h4 class="text-sm font-medium text-gray-600 mb-3">常见问题</h4>
+              <h4 class="text-sm font-medium text-gray-600 mb-3">快速开始</h4>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <button
                   v-for="question in quickQuestions"
                   :key="question"
                   @click="handleQuickQuestion(question)"
-                  class="quick-question-btn p-3 text-left bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"
+                  class="quick-question-btn p-3 text-left bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 transform hover:scale-105"
                 >
-                  <span class="text-sm text-gray-700">{{ question }}</span>
+                  <el-icon class="text-blue-500 mb-2"
+                    ><QuestionFilled
+                  /></el-icon>
+                  <div class="text-sm text-gray-700 font-medium">
+                    {{ question }}
+                  </div>
                 </button>
               </div>
             </div>
           </div>
 
           <!-- 消息列表 -->
-          <MessageItem
-            v-for="message in learningStore.currentMessages"
-            :key="message.id"
-            :message="message"
-            @feedback="handleFeedback"
-            @copy="handleCopyMessage"
-            @regenerate="handleRegenerateAnswer"
-          />
+          <div class="messages-container">
+            <MessageItem
+              v-for="(message, index) in learningStore.currentMessages"
+              :key="message.id"
+              :message="message"
+              :show-timestamp="shouldShowTimestamp(message, index)"
+              @feedback="handleFeedback"
+              @copy="handleCopyMessage"
+              @regenerate="handleRegenerateAnswer"
+            />
+          </div>
+
+          <!-- AI正在思考指示器 -->
+          <div
+            v-if="learningStore.chatState.isTyping"
+            class="ai-thinking py-4 flex justify-start"
+          >
+            <div class="flex items-center space-x-3">
+              <div
+                class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center"
+              >
+                <el-icon class="text-white text-sm">
+                  <ChatDotRound />
+                </el-icon>
+              </div>
+              <div
+                class="bg-white border border-gray-200 rounded-xl px-4 py-3 shadow-sm"
+              >
+                <div class="flex items-center space-x-2">
+                  <div class="typing-dots flex space-x-1">
+                    <div
+                      class="dot w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                    ></div>
+                    <div
+                      class="dot w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                      style="animation-delay: 0.1s"
+                    ></div>
+                    <div
+                      class="dot w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                      style="animation-delay: 0.2s"
+                    ></div>
+                  </div>
+                  <span class="text-sm text-gray-500">AI正在思考中...</span>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <!-- 加载指示器 -->
           <div
-            v-if="learningStore.chatState.isLoading"
-            class="text-center py-4"
+            v-if="
+              learningStore.chatState.isLoading &&
+              !learningStore.chatState.isTyping
+            "
+            class="text-center py-8"
           >
-            <el-icon class="animate-spin text-blue-500"><Loading /></el-icon>
-            <span class="ml-2 text-gray-500">正在加载历史记录...</span>
+            <div class="flex flex-col items-center space-y-3">
+              <el-icon class="animate-spin text-blue-500 text-2xl"
+                ><Loading
+              /></el-icon>
+              <span class="text-gray-500">正在加载历史记录...</span>
+              <div class="text-xs text-gray-400">请稍候，这可能需要几秒钟</div>
+            </div>
+          </div>
+
+          <!-- 连接错误提示 -->
+          <div
+            v-if="
+              learningStore.chatState.error &&
+              !learningStore.chatState.isLoading
+            "
+            class="text-center py-8"
+          >
+            <div class="flex flex-col items-center space-y-4">
+              <el-icon class="text-red-500 text-3xl"><Warning /></el-icon>
+              <div class="text-red-600 font-medium">连接失败</div>
+              <div class="text-gray-500 text-sm max-w-md">
+                {{ learningStore.chatState.error }}
+              </div>
+              <el-button
+                type="primary"
+                size="small"
+                @click="handleRetryConnection"
+              >
+                <el-icon class="mr-1"><Refresh /></el-icon>
+                重试连接
+              </el-button>
+            </div>
           </div>
         </div>
 
@@ -147,6 +224,7 @@
           <QuestionInput
             :disabled="!learningStore.canSendMessage"
             :loading="learningStore.isSubmittingQuestion"
+            :placeholder="inputPlaceholder"
             @submit="handleQuestionSubmit"
           />
 
@@ -163,14 +241,31 @@
           <div
             class="input-tips mt-2 flex items-center justify-between text-xs text-gray-500"
           >
-            <span>按 Shift + Enter 换行，Enter 发送</span>
-            <span
-              v-if="learningStore.chatState.isTyping"
-              class="typing-indicator flex items-center"
-            >
-              <el-icon class="animate-pulse mr-1"><EditPen /></el-icon>
-              AI正在思考中...
-            </span>
+            <div class="flex items-center space-x-4">
+              <span>按 Shift + Enter 换行，Enter 发送</span>
+              <span
+                v-if="learningStore.hasCurrentSession"
+                class="text-green-600"
+              >
+                <el-icon class="mr-1"><Select /></el-icon>
+                已连接会话
+              </span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <span
+                v-if="learningStore.currentMessages.length > 0"
+                class="text-gray-400"
+              >
+                {{ learningStore.currentMessages.length }} 条消息
+              </span>
+              <span
+                v-if="learningStore.chatState.isTyping"
+                class="typing-indicator flex items-center text-blue-500"
+              >
+                <el-icon class="animate-pulse mr-1"><EditPen /></el-icon>
+                AI正在输入...
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -333,6 +428,10 @@ import {
   List,
   Loading,
   EditPen,
+  QuestionFilled,
+  Select,
+  Warning,
+  Refresh,
 } from "@element-plus/icons-vue";
 
 // 组件导入
@@ -396,15 +495,28 @@ const subjectOptions = LEARNING_SUBJECT_OPTIONS;
 
 // 快捷问题
 const quickQuestions = [
-  "解释一下二次函数的性质",
-  "如何提高英语阅读理解能力？",
-  "请帮我分析这道数学题",
-  "化学元素周期表的规律",
-  "古诗词鉴赏的方法",
-  "物理电路分析步骤",
+  "数学题目解答",
+  "英语语法讲解",
+  "物理概念解释",
+  "化学实验分析",
+  "语文阅读理解",
+  "历史事件梳理",
 ];
 
 // ========== 计算属性和工具函数 ==========
+
+const inputPlaceholder = computed(() => {
+  if (!learningStore.hasCurrentSession) {
+    return "请先创建会话开始学习对话...";
+  }
+  if (learningStore.chatState.isLoading) {
+    return "正在加载中，请稍候...";
+  }
+  if (learningStore.currentMessages.length === 0) {
+    return "开始提问吧！描述你的问题越详细，AI回答越准确...";
+  }
+  return "继续提问，或询问相关知识点...";
+});
 
 const getSubjectColor = (subject: string) => {
   const option = subjectOptions.find(
@@ -420,6 +532,28 @@ const getSubjectLabel = (subject: string) => {
   return option?.label || subject;
 };
 
+const shouldShowTimestamp = (message: any, index: number) => {
+  // 第一条消息总是显示时间戳
+  if (index === 0) return true;
+
+  const prevMessage = learningStore.currentMessages[index - 1];
+  if (!prevMessage) return true;
+
+  const currentTime = new Date(message.timestamp);
+  const prevTime = new Date(prevMessage.timestamp);
+  const diffInMinutes =
+    (currentTime.getTime() - prevTime.getTime()) / (1000 * 60);
+
+  // 不同用户类型之间的消息显示时间戳
+  if (message.type !== prevMessage.type) {
+    return diffInMinutes > 1; // 不同类型消息间隔1分钟显示时间戳
+  }
+
+  // 同类型消息超过5分钟显示时间戳
+  // 或者是错误消息/重要消息总是显示时间戳
+  return diffInMinutes > 5 || message.error || message.is_important;
+};
+
 // ========== 事件处理 ==========
 
 /**
@@ -427,6 +561,16 @@ const getSubjectLabel = (subject: string) => {
  */
 const handleQuestionSubmit = async (request: AskQuestionRequest) => {
   try {
+    // 如果没有当前会话，先创建一个默认会话
+    if (!learningStore.hasCurrentSession) {
+      const session = await learningStore.createSession({
+        title: `学习会话 ${new Date().toLocaleString()}`,
+        subject: request.subject,
+        context_enabled: true,
+      });
+      await learningStore.switchSession(session.id);
+    }
+
     await learningStore.askQuestion(request);
 
     // 滚动到底部
@@ -434,6 +578,7 @@ const handleQuestionSubmit = async (request: AskQuestionRequest) => {
     scrollToBottom();
   } catch (error) {
     console.error("提交问题失败:", error);
+    ElMessage.error("发送消息失败，请稍后重试");
   }
 };
 
@@ -490,16 +635,26 @@ const handleSessionCommand = async (command: string) => {
     case "delete":
       try {
         await ElMessageBox.confirm(
-          "确定要删除此会话吗？删除后无法恢复。",
-          "确认删除",
+          `确定要删除会话「${currentSession.title}」吗？\n\n此操作将永久删除：\n• 会话中的所有对话记录\n• 相关的学习数据和反馈\n• 无法恢复已删除的内容\n\n建议先归档会话以保留数据。`,
+          "⚠️ 危险操作：删除会话",
           {
             type: "error",
+            confirmButtonText: "确认删除",
+            cancelButtonText: "取消",
+            confirmButtonClass: "el-button--danger",
+            showClose: false,
+            closeOnClickModal: false,
+            closeOnPressEscape: false,
           },
         );
+
+        ElMessage.info("正在删除会话...");
         await learningStore.deleteSession(currentSession.id);
+        ElMessage.success("会话已删除");
       } catch (error) {
         if (error !== "cancel") {
           console.error("删除会话失败:", error);
+          ElMessage.error("删除会话失败，请重试");
         }
       }
       break;
@@ -509,16 +664,28 @@ const handleSessionCommand = async (command: string) => {
 /**
  * 处理会话选择
  */
-const handleSessionSelect = async (sessionId: string) => {
+const handleSessionSelect = async (session: any) => {
   try {
     showSessionDrawer.value = false;
-    await learningStore.switchSession(sessionId);
 
-    // 滚动到底部
+    // 显示切换中状态
+    ElMessage.info({
+      message: `正在切换到「${session.title}」...`,
+      duration: 1000,
+    });
+
+    await learningStore.switchSession(session.id);
     await nextTick();
     scrollToBottom();
+
+    // 显示成功反馈
+    ElMessage.success({
+      message: `已切换到「${session.title}」`,
+      duration: 2000,
+    });
   } catch (error) {
     console.error("切换会话失败:", error);
+    ElMessage.error("切换会话失败，请重试");
   }
 };
 
@@ -570,19 +737,48 @@ const handleCreateSession = async () => {
  * 处理更新标题
  */
 const handleUpdateTitle = async () => {
+  if (!editTitleData.title.trim()) return;
+
   const currentSession = learningStore.chatState.currentSession;
-  if (!currentSession || !editTitleData.title.trim()) return;
+  if (!currentSession) return;
 
   try {
     isUpdatingTitle.value = true;
+
+    const oldTitle = currentSession.title;
+    const newTitle = editTitleData.title.trim();
+
+    if (oldTitle === newTitle) {
+      showEditTitleDialog.value = false;
+      ElMessage.info("标题未发生变化");
+      return;
+    }
+
+    ElMessage.info("正在更新标题...");
+
     await learningStore.updateSession(currentSession.id, {
-      title: editTitleData.title.trim(),
+      title: newTitle,
     });
 
     showEditTitleDialog.value = false;
-    ElMessage.success("标题更新成功");
+    ElMessage.success({
+      message: `标题已更新为「${newTitle}」`,
+      duration: 3000,
+    });
   } catch (error) {
     console.error("更新标题失败:", error);
+
+    let errorMessage = "更新失败，请重试";
+    if (typeof error === "string") {
+      errorMessage = error;
+    } else if (error && typeof error === "object" && "message" in error) {
+      errorMessage = error.message as string;
+    }
+
+    ElMessage.error({
+      message: errorMessage,
+      duration: 5000,
+    });
   } finally {
     isUpdatingTitle.value = false;
   }
@@ -628,6 +824,31 @@ const clearError = () => {
 };
 
 /**
+ * 处理重试连接
+ */
+const handleRetryConnection = async () => {
+  try {
+    learningStore.clearError();
+    // 如果有当前会话，重新切换到当前会话（会重新加载消息）
+    if (
+      learningStore.hasCurrentSession &&
+      learningStore.chatState.currentSession?.id
+    ) {
+      await learningStore.switchSession(
+        learningStore.chatState.currentSession.id,
+      );
+    } else {
+      // 否则重新加载会话列表
+      await learningStore.loadSessions();
+    }
+    ElMessage.success("连接已恢复");
+  } catch (error) {
+    console.error("重试连接失败:", error);
+    ElMessage.error("连接失败，请检查网络后重试");
+  }
+};
+
+/**
  * 滚动到底部
  */
 const scrollToBottom = () => {
@@ -639,8 +860,15 @@ const scrollToBottom = () => {
 /**
  * 处理滚动事件
  */
-const handleScroll = () => {
-  // TODO: 实现滚动加载更多历史消息
+const handleScroll = (event: Event) => {
+  const container = event.target as HTMLElement;
+  if (!container) return;
+
+  // 检查是否滚动到顶部，加载更多历史消息
+  if (container.scrollTop === 0 && learningStore.hasCurrentSession) {
+    // TODO: 实现滚动加载更多历史消息
+    console.log("滚动到顶部，可以加载更多历史消息");
+  }
 };
 
 // ========== 生命周期 ==========
@@ -668,6 +896,7 @@ onUnmounted(() => {
   .message-list {
     scrollbar-width: thin;
     scrollbar-color: #d1d5db #f9fafb;
+    scroll-behavior: smooth;
 
     &::-webkit-scrollbar {
       width: 6px;
@@ -675,11 +904,13 @@ onUnmounted(() => {
 
     &::-webkit-scrollbar-track {
       background: #f9fafb;
+      border-radius: 3px;
     }
 
     &::-webkit-scrollbar-thumb {
       background-color: #d1d5db;
       border-radius: 3px;
+      transition: background-color 0.2s ease;
 
       &:hover {
         background-color: #9ca3af;
@@ -688,21 +919,130 @@ onUnmounted(() => {
   }
 
   .quick-question-btn {
-    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 2px solid transparent;
+
+    &::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(59, 130, 246, 0.1),
+        transparent
+      );
+      transition: left 0.6s ease;
+    }
 
     &:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(59, 130, 246, 0.15);
+      border-color: rgba(59, 130, 246, 0.2);
+
+      &::before {
+        left: 100%;
+      }
+    }
+
+    &:active {
+      transform: translateY(0);
+      transition: transform 0.1s ease;
+    }
+  }
+
+  .ai-thinking {
+    animation: fadeInUp 0.4s ease-out;
+
+    .typing-dots {
+      .dot {
+        animation: typing 1.4s ease-in-out infinite;
+
+        &:nth-child(2) {
+          animation-delay: 0.2s;
+        }
+
+        &:nth-child(3) {
+          animation-delay: 0.4s;
+        }
+      }
+    }
+  }
+
+  .messages-container {
+    .message-item {
+      animation: slideInFromBottom 0.4s ease-out;
+      animation-fill-mode: both;
+
+      &:nth-child(n) {
+        animation-delay: calc(var(--index, 0) * 0.1s);
+      }
     }
   }
 
   .typing-indicator {
     color: #3b82f6;
+    font-weight: 500;
+
+    .el-icon {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
   }
 
   .error-tip {
+    animation: shakeX 0.6s ease-in-out;
+
     :deep(.el-alert) {
       border-radius: 8px;
+      border-left: 4px solid #ef4444;
+    }
+  }
+
+  .chat-header {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  }
+
+  .chat-input {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(226, 232, 240, 0.8);
+    box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.05);
+  }
+
+  .empty-state {
+    .el-icon {
+      animation: float 3s ease-in-out infinite;
+    }
+
+    h3,
+    p {
+      animation: fadeInUp 0.6s ease-out;
+      animation-delay: 0.2s;
+      animation-fill-mode: both;
+    }
+
+    .quick-questions {
+      animation: fadeInUp 0.6s ease-out;
+      animation-delay: 0.4s;
+      animation-fill-mode: both;
+    }
+  }
+
+  .input-tips {
+    span {
+      transition: all 0.2s ease;
+
+      &:hover {
+        color: #3b82f6;
+      }
     }
   }
 }
@@ -710,6 +1050,158 @@ onUnmounted(() => {
 .session-drawer {
   :deep(.el-drawer__body) {
     padding: 0;
+    background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+  }
+
+  :deep(.el-drawer__header) {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+  }
+}
+
+// 自定义动画
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInFromBottom {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes typing {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-10px);
+    opacity: 1;
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes shakeX {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-5px);
+  }
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(5px);
+  }
+}
+
+// 响应式设计优化
+@media (max-width: 768px) {
+  .chat-interface {
+    .chat-header {
+      padding: 1rem;
+
+      .flex {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+
+        &:first-child {
+          width: 100%;
+        }
+      }
+    }
+
+    .message-list {
+      padding: 1rem;
+    }
+
+    .chat-input {
+      padding: 1rem;
+    }
+
+    .quick-questions {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .input-tips {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+  }
+}
+
+// 暗色主题支持
+@media (prefers-color-scheme: dark) {
+  .chat-interface {
+    background-color: #0f172a;
+
+    .chat-header,
+    .chat-input {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border-color: rgba(71, 85, 105, 0.3);
+    }
+
+    .quick-question-btn {
+      background-color: #1e293b;
+      border-color: #334155;
+      color: #e2e8f0;
+
+      &:hover {
+        background-color: #334155;
+        border-color: rgba(59, 130, 246, 0.3);
+      }
+    }
+
+    .ai-thinking {
+      .bg-white {
+        background-color: #1e293b !important;
+        border-color: #334155 !important;
+      }
+    }
   }
 }
 </style>

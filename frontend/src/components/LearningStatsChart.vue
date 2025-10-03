@@ -205,13 +205,35 @@ const initStudyTimeChart = () => {
       trigger: "axis",
       axisPointer: {
         type: "cross",
+        label: {
+          backgroundColor: "#6a7985",
+        },
+      },
+      backgroundColor: "rgba(255, 255, 255, 0.95)",
+      borderColor: "#e5e7eb",
+      borderWidth: 1,
+      textStyle: {
+        color: "#374151",
+        fontSize: 12,
       },
       formatter: (params: any) => {
         const data = params[0];
+        const progressData = analyticsStore.learningProgress.find(
+          (p) => dayjs(p.date).format("MM-DD") === data.axisValue,
+        );
         return `
-          <div class="text-sm">
-            <div class="font-medium">${data.axisValue}</div>
-            <div class="text-blue-600">学习时长: ${data.value}分钟</div>
+          <div style="padding: 8px;">
+            <div style="font-weight: 600; margin-bottom: 4px;">${data.axisValue}</div>
+            <div style="color: #3b82f6; margin-bottom: 2px;">学习时长: ${data.value}分钟</div>
+            ${
+              progressData
+                ? `
+            <div style="color: #10b981; margin-bottom: 2px;">完成作业: ${progressData.homeworkCount}份</div>
+            <div style="color: #f59e0b; margin-bottom: 2px;">提问次数: ${progressData.questionCount}次</div>
+            <div style="color: #8b5cf6;">平均分: ${progressData.averageScore}分</div>
+            `
+                : ""
+            }
           </div>
         `;
       },
@@ -219,7 +241,8 @@ const initStudyTimeChart = () => {
     grid: {
       left: "3%",
       right: "4%",
-      bottom: "3%",
+      bottom: "8%",
+      top: "5%",
       containLabel: true,
     },
     xAxis: {
@@ -229,14 +252,34 @@ const initStudyTimeChart = () => {
         dayjs(p.date).format("MM-DD"),
       ),
       axisLabel: {
-        fontSize: 12,
+        fontSize: 11,
+        color: "#6b7280",
+        rotate: 45,
+      },
+      axisLine: {
+        lineStyle: {
+          color: "#e5e7eb",
+        },
+      },
+      splitLine: {
+        show: false,
       },
     },
     yAxis: {
       type: "value",
       axisLabel: {
         formatter: "{value}min",
-        fontSize: 12,
+        fontSize: 11,
+        color: "#6b7280",
+      },
+      axisLine: {
+        show: false,
+      },
+      splitLine: {
+        lineStyle: {
+          color: "#f3f4f6",
+          type: "dashed",
+        },
       },
     },
     series: [
@@ -244,8 +287,16 @@ const initStudyTimeChart = () => {
         name: "学习时长",
         type: "line",
         smooth: true,
+        symbol: "circle",
+        symbolSize: 6,
         data: analyticsStore.learningProgress.map((p) => p.studyTime),
         itemStyle: {
+          color: "#3b82f6",
+          borderWidth: 2,
+          borderColor: "#ffffff",
+        },
+        lineStyle: {
+          width: 3,
           color: "#3b82f6",
         },
         areaStyle: {
@@ -256,16 +307,27 @@ const initStudyTimeChart = () => {
             x2: 0,
             y2: 1,
             colorStops: [
-              { offset: 0, color: "rgba(59, 130, 246, 0.3)" },
-              { offset: 1, color: "rgba(59, 130, 246, 0.1)" },
+              { offset: 0, color: "rgba(59, 130, 246, 0.25)" },
+              { offset: 1, color: "rgba(59, 130, 246, 0.05)" },
             ],
+          },
+        },
+        emphasis: {
+          focus: "series",
+          itemStyle: {
+            borderWidth: 3,
+            shadowBlur: 10,
+            shadowColor: "rgba(59, 130, 246, 0.3)",
           },
         },
       },
     ],
+    animation: true,
+    animationDuration: 1000,
+    animationEasing: "cubicOut",
   };
 
-  studyTimeChartInstance.setOption(option);
+  studyTimeChartInstance.setOption(option as any);
 };
 
 // 初始化学科分布图
@@ -279,33 +341,94 @@ const initSubjectChart = () => {
     value: s.studyTime,
   }));
 
+  const colors = [
+    "#3b82f6",
+    "#10b981",
+    "#f59e0b",
+    "#ef4444",
+    "#8b5cf6",
+    "#06b6d4",
+    "#84cc16",
+  ];
+
   const option = {
     tooltip: {
       trigger: "item",
-      formatter: "{a} <br/>{b}: {c}min ({d}%)",
+      backgroundColor: "rgba(255, 255, 255, 0.95)",
+      borderColor: "#e5e7eb",
+      borderWidth: 1,
+      textStyle: {
+        color: "#374151",
+        fontSize: 12,
+      },
+      formatter: (params: any) => {
+        return `
+          <div style="padding: 8px;">
+            <div style="font-weight: 600; margin-bottom: 4px;">${params.name}</div>
+            <div style="color: ${params.color}; margin-bottom: 2px;">学习时长: ${params.value}分钟</div>
+            <div style="color: #6b7280;">占比: ${params.percent}%</div>
+          </div>
+        `;
+      },
+    },
+    legend: {
+      orient: "vertical",
+      left: "left",
+      top: "middle",
+      textStyle: {
+        fontSize: 11,
+        color: "#374151",
+      },
     },
     series: [
       {
         name: "学习时长",
         type: "pie",
-        radius: "50%",
-        data: data,
+        radius: ["40%", "65%"],
+        center: ["65%", "50%"],
+        data: data.map((item, index) => ({
+          ...item,
+          itemStyle: {
+            color: colors[index % colors.length],
+            borderRadius: 4,
+            borderColor: "#ffffff",
+            borderWidth: 2,
+          },
+        })),
         emphasis: {
           itemStyle: {
-            shadowBlur: 10,
+            shadowBlur: 15,
             shadowOffsetX: 0,
-            shadowColor: "rgba(0, 0, 0, 0.5)",
+            shadowColor: "rgba(0, 0, 0, 0.15)",
+            borderWidth: 3,
+          },
+          label: {
+            show: true,
+            fontSize: 14,
+            fontWeight: "bold",
           },
         },
         label: {
           show: true,
+          position: "outside",
           formatter: "{b}: {d}%",
+          fontSize: 11,
+          color: "#374151",
+        },
+        labelLine: {
+          show: true,
+          length: 15,
+          length2: 10,
+          smooth: true,
         },
       },
     ],
+    animation: true,
+    animationDuration: 1000,
+    animationEasing: "cubicOut",
   };
 
-  subjectChartInstance.setOption(option);
+  subjectChartInstance.setOption(option as any);
 };
 
 // 初始化效率分析图
@@ -314,44 +437,125 @@ const initEfficiencyChart = () => {
 
   efficiencyChartInstance = echarts.init(efficiencyChart.value);
 
+  // 计算一周效率数据
+  const weekData = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
+  const totalTimeData = [120, 90, 150, 80, 130, 110, 95];
+  const effectiveTimeData = [100, 75, 120, 65, 110, 90, 80];
+
   const option = {
     tooltip: {
       trigger: "axis",
+      axisPointer: {
+        type: "shadow",
+      },
+      backgroundColor: "rgba(255, 255, 255, 0.95)",
+      borderColor: "#e5e7eb",
+      borderWidth: 1,
+      textStyle: {
+        color: "#374151",
+        fontSize: 12,
+      },
+      formatter: (params: any) => {
+        const day = params[0].axisValue;
+        const total = params[0].value;
+        const effective = params[1].value;
+        const efficiency = Math.round((effective / total) * 100);
+        return `
+          <div style="padding: 8px;">
+            <div style="font-weight: 600; margin-bottom: 4px;">${day}</div>
+            <div style="color: #e5e7eb; margin-bottom: 2px;">总时长: ${total}分钟</div>
+            <div style="color: #3b82f6; margin-bottom: 2px;">有效时长: ${effective}分钟</div>
+            <div style="color: #10b981;">学习效率: ${efficiency}%</div>
+          </div>
+        `;
+      },
     },
     legend: {
-      data: ["学习时长", "有效时长"],
+      data: ["总时长", "有效时长"],
+      top: "top",
+      right: "right",
+      textStyle: {
+        fontSize: 11,
+        color: "#374151",
+      },
+    },
+    grid: {
+      left: "3%",
+      right: "4%",
+      bottom: "3%",
+      top: "15%",
+      containLabel: true,
     },
     xAxis: {
       type: "category",
-      data: ["周一", "周二", "周三", "周四", "周五", "周六", "周日"],
+      data: weekData,
+      axisLabel: {
+        fontSize: 11,
+        color: "#6b7280",
+      },
+      axisLine: {
+        lineStyle: {
+          color: "#e5e7eb",
+        },
+      },
     },
     yAxis: {
       type: "value",
       axisLabel: {
         formatter: "{value}min",
+        fontSize: 11,
+        color: "#6b7280",
+      },
+      axisLine: {
+        show: false,
+      },
+      splitLine: {
+        lineStyle: {
+          color: "#f3f4f6",
+          type: "dashed",
+        },
       },
     },
     series: [
       {
-        name: "学习时长",
+        name: "总时长",
         type: "bar",
-        data: [120, 90, 150, 80, 130, 110, 95],
+        data: totalTimeData,
         itemStyle: {
           color: "#e5e7eb",
+          borderRadius: [4, 4, 0, 0],
         },
+        emphasis: {
+          itemStyle: {
+            color: "#d1d5db",
+          },
+        },
+        barWidth: "60%",
       },
       {
         name: "有效时长",
         type: "bar",
-        data: [100, 75, 120, 65, 110, 90, 80],
+        data: effectiveTimeData,
         itemStyle: {
           color: "#3b82f6",
+          borderRadius: [4, 4, 0, 0],
         },
+        emphasis: {
+          itemStyle: {
+            color: "#2563eb",
+            shadowBlur: 10,
+            shadowColor: "rgba(59, 130, 246, 0.3)",
+          },
+        },
+        barWidth: "60%",
       },
     ],
+    animation: true,
+    animationDuration: 1000,
+    animationEasing: "cubicOut",
   };
 
-  efficiencyChartInstance.setOption(option);
+  efficiencyChartInstance.setOption(option as any);
 };
 
 // 初始化知识点掌握度图
@@ -372,31 +576,77 @@ const initKnowledgeChart = () => {
       axisPointer: {
         type: "shadow",
       },
+      backgroundColor: "rgba(255, 255, 255, 0.95)",
+      borderColor: "#e5e7eb",
+      borderWidth: 1,
+      textStyle: {
+        color: "#374151",
+        fontSize: 12,
+      },
+      formatter: (params: any) => {
+        const pointName = params[0].name;
+        const point = filteredPoints.find((p) => p.name === pointName);
+        if (!point) return "";
+        return `
+          <div style="padding: 8px;">
+            <div style="font-weight: 600; margin-bottom: 4px;">${point.name}</div>
+            <div style="color: ${params[0].color}; margin-bottom: 2px;">掌握度: ${point.masteryLevel}%</div>
+            <div style="color: #6b7280; margin-bottom: 2px;">练习次数: ${point.practiceCount}次</div>
+            <div style="color: #6b7280; margin-bottom: 2px;">正确率: ${point.correctRate}%</div>
+            <div style="color: #6b7280;">学科: ${point.subject}</div>
+          </div>
+        `;
+      },
     },
     grid: {
-      left: "3%",
+      left: "20%",
       right: "4%",
       bottom: "3%",
-      containLabel: true,
+      top: "5%",
+      containLabel: false,
     },
     xAxis: {
       type: "value",
       max: 100,
       axisLabel: {
         formatter: "{value}%",
+        fontSize: 11,
+        color: "#6b7280",
+      },
+      axisLine: {
+        show: false,
+      },
+      splitLine: {
+        lineStyle: {
+          color: "#f3f4f6",
+          type: "dashed",
+        },
       },
     },
     yAxis: {
       type: "category",
-      data: filteredPoints.map((p) => p.name),
+      data: filteredPoints.map((p) =>
+        p.name.length > 8 ? p.name.substring(0, 8) + "..." : p.name,
+      ),
       axisLabel: {
-        fontSize: 11,
+        fontSize: 10,
+        color: "#374151",
+        fontWeight: "500",
+      },
+      axisLine: {
+        lineStyle: {
+          color: "#e5e7eb",
+        },
+      },
+      axisTick: {
+        show: false,
       },
     },
     series: [
       {
         name: "掌握度",
         type: "bar",
+        barWidth: "60%",
         data: filteredPoints.map((p) => ({
           value: p.masteryLevel,
           itemStyle: {
@@ -406,13 +656,31 @@ const initKnowledgeChart = () => {
                 : p.masteryLevel >= 60
                   ? "#f59e0b"
                   : "#ef4444",
+            borderRadius: [0, 4, 4, 0],
           },
         })),
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 10,
+            shadowColor: "rgba(0, 0, 0, 0.15)",
+          },
+        },
+        label: {
+          show: true,
+          position: "right",
+          formatter: "{c}%",
+          fontSize: 10,
+          color: "#374151",
+          fontWeight: "500",
+        },
       },
     ],
+    animation: true,
+    animationDuration: 1000,
+    animationEasing: "cubicOut",
   };
 
-  knowledgeChartInstance.setOption(option);
+  knowledgeChartInstance.setOption(option as any);
 };
 
 // 初始化热力图
@@ -438,36 +706,86 @@ const initHeatmapChart = () => {
 
   const option = {
     tooltip: {
+      backgroundColor: "rgba(255, 255, 255, 0.95)",
+      borderColor: "#e5e7eb",
+      borderWidth: 1,
+      textStyle: {
+        color: "#374151",
+        fontSize: 12,
+      },
       formatter: (params: any) => {
-        return `${params.data[0]}<br/>学习强度: ${params.data[1]}`;
+        const date = dayjs(params.data[0]).format("YYYY年MM月DD日");
+        const intensity = params.data[1];
+        const level =
+          intensity === 0
+            ? "无学习"
+            : intensity === 1
+              ? "轻度学习"
+              : intensity === 2
+                ? "中度学习"
+                : "高强度学习";
+        return `
+          <div style="padding: 8px;">
+            <div style="font-weight: 600; margin-bottom: 4px;">${date}</div>
+            <div style="color: ${params.color}; margin-bottom: 2px;">学习强度: ${level}</div>
+            <div style="color: #6b7280;">强度值: ${intensity}</div>
+          </div>
+        `;
       },
     },
     visualMap: {
       min: 0,
       max: 3,
-      inRange: {
-        color: ["#ebedf0", "#c6e48b", "#7bc96f", "#239a3b", "#196127"],
+      type: "piecewise",
+      orient: "horizontal",
+      left: "center",
+      top: 5,
+      pieces: [
+        { min: 0, max: 0, color: "#ebedf0", label: "无学习" },
+        { min: 1, max: 1, color: "#c6e48b", label: "轻度" },
+        { min: 2, max: 2, color: "#7bc96f", label: "中度" },
+        { min: 3, max: 3, color: "#239a3b", label: "高强度" },
+      ],
+      textStyle: {
+        fontSize: 10,
+        color: "#374151",
       },
-      show: false,
+      itemWidth: 12,
+      itemHeight: 12,
+      itemGap: 8,
     },
     calendar: {
-      top: 20,
-      left: 20,
-      right: 20,
+      top: 60,
+      left: 30,
+      right: 30,
       bottom: 20,
       range: selectedYear.value,
+      cellSize: ["auto", 15],
+      splitLine: {
+        show: true,
+        lineStyle: {
+          color: "#f3f4f6",
+          width: 1,
+        },
+      },
       itemStyle: {
         borderWidth: 1,
-        borderColor: "#fff",
+        borderColor: "#ffffff",
+        borderRadius: 2,
       },
-      yearLabel: { show: false },
+      yearLabel: {
+        show: false,
+      },
       monthLabel: {
         nameMap: "cn",
         fontSize: 12,
+        color: "#374151",
+        fontWeight: "500",
       },
       dayLabel: {
         nameMap: "cn",
         fontSize: 10,
+        color: "#6b7280",
       },
     },
     series: [
@@ -475,11 +793,19 @@ const initHeatmapChart = () => {
         type: "heatmap",
         coordinateSystem: "calendar",
         data: generateHeatmapData(),
+        emphasis: {
+          itemStyle: {
+            borderColor: "#3b82f6",
+            borderWidth: 2,
+          },
+        },
       },
     ],
+    animation: true,
+    animationDuration: 800,
   };
 
-  heatmapChartInstance.setOption(option);
+  heatmapChartInstance.setOption(option as any);
 };
 
 // 响应式处理

@@ -94,13 +94,20 @@
 
       <!-- 学习统计图表区域 -->
       <div class="charts-section mb-8">
-        <h2 class="section-title">学习统计</h2>
-        <LearningStatsChart :auto-refresh="true" />
+        <h2 class="section-title">学习统计图表</h2>
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <div>
+            <LearningStatsChart :auto-refresh="true" />
+          </div>
+          <div>
+            <LearningProgressChart :default-metric="selectedTimeRange" />
+          </div>
+        </div>
       </div>
 
       <!-- 知识点掌握雷达图 -->
       <div class="knowledge-section mb-8">
-        <h2 class="section-title">知识掌握分析</h2>
+        <h2 class="section-title">知识掌握雷达分析</h2>
         <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
           <div class="xl:col-span-2">
             <KnowledgeRadarChart :show-comparison="true" />
@@ -160,11 +167,11 @@
 
       <!-- 学习建议和目标管理 -->
       <div class="recommendations-section mb-8">
-        <h2 class="section-title">学习建议与目标</h2>
+        <h2 class="section-title">智能学习建议</h2>
         <LearningRecommendations />
       </div>
 
-      <!-- 学习日历和成就 -->
+      <!-- 学习日历和成就系统 -->
       <div class="calendar-achievements-section">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <!-- 学习日历 -->
@@ -190,143 +197,49 @@
               </div>
             </div>
             <div ref="calendarContainer" class="calendar-container">
-              <!-- 这里可以集成一个日历组件显示学习活动 -->
-              <div class="calendar-placeholder text-center py-8 text-gray-500">
-                <el-icon :size="48" class="mb-2">
-                  <Calendar />
-                </el-icon>
-                <p>学习日历功能开发中</p>
+              <!-- 学习日历热力图 -->
+              <div class="calendar-heatmap">
+                <div class="text-center py-4">
+                  <div class="grid grid-cols-7 gap-1 mb-4">
+                    <div
+                      v-for="day in ['日', '一', '二', '三', '四', '五', '六']"
+                      :key="day"
+                      class="text-xs text-gray-500 text-center py-1"
+                    >
+                      {{ day }}
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-7 gap-1">
+                    <div
+                      v-for="(day, index) in generateCalendarDays()"
+                      :key="index"
+                      class="w-8 h-8 rounded text-xs flex items-center justify-center cursor-pointer transition-colors"
+                      :class="getCalendarDayClass(day)"
+                      @click="handleCalendarDayClick(day)"
+                    >
+                      {{ day.date }}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
           <!-- 成就系统 -->
-          <div
-            class="achievements-card bg-white rounded-lg p-6 shadow-sm border"
-          >
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">学习成就</h3>
-            <div class="achievements-grid grid grid-cols-3 gap-3">
-              <div
-                v-for="achievement in recentAchievements"
-                :key="achievement.id"
-                class="achievement-item"
-                :class="achievement.unlocked ? 'unlocked' : 'locked'"
-              >
-                <div class="achievement-icon mb-2">
-                  <el-icon :size="32">
-                    <Trophy v-if="achievement.unlocked" />
-                    <Lock v-else />
-                  </el-icon>
-                </div>
-                <div class="achievement-name text-xs text-center font-medium">
-                  {{ achievement.name }}
-                </div>
-                <div class="achievement-progress mt-1">
-                  <el-progress
-                    :percentage="Math.min(achievement.progress * 100, 100)"
-                    :stroke-width="4"
-                    :show-text="false"
-                    :color="achievement.unlocked ? '#10b981' : '#d1d5db'"
-                  />
-                </div>
-              </div>
-            </div>
-            <div class="achievements-footer mt-4 pt-4 border-t">
-              <div class="flex justify-between text-sm text-gray-600">
-                <span>已解锁: {{ unlockedCount }}/{{ totalAchievements }}</span>
-                <el-button
-                  type="text"
-                  size="small"
-                  @click="showAllAchievements"
-                >
-                  查看全部
-                </el-button>
-              </div>
-            </div>
+          <div class="achievements-section">
+            <AchievementDisplay
+              :max-display="6"
+              :show-categories="false"
+              :auto-refresh="true"
+            />
           </div>
         </div>
       </div>
 
-      <!-- 学习洞察 -->
+      <!-- 智能学习洞察 -->
       <div class="insights-section mt-8">
-        <h2 class="section-title">个人学习洞察</h2>
-        <div class="bg-white rounded-lg p-6 shadow-sm border">
-          <div v-if="personalInsights" class="insights-content">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div class="strengths">
-                <h4
-                  class="text-md font-semibold text-green-600 mb-3 flex items-center"
-                >
-                  <el-icon class="mr-2"><Check /></el-icon>
-                  您的优势
-                </h4>
-                <ul class="space-y-2">
-                  <li
-                    v-for="strength in personalInsights.strengths"
-                    :key="strength"
-                    class="text-sm text-gray-700 flex items-start"
-                  >
-                    <span
-                      class="w-2 h-2 bg-green-500 rounded-full mt-2 mr-3 flex-shrink-0"
-                    ></span>
-                    {{ strength }}
-                  </li>
-                </ul>
-              </div>
-              <div class="improvements">
-                <h4
-                  class="text-md font-semibold text-yellow-600 mb-3 flex items-center"
-                >
-                  <el-icon class="mr-2"><Warning /></el-icon>
-                  改进建议
-                </h4>
-                <ul class="space-y-2">
-                  <li
-                    v-for="suggestion in personalInsights.suggestions"
-                    :key="suggestion"
-                    class="text-sm text-gray-700 flex items-start"
-                  >
-                    <span
-                      class="w-2 h-2 bg-yellow-500 rounded-full mt-2 mr-3 flex-shrink-0"
-                    ></span>
-                    {{ suggestion }}
-                  </li>
-                </ul>
-              </div>
-            </div>
-            <div class="trends mt-6 pt-6 border-t">
-              <h4
-                class="text-md font-semibold text-blue-600 mb-3 flex items-center"
-              >
-                <el-icon class="mr-2"><TrendCharts /></el-icon>
-                学习趋势
-              </h4>
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div
-                  v-for="trend in personalInsights.trends"
-                  :key="trend"
-                  class="trend-item p-3 bg-blue-50 rounded-lg"
-                >
-                  <p class="text-sm text-gray-700">{{ trend }}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div v-else class="insights-placeholder text-center py-8">
-            <el-icon :size="48" class="text-gray-400 mb-2">
-              <DataAnalysis />
-            </el-icon>
-            <p class="text-gray-500">正在分析您的学习数据...</p>
-            <el-button
-              type="primary"
-              size="small"
-              @click="generateInsights"
-              class="mt-2"
-            >
-              生成洞察报告
-            </el-button>
-          </div>
-        </div>
+        <h2 class="section-title">智能学习洞察</h2>
+        <LearningInsights />
       </div>
     </div>
   </div>
@@ -338,22 +251,19 @@ import { useAnalyticsStore } from "../stores/analytics";
 import LearningStatsChart from "../components/LearningStatsChart.vue";
 import KnowledgeRadarChart from "../components/KnowledgeRadarChart.vue";
 import LearningRecommendations from "../components/LearningRecommendations.vue";
+import AchievementDisplay from "../components/AchievementDisplay.vue";
+import LearningProgressChart from "../components/LearningProgressChart.vue";
+import LearningInsights from "../components/LearningInsights.vue";
 import {
   Refresh,
   Download,
   ArrowDown,
   ArrowLeft,
   ArrowRight,
-  Calendar,
-  Trophy,
-  Lock,
-  Check,
-  Warning,
-  TrendCharts,
-  DataAnalysis,
   Clock,
   Document,
   Flag,
+  TrendCharts,
 } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
 import dayjs from "dayjs";
@@ -458,17 +368,55 @@ const knowledgeSummary = computed(() => {
 });
 
 // 最近成就
-const recentAchievements = computed(() => {
-  return analyticsStore.achievements.slice(0, 6);
-});
 
-const unlockedCount = computed(() => {
-  return analyticsStore.unlockedAchievements.length;
-});
+// 日历相关计算
+const generateCalendarDays = () => {
+  const start = currentMonth.value.startOf("month").startOf("week");
+  const end = currentMonth.value.endOf("month").endOf("week");
+  const days = [];
 
-const totalAchievements = computed(() => {
-  return analyticsStore.achievements.length;
-});
+  let current = start;
+  while (current.isBefore(end) || current.isSame(end, "day")) {
+    days.push({
+      date: current.date(),
+      fullDate: current.format("YYYY-MM-DD"),
+      isCurrentMonth: current.isSame(currentMonth.value, "month"),
+      studyTime: Math.floor(Math.random() * 120), // 模拟学习时长
+      isToday: current.isSame(dayjs(), "day"),
+    });
+    current = current.add(1, "day");
+  }
+
+  return days;
+};
+
+const getCalendarDayClass = (day: any) => {
+  const baseClass = "border border-gray-200 hover:border-blue-300";
+
+  if (!day.isCurrentMonth) {
+    return `${baseClass} text-gray-300 bg-gray-50`;
+  }
+
+  if (day.isToday) {
+    return `${baseClass} bg-blue-500 text-white font-bold`;
+  }
+
+  if (day.studyTime > 60) {
+    return `${baseClass} bg-green-100 text-green-800 font-medium`;
+  } else if (day.studyTime > 30) {
+    return `${baseClass} bg-yellow-100 text-yellow-800`;
+  } else if (day.studyTime > 0) {
+    return `${baseClass} bg-blue-50 text-blue-700`;
+  }
+
+  return `${baseClass} text-gray-700 hover:bg-gray-50`;
+};
+
+const handleCalendarDayClick = (day: any) => {
+  if (day.isCurrentMonth) {
+    ElMessage.info(`${day.fullDate} 学习时长: ${day.studyTime}分钟`);
+  }
+};
 
 // 方法
 const handleTimeRangeChange = () => {
@@ -509,19 +457,6 @@ const fetchCalendarData = () => {
     currentMonth.value.year(),
     currentMonth.value.month() + 1,
   );
-};
-
-const showAllAchievements = () => {
-  ElMessage.info("查看全部成就功能开发中");
-};
-
-const generateInsights = async () => {
-  try {
-    await analyticsStore.fetchPersonalInsights();
-    ElMessage.success("洞察报告生成成功");
-  } catch (error) {
-    ElMessage.error("生成失败，请稍后重试");
-  }
 };
 
 // 监听路由和数据变化
@@ -765,6 +700,37 @@ onMounted(async () => {
   animation-delay: 0.5s;
 }
 .analytics-content > div:nth-child(6) {
-  animation-delay: 0.6s;
+  animation-delay: 1s;
+}
+
+/* 日历样式优化 */
+.calendar-heatmap {
+  padding: 16px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.calendar-heatmap .grid {
+  max-width: 280px;
+  margin: 0 auto;
+}
+
+/* 成就展示区域样式 */
+.achievements-card {
+  background: linear-gradient(135deg, #fef3c7 0%, #fbbf24 10%, #f59e0b 100%);
+  color: #78350f;
+}
+
+.achievements-card .achievement-item.unlocked {
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid #fbbf24;
+  transform: scale(1.02);
+}
+
+.achievements-card .achievement-item.locked {
+  background: rgba(255, 255, 255, 0.5);
+  border: 2px solid #d1d5db;
+  opacity: 0.7;
 }
 </style>

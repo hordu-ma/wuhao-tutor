@@ -193,16 +193,32 @@ const radarData = computed(() => {
       name: "掌握度",
       value: points.map((point) => point.masteryLevel),
       areaStyle: {
-        color: "rgba(59, 130, 246, 0.2)",
+        color: {
+          type: "radial",
+          x: 0.5,
+          y: 0.5,
+          r: 0.5,
+          colorStops: [
+            { offset: 0, color: "rgba(59, 130, 246, 0.4)" },
+            { offset: 0.8, color: "rgba(59, 130, 246, 0.2)" },
+            { offset: 1, color: "rgba(59, 130, 246, 0.1)" },
+          ],
+        },
       },
       lineStyle: {
         color: "#3b82f6",
-        width: 2,
+        width: 3,
+        shadowColor: "rgba(59, 130, 246, 0.3)",
+        shadowBlur: 5,
       },
       symbol: "circle",
-      symbolSize: 6,
+      symbolSize: 8,
       itemStyle: {
         color: "#3b82f6",
+        borderColor: "#ffffff",
+        borderWidth: 2,
+        shadowColor: "rgba(59, 130, 246, 0.4)",
+        shadowBlur: 8,
       },
     },
   ];
@@ -213,16 +229,32 @@ const radarData = computed(() => {
       name: "正确率",
       value: points.map((point) => point.correctRate),
       areaStyle: {
-        color: "rgba(16, 185, 129, 0.2)",
+        color: {
+          type: "radial",
+          x: 0.5,
+          y: 0.5,
+          r: 0.5,
+          colorStops: [
+            { offset: 0, color: "rgba(16, 185, 129, 0.3)" },
+            { offset: 0.8, color: "rgba(16, 185, 129, 0.15)" },
+            { offset: 1, color: "rgba(16, 185, 129, 0.05)" },
+          ],
+        },
       },
       lineStyle: {
         color: "#10b981",
-        width: 2,
+        width: 3,
+        shadowColor: "rgba(16, 185, 129, 0.3)",
+        shadowBlur: 5,
       },
       symbol: "circle",
-      symbolSize: 6,
+      symbolSize: 8,
       itemStyle: {
         color: "#10b981",
+        borderColor: "#ffffff",
+        borderWidth: 2,
+        shadowColor: "rgba(16, 185, 129, 0.4)",
+        shadowBlur: 8,
       },
     });
   }
@@ -241,18 +273,25 @@ const initRadarChart = () => {
   const option = {
     tooltip: {
       trigger: "item",
+      backgroundColor: "rgba(255, 255, 255, 0.95)",
+      borderColor: "#e5e7eb",
+      borderWidth: 1,
+      textStyle: {
+        color: "#374151",
+        fontSize: 12,
+      },
       formatter: (params: any) => {
         const point = filteredKnowledgePoints.value[params.dataIndex];
         if (!point) return "";
 
         return `
-          <div class="text-sm">
-            <div class="font-medium mb-2">${point.name}</div>
-            <div>学科: ${point.subject}</div>
-            <div>掌握度: ${point.masteryLevel}%</div>
-            <div>正确率: ${point.correctRate}%</div>
-            <div>练习次数: ${point.practiceCount}次</div>
-            <div>难度: ${getDifficultyText(point.difficulty)}</div>
+          <div style="padding: 12px; max-width: 280px;">
+            <div style="font-weight: 600; margin-bottom: 8px; color: #111827;">${point.name}</div>
+            <div style="margin-bottom: 4px; color: #6b7280;">学科: <span style="color: #3b82f6;">${point.subject}</span></div>
+            <div style="margin-bottom: 4px; color: #6b7280;">掌握度: <span style="color: ${point.masteryLevel >= 80 ? "#10b981" : point.masteryLevel >= 60 ? "#f59e0b" : "#ef4444"}; font-weight: 500;">${point.masteryLevel}%</span></div>
+            <div style="margin-bottom: 4px; color: #6b7280;">正确率: <span style="color: ${point.correctRate >= 80 ? "#10b981" : point.correctRate >= 60 ? "#f59e0b" : "#ef4444"}; font-weight: 500;">${point.correctRate}%</span></div>
+            <div style="margin-bottom: 4px; color: #6b7280;">练习次数: <span style="color: #374151; font-weight: 500;">${point.practiceCount}次</span></div>
+            <div style="color: #6b7280;">难度: <span style="color: ${point.difficulty === "easy" ? "#10b981" : point.difficulty === "medium" ? "#f59e0b" : "#ef4444"}; font-weight: 500;">${getDifficultyText(point.difficulty)}</span></div>
           </div>
         `;
       },
@@ -262,35 +301,57 @@ const initRadarChart = () => {
       orient: "horizontal",
       top: "bottom",
       itemGap: 20,
+      textStyle: {
+        fontSize: 12,
+        color: "#374151",
+      },
+      icon: "circle",
     },
     radar: {
       indicator: indicator,
-      radius: "65%",
-      center: ["50%", "50%"],
+      radius: "70%",
+      center: ["50%", "45%"],
       startAngle: 90,
-      splitNumber: 4,
+      splitNumber: 5,
       shape: "polygon",
       splitArea: {
+        show: true,
         areaStyle: {
-          color: ["rgba(250, 250, 250, 0.1)", "rgba(200, 200, 200, 0.1)"],
+          color: [
+            "rgba(59, 130, 246, 0.05)",
+            "rgba(59, 130, 246, 0.02)",
+            "rgba(250, 250, 250, 0.05)",
+            "rgba(229, 231, 235, 0.08)",
+            "rgba(156, 163, 175, 0.1)",
+          ],
         },
       },
       splitLine: {
         lineStyle: {
-          color: "rgba(200, 200, 200, 0.5)",
+          color: "#e5e7eb",
           width: 1,
+          type: "solid",
         },
       },
       axisLine: {
         lineStyle: {
-          color: "rgba(200, 200, 200, 0.5)",
+          color: "#d1d5db",
+          width: 1,
         },
       },
       name: {
         textStyle: {
           fontSize: 11,
-          color: "#666",
+          color: "#374151",
+          fontWeight: "500",
         },
+        gap: 5,
+      },
+      axisLabel: {
+        show: true,
+        fontSize: 10,
+        color: "#9ca3af",
+        margin: 8,
       },
     },
     series: [
@@ -299,15 +360,29 @@ const initRadarChart = () => {
         type: "radar",
         data: seriesData,
         emphasis: {
+          focus: "series",
           areaStyle: {
-            color: "rgba(59, 130, 246, 0.4)",
+            color: "rgba(59, 130, 246, 0.3)",
+            opacity: 0.8,
+          },
+          lineStyle: {
+            width: 3,
+          },
+          itemStyle: {
+            shadowBlur: 10,
+            shadowColor: "rgba(59, 130, 246, 0.5)",
           },
         },
+        animation: true,
+        animationDuration: 1200,
+        animationEasing: "cubicOut",
       },
     ],
+    animationDurationUpdate: 800,
+    animationEasingUpdate: "cubicInOut",
   };
 
-  radarChartInstance.setOption(option);
+  radarChartInstance.setOption(option as any);
 
   // 添加点击事件
   radarChartInstance.on("click", (params) => {
