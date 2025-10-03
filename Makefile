@@ -274,3 +274,39 @@ profile: ## 性能分析
 	@echo "$(GREEN)运行性能分析...$(RESET)"
 	$(UV) run python -m cProfile -o profile.stats src/main.py
 	$(UV) run python -c "import pstats; p=pstats.Stats('profile.stats'); p.sort_stats('cumulative').print_stats(20)"
+
+# ========================================
+# Task 1.5 测试和调试
+# ========================================
+
+.PHONY: test-task-1-5
+test-task-1-5: ## 运行 Task 1.5 全面测试和调试
+	@echo "$(GREEN)运行 Task 1.5 全面测试和调试...$(RESET)"
+	$(UV) run python scripts/run_task_1_5_tests.py
+
+.PHONY: test-task-1-5-quick
+test-task-1-5-quick: ## 运行 Task 1.5 快速测试
+	@echo "$(GREEN)运行 Task 1.5 快速测试...$(RESET)"
+	$(UV) run python scripts/run_task_1_5_tests.py --quick
+
+.PHONY: test-api-integration
+test-api-integration: ## 运行 API 集成测试
+	@echo "$(GREEN)运行 API 集成测试...$(RESET)"
+	$(UV) run pytest tests/integration/test_miniprogram_api_integration.py -v
+
+.PHONY: test-miniprogram
+test-miniprogram: ## 测试小程序功能（需要在小程序环境下运行）
+	@echo "$(GREEN)小程序功能测试...$(RESET)"
+	@echo "请在微信开发者工具中运行以下测试："
+	@echo "1. 在小程序控制台执行: runTests()"
+	@echo "2. 查看测试结果和性能报告"
+
+.PHONY: test-performance
+test-performance: ## 运行性能测试
+	@echo "$(GREEN)运行性能测试...$(RESET)"
+	$(UV) run python scripts/run_task_1_5_tests.py --skip-backend-tests --skip-integration
+
+.PHONY: test-all-integration
+test-all-integration: install-dev db-init seed-data ## 运行完整集成测试（包括环境准备）
+	@echo "$(GREEN)运行完整集成测试...$(RESET)"
+	$(MAKE) test-task-1-5

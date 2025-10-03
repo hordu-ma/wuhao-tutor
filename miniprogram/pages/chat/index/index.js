@@ -4,7 +4,7 @@ const { routeGuard } = require('../../../utils/route-guard.js');
 const { authManager } = require('../../../utils/auth.js');
 const { permissionManager } = require('../../../utils/permission-manager.js');
 const { roleManager } = require('../../../utils/role-manager.js');
-const api = require('../../../utils/api.js');
+const api = require('../../../api/index.js');
 const utils = require('../../../utils/utils.js');
 
 Page({
@@ -510,39 +510,30 @@ Page({
       this.setData({ messageList });
       this.scrollToBottom();
 
-      // 调用AI API（带超时处理）
+      // 调用真实的学习问答 API
       try {
-        const apiCall = async () => {
-          return await api.chatWithAI({
-            question: question,
-            subject: this.data.currentSubject,
-            history: this.getRecentMessages(),
-            userId: this.data.userInfo?.id,
-            sessionId: this.data.sessionId,
-            stream: true, // 启用流式输出
-          });
-        };
+        const response = await api.learning.askQuestion({
+          question: question,
+          session_id: this.data.sessionId,
+          subject: this.data.currentSubject !== 'all' ? this.data.currentSubject : undefined,
+        });
 
-        const response = await this.handleNetworkTimeout(apiCall);
+        if (response.success && response.data) {
+          const answerData = response.data;
 
-        // 处理流式响应
-        if (response.stream) {
-          await this.handleStreamResponse(aiMessage.id, response);
+          // 模拟打字效果显示答案
+          await this.typeAIMessage(aiMessage.id, answerData.answer, answerData.question_id);
+
+          // 重置重试计数
+          this.setData({ retryCount: 0 });
         } else {
-          // 普通响应处理
-          await this.typeAIMessage(aiMessage.id, response.content);
+          throw new Error(response.error?.message || 'AI 回复失败');
         }
-
-        // 保存对话到历史记录
-        await this.saveChatHistory(question, response.content || response.finalContent);
-
-        // 重置重试计数
-        this.setData({ retryCount: 0 });
       } catch (apiError) {
         console.error('AI API调用失败:', apiError);
 
         // 根据错误类型处理
-        if (apiError.message === 'TIMEOUT') {
+        if (apiError.code === 'TIMEOUT_ERROR') {
           // 超时错误，提供重试选项
           this.showTimeoutError(aiMessage.id, question);
         } else if (apiError.code === 'NETWORK_ERROR') {
@@ -553,10 +544,8 @@ Page({
             throw apiError;
           }
         } else {
-          // 其他API错误，使用模拟回复
-          console.log('API异常，使用模拟回复');
-          const mockResponse = this.generateMockAIResponse(question);
-          await this.typeAIMessage(aiMessage.id, mockResponse);
+          // 其他API错误，显示错误信息
+          throw apiError;
         }
       }
     } catch (error) {
@@ -569,6 +558,7 @@ Page({
         content: this.getErrorMessage(error),
         timestamp: Date.now(),
         status: 'error',
+        retryQuestion: question,
       };
 
       const messageList = this.data.messageList;
@@ -1343,10 +1333,31 @@ Page({
   /**
    * 跳转到历史记录
    */
-  onGoToHistory() {
-    wx.navigateTo({
-      url: '/pages/chat/history/index',
-    });
+  async onGoToHistory() {
+    try {
+      // 加载会话列表
+      const response = await api.learning.getSessions({
+        page: 1,
+        size: 20,
+        status: 'active',
+      });
+
+      if (response.success && response.data) {
+        // 导航到历史记录页面
+        wx.navigateTo({
+          url: '/pages/chat/history/index',
+        });
+      } else {
+        wx.navigateTo({
+          url: '/pages/chat/history/index',
+        });
+      }
+    } catch (error) {
+      console.error('加载历史记录失败:', error);
+      wx.navigateTo({
+        url: '/pages/chat/history/index',
+      });
+    }
   },
 
   /**

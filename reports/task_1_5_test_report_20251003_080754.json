@@ -1,0 +1,160 @@
+{
+  "start_time": "2025-10-03T08:07:54.706769",
+  "end_time": "2025-10-03T08:07:54.988500",
+  "duration": 0.281731,
+  "backend_tests": null,
+  "frontend_tests": {
+    "simulation_tests": [
+      {
+        "name": "页面加载模拟",
+        "description": "模拟页面加载和基本元素检查",
+        "passed": true,
+        "duration": 150
+      },
+      {
+        "name": "用户交互模拟",
+        "description": "模拟用户点击、输入等交互操作",
+        "passed": true,
+        "duration": 200
+      },
+      {
+        "name": "API调用模拟",
+        "description": "模拟前端调用API的流程",
+        "passed": true,
+        "duration": 300
+      },
+      {
+        "name": "错误处理模拟",
+        "description": "模拟网络错误和异常情况的处理",
+        "passed": true,
+        "duration": 100
+      }
+    ],
+    "total_tests": 4,
+    "passed_tests": 4,
+    "failed_tests": 0,
+    "passed": true
+  },
+  "integration_tests": {
+    "results": {
+      "test_suite": "小程序API集成测试",
+      "start_time": "2025-10-03T08:07:54.922608",
+      "test_results": [
+        {
+          "test_name": "作业API集成测试",
+          "start_time": "2025-10-03T08:07:54.965848",
+          "tests": [
+            {
+              "name": "获取作业模板",
+              "status": "passed",
+              "note": "需要认证（预期行为）",
+              "data": {
+                "template_count": 0
+              }
+            },
+            {
+              "name": "获取模板详情",
+              "status": "passed",
+              "note": "需要认证（预期行为）",
+              "data": {
+                "template_id": "test-template-math-001"
+              }
+            },
+            {
+              "name": "提交文本作业",
+              "status": "failed",
+              "error": ""
+            }
+          ],
+          "passed": 2,
+          "failed": 1,
+          "end_time": "2025-10-03T08:07:54.981252"
+        },
+        {
+          "test_name": "学习问答API集成测试",
+          "start_time": "2025-10-03T08:07:54.981262",
+          "tests": [
+            {
+              "name": "创建学习会话",
+              "status": "passed",
+              "note": "需要认证（预期行为）",
+              "data": {
+                "session_id": "a1be58ee-917e-4b86-86ee-ef257c1f790a"
+              }
+            },
+            {
+              "name": "提问",
+              "status": "passed",
+              "note": "需要认证（预期行为）",
+              "data": {
+                "has_answer": false
+              }
+            },
+            {
+              "name": "搜索问题",
+              "status": "failed",
+              "error": ""
+            },
+            {
+              "name": "获取会话历史",
+              "status": "passed",
+              "note": "需要认证（预期行为）",
+              "data": {
+                "history_count": 0
+              }
+            }
+          ],
+          "passed": 3,
+          "failed": 1,
+          "end_time": "2025-10-03T08:07:54.985526"
+        },
+        {
+          "test_name": "数据分析API集成测试",
+          "start_time": "2025-10-03T08:07:54.985538",
+          "tests": [
+            {
+              "name": "获取分析概览",
+              "status": "failed",
+              "error": ""
+            },
+            {
+              "name": "获取详细分析",
+              "status": "failed",
+              "error": ""
+            },
+            {
+              "name": "获取学习进度",
+              "status": "failed",
+              "error": ""
+            },
+            {
+              "name": "创建学习目标",
+              "status": "failed",
+              "error": ""
+            }
+          ],
+          "passed": 0,
+          "failed": 4,
+          "end_time": "2025-10-03T08:07:54.988374"
+        }
+      ],
+      "summary": {
+        "total_test_suites": 3,
+        "passed_test_suites": 0,
+        "failed_test_suites": 3,
+        "total_tests": 11,
+        "passed_tests": 5,
+        "failed_tests": 6
+      },
+      "end_time": "2025-10-03T08:07:54.988440"
+    },
+    "passed": false
+  },
+  "summary": {
+    "total_tests": 15,
+    "passed_tests": 9,
+    "failed_tests": 6,
+    "pass_rate": "60.0%",
+    "overall_status": "failed"
+  }
+}
