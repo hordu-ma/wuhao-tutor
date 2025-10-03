@@ -156,6 +156,26 @@
       </div>
     </el-collapse-transition>
 
+    <!-- 快捷回复按钮 -->
+    <div
+      v-if="!questionText.trim() && imageFiles.length === 0"
+      class="quick-replies mb-3"
+    >
+      <div class="flex flex-wrap gap-2">
+        <el-button
+          v-for="reply in quickReplies"
+          :key="reply"
+          size="small"
+          type="info"
+          plain
+          @click="handleQuickReply(reply)"
+          class="quick-reply-btn"
+        >
+          {{ reply }}
+        </el-button>
+      </div>
+    </div>
+
     <!-- 图片上传区域 -->
     <div v-if="imageFiles.length > 0" class="image-preview mb-3">
       <div class="flex flex-wrap gap-3">
@@ -306,6 +326,7 @@ interface ImageFile {
 interface Props {
   disabled?: boolean;
   loading?: boolean;
+  placeholder?: string;
 }
 
 interface Emits {
@@ -317,6 +338,7 @@ interface Emits {
 const props = withDefaults(defineProps<Props>(), {
   disabled: false,
   loading: false,
+  placeholder: "输入您的问题，我会为您详细解答...",
 });
 
 const emit = defineEmits<Emits>();
@@ -342,10 +364,19 @@ const questionData = reactive<Partial<AskQuestionRequest>>({
 // 图片文件
 const imageFiles = ref<ImageFile[]>([]);
 
-// 选项数据
 const questionTypeOptions = QUESTION_TYPE_OPTIONS;
 const subjectOptions = LEARNING_SUBJECT_OPTIONS;
 const difficultyOptions = DIFFICULTY_OPTIONS;
+
+// 快捷回复选项
+const quickReplies = ref([
+  "继续解释",
+  "举个例子",
+  "换个思路",
+  "检查答案",
+  "相关知识点",
+  "练习题目",
+]);
 
 // ========== 计算属性 ==========
 
@@ -418,7 +449,22 @@ const handleBlur = () => {
 };
 
 const handleInput = () => {
-  // 自动调整高度在computed中处理
+  // 触发输入事件，可用于实时搜索等功能
+};
+
+const handleQuickReply = (reply: string) => {
+  questionText.value = reply;
+  nextTick(() => {
+    // 聚焦到输入框
+    const textarea = document.querySelector(
+      ".question-textarea .el-textarea__inner",
+    ) as HTMLTextAreaElement;
+    if (textarea) {
+      textarea.focus();
+      // 将光标移到末尾
+      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    }
+  });
 };
 
 const handleImageUpload = async (file: UploadRawFile): Promise<boolean> => {
@@ -630,6 +676,29 @@ defineExpose({
           margin-left: 8px;
           color: #d1d5db;
         }
+      }
+    }
+  }
+
+  .quick-replies {
+    .quick-reply-btn {
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+      color: #6b7280;
+      transition: all 0.2s ease;
+
+      &:hover {
+        border-color: #3b82f6;
+        background: #eff6ff;
+        color: #3b82f6;
+        transform: translateY(-1px);
+      }
+
+      &:active {
+        transform: translateY(0);
       }
     }
   }
