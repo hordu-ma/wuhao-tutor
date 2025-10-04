@@ -1,0 +1,201 @@
+/* components/image-cropper/index.wxss */
+
+.cropper-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+}
+
+.cropper-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  z-index: 1;
+}
+
+.cropper-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #000;
+}
+
+/* 标题栏 */
+.cropper-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 32rpx 32rpx 24rpx;
+  background-color: #1a1a1a;
+  border-bottom: 1rpx solid #333;
+}
+
+.header-title {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #fff;
+}
+
+.header-actions {
+  display: flex;
+  gap: 24rpx;
+}
+
+.action-btn {
+  padding: 12rpx 32rpx;
+  font-size: 28rpx;
+  border-radius: 8rpx;
+  border: none;
+  line-height: 1.4;
+}
+
+.cancel-btn {
+  background-color: #333;
+  color: #fff;
+}
+
+.confirm-btn {
+  background-color: #409eff;
+  color: #fff;
+}
+
+.confirm-btn:active {
+  background-color: #3a8ee6;
+}
+
+/* Canvas区域 */
+.canvas-wrapper {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background-color: #000;
+}
+
+.cropper-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+/* 工具栏 */
+.cropper-toolbar {
+  padding: 32rpx;
+  background-color: #1a1a1a;
+  border-top: 1rpx solid #333;
+}
+
+.toolbar-section {
+  margin-bottom: 32rpx;
+}
+
+.toolbar-section:last-child {
+  margin-bottom: 0;
+}
+
+.section-label {
+  display: block;
+  font-size: 28rpx;
+  color: #999;
+  margin-bottom: 16rpx;
+}
+
+/* 比例选项 */
+.ratio-options {
+  display: flex;
+  gap: 16rpx;
+}
+
+.ratio-item {
+  flex: 1;
+  padding: 16rpx 0;
+  text-align: center;
+  font-size: 28rpx;
+  color: #fff;
+  background-color: #333;
+  border-radius: 8rpx;
+  transition: all 0.3s;
+}
+
+.ratio-item.active {
+  background-color: #409eff;
+  color: #fff;
+  font-weight: 600;
+}
+
+/* 工具按钮 */
+.tools {
+  display: flex;
+  gap: 16rpx;
+  flex-wrap: wrap;
+}
+
+.tool-item {
+  flex: 1;
+  min-width: 120rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20rpx 16rpx;
+  background-color: #333;
+  border-radius: 8rpx;
+  transition: all 0.3s;
+}
+
+.tool-item:active {
+  background-color: #444;
+  transform: scale(0.98);
+}
+
+.tool-icon {
+  font-size: 48rpx;
+  color: #409eff;
+  margin-bottom: 8rpx;
+}
+
+.tool-label {
+  font-size: 24rpx;
+  color: #999;
+}
+
+/* 提示信息 */
+.cropper-tips {
+  padding: 24rpx 32rpx;
+  background-color: #2a2a2a;
+  border-top: 1rpx solid #333;
+}
+
+.tips-text {
+  font-size: 24rpx;
+  color: #999;
+  line-height: 1.6;
+}
+
+/* 响应式适配 */
+@media (max-width: 375px) {
+  .header-title {
+    font-size: 32rpx;
+  }
+
+  .action-btn {
+    padding: 10rpx 24rpx;
+    font-size: 26rpx;
+  }
+
+  .tool-item {
+    min-width: 100rpx;
+    padding: 16rpx 12rpx;
+  }
+
+  .tool-icon {
+    font-size: 40rpx;
+  }
+}
