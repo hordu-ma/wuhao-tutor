@@ -64,13 +64,13 @@ Page({
       quality: 0.8,
       maxSizeKB: 500,
       maxWidth: 1080,
-      maxHeight: 1920
+      maxHeight: 1920,
     },
 
     // 新增: OCR进度
     showOCRProgress: false,
     ocrImages: [], // {id, path, status, ocrText, confidence, error}
-    ocrProgress: 0
+    ocrProgress: 0,
   },
 
   /**
@@ -307,7 +307,7 @@ Page({
       count: remainCount,
       mediaType: ['image'],
       sourceType: ['album', 'camera'],
-      success: async (res) => {
+      success: async res => {
         await this.processSelectedImages(res.tempFiles);
       },
       fail: error => {
@@ -362,7 +362,7 @@ Page({
       count: 1,
       mediaType: ['image'],
       sourceType: ['camera'],
-      success: async (res) => {
+      success: async res => {
         await this.processSelectedImages(res.tempFiles);
       },
       fail: error => {
@@ -383,7 +383,7 @@ Page({
       this.setData({
         imageProcessing: true,
         showCompressionDialog: true,
-        compressionProgress: 0
+        compressionProgress: 0,
       });
 
       const { imageList } = this.data;
@@ -401,7 +401,7 @@ Page({
           const shouldCompressResult = await imageProcessor.shouldCompress(file.tempFilePath, {
             maxWidth: 1080,
             maxHeight: 1920,
-            maxSizeKB: 500
+            maxSizeKB: 500,
           });
 
           let finalPath = file.tempFilePath;
@@ -413,14 +413,16 @@ Page({
               maxWidth: 1080,
               maxHeight: 1920,
               quality: 0.8,
-              maxSizeKB: 500
+              maxSizeKB: 500,
             });
 
             if (compressResult.success) {
               finalPath = compressResult.compressedPath;
               finalSize = compressResult.compressedSize;
 
-              console.log(`图片压缩成功: ${imageProcessor.formatFileSize(compressResult.originalSize)} -> ${imageProcessor.formatFileSize(compressResult.compressedSize)} (压缩率: ${compressResult.compressionRatio}%)`);
+              console.log(
+                `图片压缩成功: ${imageProcessor.formatFileSize(compressResult.originalSize)} -> ${imageProcessor.formatFileSize(compressResult.compressedSize)} (压缩率: ${compressResult.compressionRatio}%)`,
+              );
             } else {
               console.warn('图片压缩失败，使用原图:', compressResult.error);
             }
@@ -441,7 +443,6 @@ Page({
             formattedSize: previewInfo.formattedSize,
             compressed: shouldCompressResult.shouldCompress,
           });
-
         } catch (error) {
           console.error('处理图片失败:', error);
           // 处理失败时使用原图
@@ -471,7 +472,6 @@ Page({
           icon: 'success',
         });
       }
-
     } catch (error) {
       console.error('批量处理图片失败:', error);
       this.setData({
@@ -646,7 +646,7 @@ Page({
       student_name: userInfo.name || userInfo.username || '学生',
       filePath: firstImage.url,
       additional_info: additionalInfo,
-      onProgress: (progress) => {
+      onProgress: progress => {
         console.log('上传进度:', progress);
         // 可以在这里更新UI显示上传进度
       },
@@ -658,17 +658,19 @@ Page({
       const filePaths = remainingImages.map(img => img.url);
 
       // 后台继续上传剩余图片（不阻塞返回）
-      homeworkAPI.submitHomeworkImages({
-        template_id: homework.id,
-        student_name: userInfo.name || userInfo.username || '学生',
-        filePaths,
-        additional_info: `附加图片 (${remainingImages.length}张)`,
-        onProgress: (progress) => {
-          console.log('批量上传进度:', progress);
-        },
-      }).catch(error => {
-        console.error('批量上传失败:', error);
-      });
+      homeworkAPI
+        .submitHomeworkImages({
+          template_id: homework.id,
+          student_name: userInfo.name || userInfo.username || '学生',
+          filePaths,
+          additional_info: `附加图片 (${remainingImages.length}张)`,
+          onProgress: progress => {
+            console.log('批量上传进度:', progress);
+          },
+        })
+        .catch(error => {
+          console.error('批量上传失败:', error);
+        });
     }
 
     return result;
@@ -716,7 +718,7 @@ Page({
         wx.showModal({
           title: '发现草稿',
           content: '是否加载上次保存的草稿？',
-          success: (res) => {
+          success: res => {
             if (res.confirm) {
               this.setData({
                 textContent: draftData.content || '',
@@ -766,7 +768,7 @@ Page({
         maxWidth: 800,
         maxHeight: 1200,
         quality: 0.6,
-        maxSizeKB: 300
+        maxSizeKB: 300,
       });
 
       if (compressResult.success) {
@@ -826,5 +828,460 @@ Page({
       content: info.join('\n'),
       showCancel: false,
     });
+  },
+
+  // ==================== 新增: 图片裁剪功能 ====================
+
+  /**
+   * 打开图片裁剪器
+   */
+  onOpenCropper(e) {
+    const { index } = e.currentTarget.dataset;
+    const { imageList } = this.data;
+
+    if (!imageList[index]) return;
+
+    this.setData({
+      showImageCropper: true,
+      currentCropImage: imageList[index].url,
+      currentCropIndex: index,
+    });
+  },
+
+  /**
+   * 裁剪确认
+   */
+  async onCropConfirm(e) {
+    const { croppedPath, width, height } = e.detail;
+    const { currentCropIndex, imageList } = this.data;
+
+    try {
+      // 更新图片列表
+      const newImageList = [...imageList];
+      newImageList[currentCropIndex] = {
+        ...newImageList[currentCropIndex],
+        url: croppedPath,
+        width,
+        height,
+        cropped: true,
+      };
+
+      this.setData({
+        imageList: newImageList,
+        showImageCropper: false,
+        currentCropImage: null,
+        currentCropIndex: -1,
+      });
+
+      wx.showToast({
+        title: '裁剪成功',
+        icon: 'success',
+      });
+    } catch (error) {
+      console.error('裁剪失败:', error);
+      wx.showToast({
+        title: '裁剪失败',
+        icon: 'error',
+      });
+    }
+  },
+
+  /**
+   * 取消裁剪
+   */
+  onCropCancel() {
+    this.setData({
+      showImageCropper: false,
+      currentCropImage: null,
+      currentCropIndex: -1,
+    });
+  },
+
+  // ==================== 新增: 质量选择功能 ====================
+
+  /**
+   * 打开质量选择器
+   */
+  onOpenQualitySelector() {
+    this.setData({ showQualitySelector: true });
+  },
+
+  /**
+   * 质量选择变更
+   */
+  onQualityChange(e) {
+    const { preset, config } = e.detail;
+
+    this.setData({
+      selectedQuality: preset,
+      qualityConfig: config,
+      showQualitySelector: false,
+    });
+
+    // 保存用户偏好
+    wx.setStorageSync('quality_preference', preset);
+
+    console.log('质量设置已更新:', config);
+  },
+
+  /**
+   * 关闭质量选择器
+   */
+  onQualitySelectorClose() {
+    this.setData({ showQualitySelector: false });
+  },
+
+  // ==================== 新增: OCR进度功能 ====================
+
+  /**
+   * 显示OCR进度
+   */
+  showOCRProgressDialog() {
+    this.setData({ showOCRProgress: true });
+  },
+
+  /**
+   * 关闭OCR进度
+   */
+  onOCRProgressClose() {
+    this.setData({ showOCRProgress: false });
+  },
+
+  /**
+   * OCR重试
+   */
+  async onOCRRetry(e) {
+    const { imageId } = e.detail;
+    console.log('重试OCR识别:', imageId);
+
+    // 查找对应的图片
+    const { ocrImages } = this.data;
+    const imageIndex = ocrImages.findIndex(img => img.id === imageId);
+
+    if (imageIndex === -1) return;
+
+    // 更新状态为处理中
+    const newOcrImages = [...ocrImages];
+    newOcrImages[imageIndex] = {
+      ...newOcrImages[imageIndex],
+      status: 'processing',
+      error: null,
+    };
+
+    this.setData({ ocrImages: newOcrImages });
+
+    try {
+      // 调用OCR识别接口
+      const result = await this.performOCR(ocrImages[imageIndex].path);
+
+      // 更新为成功状态
+      newOcrImages[imageIndex] = {
+        ...newOcrImages[imageIndex],
+        status: 'success',
+        ocrText: result.text,
+        confidence: result.confidence,
+      };
+    } catch (error) {
+      // 更新为失败状态
+      newOcrImages[imageIndex] = {
+        ...newOcrImages[imageIndex],
+        status: 'failed',
+        error: error.message || '识别失败',
+      };
+    }
+
+    this.setData({ ocrImages: newOcrImages });
+    this.updateOCRProgress();
+  },
+
+  /**
+   * 删除OCR图片
+   */
+  onOCRDelete(e) {
+    const { imageId } = e.detail;
+    const { ocrImages } = this.data;
+
+    const newOcrImages = ocrImages.filter(img => img.id !== imageId);
+    this.setData({ ocrImages: newOcrImages });
+    this.updateOCRProgress();
+  },
+
+  /**
+   * 编辑OCR文本
+   */
+  onOCREdit(e) {
+    const { imageId, text } = e.detail;
+
+    wx.showModal({
+      title: '编辑识别文本',
+      editable: true,
+      placeholderText: '请输入文本',
+      content: text,
+      success: res => {
+        if (res.confirm && res.content) {
+          const { ocrImages } = this.data;
+          const newOcrImages = ocrImages.map(img => {
+            if (img.id === imageId) {
+              return { ...img, ocrText: res.content };
+            }
+            return img;
+          });
+          this.setData({ ocrImages: newOcrImages });
+        }
+      },
+    });
+  },
+
+  /**
+   * 执行OCR识别
+   */
+  async performOCR(imagePath) {
+    // 模拟OCR识别过程
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        // 这里应该调用后端OCR API
+        // 暂时返回模拟数据
+        const random = Math.random();
+        if (random > 0.1) {
+          resolve({
+            text: '这是识别出的文本内容...',
+            confidence: 0.85 + Math.random() * 0.15,
+          });
+        } else {
+          reject(new Error('OCR服务暂时不可用'));
+        }
+      }, 2000);
+    });
+  },
+
+  /**
+   * 更新OCR进度
+   */
+  updateOCRProgress() {
+    const { ocrImages } = this.data;
+    if (ocrImages.length === 0) {
+      this.setData({ ocrProgress: 0 });
+      return;
+    }
+
+    const completedCount = ocrImages.filter(
+      img => img.status === 'success' || img.status === 'failed',
+    ).length;
+
+    const progress = Math.round((completedCount / ocrImages.length) * 100);
+    this.setData({ ocrProgress: progress });
+  },
+
+  /**
+   * 批量开始OCR识别
+   */
+  async startBatchOCR() {
+    const { imageList } = this.data;
+
+    if (imageList.length === 0) {
+      wx.showToast({
+        title: '请先选择图片',
+        icon: 'none',
+      });
+      return;
+    }
+
+    // 初始化OCR图片列表
+    const ocrImages = imageList.map((img, index) => ({
+      id: `ocr_${Date.now()}_${index}`,
+      path: img.url,
+      status: 'pending',
+      ocrText: '',
+      confidence: 0,
+      error: null,
+    }));
+
+    this.setData({
+      ocrImages,
+      showOCRProgress: true,
+      ocrProgress: 0,
+    });
+
+    // 逐个处理OCR
+    for (let i = 0; i < ocrImages.length; i++) {
+      const newOcrImages = [...this.data.ocrImages];
+      newOcrImages[i].status = 'processing';
+      this.setData({ ocrImages: newOcrImages });
+
+      try {
+        const result = await this.performOCR(ocrImages[i].path);
+        newOcrImages[i] = {
+          ...newOcrImages[i],
+          status: 'success',
+          ocrText: result.text,
+          confidence: result.confidence,
+        };
+      } catch (error) {
+        newOcrImages[i] = {
+          ...newOcrImages[i],
+          status: 'failed',
+          error: error.message || '识别失败',
+        };
+      }
+
+      this.setData({ ocrImages: newOcrImages });
+      this.updateOCRProgress();
+    }
+
+    wx.showToast({
+      title: 'OCR识别完成',
+      icon: 'success',
+    });
+  },
+
+  // ==================== 优化的图片选择流程 ====================
+
+  /**
+   * 选择图片（优化版，集成新功能）
+   */
+  async onChooseImageOptimized() {
+    const { imageList, maxImageCount } = this.data;
+    const remainCount = maxImageCount - imageList.length;
+
+    if (remainCount <= 0) {
+      wx.showToast({
+        title: `最多只能选择${maxImageCount}张图片`,
+        icon: 'none',
+      });
+      return;
+    }
+
+    // 先让用户选择质量
+    this.setData({ showQualitySelector: true });
+
+    // 等待质量选择完成后再选择图片
+    // 注意: 实际应用中可能需要使用Promise或回调来处理异步流程
+  },
+
+  /**
+   * 质量选择后继续选择图片
+   */
+  async continueChooseImage() {
+    const { imageList, maxImageCount, qualityConfig } = this.data;
+    const remainCount = maxImageCount - imageList.length;
+
+    wx.chooseMedia({
+      count: remainCount,
+      mediaType: ['image'],
+      sourceType: ['album', 'camera'],
+      success: async res => {
+        await this.processSelectedImagesOptimized(res.tempFiles);
+      },
+      fail: error => {
+        console.error('选择图片失败:', error);
+        wx.showToast({
+          title: '选择图片失败',
+          icon: 'error',
+        });
+      },
+    });
+  },
+
+  /**
+   * 处理选中的图片（优化版）
+   */
+  async processSelectedImagesOptimized(files) {
+    const { imageList, qualityConfig } = this.data;
+
+    try {
+      this.setData({
+        imageProcessing: true,
+        showCompressionDialog: true,
+        compressionProgress: 0,
+      });
+
+      const processedImages = [];
+      const totalFiles = files.length;
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+
+        // 更新进度
+        this.setData({
+          compressionProgress: Math.round(((i + 1) / totalFiles) * 100),
+        });
+
+        try {
+          // 使用选定的质量配置压缩
+          const compressResult = await imageProcessor.compressImage(
+            file.tempFilePath,
+            qualityConfig,
+          );
+
+          let finalPath = file.tempFilePath;
+          let finalSize = file.size;
+
+          if (compressResult.success) {
+            finalPath = compressResult.compressedPath;
+            finalSize = compressResult.compressedSize;
+          }
+
+          // 生成预览信息
+          const previewInfo = await imageProcessor.generatePreviewInfo(finalPath);
+
+          processedImages.push({
+            url: finalPath,
+            size: finalSize,
+            originalSize: file.size,
+            width: previewInfo.width,
+            height: previewInfo.height,
+            formattedSize: previewInfo.formattedSize,
+            compressed: compressResult.success,
+          });
+        } catch (error) {
+          console.error('处理图片失败:', error);
+          processedImages.push({
+            url: file.tempFilePath,
+            size: file.size,
+            originalSize: file.size,
+            compressed: false,
+            error: error.message,
+          });
+        }
+      }
+
+      // 更新图片列表
+      this.setData({
+        imageList: [...imageList, ...processedImages],
+        imageProcessing: false,
+        showCompressionDialog: false,
+        compressionProgress: 0,
+      });
+
+      wx.showToast({
+        title: `已添加${processedImages.length}张图片`,
+        icon: 'success',
+      });
+
+      // 询问是否立即进行OCR识别
+      if (processedImages.length > 0) {
+        wx.showModal({
+          title: '提示',
+          content: '是否立即进行OCR文字识别?',
+          success: res => {
+            if (res.confirm) {
+              this.startBatchOCR();
+            }
+          },
+        });
+      }
+    } catch (error) {
+      console.error('处理图片失败:', error);
+      this.setData({
+        imageProcessing: false,
+        showCompressionDialog: false,
+        compressionProgress: 0,
+      });
+
+      wx.showToast({
+        title: '处理失败',
+        icon: 'error',
+      });
+    }
   },
 });

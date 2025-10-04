@@ -410,32 +410,86 @@ class HomeworkService:
                 logger.error(f"OCR处理失败: {e}")
 
     async def _process_single_image_ocr(
-        self, session: AsyncSession, image: HomeworkImage
+        self, session: AsyncSession, image: HomeworkImage, retry_count: int = 0
     ):
         """
-        处理单张图片的OCR识别
+        处理单张图片的OCR识别（增强版，支持重试和质量评估）
 
         Args:
             session: 数据库会话
             image: 图片对象
+            retry_count: 当前重试次数
         """
+        max_retries = 3
+        min_confidence = 0.6  # 最低置信度阈值
+
         try:
             if not self.ocr_service.is_service_available():
                 logger.warning("OCR服务不可用，跳过OCR处理")
+                await self._mark_ocr_failed(session, image, "OCR服务不可用")
                 return
 
             # 确定图片路径
             file_path = str(image.file_path)
             if not os.path.exists(file_path):
                 logger.warning(f"图片文件不存在: {file_path}")
+                await self._mark_ocr_failed(session, image, "图片文件不存在")
+                return
+
+            # 新增: 图片质量预评估
+            quality_check = await self._assess_image_quality(file_path)
+            if not quality_check["is_valid"]:
+                logger.warning(
+                    f"图片质量不合格: {quality_check['reason']}, 路径: {file_path}"
+                )
+                await self._mark_ocr_failed(
+                    session, image, f"图片质量问题: {quality_check['reason']}"
+                )
                 return
 
             # 执行OCR识别
+            logger.info(
+                f"开始OCR识别 (尝试 {retry_count + 1}/{max_retries + 1}): {image.id}"
+            )
+
             ocr_result = await self.ocr_service.auto_recognize(
                 image_path=file_path,
                 ocr_type=OCRType.GENERAL,  # 可以根据作业类型选择
                 enhance=True,
             )
+
+            # 新增: 检查OCR结果质量
+            if ocr_result.confidence < min_confidence:
+                if retry_count < max_retries:
+                    # 低置信度，尝试使用不同的OCR类型重试
+                    logger.warning(
+                        f"OCR置信度过低 ({ocr_result.confidence:.2f}), "
+                        f"尝试手写体识别重试..."
+                    )
+                    await asyncio.sleep(1 * (retry_count + 1))  # 指数退避
+
+                    # 尝试手写体识别
+                    ocr_result_handwritten = await self.ocr_service.auto_recognize(
+                        image_path=file_path,
+                        ocr_type=OCRType.HANDWRITTEN,
+                        enhance=True,
+                    )
+
+                    # 选择置信度更高的结果
+                    if ocr_result_handwritten.confidence > ocr_result.confidence:
+                        ocr_result = ocr_result_handwritten
+                        logger.info(f"手写体识别效果更好，使用手写体结果")
+
+            # 检查是否需要重试
+            if ocr_result.confidence < min_confidence and retry_count < max_retries:
+                logger.warning(
+                    f"OCR置信度仍然过低 ({ocr_result.confidence:.2f}), "
+                    f"将在 {2 ** retry_count} 秒后重试..."
+                )
+                await asyncio.sleep(2**retry_count)  # 指数退避: 1s, 2s, 4s
+                return await self._process_single_image_ocr(
+                    session, image, retry_count + 1
+                )
 
             # 更新图片记录
             stmt = (
@@ -447,6 +501,8 @@ class HomeworkService:
                     ocr_data=ocr_result.to_dict(),
                     ocr_processed_at=datetime.now(),
                     is_processed=True,
+                    retry_count=retry_count,
+                    quality_score=quality_check.get("score", 0),
                 )
             )
 
@@ -454,24 +510,163 @@ class HomeworkService:
             await session.commit()
 
             logger.info(
-                f"图片OCR处理完成: {image.id}, 置信度: {ocr_result.confidence:.2f}"
+                f"图片OCR处理完成: {image.id}, "
+                f"置信度: {ocr_result.confidence:.2f}, "
+                f"重试次数: {retry_count}"
             )
 
         except Exception as e:
-            logger.error(f"图片OCR处理失败: {e}")
+            logger.error(f"图片OCR处理失败: {e}, 重试次数: {retry_count}")
 
-            # 记录错误信息
-            stmt = (
-                update(HomeworkImage)
-                .where(HomeworkImage.id == image.id)
-                .values(
-                    processing_error=str(e),
-                    is_processed=True,  # 标记为已处理，避免重复处理
+            # 是否应该重试
+            if retry_count < max_retries:
+                logger.info(f"将在 {2 ** retry_count} 秒后重试...")
+                await asyncio.sleep(2**retry_count)
+                return await self._process_single_image_ocr(
+                    session, image, retry_count + 1
                 )
+
+            # 达到最大重试次数，记录错误
+            await self._mark_ocr_failed(session, image, str(e), retry_count)
+
+    async def _assess_image_quality(self, file_path: str) -> Dict[str, Any]:
+        """
+        评估图片质量
+
+        Args:
+            file_path: 图片文件路径
+
+        Returns:
+            质量评估结果，包含 is_valid, reason, score
+        """
+        try:
+            import cv2
+            import numpy as np
+
+            # 读取图片
+            img = cv2.imread(file_path)
+            if img is None:
+                return {"is_valid": False, "reason": "无法读取图片", "score": 0}
+
+            # 检查图片尺寸
+            height, width = img.shape[:2]
+            if width < 100 or height < 100:
+                return {
+                    "is_valid": False,
+                    "reason": f"图片尺寸过小 ({width}x{height})",
+                    "score": 0,
+                }
+
+            # 检查图片是否过大（可能导致OCR失败）
+            if width > 4096 or height > 4096:
+                return {
+                    "is_valid": False,
+                    "reason": f"图片尺寸过大 ({width}x{height})",
+                    "score": 0,
+                }
+
+            # 转换为灰度图
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+            # 计算清晰度（Laplacian方差）
+            laplacian_var = cv2.Laplacian(gray, cv2.CV_64F).var()
+
+            # 清晰度阈值
+            blur_threshold = 100
+            if laplacian_var < blur_threshold:
+                return {
+                    "is_valid": False,
+                    "reason": f"图片模糊 (清晰度: {laplacian_var:.2f})",
+                    "score": min(laplacian_var / blur_threshold * 100, 100),
+                }
+
+            # 计算亮度
+            brightness = np.mean(gray)
+
+            # 亮度检查（太暗或太亮）
+            if brightness < 50:
+                return {
+                    "is_valid": False,
+                    "reason": f"图片过暗 (亮度: {brightness:.1f})",
+                    "score": 50,
+                }
+            elif brightness > 205:
+                return {
+                    "is_valid": False,
+                    "reason": f"图片过亮 (亮度: {brightness:.1f})",
+                    "score": 50,
+                }
+
+            # 计算对比度
+            contrast = gray.std()
+            if contrast < 20:
+                return {
+                    "is_valid": False,
+                    "reason": f"对比度过低 ({contrast:.1f})",
+                    "score": 60,
+                }
+
+            # 质量分数计算（0-100）
+            sharpness_score = min(laplacian_var / 500 * 100, 100)
+            brightness_score = 100 - abs(brightness - 127.5) / 127.5 * 100
+            contrast_score = min(contrast / 80 * 100, 100)
+
+            overall_score = (
+                sharpness_score * 0.5 + brightness_score * 0.3 + contrast_score * 0.2
             )
 
-            await session.execute(stmt)
-            await session.commit()
+            return {
+                "is_valid": True,
+                "reason": "图片质量良好",
+                "score": round(overall_score, 2),
+                "details": {
+                    "sharpness": round(laplacian_var, 2),
+                    "brightness": round(brightness, 2),
+                    "contrast": round(contrast, 2),
+                    "size": f"{width}x{height}",
+                },
+            }
+
+        except Exception as e:
+            logger.error(f"图片质量评估失败: {e}")
+            # 评估失败时，默认允许继续处理
+            return {"is_valid": True, "reason": "质量评估失败，允许继续", "score": 50}
+
+    async def _mark_ocr_failed(
+        self,
+        session: AsyncSession,
+        image: HomeworkImage,
+        error_message: str,
+        retry_count: int = 0,
+    ):
+        """
+        标记OCR处理失败
+
+        Args:
+            session: 数据库会话
+            image: 图片对象
+            error_message: 错误信息
+            retry_count: 重试次数
+        """
+        stmt = (
+            update(HomeworkImage)
+            .where(HomeworkImage.id == image.id)
+            .values(
+                processing_error=error_message,
+                is_processed=True,  # 标记为已处理，避免无限重试
+                retry_count=retry_count,
+                ocr_processed_at=datetime.now(),
+            )
+        )
+
+        await session.execute(stmt)
+        await session.commit()
+
+        logger.error(
+            f"OCR处理最终失败: {image.id}, "
+            f"错误: {error_message}, "
+            f"重试次数: {retry_count}"
+        )
 
     async def _trigger_ai_review(self, session: AsyncSession, submission_id: uuid.UUID):
         """
