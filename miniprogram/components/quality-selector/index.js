@@ -8,13 +8,13 @@ Component({
     // 当前选中的质量预设
     value: {
       type: String,
-      value: 'standard' // high, standard, low
+      value: 'standard', // high, standard, low
     },
     // 是否显示选择器
     show: {
       type: Boolean,
-      value: false
-    }
+      value: false,
+    },
   },
 
   /**
@@ -33,7 +33,7 @@ Component({
         description: '最佳质量,适合保存重要资料',
         icon: '📷',
         estimatedSize: '约500-1000KB',
-        color: '#67c23a'
+        color: '#67c23a',
       },
       {
         id: 'standard',
@@ -46,7 +46,7 @@ Component({
         icon: '📸',
         estimatedSize: '约200-500KB',
         color: '#409eff',
-        recommended: true
+        recommended: true,
       },
       {
         id: 'low',
@@ -58,9 +58,9 @@ Component({
         description: '适合网络较慢时使用',
         icon: '📱',
         estimatedSize: '约50-200KB',
-        color: '#e6a23c'
-      }
-    ]
+        color: '#e6a23c',
+      },
+    ],
   },
 
   /**
@@ -73,7 +73,7 @@ Component({
     onSelectPreset(e) {
       const { preset } = e.currentTarget.dataset;
       const selectedPreset = this.data.presets.find(p => p.id === preset);
-      
+
       if (selectedPreset) {
         // 触发选择事件
         this.triggerEvent('change', {
@@ -82,8 +82,8 @@ Component({
             quality: selectedPreset.quality,
             maxSizeKB: selectedPreset.maxSizeKB,
             maxWidth: selectedPreset.maxWidth,
-            maxHeight: selectedPreset.maxHeight
-          }
+            maxHeight: selectedPreset.maxHeight,
+          },
         });
 
         // 保存用户偏好
@@ -93,7 +93,7 @@ Component({
         wx.showToast({
           title: `已选择${selectedPreset.name}`,
           icon: 'success',
-          duration: 1500
+          duration: 1500,
         });
       }
     },
@@ -133,7 +133,7 @@ Component({
      */
     stopPropagation() {
       // 阻止点击内容区域时关闭弹窗
-    }
+    },
   },
 
   lifetimes: {
@@ -143,6 +143,6 @@ Component({
       if (preference !== this.data.value) {
         this.setData({ value: preference });
       }
-    }
-  }
+    },
+  },
 });

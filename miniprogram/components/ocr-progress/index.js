@@ -8,19 +8,19 @@ Component({
     // 是否显示
     show: {
       type: Boolean,
-      value: false
+      value: false,
     },
     // 图片列表及OCR状态
     images: {
       type: Array,
-      value: []
+      value: [],
       // 每个图片对象: { id, path, status: 'pending'|'processing'|'success'|'failed', ocrText, confidence, error }
     },
     // 总体进度百分比
     progress: {
       type: Number,
-      value: 0
-    }
+      value: 0,
+    },
   },
 
   /**
@@ -34,22 +34,22 @@ Component({
       pending: '⏳',
       processing: '🔄',
       success: '✓',
-      failed: '✕'
+      failed: '✕',
     },
     // 状态文本映射
     statusTexts: {
       pending: '等待识别',
       processing: '识别中...',
       success: '识别完成',
-      failed: '识别失败'
+      failed: '识别失败',
     },
     // 状态颜色映射
     statusColors: {
       pending: '#909399',
       processing: '#409eff',
       success: '#67c23a',
-      failed: '#f56c6c'
-    }
+      failed: '#f56c6c',
+    },
   },
 
   /**
@@ -78,15 +78,15 @@ Component({
      */
     onRetry(e) {
       const { imageId } = e.currentTarget.dataset;
-      
+
       wx.showModal({
         title: '重试识别',
         content: '确定要重新识别这张图片吗?',
-        success: (res) => {
+        success: res => {
           if (res.confirm) {
             this.triggerEvent('retry', { imageId });
           }
-        }
+        },
       });
     },
 
@@ -95,15 +95,15 @@ Component({
      */
     onDelete(e) {
       const { imageId } = e.currentTarget.dataset;
-      
+
       wx.showModal({
         title: '删除图片',
         content: '确定要删除这张图片吗?',
-        success: (res) => {
+        success: res => {
           if (res.confirm) {
             this.triggerEvent('delete', { imageId });
           }
-        }
+        },
       });
     },
 
@@ -112,13 +112,11 @@ Component({
      */
     onPreview(e) {
       const { imagePath, index } = e.currentTarget.dataset;
-      const urls = this.data.images
-        .filter(img => img.path)
-        .map(img => img.path);
+      const urls = this.data.images.filter(img => img.path).map(img => img.path);
 
       wx.previewImage({
         current: imagePath,
-        urls: urls
+        urls: urls,
       });
     },
 
@@ -127,15 +125,15 @@ Component({
      */
     onCopyText(e) {
       const { text } = e.currentTarget.dataset;
-      
+
       wx.setClipboardData({
         data: text,
         success: () => {
           wx.showToast({
             title: '已复制',
-            icon: 'success'
+            icon: 'success',
           });
-        }
+        },
       });
     },
 
@@ -144,10 +142,10 @@ Component({
      */
     onEditText(e) {
       const { imageId, text } = e.currentTarget.dataset;
-      
+
       this.triggerEvent('edit', {
         imageId,
-        text
+        text,
       });
     },
 
@@ -198,7 +196,7 @@ Component({
         success: images.filter(img => img.status === 'success').length,
         failed: images.filter(img => img.status === 'failed').length,
         processing: images.filter(img => img.status === 'processing').length,
-        pending: images.filter(img => img.status === 'pending').length
+        pending: images.filter(img => img.status === 'pending').length,
       };
     },
 
@@ -207,20 +205,18 @@ Component({
      */
     stopPropagation() {
       // 阻止点击内容区域时关闭弹窗
-    }
+    },
   },
 
   observers: {
-    'images': function(images) {
+    images: function (images) {
       // 自动展开失败的图片
-      const failedIds = images
-        .filter(img => img.status === 'failed')
-        .map(img => img.id);
-      
+      const failedIds = images.filter(img => img.status === 'failed').map(img => img.id);
+
       if (failedIds.length > 0) {
         const expandedIds = [...new Set([...this.data.expandedIds, ...failedIds])];
         this.setData({ expandedIds });
       }
-    }
-  }
+    },
+  },
 });
