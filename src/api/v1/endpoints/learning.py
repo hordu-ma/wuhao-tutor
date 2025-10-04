@@ -201,11 +201,9 @@ async def get_session_list(
         )
 
 
-@router.get(
-    "/sessions/{session_id}", response_model=SessionResponse, summary="获取会话详情"
-)
+@router.get("/sessions/{id}", response_model=SessionResponse, summary="获取会话详情")
 async def get_session_detail(
-    session_id: str,
+    id: str,
     current_user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
@@ -213,7 +211,7 @@ async def get_session_detail(
     try:
         learning_service = get_learning_service(db)
 
-        session = await learning_service.session_repo.get_by_id(session_id)
+        session = await learning_service.session_repo.get_by_id(id)
         if not session:
             raise HTTPException(
                 status_code=http_status.HTTP_404_NOT_FOUND, detail="会话不存在"
@@ -232,11 +230,9 @@ async def get_session_detail(
         )
 
 
-@router.put(
-    "/sessions/{session_id}", response_model=SessionResponse, summary="更新会话"
-)
+@router.put("/sessions/{id}", response_model=SessionResponse, summary="更新会话")
 async def update_session(
-    session_id: str,
+    id: str,
     request: UpdateSessionRequest,
     current_user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
@@ -252,7 +248,7 @@ async def update_session(
         learning_service = get_learning_service(db)
 
         # 验证会话归属
-        session = await learning_service.session_repo.get_by_id(session_id)
+        session = await learning_service.session_repo.get_by_id(id)
         if not session:
             raise HTTPException(
                 status_code=http_status.HTTP_404_NOT_FOUND, detail="会话不存在"
@@ -266,8 +262,8 @@ async def update_session(
         # 更新会话
         update_data = request.model_dump(exclude_unset=True)
         if update_data:
-            await learning_service.session_repo.update(session_id, update_data)
-            session = await learning_service.session_repo.get_by_id(session_id)
+            await learning_service.session_repo.update(id, update_data)
+            session = await learning_service.session_repo.get_by_id(id)
 
         return SessionResponse.model_validate(session)
 
@@ -277,11 +273,9 @@ async def update_session(
         )
 
 
-@router.delete(
-    "/sessions/{session_id}", response_model=SuccessResponse, summary="删除会话"
-)
+@router.delete("/sessions/{id}", response_model=SuccessResponse, summary="删除会话")
 async def delete_session(
-    session_id: str,
+    id: str,
     current_user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
@@ -290,7 +284,7 @@ async def delete_session(
         learning_service = get_learning_service(db)
 
         # 验证会话归属
-        session = await learning_service.session_repo.get_by_id(session_id)
+        session = await learning_service.session_repo.get_by_id(id)
         if not session:
             raise HTTPException(
                 status_code=http_status.HTTP_404_NOT_FOUND, detail="会话不存在"
@@ -302,9 +296,161 @@ async def delete_session(
             )
 
         # 标记为已删除
-        await learning_service.session_repo.update(session_id, {"status": "archived"})
+        await learning_service.session_repo.update(id, {"status": "archived"})
 
         return SuccessResponse(message="会话删除成功")
+
+    except NotFoundError:
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND, detail="会话不存在"
+        )
+
+
+@router.patch("/sessions/{id}", response_model=SessionResponse, summary="部分更新会话")
+async def patch_session(
+    id: str,
+    request: UpdateSessionRequest,
+    current_user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    部分更新会话信息 (PATCH)
+
+    - **title**: 会话标题
+    - **status**: 会话状态
+    - **context_enabled**: 是否启用上下文
+    """
+    try:
+        learning_service = get_learning_service(db)
+
+        # 验证会话归属
+        session = await learning_service.session_repo.get_by_id(id)
+        if not session:
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND, detail="会话不存在"
+            )
+
+        if str(session.user_id) != str(current_user_id):
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND, detail="无权限访问该会话"
+            )
+
+        # 更新会话
+        update_data = request.model_dump(exclude_unset=True)
+        if update_data:
+            await learning_service.session_repo.update(id, update_data)
+            session = await learning_service.session_repo.get_by_id(id)
+
+        return SessionResponse.model_validate(session)
+
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)
+        )
+
+
+@router.patch(
+    "/sessions/{id}/archive", response_model=SuccessResponse, summary="归档会话"
+)
+async def archive_session(
+    id: str,
+    current_user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """归档指定会话"""
+    try:
+        learning_service = get_learning_service(db)
+
+        # 验证会话归属
+        session = await learning_service.session_repo.get_by_id(id)
+        if not session:
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND, detail="会话不存在"
+            )
+
+        if str(session.user_id) != str(current_user_id):
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND, detail="无权限访问该会话"
+            )
+
+        # 更新状态为归档
+        await learning_service.session_repo.update(id, {"status": "archived"})
+
+        return SuccessResponse(message="会话归档成功")
+
+    except NotFoundError:
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND, detail="会话不存在"
+        )
+
+
+@router.patch(
+    "/sessions/{id}/activate", response_model=SuccessResponse, summary="激活会话"
+)
+async def activate_session(
+    id: str,
+    current_user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """激活指定会话（从归档状态恢复）"""
+    try:
+        learning_service = get_learning_service(db)
+
+        # 验证会话归属
+        session = await learning_service.session_repo.get_by_id(id)
+        if not session:
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND, detail="会话不存在"
+            )
+
+        if str(session.user_id) != str(current_user_id):
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND, detail="无权限访问该会话"
+            )
+
+        # 更新状态为活跃
+        await learning_service.session_repo.update(id, {"status": "active"})
+
+        return SuccessResponse(message="会话激活成功")
+
+    except NotFoundError:
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND, detail="会话不存在"
+        )
+
+
+@router.get(
+    "/sessions/{id}/questions",
+    response_model=QuestionHistoryResponse,
+    summary="获取会话的问题列表",
+)
+async def get_session_questions(
+    id: str,
+    page: int = Query(1, ge=1, description="页码"),
+    size: int = Query(20, ge=1, le=100, description="每页大小"),
+    current_user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取指定会话的所有问题"""
+    try:
+        learning_service = get_learning_service(db)
+
+        # 验证会话归属
+        session = await learning_service.session_repo.get_by_id(id)
+        if not session:
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND, detail="会话不存在"
+            )
+
+        if str(session.user_id) != str(current_user_id):
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND, detail="无权限访问该会话"
+            )
+
+        query = QuestionHistoryQuery(session_id=id, page=page, size=size)
+        result = await learning_service.get_question_history(current_user_id, query)
+
+        return QuestionHistoryResponse(**result)
 
     except NotFoundError:
         raise HTTPException(
@@ -358,9 +504,116 @@ async def get_question_history(
         )
 
 
-@router.get("/sessions/{session_id}/history", summary="获取会话问答历史")
+@router.get(
+    "/questions/history",
+    response_model=QuestionHistoryResponse,
+    summary="获取问题历史（别名）",
+)
+async def get_questions_history_alias(
+    subject_filter: Optional[str] = Query(None, description="学科筛选"),
+    question_type_filter: Optional[str] = Query(None, description="问题类型筛选"),
+    start_date: Optional[str] = Query(None, description="开始日期"),
+    end_date: Optional[str] = Query(None, description="结束日期"),
+    page: int = Query(1, ge=1, description="页码"),
+    size: int = Query(20, ge=1, le=100, description="每页大小"),
+    current_user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    获取用户的问答历史记录（与 GET /questions 功能相同）
+    此端点是为了兼容前端调用
+    """
+    try:
+        learning_service = get_learning_service(db)
+
+        from datetime import datetime
+
+        query = QuestionHistoryQuery(
+            subject=subject_filter,
+            question_type=question_type_filter,
+            start_date=datetime.fromisoformat(start_date) if start_date else None,
+            end_date=datetime.fromisoformat(end_date) if end_date else None,
+            page=page,
+            size=size,
+        )
+
+        result = await learning_service.get_question_history(current_user_id, query)
+
+        return QuestionHistoryResponse(**result)
+
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"日期格式错误: {str(e)}",
+        )
+
+
+@router.get(
+    "/questions/search", response_model=QuestionHistoryResponse, summary="搜索问题"
+)
+async def search_questions(
+    keyword: Optional[str] = Query(None, description="搜索关键词"),
+    subject: Optional[str] = Query(None, description="学科筛选"),
+    question_type: Optional[str] = Query(None, description="问题类型筛选"),
+    start_date: Optional[str] = Query(None, description="开始日期"),
+    end_date: Optional[str] = Query(None, description="结束日期"),
+    page: int = Query(1, ge=1, description="页码"),
+    size: int = Query(20, ge=1, le=100, description="每页大小"),
+    current_user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    搜索用户的问答记录
+
+    支持按关键词、学科、类型、时间范围等条件搜索
+    """
+    try:
+        learning_service = get_learning_service(db)
+
+        from datetime import datetime
+
+        query = QuestionHistoryQuery(
+            subject=subject,
+            question_type=question_type,
+            start_date=datetime.fromisoformat(start_date) if start_date else None,
+            end_date=datetime.fromisoformat(end_date) if end_date else None,
+            page=page,
+            size=size,
+        )
+
+        result = await learning_service.get_question_history(current_user_id, query)
+
+        # 如果有关键词，进行额外的过滤
+        if keyword and result.get("questions"):
+            filtered_questions = [
+                q
+                for q in result["questions"]
+                if keyword.lower() in q.get("content", "").lower()
+                or keyword.lower() in q.get("answer", "").lower()
+            ]
+            result["questions"] = filtered_questions
+            result["total"] = len(filtered_questions)
+
+        return QuestionHistoryResponse(**result)
+
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"日期格式错误: {str(e)}",
+        )
+
+
+@router.get("/sessions/{id}/history", summary="获取会话问答历史")
 async def get_session_history(
-    session_id: str,
+    id: str,
     page: int = Query(1, ge=1, description="页码"),
     size: int = Query(20, ge=1, le=100, description="每页大小"),
     current_user_id: str = Depends(get_current_user_id),
@@ -371,7 +624,7 @@ async def get_session_history(
         learning_service = get_learning_service(db)
 
         # 验证会话归属
-        session = await learning_service.session_repo.get_by_id(session_id)
+        session = await learning_service.session_repo.get_by_id(id)
         if not session:
             raise HTTPException(
                 status_code=http_status.HTTP_404_NOT_FOUND, detail="会话不存在"
@@ -382,7 +635,7 @@ async def get_session_history(
                 status_code=http_status.HTTP_404_NOT_FOUND, detail="无权限访问该会话"
             )
 
-        query = QuestionHistoryQuery(session_id=session_id, page=page, size=size)
+        query = QuestionHistoryQuery(session_id=id, page=page, size=size)
 
         result = await learning_service.get_question_history(current_user_id, query)
 
