@@ -79,26 +79,26 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
-import * as echarts from 'echarts';
-import { Refresh } from '@element-plus/icons-vue';
-import { ElMessage } from 'element-plus';
-import type { ECharts } from 'echarts';
-import dayjs from 'dayjs';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import * as echarts from 'echarts'
+import { Refresh } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import type { ECharts } from 'echarts'
+import dayjs from 'dayjs'
 
 // 接口定义
 interface TrendData {
-  date: string;
-  value: number;
-  change: number;
-  note?: string;
+  date: string
+  value: number
+  change: number
+  note?: string
 }
 
 interface Props {
-  height?: string;
-  defaultMetric?: string;
-  defaultTimeRange?: string;
-  autoRefresh?: boolean;
+  height?: string
+  defaultMetric?: string
+  defaultTimeRange?: string
+  autoRefresh?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -106,19 +106,19 @@ const props = withDefaults(defineProps<Props>(), {
   defaultMetric: 'studyTime',
   defaultTimeRange: '30d',
   autoRefresh: false,
-});
+})
 
 // 响应式数据
-const chartContainer = ref<HTMLDivElement>();
-let chartInstance: ECharts | null = null;
+const chartContainer = ref<HTMLDivElement>()
+let chartInstance: ECharts | null = null
 
-const selectedMetric = ref(props.defaultMetric);
-const timeRange = ref(props.defaultTimeRange);
-const loading = ref(false);
-const showTable = ref(false);
+const selectedMetric = ref(props.defaultMetric)
+const timeRange = ref(props.defaultTimeRange)
+const loading = ref(false)
+const showTable = ref(false)
 
 // 计算属性
-const chartHeight = computed(() => props.height);
+const chartHeight = computed(() => props.height)
 
 const summaryStats = computed(() => {
   return [
@@ -154,42 +154,42 @@ const summaryStats = computed(() => {
       textClass: 'text-purple-600',
       trend: 15,
     },
-  ];
-});
+  ]
+})
 
 const tableData = computed<TrendData[]>(() => {
-  const days = getDaysCount();
-  const data: TrendData[] = [];
-  
+  const days = getDaysCount()
+  const data: TrendData[] = []
+
   for (let i = 0; i < days; i++) {
-    const date = dayjs().subtract(i, 'day').format('MM-DD');
-    const value = Math.floor(Math.random() * 100) + 20;
-    const change = Math.floor(Math.random() * 40) - 20;
-    
+    const date = dayjs().subtract(i, 'day').format('MM-DD')
+    const value = Math.floor(Math.random() * 100) + 20
+    const change = Math.floor(Math.random() * 40) - 20
+
     data.unshift({
       date,
       value,
       change,
       note: value > 80 ? '表现优秀' : value < 40 ? '需要加强' : '',
-    });
+    })
   }
-  
-  return data;
-});
+
+  return data
+})
 
 // 方法
 const getDaysCount = () => {
   switch (timeRange.value) {
     case '7d':
-      return 7;
+      return 7
     case '30d':
-      return 30;
+      return 30
     case '90d':
-      return 90;
+      return 90
     default:
-      return 30;
+      return 30
   }
-};
+}
 
 const getMetricLabel = (metric: string) => {
   const labels: Record<string, string> = {
@@ -197,36 +197,36 @@ const getMetricLabel = (metric: string) => {
     homework: '作业数量',
     questions: '提问次数',
     accuracy: '正确率(%)',
-  };
-  return labels[metric] || metric;
-};
+  }
+  return labels[metric] || metric
+}
 
 const getValueClass = (value: number) => {
-  if (value > 80) return 'text-green-600 font-semibold';
-  if (value < 40) return 'text-red-600 font-semibold';
-  return 'text-gray-700';
-};
+  if (value > 80) return 'text-green-600 font-semibold'
+  if (value < 40) return 'text-red-600 font-semibold'
+  return 'text-gray-700'
+}
 
 const initChart = () => {
-  if (!chartContainer.value) return;
+  if (!chartContainer.value) return
 
-  chartInstance = echarts.init(chartContainer.value);
-  updateChart();
+  chartInstance = echarts.init(chartContainer.value)
+  updateChart()
 
   // 响应式调整
-  window.addEventListener('resize', handleResize);
-};
+  window.addEventListener('resize', handleResize)
+}
 
 const updateChart = () => {
-  if (!chartInstance) return;
+  if (!chartInstance) return
 
-  const days = getDaysCount();
-  const dates: string[] = [];
-  const values: number[] = [];
+  const days = getDaysCount()
+  const dates: string[] = []
+  const values: number[] = []
 
   for (let i = days - 1; i >= 0; i--) {
-    dates.push(dayjs().subtract(i, 'day').format('MM-DD'));
-    values.push(Math.floor(Math.random() * 100) + 20);
+    dates.push(dayjs().subtract(i, 'day').format('MM-DD'))
+    values.push(Math.floor(Math.random() * 100) + 20)
   }
 
   const option: echarts.EChartsOption = {
@@ -239,13 +239,13 @@ const updateChart = () => {
         color: '#374151',
       },
       formatter: (params: any) => {
-        const data = params[0];
+        const data = params[0]
         return `
           <div style="padding: 8px;">
             <div style="font-weight: 600; margin-bottom: 4px;">${data.name}</div>
             <div style="color: #3b82f6;">${getMetricLabel(selectedMetric.value)}: ${data.value}</div>
           </div>
-        `;
+        `
       },
     },
     grid: {
@@ -339,75 +339,75 @@ const updateChart = () => {
         },
       },
     ],
-  };
+  }
 
-  chartInstance.setOption(option);
-};
+  chartInstance.setOption(option)
+}
 
 const handleResize = () => {
-  chartInstance?.resize();
-};
+  chartInstance?.resize()
+}
 
 const refreshData = async () => {
-  loading.value = true;
+  loading.value = true
   try {
     // 模拟数据加载
-    await new Promise(resolve => setTimeout(resolve, 500));
-    updateChart();
-    ElMessage.success('数据已刷新');
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    updateChart()
+    ElMessage.success('数据已刷新')
   } catch (error) {
-    ElMessage.error('刷新失败');
+    ElMessage.error('刷新失败')
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-};
+}
 
 const exportChart = () => {
-  if (!chartInstance) return;
-  
+  if (!chartInstance) return
+
   const url = chartInstance.getDataURL({
     type: 'png',
     pixelRatio: 2,
     backgroundColor: '#fff',
-  });
-  
-  const link = document.createElement('a');
-  link.download = `学习趋势-${dayjs().format('YYYY-MM-DD')}.png`;
-  link.href = url;
-  link.click();
-  
-  ElMessage.success('图表已导出');
-};
+  })
+
+  const link = document.createElement('a')
+  link.download = `学习趋势-${dayjs().format('YYYY-MM-DD')}.png`
+  link.href = url
+  link.click()
+
+  ElMessage.success('图表已导出')
+}
 
 const shareReport = () => {
-  ElMessage.info('分享功能开发中...');
-};
+  ElMessage.info('分享功能开发中...')
+}
 
 // 生命周期
 onMounted(() => {
-  initChart();
-  
+  initChart()
+
   if (props.autoRefresh) {
-    setInterval(refreshData, 60000); // 每分钟刷新
+    setInterval(refreshData, 60000) // 每分钟刷新
   }
-});
+})
 
 onUnmounted(() => {
-  window.removeEventListener('resize', handleResize);
-  chartInstance?.dispose();
-});
+  window.removeEventListener('resize', handleResize)
+  chartInstance?.dispose()
+})
 
 // 监听变化
 watch([selectedMetric, timeRange], () => {
-  updateChart();
-});
+  updateChart()
+})
 </script>
 
 <style scoped lang="scss">
 .learning-trend-chart {
   .stat-item {
     transition: all 0.3s ease;
-    
+
     &:hover {
       transform: translateY(-2px);
       box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
