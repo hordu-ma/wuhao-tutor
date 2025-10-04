@@ -289,13 +289,13 @@ docker-compose ps
 | ---------------------------------------------------------------------- | ------------------ |
 | [📚 文档导航](docs/README.md)                                          | **文档中心入口**   |
 | [🤖 AI助手上下文](AI-CONTEXT.md)                                       | AI开发助手必读     |
-| [📋 MVP开发计划](MVP-DEVELOPMENT-PLAN.md)                              | 当前开发计划       |
-| [架构设计](docs/ARCHITECTURE.md)                                       | 系统分层与模块设计 |
-| [开发指南](docs/DEVELOPMENT.md)                                        | 详细开发工作流     |
+| [🤖 Warp AI 指南](WARP.md)                                            | Warp 终端开发指南     |
+| [架构设计](docs/architecture/overview.md)                              | 系统分层与模块设计 |
+| [开发指南](docs/guide/development.md)                                  | 详细开发工作流     |
 | [API文档](docs/api/)                                                   | 接口规范与示例     |
-| [学习指南](docs/development/LEARNING_GUIDE.md)                         | 学习现代Python开发 |
-| [小程序开发](docs/development/WECHAT_MINIPROGRAM_DEVELOPMENT_GUIDE.md) | 微信小程序指南     |
-| [历史文档](docs/history/)                                              | Phase 1/2 完成总结 |
+| [学习指南](docs/reference/learning-guide.md)                           | 学习现代Python开发 |
+| [小程序开发](docs/integration/wechat-miniprogram.md)                 | 微信小程序指南     |
+| [历史文档](docs/history/)                                              | Phase 1-3 完成总结 |
 
 ## 🗓️ 版本规划
 
