@@ -68,6 +68,47 @@ def mock_get_current_user_id() -> str:
     return "test_user_123"
 
 
+# Mock HTTP Bearer认证函数（绕过token验证）
+def mock_http_bearer():
+    """测试Mock HTTPBearer依赖，绕过token验证"""
+    from fastapi.security import HTTPAuthorizationCredentials
+
+    return HTTPAuthorizationCredentials(scheme="Bearer", credentials="mock_jwt_token")
+
+
+# Mock安全依赖（无需token）
+def mock_optional_auth():
+    """测试Mock可选认证，允许无token访问"""
+    return None
+
+
+# Mock认证服务
+class MockAuthService:
+    def verify_token(self, token):
+        return {"sub": "test_user_123", "type": "access", "jti": "test_jti"}
+
+    async def verify_user_session(self, jti):
+        return {"id": "test_session", "user_id": "test_user_123"}
+
+
+def mock_get_auth_service(user_service=None):
+    return MockAuthService()
+
+
+# Mock用户服务
+class MockUserService:
+    class UserRepo:
+        async def get_by_id(self, user_id):
+            return mock_get_current_user()
+
+    def __init__(self):
+        self.user_repo = self.UserRepo()
+
+
+def mock_get_user_service(db=None):
+    return MockUserService()
+
+
 @pytest_asyncio.fixture(scope="session")
 def event_loop():
     """创建事件循环"""
