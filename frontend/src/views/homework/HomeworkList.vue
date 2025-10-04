@@ -136,10 +136,7 @@
     <div class="homework-list">
       <el-card>
         <!-- 加载状态 -->
-        <div
-          v-if="homeworkStore.listLoading && homeworkList.length === 0"
-          class="loading-state"
-        >
+        <div v-if="homeworkStore.listLoading && homeworkList.length === 0" class="loading-state">
           <el-skeleton :rows="5" animated />
         </div>
 
@@ -149,9 +146,7 @@
           class="empty-state"
         >
           <el-empty description="暂无作业数据">
-            <el-button type="primary" @click="goToUpload"
-              >上传第一个作业</el-button
-            >
+            <el-button type="primary" @click="goToUpload">上传第一个作业</el-button>
           </el-empty>
         </div>
 
@@ -174,158 +169,20 @@
 
           <!-- 作业项 -->
           <div class="homework-items">
-            <div
+            <HomeworkCard
               v-for="homework in homeworkList"
               :key="homework.id"
-              class="homework-item"
-              :class="{
-                'item-selected': selectedHomework.includes(homework.id),
-              }"
+              :homework="homework"
+              :selected="selectedHomework.includes(homework.id)"
+              :show-checkbox="true"
+              @select="handleSelectItem(homework.id, $event)"
               @click="viewHomework(homework.id)"
-            >
-              <div class="item-checkbox" @click.stop>
-                <el-checkbox
-                  :model-value="selectedHomework.includes(homework.id)"
-                  @change="handleSelectItem(homework.id, $event)"
-                />
-              </div>
-
-              <div class="item-preview">
-                <img
-                  v-if="homework.original_images?.[0]"
-                  :src="homework.original_images[0]"
-                  alt="作业预览"
-                />
-                <el-icon v-else><Document /></el-icon>
-              </div>
-
-              <div class="item-content">
-                <div class="item-header">
-                  <h3 class="item-title">
-                    {{ homework.title || "未命名作业" }}
-                  </h3>
-                  <el-tag
-                    :type="getStatusTagType(homework.status)"
-                    size="small"
-                  >
-                    {{ getStatusLabel(homework.status) }}
-                  </el-tag>
-                </div>
-
-                <div class="item-meta">
-                  <span class="meta-item">
-                    <el-icon><Collection /></el-icon>
-                    {{ getSubjectLabel(homework.subject) }}
-                  </span>
-                  <span class="meta-item">
-                    <el-icon><User /></el-icon>
-                    {{ getGradeLabel(homework.grade_level) }}
-                  </span>
-                  <span class="meta-item">
-                    <el-icon><Picture /></el-icon>
-                    {{ homework.original_images?.length || 0 }} 张图片
-                  </span>
-                  <span class="meta-item">
-                    <el-icon><Clock /></el-icon>
-                    {{ formatTime(homework.created_at) }}
-                  </span>
-                </div>
-
-                <div v-if="homework.description" class="item-description">
-                  {{ homework.description }}
-                </div>
-
-                <!-- 批改结果预览 -->
-                <div
-                  v-if="homework.correction_result"
-                  class="correction-preview"
-                >
-                  <div class="score-preview">
-                    <el-icon
-                      :class="
-                        homework.correction_result.is_correct
-                          ? 'correct-icon'
-                          : 'incorrect-icon'
-                      "
-                    >
-                      <component
-                        :is="
-                          homework.correction_result.is_correct
-                            ? CircleCheck
-                            : CircleClose
-                        "
-                      />
-                    </el-icon>
-                    <span class="score-text"
-                      >{{ homework.correction_result.score }}分</span
-                    >
-                  </div>
-                  <div
-                    v-if="homework.correction_result.knowledge_points?.length"
-                    class="knowledge-preview"
-                  >
-                    <el-tag
-                      v-for="point in homework.correction_result.knowledge_points.slice(
-                        0,
-                        3,
-                      )"
-                      :key="point"
-                      size="small"
-                      type="info"
-                    >
-                      {{ point }}
-                    </el-tag>
-                    <span
-                      v-if="
-                        homework.correction_result.knowledge_points.length > 3
-                      "
-                      class="more-tags"
-                    >
-                      +{{
-                        homework.correction_result.knowledge_points.length - 3
-                      }}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="item-actions" @click.stop>
-                <el-button
-                  v-if="homework.status === 'submitted'"
-                  type="primary"
-                  size="small"
-                  @click="startCorrection(homework.id)"
-                >
-                  开始批改
-                </el-button>
-                <el-button
-                  v-else-if="homework.status === 'failed'"
-                  type="warning"
-                  size="small"
-                  @click="retryCorrection(homework.id)"
-                >
-                  重新批改
-                </el-button>
-                <el-dropdown trigger="click">
-                  <el-button type="text" :icon="MoreFilled" />
-                  <template #dropdown>
-                    <el-dropdown-menu>
-                      <el-dropdown-item @click="viewHomework(homework.id)"
-                        >查看详情</el-dropdown-item
-                      >
-                      <el-dropdown-item @click="editHomework(homework)"
-                        >编辑信息</el-dropdown-item
-                      >
-                      <el-dropdown-item
-                        divided
-                        @click="deleteHomework(homework.id)"
-                        >删除</el-dropdown-item
-                      >
-                    </el-dropdown-menu>
-                  </template>
-                </el-dropdown>
-              </div>
-            </div>
+              @view-detail="viewHomework"
+              @edit="editHomework"
+              @delete="deleteHomework"
+              @start-correction="startCorrection"
+              @retry-correction="retryCorrection"
+            />
           </div>
 
           <!-- 分页 -->
@@ -351,12 +208,7 @@
       width="500px"
       @close="closeEditDialog"
     >
-      <el-form
-        v-if="editingHomework"
-        ref="editFormRef"
-        :model="editForm"
-        label-width="80px"
-      >
+      <el-form v-if="editingHomework" ref="editFormRef" :model="editForm" label-width="80px">
         <el-form-item label="标题">
           <el-input
             v-model="editForm.title"
@@ -388,303 +240,242 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, watch } from "vue";
-import { useRouter } from "vue-router";
-import { ElMessage, ElMessageBox } from "element-plus";
-import type { FormInstance } from "element-plus";
-import {
-  Notebook,
-  Plus,
-  Search,
-  Document,
-  Collection,
-  User,
-  Picture,
-  Clock,
-  CircleCheck,
-  CircleClose,
-  MoreFilled,
-} from "@element-plus/icons-vue";
-import dayjs from "dayjs";
+import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import type { FormInstance } from 'element-plus'
+import { Notebook, Plus, Search } from '@element-plus/icons-vue'
 
-import { useHomeworkStore } from "@/stores/homework";
+import { useHomeworkStore } from '@/stores/homework'
+import HomeworkCard from '@/components/homework/HomeworkCard.vue'
 import {
   HOMEWORK_SUBJECT_OPTIONS,
   GRADE_LEVEL_OPTIONS,
   STATUS_OPTIONS,
   type HomeworkQueryParams,
   type HomeworkRecord,
-  type HomeworkStatus,
-  type Subject,
-  type GradeLevel,
-  type SubjectOption,
-} from "@/types/homework";
+} from '@/types/homework'
 
-const router = useRouter();
-const homeworkStore = useHomeworkStore();
+const router = useRouter()
+const homeworkStore = useHomeworkStore()
 
 // 表单引用
-const editFormRef = ref<FormInstance>();
+const editFormRef = ref<FormInstance>()
 
 // 筛选表单
 const filterForm = reactive<HomeworkQueryParams>({
   page: 1,
   page_size: 20,
-});
+})
 
 // 日期范围
-const dateRange = ref<[string, string] | null>(null);
+const dateRange = ref<[string, string] | null>(null)
 
 // 选中的作业
-const selectedHomework = ref<string[]>([]);
+const selectedHomework = ref<string[]>([])
 
 // 编辑对话框
-const editDialogVisible = ref(false);
-const editingHomework = ref<HomeworkRecord | null>(null);
+const editDialogVisible = ref(false)
+const editingHomework = ref<HomeworkRecord | null>(null)
 const editForm = reactive({
-  title: "",
-  description: "",
-});
+  title: '',
+  description: '',
+})
 
 // 计算属性
-const homeworkList = computed(() => homeworkStore.homeworkList);
-const pagination = computed(() => homeworkStore.pagination);
-const stats = computed(() => homeworkStore.stats);
+const homeworkList = computed(() => homeworkStore.homeworkList)
+const pagination = computed(() => homeworkStore.pagination)
+const stats = computed(() => homeworkStore.stats)
 
 // 全选状态
 const selectAll = computed({
   get: () =>
-    selectedHomework.value.length === homeworkList.value.length &&
-    homeworkList.value.length > 0,
+    selectedHomework.value.length === homeworkList.value.length && homeworkList.value.length > 0,
   set: (value: boolean) => {
     if (value) {
-      selectedHomework.value = homeworkList.value.map((item) => item.id);
+      selectedHomework.value = homeworkList.value.map((item) => item.id)
     } else {
-      selectedHomework.value = [];
+      selectedHomework.value = []
     }
   },
-});
+})
 
 // 半选状态
 const isIndeterminate = computed(() => {
-  const selectedCount = selectedHomework.value.length;
-  return selectedCount > 0 && selectedCount < homeworkList.value.length;
-});
+  const selectedCount = selectedHomework.value.length
+  return selectedCount > 0 && selectedCount < homeworkList.value.length
+})
 
 // 监听日期范围变化
 watch(dateRange, (newRange) => {
   if (newRange) {
-    filterForm.start_date = newRange[0];
-    filterForm.end_date = newRange[1];
+    filterForm.start_date = newRange[0]
+    filterForm.end_date = newRange[1]
   } else {
-    delete filterForm.start_date;
-    delete filterForm.end_date;
+    delete filterForm.start_date
+    delete filterForm.end_date
   }
-});
+})
 
 // 生命周期
 onMounted(async () => {
-  await Promise.all([
-    homeworkStore.getHomeworkList(filterForm),
-    homeworkStore.getHomeworkStats(),
-  ]);
-});
+  await Promise.all([homeworkStore.getHomeworkList(filterForm), homeworkStore.getHomeworkStats()])
+})
 
 // 搜索
 const handleSearch = () => {
-  filterForm.page = 1;
-  homeworkStore.getHomeworkList(filterForm);
-};
+  filterForm.page = 1
+  homeworkStore.getHomeworkList(filterForm)
+}
 
 // 重置筛选
 const handleReset = () => {
   Object.keys(filterForm).forEach((key) => {
-    if (key !== "page" && key !== "page_size") {
-      delete filterForm[key as keyof HomeworkQueryParams];
+    if (key !== 'page' && key !== 'page_size') {
+      delete filterForm[key as keyof HomeworkQueryParams]
     }
-  });
-  filterForm.page = 1;
-  dateRange.value = null;
-  homeworkStore.getHomeworkList(filterForm);
-};
+  })
+  filterForm.page = 1
+  dateRange.value = null
+  homeworkStore.getHomeworkList(filterForm)
+}
 
 // 页面变化
 const handlePageChange = (page: number) => {
-  filterForm.page = page;
-  homeworkStore.getHomeworkList(filterForm);
-};
+  filterForm.page = page
+  homeworkStore.getHomeworkList(filterForm)
+}
 
 // 页大小变化
 const handleSizeChange = (size: number) => {
-  filterForm.page = 1;
-  filterForm.page_size = size;
-  homeworkStore.getHomeworkList(filterForm);
-};
+  filterForm.page = 1
+  filterForm.page_size = size
+  homeworkStore.getHomeworkList(filterForm)
+}
 
 // 全选处理
 const handleSelectAll = (checked: boolean | string | number) => {
-  selectAll.value = Boolean(checked);
-};
+  selectAll.value = Boolean(checked)
+}
 
 // 选择单项
 const handleSelectItem = (id: string, checked: boolean | string | number) => {
-  const isChecked = Boolean(checked);
+  const isChecked = Boolean(checked)
   if (isChecked) {
-    selectedHomework.value.push(id);
+    selectedHomework.value.push(id)
   } else {
-    const index = selectedHomework.value.indexOf(id);
+    const index = selectedHomework.value.indexOf(id)
     if (index > -1) {
-      selectedHomework.value.splice(index, 1);
+      selectedHomework.value.splice(index, 1)
     }
   }
-};
+}
 
 // 批量删除
 const handleBatchDelete = async () => {
   if (selectedHomework.value.length === 0) {
-    ElMessage.warning("请选择要删除的作业");
-    return;
+    ElMessage.warning('请选择要删除的作业')
+    return
   }
 
   try {
     await ElMessageBox.confirm(
       `确定要删除选中的 ${selectedHomework.value.length} 个作业吗？删除后无法恢复。`,
-      "确认删除",
+      '确认删除',
       {
-        confirmButtonText: "删除",
-        cancelButtonText: "取消",
-        type: "warning",
-      },
-    );
+        confirmButtonText: '删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
 
-    await homeworkStore.batchDeleteHomework(selectedHomework.value);
-    selectedHomework.value = [];
+    await homeworkStore.batchDeleteHomework(selectedHomework.value)
+    selectedHomework.value = []
 
     // 重新获取统计数据
-    homeworkStore.getHomeworkStats();
+    homeworkStore.getHomeworkStats()
   } catch (error) {
-    if (error !== "cancel") {
-      console.error("批量删除失败:", error);
+    if (error !== 'cancel') {
+      console.error('批量删除失败:', error)
     }
   }
-};
+}
 
 // 跳转到上传页面
 const goToUpload = () => {
-  router.push({ name: "HomeworkUpload" });
-};
+  router.push({ name: 'HomeworkUpload' })
+}
 
 // 查看作业详情
 const viewHomework = (homeworkId: string) => {
   router.push({
-    name: "HomeworkDetail",
+    name: 'HomeworkDetail',
     params: { id: homeworkId },
-  });
-};
+  })
+}
 
 // 编辑作业
 const editHomework = (homework: HomeworkRecord) => {
-  editingHomework.value = homework;
-  editForm.title = homework.title || "";
-  editForm.description = homework.description || "";
-  editDialogVisible.value = true;
-};
+  editingHomework.value = homework
+  editForm.title = homework.title || ''
+  editForm.description = homework.description || ''
+  editDialogVisible.value = true
+}
 
 // 关闭编辑对话框
 const closeEditDialog = () => {
-  editingHomework.value = null;
-  editForm.title = "";
-  editForm.description = "";
-};
+  editingHomework.value = null
+  editForm.title = ''
+  editForm.description = ''
+}
 
 // 保存编辑
 const saveEdit = async () => {
-  if (!editingHomework.value) return;
+  if (!editingHomework.value) return
 
   try {
     await homeworkStore.updateHomework(editingHomework.value.id, {
       title: editForm.title,
       description: editForm.description,
-    });
+    })
 
-    editDialogVisible.value = false;
-    ElMessage.success("编辑成功");
+    editDialogVisible.value = false
+    ElMessage.success('编辑成功')
   } catch (error) {
-    console.error("编辑失败:", error);
-    ElMessage.error("编辑失败");
+    console.error('编辑失败:', error)
+    ElMessage.error('编辑失败')
   }
-};
+}
 
 // 开始批改
 const startCorrection = async (homeworkId: string) => {
-  await homeworkStore.correctHomework(homeworkId);
-};
+  await homeworkStore.correctHomework(homeworkId)
+}
 
 // 重新批改
 const retryCorrection = async (homeworkId: string) => {
-  await homeworkStore.retryCorrection(homeworkId);
-};
+  await homeworkStore.retryCorrection(homeworkId)
+}
 
 // 删除作业
 const deleteHomework = async (homeworkId: string) => {
   try {
-    await ElMessageBox.confirm(
-      "确定要删除这个作业吗？删除后无法恢复。",
-      "确认删除",
-      {
-        confirmButtonText: "删除",
-        cancelButtonText: "取消",
-        type: "warning",
-      },
-    );
+    await ElMessageBox.confirm('确定要删除这个作业吗？删除后无法恢复。', '确认删除', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
 
-    await homeworkStore.deleteHomework(homeworkId);
+    await homeworkStore.deleteHomework(homeworkId)
 
     // 重新获取统计数据
-    homeworkStore.getHomeworkStats();
+    homeworkStore.getHomeworkStats()
   } catch (error) {
-    if (error !== "cancel") {
-      console.error("删除失败:", error);
+    if (error !== 'cancel') {
+      console.error('删除失败:', error)
     }
   }
-};
-
-// 工具函数
-const getSubjectLabel = (subject: Subject): string => {
-  const option = HOMEWORK_SUBJECT_OPTIONS.find(
-    (opt: SubjectOption) => opt.value === subject,
-  );
-  return option?.label || subject;
-};
-
-const getGradeLabel = (grade: GradeLevel): string => {
-  const option = GRADE_LEVEL_OPTIONS.find((opt) => opt.value === grade);
-  return option?.label || `${grade}年级`;
-};
-
-const getStatusLabel = (status: HomeworkStatus): string => {
-  const option = STATUS_OPTIONS.find((opt) => opt.value === status);
-  return option?.label || status;
-};
-
-const getStatusTagType = (
-  status: HomeworkStatus,
-): "success" | "primary" | "warning" | "info" | "danger" => {
-  const typeMap: Record<
-    HomeworkStatus,
-    "success" | "primary" | "warning" | "info" | "danger"
-  > = {
-    submitted: "info",
-    processing: "warning",
-    completed: "success",
-    failed: "danger",
-  };
-  return typeMap[status] || "info";
-};
-
-const formatTime = (time: string): string => {
-  return dayjs(time).format("MM-DD HH:mm");
-};
+}
 </script>
 
 <style scoped lang="scss">
@@ -700,13 +491,21 @@ const formatTime = (time: string): string => {
     margin-bottom: 24px;
 
     .header-left {
+      flex: 1;
+
       .page-title {
-        font-size: 28px;
-        color: #303133;
-        margin: 0 0 16px 0;
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 8px;
+        font-size: 28px;
+        font-weight: 700;
+        color: #303133;
+        margin: 0 0 20px 0;
+
+        .el-icon {
+          font-size: 32px;
+          color: #409eff;
+        }
       }
 
       .stats-cards {
@@ -714,22 +513,31 @@ const formatTime = (time: string): string => {
         gap: 16px;
 
         .stat-card {
-          background: #f8f9fa;
-          padding: 16px 20px;
-          border-radius: 8px;
-          text-align: center;
-          min-width: 80px;
+          padding: 12px 20px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          border-radius: 12px;
+          color: white;
+          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 
           .stat-number {
             font-size: 24px;
-            font-weight: 600;
-            color: #409eff;
+            font-weight: 700;
             margin-bottom: 4px;
           }
 
           .stat-label {
-            font-size: 12px;
-            color: #909399;
+            font-size: 13px;
+            opacity: 0.9;
+          }
+
+          &:nth-child(2) {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            box-shadow: 0 4px 12px rgba(240, 147, 251, 0.3);
+          }
+
+          &:nth-child(3) {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);
           }
         }
       }
@@ -740,190 +548,36 @@ const formatTime = (time: string): string => {
     margin-bottom: 24px;
 
     .filter-form {
-      .search-icon {
-        cursor: pointer;
-        color: #c0c4cc;
-      }
+      margin-bottom: -18px;
     }
   }
 
-  .homework-list {
-    .loading-state {
-      padding: 40px;
+  .main-content {
+    .list-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid #e4e7ed;
+      margin-bottom: 16px;
+
+      .total-info {
+        font-size: 14px;
+        color: #606266;
+      }
     }
 
-    .empty-state {
-      padding: 60px 20px;
+    .homework-items {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 20px;
+      margin-bottom: 24px;
     }
 
-    .list-content {
-      .list-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 16px 0;
-        border-bottom: 1px solid #ebeef5;
-        margin-bottom: 16px;
-
-        .total-info {
-          font-size: 14px;
-          color: #909399;
-        }
-      }
-
-      .homework-items {
-        .homework-item {
-          display: flex;
-          align-items: center;
-          padding: 20px;
-          border: 1px solid #ebeef5;
-          border-radius: 8px;
-          margin-bottom: 16px;
-          cursor: pointer;
-          transition: all 0.3s;
-
-          &:hover {
-            border-color: #c6e2ff;
-            background-color: #ecf5ff;
-          }
-
-          &.item-selected {
-            border-color: #409eff;
-            background-color: #ecf5ff;
-          }
-
-          .item-checkbox {
-            margin-right: 16px;
-          }
-
-          .item-preview {
-            width: 80px;
-            height: 80px;
-            border-radius: 6px;
-            overflow: hidden;
-            margin-right: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #f5f5f5;
-            flex-shrink: 0;
-
-            img {
-              width: 100%;
-              height: 100%;
-              object-fit: cover;
-            }
-
-            .el-icon {
-              font-size: 32px;
-              color: #c0c4cc;
-            }
-          }
-
-          .item-content {
-            flex: 1;
-            min-width: 0;
-
-            .item-header {
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              margin-bottom: 8px;
-
-              .item-title {
-                font-size: 16px;
-                color: #303133;
-                margin: 0;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-              }
-            }
-
-            .item-meta {
-              display: flex;
-              gap: 16px;
-              margin-bottom: 8px;
-              font-size: 12px;
-              color: #909399;
-
-              .meta-item {
-                display: flex;
-                align-items: center;
-                gap: 4px;
-
-                .el-icon {
-                  font-size: 14px;
-                }
-              }
-            }
-
-            .item-description {
-              font-size: 14px;
-              color: #606266;
-              margin-bottom: 8px;
-              overflow: hidden;
-              text-overflow: ellipsis;
-              white-space: nowrap;
-            }
-
-            .correction-preview {
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              margin-top: 12px;
-              padding-top: 12px;
-              border-top: 1px solid #f0f0f0;
-
-              .score-preview {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-
-                .correct-icon {
-                  color: #67c23a;
-                  font-size: 18px;
-                }
-
-                .incorrect-icon {
-                  color: #f56c6c;
-                  font-size: 18px;
-                }
-
-                .score-text {
-                  font-size: 16px;
-                  font-weight: 600;
-                  color: #303133;
-                }
-              }
-
-              .knowledge-preview {
-                display: flex;
-                align-items: center;
-                gap: 6px;
-
-                .more-tags {
-                  font-size: 12px;
-                  color: #909399;
-                }
-              }
-            }
-          }
-
-          .item-actions {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-left: 16px;
-          }
-        }
-      }
-
-      .pagination-container {
-        display: flex;
-        justify-content: center;
-        margin-top: 32px;
-      }
+    .pagination-container {
+      display: flex;
+      justify-content: center;
+      margin-top: 32px;
     }
   }
 }

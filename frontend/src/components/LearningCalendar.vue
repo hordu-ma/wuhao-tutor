@@ -4,14 +4,9 @@
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-lg font-semibold text-gray-900">学习日历</h3>
       <div class="flex items-center space-x-2">
-        <el-button
-          size="small"
-          :icon="ArrowLeft"
-          @click="previousMonth"
-          circle
-        />
+        <el-button size="small" :icon="ArrowLeft" @click="previousMonth" circle />
         <span class="text-sm font-medium px-2 min-w-32 text-center">
-          {{ currentMonth.format("YYYY年MM月") }}
+          {{ currentMonth.format('YYYY年MM月') }}
         </span>
         <el-button
           size="small"
@@ -71,17 +66,12 @@
             :key="level.label"
             class="flex items-center space-x-1"
           >
-            <div
-              class="w-4 h-4 rounded"
-              :class="level.colorClass"
-            ></div>
+            <div class="w-4 h-4 rounded" :class="level.colorClass"></div>
             <span class="text-xs text-gray-600">{{ level.label }}</span>
           </div>
         </div>
       </div>
-      <div class="text-xs text-gray-500">
-        本月总计: {{ monthlyTotalMinutes }}分钟
-      </div>
+      <div class="text-xs text-gray-500">本月总计: {{ monthlyTotalMinutes }}分钟</div>
     </div>
 
     <!-- 每日详情对话框 -->
@@ -124,9 +114,7 @@
                   <div class="text-xs text-gray-500">{{ activity.subject }}</div>
                 </div>
               </div>
-              <span class="text-xs text-gray-600">
-                {{ activity.duration }}分钟
-              </span>
+              <span class="text-xs text-gray-600"> {{ activity.duration }}分钟 </span>
             </div>
           </div>
         </div>
@@ -164,109 +152,109 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
-import { ArrowLeft, ArrowRight, Document, ChatDotRound } from '@element-plus/icons-vue';
-import dayjs, { Dayjs } from 'dayjs';
-import { useAnalyticsStore } from '@/stores/analytics';
+import { ref, computed, onMounted, watch } from 'vue'
+import { ArrowLeft, ArrowRight, Document, ChatDotRound } from '@element-plus/icons-vue'
+import dayjs, { Dayjs } from 'dayjs'
+import { useAnalyticsStore } from '@/stores/analytics'
 
 // 接口定义
 interface CalendarDay {
-  date: number;
-  fullDate: string;
-  isCurrentMonth: boolean;
-  isToday: boolean;
-  studyMinutes: number;
-  activities: Activity[];
-  completedTasks: number;
-  questions: number;
-  achievements: number;
+  date: number
+  fullDate: string
+  isCurrentMonth: boolean
+  isToday: boolean
+  studyMinutes: number
+  activities: Activity[]
+  completedTasks: number
+  questions: number
+  achievements: number
 }
 
 interface Activity {
-  id: string;
-  name: string;
-  subject: string;
-  duration: number;
-  icon: any;
-  color: string;
+  id: string
+  name: string
+  subject: string
+  duration: number
+  icon: any
+  color: string
 }
 
 // Props
 interface Props {
-  autoRefresh?: boolean;
-  showDetails?: boolean;
+  autoRefresh?: boolean
+  showDetails?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   autoRefresh: false,
   showDetails: true,
-});
+})
 
 // Store
-const analyticsStore = useAnalyticsStore();
+const analyticsStore = useAnalyticsStore()
 
 // 响应式数据
-const currentMonth = ref(dayjs());
-const showDayDetail = ref(false);
-const selectedDay = ref<CalendarDay | null>(null);
+const currentMonth = ref(dayjs())
+const showDayDetail = ref(false)
+const selectedDay = ref<CalendarDay | null>(null)
 
 // 常量
-const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+const weekdays = ['日', '一', '二', '三', '四', '五', '六']
 const intensityLevels = [
   { label: '无', colorClass: 'bg-gray-100' },
   { label: '少', colorClass: 'bg-green-100' },
   { label: '中', colorClass: 'bg-green-300' },
   { label: '多', colorClass: 'bg-green-500' },
   { label: '极多', colorClass: 'bg-green-700' },
-];
+]
 
 // 计算属性
 const isCurrentMonth = computed(() => {
-  return currentMonth.value.isSame(dayjs(), 'month');
-});
+  return currentMonth.value.isSame(dayjs(), 'month')
+})
 
 const calendarDays = computed(() => {
-  const days: CalendarDay[] = [];
-  const firstDay = currentMonth.value.startOf('month');
-  const lastDay = currentMonth.value.endOf('month');
-  const startWeekday = firstDay.day();
-  const totalDays = lastDay.date();
+  const days: CalendarDay[] = []
+  const firstDay = currentMonth.value.startOf('month')
+  const lastDay = currentMonth.value.endOf('month')
+  const startWeekday = firstDay.day()
+  const totalDays = lastDay.date()
 
   // 添加上个月的填充日期
-  const prevMonthLastDay = firstDay.subtract(1, 'day');
+  const prevMonthLastDay = firstDay.subtract(1, 'day')
   for (let i = startWeekday - 1; i >= 0; i--) {
-    const date = prevMonthLastDay.subtract(i, 'day');
-    days.push(createCalendarDay(date, false));
+    const date = prevMonthLastDay.subtract(i, 'day')
+    days.push(createCalendarDay(date, false))
   }
 
   // 添加当月日期
   for (let i = 1; i <= totalDays; i++) {
-    const date = firstDay.date(i);
-    days.push(createCalendarDay(date, true));
+    const date = firstDay.date(i)
+    days.push(createCalendarDay(date, true))
   }
 
   // 添加下个月的填充日期
-  const remainingDays = 7 - (days.length % 7);
+  const remainingDays = 7 - (days.length % 7)
   if (remainingDays < 7) {
     for (let i = 1; i <= remainingDays; i++) {
-      const date = lastDay.add(i, 'day');
-      days.push(createCalendarDay(date, false));
+      const date = lastDay.add(i, 'day')
+      days.push(createCalendarDay(date, false))
     }
   }
 
-  return days;
-});
+  return days
+})
 
 const monthlyTotalMinutes = computed(() => {
   return calendarDays.value
-    .filter(day => day.isCurrentMonth)
-    .reduce((total, day) => total + day.studyMinutes, 0);
-});
+    .filter((day) => day.isCurrentMonth)
+    .reduce((total, day) => total + day.studyMinutes, 0)
+})
 
 // 方法
 const createCalendarDay = (date: Dayjs, isCurrentMonth: boolean): CalendarDay => {
-  const studyData = getStudyDataForDate(date);
-  
+  const studyData = getStudyDataForDate(date)
+
   return {
     date: date.date(),
     fullDate: date.format('YYYY-MM-DD'),
@@ -277,136 +265,139 @@ const createCalendarDay = (date: Dayjs, isCurrentMonth: boolean): CalendarDay =>
     completedTasks: studyData.completedTasks,
     questions: studyData.questions,
     achievements: studyData.achievements,
-  };
-};
+  }
+}
 
 const getStudyDataForDate = (_date: Dayjs) => {
   // 这里应该从 store 获取真实数据，现在使用模拟数据
-  const randomMinutes = Math.floor(Math.random() * 240);
-  
+  const randomMinutes = Math.floor(Math.random() * 240)
+
   return {
     minutes: randomMinutes,
-    activities: randomMinutes > 0 ? [
-      {
-        id: '1',
-        name: '作业批改',
-        subject: '数学',
-        duration: Math.floor(randomMinutes * 0.4),
-        icon: Document,
-        color: '#3b82f6',
-      },
-      {
-        id: '2',
-        name: '学习问答',
-        subject: '英语',
-        duration: Math.floor(randomMinutes * 0.6),
-        icon: ChatDotRound,
-        color: '#10b981',
-      },
-    ] : [],
+    activities:
+      randomMinutes > 0
+        ? [
+            {
+              id: '1',
+              name: '作业批改',
+              subject: '数学',
+              duration: Math.floor(randomMinutes * 0.4),
+              icon: Document,
+              color: '#3b82f6',
+            },
+            {
+              id: '2',
+              name: '学习问答',
+              subject: '英语',
+              duration: Math.floor(randomMinutes * 0.6),
+              icon: ChatDotRound,
+              color: '#10b981',
+            },
+          ]
+        : [],
     completedTasks: Math.floor(randomMinutes / 30),
     questions: Math.floor(randomMinutes / 20),
     achievements: Math.floor(randomMinutes / 60),
-  };
-};
+  }
+}
 
 const getDayClass = (day: CalendarDay) => {
-  const classes = [];
-  
+  const classes = []
+
   if (!day.isCurrentMonth) {
-    classes.push('bg-gray-50 opacity-50');
+    classes.push('bg-gray-50 opacity-50')
   } else if (day.isToday) {
-    classes.push('ring-2 ring-blue-500 bg-blue-50');
+    classes.push('ring-2 ring-blue-500 bg-blue-50')
   } else if (day.studyMinutes === 0) {
-    classes.push('bg-gray-100 hover:bg-gray-200');
+    classes.push('bg-gray-100 hover:bg-gray-200')
   } else if (day.studyMinutes < 30) {
-    classes.push('bg-green-100 hover:bg-green-200');
+    classes.push('bg-green-100 hover:bg-green-200')
   } else if (day.studyMinutes < 60) {
-    classes.push('bg-green-300 hover:bg-green-400');
+    classes.push('bg-green-300 hover:bg-green-400')
   } else if (day.studyMinutes < 120) {
-    classes.push('bg-green-500 hover:bg-green-600 text-white');
+    classes.push('bg-green-500 hover:bg-green-600 text-white')
   } else {
-    classes.push('bg-green-700 hover:bg-green-800 text-white');
+    classes.push('bg-green-700 hover:bg-green-800 text-white')
   }
-  
-  return classes.join(' ');
-};
+
+  return classes.join(' ')
+}
 
 const getDayTextClass = (day: CalendarDay) => {
   if (day.studyMinutes >= 60) {
-    return 'text-white';
+    return 'text-white'
   }
   if (!day.isCurrentMonth) {
-    return 'text-gray-400';
+    return 'text-gray-400'
   }
   if (day.isToday) {
-    return 'text-blue-600 font-bold';
+    return 'text-blue-600 font-bold'
   }
-  return 'text-gray-700';
-};
+  return 'text-gray-700'
+}
 
 const getStudyTimeTextClass = (day: CalendarDay) => {
-  return day.studyMinutes >= 60 ? 'text-white' : 'text-gray-600';
-};
+  return day.studyMinutes >= 60 ? 'text-white' : 'text-gray-600'
+}
 
 const formatStudyTime = (minutes: number) => {
-  if (minutes === 0) return '0分';
-  if (minutes < 60) return `${minutes}分`;
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return mins > 0 ? `${hours}时${mins}分` : `${hours}时`;
-};
+  if (minutes === 0) return '0分'
+  if (minutes < 60) return `${minutes}分`
+  const hours = Math.floor(minutes / 60)
+  const mins = minutes % 60
+  return mins > 0 ? `${hours}时${mins}分` : `${hours}时`
+}
 
 const getStudyProgress = (minutes: number) => {
   // 假设每天目标120分钟
-  const target = 120;
-  return Math.min(100, Math.round((minutes / target) * 100));
-};
+  const target = 120
+  return Math.min(100, Math.round((minutes / target) * 100))
+}
 
 const getProgressColor = (minutes: number) => {
-  if (minutes >= 120) return '#10b981'; // green
-  if (minutes >= 60) return '#3b82f6'; // blue
-  if (minutes >= 30) return '#f59e0b'; // yellow
-  return '#ef4444'; // red
-};
+  if (minutes >= 120) return '#10b981' // green
+  if (minutes >= 60) return '#3b82f6' // blue
+  if (minutes >= 30) return '#f59e0b' // yellow
+  return '#ef4444' // red
+}
 
 const previousMonth = () => {
-  currentMonth.value = currentMonth.value.subtract(1, 'month');
-};
+  currentMonth.value = currentMonth.value.subtract(1, 'month')
+}
 
 const nextMonth = () => {
   if (!isCurrentMonth.value) {
-    currentMonth.value = currentMonth.value.add(1, 'month');
+    currentMonth.value = currentMonth.value.add(1, 'month')
   }
-};
+}
 
 const handleDayClick = (day: CalendarDay) => {
-  if (!day.isCurrentMonth || day.studyMinutes === 0) return;
-  
-  selectedDay.value = day;
-  showDayDetail.value = true;
-};
+  if (!day.isCurrentMonth || day.studyMinutes === 0) return
+
+  selectedDay.value = day
+  showDayDetail.value = true
+}
 
 // 生命周期
 onMounted(async () => {
   if (props.autoRefresh) {
     // 加载日历数据
-    await analyticsStore.fetchLearningStats('30d');
+    await analyticsStore.fetchLearningStats('30d')
   }
-});
+})
 
 // 监听月份变化
 watch(currentMonth, async () => {
   // 加载新月份的数据
-  await analyticsStore.fetchLearningStats('30d');
-});
+  await analyticsStore.fetchLearningStats('30d')
+})
 </script>
 
 <style scoped lang="scss">
 .learning-calendar {
   .calendar-day {
     min-height: 60px;
-    
+
     @media (max-width: 768px) {
       min-height: 48px;
     }

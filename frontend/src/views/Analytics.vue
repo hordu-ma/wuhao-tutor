@@ -8,11 +8,7 @@
           <p class="text-gray-600">全面了解您的学习状况，获得个性化学习建议</p>
         </div>
         <div class="flex items-center space-x-3">
-          <el-select
-            v-model="selectedTimeRange"
-            size="small"
-            @change="handleTimeRangeChange"
-          >
+          <el-select v-model="selectedTimeRange" size="small" @change="handleTimeRangeChange">
             <el-option label="最近7天" value="7d" />
             <el-option label="最近30天" value="30d" />
             <el-option label="最近90天" value="90d" />
@@ -112,23 +108,15 @@
           <div class="xl:col-span-2">
             <KnowledgeRadarChart :show-comparison="true" />
           </div>
-          <div
-            class="knowledge-summary bg-white rounded-lg p-6 shadow-sm border"
-          >
+          <div class="knowledge-summary bg-white rounded-lg p-6 shadow-sm border">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">掌握度总结</h3>
             <div class="space-y-4">
-              <div
-                v-for="category in knowledgeSummary"
-                :key="category.level"
-                class="summary-item"
-              >
+              <div v-for="category in knowledgeSummary" :key="category.level" class="summary-item">
                 <div class="flex items-center justify-between mb-2">
                   <span class="text-sm font-medium" :class="category.textClass">
                     {{ category.label }}
                   </span>
-                  <span class="text-sm text-gray-600">
-                    {{ category.count }}个知识点
-                  </span>
+                  <span class="text-sm text-gray-600"> {{ category.count }}个知识点 </span>
                 </div>
                 <el-progress
                   :percentage="category.percentage"
@@ -140,9 +128,7 @@
 
             <!-- 薄弱知识点列表 -->
             <div class="mt-6">
-              <h4 class="text-md font-medium text-gray-900 mb-3">
-                需要重点关注
-              </h4>
+              <h4 class="text-md font-medium text-gray-900 mb-3">需要重点关注</h4>
               <div class="space-y-2">
                 <div
                   v-for="point in weakKnowledgePoints.slice(0, 5)"
@@ -179,11 +165,7 @@
 
           <!-- 成就系统 -->
           <div class="achievements-section">
-            <AchievementDisplay
-              :max-display="6"
-              :show-categories="false"
-              :auto-refresh="true"
-            />
+            <AchievementDisplay :max-display="6" :show-categories="false" :auto-refresh="true" />
           </div>
         </div>
       </div>
@@ -198,15 +180,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
-import { useAnalyticsStore } from "../stores/analytics";
-import LearningTrendChart from "../components/LearningTrendChart.vue";
-import KnowledgeRadarChart from "../components/KnowledgeRadarChart.vue";
-import LearningRecommendations from "../components/LearningRecommendations.vue";
-import AchievementDisplay from "../components/AchievementDisplay.vue";
-import LearningProgressChart from "../components/LearningProgressChart.vue";
-import LearningInsights from "../components/LearningInsights.vue";
-import LearningCalendar from "../components/LearningCalendar.vue";
+import { ref, computed, onMounted } from 'vue'
+import { useAnalyticsStore } from '../stores/analytics'
+import LearningTrendChart from '../components/LearningTrendChart.vue'
+import KnowledgeRadarChart from '../components/KnowledgeRadarChart.vue'
+import LearningRecommendations from '../components/LearningRecommendations.vue'
+import AchievementDisplay from '../components/AchievementDisplay.vue'
+import LearningProgressChart from '../components/LearningProgressChart.vue'
+import LearningInsights from '../components/LearningInsights.vue'
+import LearningCalendar from '../components/LearningCalendar.vue'
 import {
   Refresh,
   Download,
@@ -215,138 +197,136 @@ import {
   Document,
   Flag,
   TrendCharts,
-} from "@element-plus/icons-vue";
-import { ElMessage } from "element-plus";
+} from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 
-const analyticsStore = useAnalyticsStore();
+const analyticsStore = useAnalyticsStore()
 
 // 响应式数据
-const selectedTimeRange = ref("30d");
+const selectedTimeRange = ref('30d')
 
 // 计算属性
-const loading = computed(() => analyticsStore.loading);
-const error = computed(() => analyticsStore.error);
-const hasData = computed(() => analyticsStore.learningStats !== null);
-const weakKnowledgePoints = computed(() => analyticsStore.weakKnowledgePoints);
+const loading = computed(() => analyticsStore.loading)
+const error = computed(() => analyticsStore.error)
+const hasData = computed(() => analyticsStore.learningStats !== null)
+const weakKnowledgePoints = computed(() => analyticsStore.weakKnowledgePoints)
 
 // 概览统计数据
 const overviewStats = computed(() => [
   {
-    key: "studyTime",
-    label: "总学习时长",
+    key: 'studyTime',
+    label: '总学习时长',
     value: analyticsStore.getFormattedStats.studyTime,
     icon: Clock,
-    colorClass: "text-blue-500 bg-blue-50",
+    colorClass: 'text-blue-500 bg-blue-50',
     trend: 12,
     trendIcon: TrendCharts,
-    trendClass: "text-green-600",
+    trendClass: 'text-green-600',
   },
   {
-    key: "homework",
-    label: "完成作业",
+    key: 'homework',
+    label: '完成作业',
     value: `${analyticsStore.learningStats?.completedHomework || 0}份`,
     icon: Document,
-    colorClass: "text-green-500 bg-green-50",
+    colorClass: 'text-green-500 bg-green-50',
     trend: 8,
     trendIcon: TrendCharts,
-    trendClass: "text-green-600",
+    trendClass: 'text-green-600',
   },
   {
-    key: "score",
-    label: "平均成绩",
+    key: 'score',
+    label: '平均成绩',
     value: analyticsStore.getFormattedStats.averageScore,
     icon: TrendCharts,
-    colorClass: "text-yellow-500 bg-yellow-50",
+    colorClass: 'text-yellow-500 bg-yellow-50',
     trend: 5,
     trendIcon: TrendCharts,
-    trendClass: "text-green-600",
+    trendClass: 'text-green-600',
   },
   {
-    key: "streak",
-    label: "连续学习",
+    key: 'streak',
+    label: '连续学习',
     value: analyticsStore.getFormattedStats.streak,
     icon: Flag,
-    colorClass: "text-purple-500 bg-purple-50",
+    colorClass: 'text-purple-500 bg-purple-50',
     trend: 0,
     trendIcon: TrendCharts,
-    trendClass: "text-gray-500",
+    trendClass: 'text-gray-500',
   },
-]);
+])
 
 // 知识掌握度总结
 const knowledgeSummary = computed(() => {
-  const points = analyticsStore.knowledgePoints;
-  const total = points.length;
+  const points = analyticsStore.knowledgePoints
+  const total = points.length
 
-  if (total === 0) return [];
+  if (total === 0) return []
 
-  const excellent = points.filter((p) => p.masteryLevel >= 80).length;
-  const good = points.filter(
-    (p) => p.masteryLevel >= 60 && p.masteryLevel < 80,
-  ).length;
-  const weak = points.filter((p) => p.masteryLevel < 60).length;
+  const excellent = points.filter((p) => p.masteryLevel >= 80).length
+  const good = points.filter((p) => p.masteryLevel >= 60 && p.masteryLevel < 80).length
+  const weak = points.filter((p) => p.masteryLevel < 60).length
 
   return [
     {
-      level: "excellent",
-      label: "优秀掌握",
+      level: 'excellent',
+      label: '优秀掌握',
       count: excellent,
       percentage: Math.round((excellent / total) * 100),
-      color: "#10b981",
-      textClass: "text-green-600",
+      color: '#10b981',
+      textClass: 'text-green-600',
     },
     {
-      level: "good",
-      label: "良好掌握",
+      level: 'good',
+      label: '良好掌握',
       count: good,
       percentage: Math.round((good / total) * 100),
-      color: "#f59e0b",
-      textClass: "text-yellow-600",
+      color: '#f59e0b',
+      textClass: 'text-yellow-600',
     },
     {
-      level: "weak",
-      label: "需要提升",
+      level: 'weak',
+      label: '需要提升',
       count: weak,
       percentage: Math.round((weak / total) * 100),
-      color: "#ef4444",
-      textClass: "text-red-600",
+      color: '#ef4444',
+      textClass: 'text-red-600',
     },
-  ];
-});
+  ]
+})
 
 // 方法
 const handleTimeRangeChange = () => {
-  analyticsStore.setTimeRange(selectedTimeRange.value);
-  refreshAllData();
-};
+  analyticsStore.setTimeRange(selectedTimeRange.value)
+  refreshAllData()
+}
 
 const refreshAllData = async () => {
   try {
-    await analyticsStore.initializeDashboard(selectedTimeRange.value);
-    ElMessage.success("数据刷新成功");
+    await analyticsStore.initializeDashboard(selectedTimeRange.value)
+    ElMessage.success('数据刷新成功')
   } catch (error) {
-    ElMessage.error("数据刷新失败");
+    ElMessage.error('数据刷新失败')
   }
-};
+}
 
 const clearError = () => {
-  analyticsStore.clearError();
-};
+  analyticsStore.clearError()
+}
 
 const handleExport = (command: string) => {
-  ElMessage.info(`正在导出${command.toUpperCase()}格式报告...`);
+  ElMessage.info(`正在导出${command.toUpperCase()}格式报告...`)
   // 这里调用导出API
-};
+}
 
 onMounted(async () => {
   // 初始化数据
-  await analyticsStore.initializeDashboard(selectedTimeRange.value);
+  await analyticsStore.initializeDashboard(selectedTimeRange.value)
 
   // 获取成就数据
   if (analyticsStore.achievements.length === 0) {
-    analyticsStore.fetchAchievements();
+    analyticsStore.fetchAchievements()
   }
-});
+})
 </script>
 
 <style scoped>
@@ -371,7 +351,7 @@ onMounted(async () => {
 }
 
 .section-title::before {
-  content: "";
+  content: '';
   width: 0.25rem;
   height: 1.5rem;
   background-color: rgb(59, 130, 246);
