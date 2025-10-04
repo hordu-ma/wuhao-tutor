@@ -298,12 +298,11 @@ uv run python scripts/performance_monitor.py status
 
 - **本文档** (`AI-CONTEXT.md`) - AI 助手快速上下文
 - `README.md` - 项目主页
-- `MVP-DEVELOPMENT-PLAN.md` - MVP 开发计划
 - `docs/README.md` - 📚 文档导航中心
-- `docs/ARCHITECTURE.md` - 详细架构设计
-- `docs/DEVELOPMENT.md` - 完整开发工作流
-- `docs/SECURITY.md` - 安全策略与实践
-- `docs/TESTING.md` - 测试策略与规范
+- `docs/architecture/overview.md` - 详细架构设计
+- `docs/guide/development.md` - 完整开发工作流
+- `docs/architecture/security.md` - 安全策略与实践
+- `docs/guide/testing.md` - 测试策略与规范
 
 ### 开发指南文档
 
@@ -320,13 +319,15 @@ uv run python scripts/performance_monitor.py status
 ### 历史文档
 
 - `docs/history/phase1/` - Phase 1 完成总结
-- `docs/history/phase2/` - Phase 2 完成总结 (推荐阅读)
+- `docs/history/phase2/` - Phase 2 完成总结
+- `docs/history/phase3/` - Phase 3 完成总结
+- `docs/archived/phase4/` - Phase 4 归档文档
 
 ### 运维文档
 
-- `docs/DEPLOYMENT.md` - 部署策略
-- `docs/OBSERVABILITY.md` - 监控体系
-- `docs/MIGRATION.md` - 数据库迁移
+- `docs/guide/deployment.md` - 部署策略
+- `docs/architecture/observability.md` - 监控体系
+- `docs/operations/database-migration.md` - 数据库迁移
 
 ---
 
