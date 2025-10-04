@@ -20,45 +20,82 @@ const analysisAPI = {
   getOverview(params = {}, config = {}) {
     const { days = 30 } = params;
 
-    return request.get('analysis/overview', { days }, {
-      showLoading: false,
-      ...config,
-    });
+    // 映射时间范围参数到后端格式
+    let timeRange = 'all';
+    if (days <= 7) timeRange = '7d';
+    else if (days <= 30) timeRange = '30d';
+    else if (days <= 90) timeRange = '90d';
+
+    return request.get(
+      'analytics/learning-stats',
+      { time_range: timeRange },
+      {
+        showLoading: false,
+        ...config,
+      },
+    );
   },
 
   /**
    * 获取活跃度时间分布
    * @param {Object} params - 查询参数
    * @param {number} [params.days=30] - 统计天数
-   * @param {string} [params.granularity='day'] - 时间粒度 (hour/day/week/month)
+   * @param {string} [params.granularity='day'] - 时间粒度 (暂不支持，使用默认)
    * @param {Object} [config] - 请求配置
    * @returns {Promise<Object>} 活跃度数据
    */
   getActivity(params = {}, config = {}) {
-    const { days = 30, granularity = 'day' } = params;
+    const { days = 30 } = params;
 
-    return request.get('analysis/activity', { days, granularity }, {
-      showLoading: false,
-      ...config,
-    });
+    // 映射时间范围参数
+    let timeRange = 'all';
+    if (days <= 7) timeRange = '7d';
+    else if (days <= 30) timeRange = '30d';
+    else if (days <= 90) timeRange = '90d';
+
+    // 注意: 后端learning-stats包含study_trend，可用于活跃度展示
+    // granularity参数暂时不支持，使用后端默认粒度
+    return request
+      .get(
+        'analytics/learning-stats',
+        { time_range: timeRange },
+        {
+          showLoading: false,
+          ...config,
+        },
+      )
+      .then(response => {
+        // 提取活跃度相关数据
+        if (response.success && response.data) {
+          return {
+            success: true,
+            data: {
+              study_trend: response.data.study_trend || [],
+              total_study_days: response.data.total_study_days || 0,
+            },
+            message: response.message,
+          };
+        }
+        return response;
+      });
   },
 
   /**
    * 获取知识点掌握推断
    * @param {Object} params - 查询参数
    * @param {string} [params.subject] - 学科筛选
-   * @param {string} [params.grade] - 年级筛选
+   * @param {string} [params.grade] - 年级筛选 (暂不支持)
    * @param {Object} [config] - 请求配置
    * @returns {Promise<Object>} 知识点掌握数据
    */
   getMastery(params = {}, config = {}) {
-    const { subject, grade } = params;
+    const { subject } = params;
+    // 注意: grade参数后端暂不支持
 
     const queryParams = {};
     if (subject) queryParams.subject = subject;
-    if (grade) queryParams.grade = grade;
 
-    return request.get('analysis/mastery', queryParams, {
+    return request.get('analytics/knowledge-map', queryParams, {
       showLoading: false,
       ...config,
     });
@@ -67,22 +104,23 @@ const analysisAPI = {
   /**
    * 获取个性化学习建议
    * @param {Object} params - 查询参数
-   * @param {string} [params.subject] - 学科筛选
-   * @param {string} [params.focus] - 关注领域 (weak/strong/balanced)
+   * @param {string} [params.subject] - 学科筛选 (暂不支持)
+   * @param {string} [params.focus] - 关注领域 (暂不支持)
    * @param {Object} [config] - 请求配置
    * @returns {Promise<Object>} 学习建议数据
    */
   getRecommendations(params = {}, config = {}) {
-    const { subject, focus } = params;
+    // 注意: 后端learning/recommendations暂不支持subject和focus参数
+    // 返回通用学习建议
 
-    const queryParams = {};
-    if (subject) queryParams.subject = subject;
-    if (focus) queryParams.focus = focus;
-
-    return request.get('analysis/recommendations', queryParams, {
-      showLoading: false,
-      ...config,
-    });
+    return request.get(
+      'learning/recommendations',
+      {},
+      {
+        showLoading: false,
+        ...config,
+      },
+    );
   },
 
   /**
@@ -90,7 +128,7 @@ const analysisAPI = {
    * @param {Object} params - 查询参数
    * @param {string} params.metric - 指标类型 (score/frequency/duration/mastery)
    * @param {number} [params.days=30] - 统计天数
-   * @param {string} [params.subject] - 学科筛选
+   * @param {string} [params.subject] - 学科筛选 (暂不支持)
    * @param {Object} [config] - 请求配置
    * @returns {Promise<Object>} 趋势数据
    */
@@ -102,15 +140,37 @@ const analysisAPI = {
       });
     }
 
-    const { metric, days = 30, subject } = params;
+    const { days = 30 } = params;
+    // 注意: metric和subject参数后端暂不支持
+    // 使用learning-stats的study_trend数据
 
-    const queryParams = { metric, days };
-    if (subject) queryParams.subject = subject;
+    let timeRange = 'all';
+    if (days <= 7) timeRange = '7d';
+    else if (days <= 30) timeRange = '30d';
+    else if (days <= 90) timeRange = '90d';
 
-    return request.get('analysis/trends', queryParams, {
-      showLoading: false,
-      ...config,
-    });
+    return request
+      .get(
+        'analytics/learning-stats',
+        { time_range: timeRange },
+        {
+          showLoading: false,
+          ...config,
+        },
+      )
+      .then(response => {
+        if (response.success && response.data) {
+          return {
+            success: true,
+            data: {
+              trend: response.data.study_trend || [],
+              metric: params.metric,
+            },
+            message: response.message,
+          };
+        }
+        return response;
+      });
   },
 
   /**
@@ -123,11 +183,15 @@ const analysisAPI = {
   getAnalytics(params = {}, config = {}) {
     const { days = 30 } = params;
 
-    return request.get('learning/analytics', { days }, {
-      showLoading: true,
-      loadingText: '加载数据中...',
-      ...config,
-    });
+    return request.get(
+      'learning/analytics',
+      { days },
+      {
+        showLoading: true,
+        loadingText: '加载数据中...',
+        ...config,
+      },
+    );
   },
 
   /**
@@ -140,10 +204,20 @@ const analysisAPI = {
   getProgress(params = {}, config = {}) {
     const { days = 7 } = params;
 
-    return request.get('learning/progress', { days }, {
-      showLoading: false,
-      ...config,
-    });
+    let timeRange = '7d';
+    if (days <= 7) timeRange = '7d';
+    else if (days <= 30) timeRange = '30d';
+    else if (days <= 90) timeRange = '90d';
+    else timeRange = 'all';
+
+    return request.get(
+      'analytics/learning-stats',
+      { time_range: timeRange },
+      {
+        showLoading: false,
+        ...config,
+      },
+    );
   },
 
   /**
@@ -151,23 +225,21 @@ const analysisAPI = {
    * @param {Object} params - 查询参数
    * @param {number} [params.page=1] - 页码
    * @param {number} [params.size=20] - 每页数量
-   * @param {string} [params.type] - 类型筛选 (homework/question/achievement)
-   * @param {number} [params.days=90] - 统计天数
+   * @param {string} [params.type] - 类型筛选 (暂不支持)
+   * @param {number} [params.days=90] - 统计天数 (暂不支持)
    * @param {Object} [config] - 请求配置
    * @returns {Promise<Object>} 学习历史数据
    */
   getHistory(params = {}, config = {}) {
-    const { page = 1, size = 20, type, days = 90 } = params;
+    const { page = 1, size = 20 } = params;
+    // 注意: type和days参数后端暂不支持
 
     const queryParams = {
       limit: size,
       offset: (page - 1) * size,
-      days,
     };
 
-    if (type) queryParams.type = type;
-
-    return request.get('learning/history', queryParams, {
+    return request.get('learning/questions/history', queryParams, {
       showLoading: false,
       ...config,
     });
@@ -179,222 +251,17 @@ const analysisAPI = {
    * @param {string} [params.status] - 状态筛选 (active/completed/overdue)
    * @param {Object} [config] - 请求配置
    * @returns {Promise<Object>} 学习目标列表
+   * @deprecated 后端未实现，功能开发中
    */
   getGoals(params = {}, config = {}) {
-    const { status } = params;
-
-    const queryParams = {};
-    if (status) queryParams.status = status;
-
-    return request.get('learning/goals', queryParams, {
-      showLoading: false,
-      ...config,
-    });
-  },
-
-  /**
-   * 创建学习目标
-   * @param {Object} params - 目标参数
-   * @param {string} params.title - 目标标题
-   * @param {string} params.description - 目标描述
-   * @param {string} params.target_date - 目标日期 (ISO 8601)
-   * @param {string} [params.subject] - 相关学科
-   * @param {number} [params.target_value] - 目标值
-   * @param {Object} [config] - 请求配置
-   * @returns {Promise<Object>} 创建的目标信息
-   */
-  createGoal(params, config = {}) {
-    if (!params || !params.title || !params.target_date) {
-      return Promise.reject({
-        code: 'VALIDATION_ERROR',
-        message: '目标标题和目标日期不能为空',
-      });
-    }
-
-    return request.post('learning/goals', params, {
-      showLoading: true,
-      loadingText: '创建中...',
-      showError: true,
-      ...config,
-    });
-  },
-
-  /**
-   * 更新学习目标
-   * @param {string} goalId - 目标 ID
-   * @param {Object} params - 更新参数
-   * @param {string} [params.title] - 目标标题
-   * @param {string} [params.description] - 目标描述
-   * @param {string} [params.target_date] - 目标日期
-   * @param {string} [params.status] - 目标状态
-   * @param {number} [params.progress] - 进度百分比
-   * @param {Object} [config] - 请求配置
-   * @returns {Promise<Object>} 更新后的目标信息
-   */
-  updateGoal(goalId, params, config = {}) {
-    return request.put(`learning/goals/${goalId}`, params, {
-      showLoading: true,
-      loadingText: '更新中...',
-      showError: true,
-      ...config,
-    });
-  },
-
-  /**
-   * 删除学习目标
-   * @param {string} goalId - 目标 ID
-   * @param {Object} [config] - 请求配置
-   * @returns {Promise<Object>} 删除结果
-   */
-  deleteGoal(goalId, config = {}) {
-    return request.delete(`learning/goals/${goalId}`, {}, {
-      showLoading: true,
-      loadingText: '删除中...',
-      ...config,
-    });
-  },
-
-  /**
-   * 更新目标进度
-   * @param {string} goalId - 目标 ID
-   * @param {Object} params - 进度参数
-   * @param {number} params.progress - 进度百分比 (0-100)
-   * @param {string} [params.note] - 进度说明
-   * @param {Object} [config] - 请求配置
-   * @returns {Promise<Object>} 更新结果
-   */
-  updateGoalProgress(goalId, params, config = {}) {
-    if (!params || typeof params.progress !== 'number') {
-      return Promise.reject({
-        code: 'VALIDATION_ERROR',
-        message: '进度值不能为空',
-      });
-    }
-
-    return request.post(`learning/goals/${goalId}/progress`, params, {
-      showLoading: false,
-      ...config,
-    });
-  },
-
-  /**
-   * 获取学科统计
-   * @param {Object} params - 查询参数
-   * @param {number} [params.days=30] - 统计天数
-   * @param {Object} [config] - 请求配置
-   * @returns {Promise<Object>} 学科统计数据
-   */
-  getSubjectStats(params = {}, config = {}) {
-    const { days = 30 } = params;
-
-    return request.get('analysis/subjects', { days }, {
-      showLoading: false,
-      ...config,
-    });
-  },
-
-  /**
-   * 获取学习模式分析
-   * @param {Object} params - 查询参数
-   * @param {number} [params.days=30] - 统计天数
-   * @param {Object} [config] - 请求配置
-   * @returns {Promise<Object>} 学习模式数据（活跃时段、星期分布等）
-   */
-  getLearningPatterns(params = {}, config = {}) {
-    const { days = 30 } = params;
-
-    return request.get('analysis/patterns', { days }, {
-      showLoading: false,
-      ...config,
-    });
-  },
-
-  /**
-   * 获取改进建议
-   * @param {Object} params - 查询参数
-   * @param {string} [params.subject] - 学科筛选
-   * @param {string} [params.priority] - 优先级筛选 (high/medium/low)
-   * @param {Object} [config] - 请求配置
-   * @returns {Promise<Object>} 改进建议列表
-   */
-  getImprovements(params = {}, config = {}) {
-    const { subject, priority } = params;
-
-    const queryParams = {};
-    if (subject) queryParams.subject = subject;
-    if (priority) queryParams.priority = priority;
-
-    return request.get('analysis/improvements', queryParams, {
-      showLoading: false,
-      ...config,
-    });
-  },
-
-  /**
-   * 获取知识缺口分析
-   * @param {Object} params - 查询参数
-   * @param {string} [params.subject] - 学科筛选
-   * @param {number} [params.threshold=0.6] - 掌握度阈值（低于此值视为缺口）
-   * @param {Object} [config] - 请求配置
-   * @returns {Promise<Object>} 知识缺口数据
-   */
-  getKnowledgeGaps(params = {}, config = {}) {
-    const { subject, threshold = 0.6 } = params;
-
-    const queryParams = { threshold };
-    if (subject) queryParams.subject = subject;
-
-    return request.get('analysis/gaps', queryParams, {
-      showLoading: false,
-      ...config,
-    });
-  },
-
-  /**
-   * 生成学习报告（可导出）
-   * @param {Object} params - 报告参数
-   * @param {number} [params.days=30] - 统计天数
-   * @param {string} [params.format='json'] - 报告格式 (json/pdf)
-   * @param {Object} [config] - 请求配置
-   * @returns {Promise<Object>} 学习报告数据或下载链接
-   */
-  generateReport(params = {}, config = {}) {
-    const { days = 30, format = 'json' } = params;
-
-    return request.post('analysis/report', { days, format }, {
-      showLoading: true,
-      loadingText: '生成报告中...',
-      ...config,
-    });
-  },
-
-  /**
-   * 获取学习排名（班级/年级）
-   * @param {Object} params - 查询参数
-   * @param {string} [params.scope='class'] - 排名范围 (class/grade/school)
-   * @param {string} [params.metric='score'] - 排名指标 (score/frequency/improvement)
-   * @param {number} [params.days=30] - 统计天数
-   * @param {Object} [config] - 请求配置
-   * @returns {Promise<Object>} 排名数据
-   */
-  getRanking(params = {}, config = {}) {
-    const { scope = 'class', metric = 'score', days = 30 } = params;
-
-    return request.get('analysis/ranking', { scope, metric, days }, {
-      showLoading: false,
-      ...config,
-    });
-  },
-
-  /**
-   * 获取成就徽章
-   * @param {Object} [config] - 请求配置
-   * @returns {Promise<Object>} 成就徽章列表
-   */
-  getAchievements(config = {}) {
-    return request.get('learning/achievements', {}, {
-      showLoading: false,
-      ...config,
+    console.warn('[API未实现] learning/goals - 学习目标功能待后端实现');
+    return Promise.resolve({
+      success: true,
+      data: {
+        items: [],
+        total: 0,
+      },
+      message: '功能开发中，敬请期待',
     });
   },
 
@@ -404,13 +271,143 @@ const analysisAPI = {
    * @param {number} [params.days=30] - 统计天数
    * @param {Object} [config] - 请求配置
    * @returns {Promise<Object>} 学习洞察数据
+   * @deprecated 后端未实现，功能开发中
    */
   getInsights(params = {}, config = {}) {
-    const { days = 30 } = params;
+    console.warn('[API未实现] analysis/insights - 学习洞察功能待后端实现');
+    return Promise.resolve({
+      success: true,
+      data: { insights: [] },
+      message: '功能开发中，敬请期待',
+    });
+  },
 
-    return request.get('analysis/insights', { days }, {
-      showLoading: false,
-      ...config,
+  // ==================== 以下功能待后端实现 ====================
+  // 这些方法暂时返回友好提示，避免调用时报错
+
+  /**
+   * 创建学习目标 (待实现)
+   * @deprecated 后端未实现
+   */
+  createGoal(params, config = {}) {
+    console.warn('[API未实现] POST learning/goals - 学习目标功能待后端实现');
+    return Promise.reject({
+      code: 'NOT_IMPLEMENTED',
+      message: '功能开发中，敬请期待',
+    });
+  },
+
+  /**
+   * 更新学习目标 (待实现)
+   * @deprecated 后端未实现
+   */
+  updateGoal(goalId, params, config = {}) {
+    console.warn('[API未实现] PUT learning/goals - 学习目标功能待后端实现');
+    return Promise.reject({
+      code: 'NOT_IMPLEMENTED',
+      message: '功能开发中，敬请期待',
+    });
+  },
+
+  /**
+   * 删除学习目标 (待实现)
+   * @deprecated 后端未实现
+   */
+  deleteGoal(goalId, config = {}) {
+    console.warn('[API未实现] DELETE learning/goals - 学习目标功能待后端实现');
+    return Promise.reject({
+      code: 'NOT_IMPLEMENTED',
+      message: '功能开发中，敬请期待',
+    });
+  },
+
+  /**
+   * 获取学科分析 (待实现)
+   * @deprecated 后端未实现
+   */
+  getSubjects(params = {}, config = {}) {
+    console.warn('[API未实现] analysis/subjects - 学科分析功能待后端实现');
+    return Promise.resolve({
+      success: true,
+      data: { subjects: [] },
+      message: '功能开发中，敬请期待',
+    });
+  },
+
+  /**
+   * 获取学习模式分析 (待实现)
+   * @deprecated 后端未实现
+   */
+  getPatterns(params = {}, config = {}) {
+    console.warn('[API未实现] analysis/patterns - 学习模式分析待后端实现');
+    return Promise.resolve({
+      success: true,
+      data: { patterns: [] },
+      message: '功能开发中，敬请期待',
+    });
+  },
+
+  /**
+   * 获取改进建议 (待实现)
+   * @deprecated 后端未实现
+   */
+  getImprovements(params = {}, config = {}) {
+    console.warn('[API未实现] analysis/improvements - 改进建议功能待后端实现');
+    return Promise.resolve({
+      success: true,
+      data: { improvements: [] },
+      message: '功能开发中，敬请期待',
+    });
+  },
+
+  /**
+   * 获取知识缺口分析 (待实现)
+   * @deprecated 后端未实现
+   */
+  getGaps(params = {}, config = {}) {
+    console.warn('[API未实现] analysis/gaps - 知识缺口分析待后端实现');
+    return Promise.resolve({
+      success: true,
+      data: { gaps: [] },
+      message: '功能开发中，敬请期待',
+    });
+  },
+
+  /**
+   * 生成学情报告 (待实现)
+   * @deprecated 后端未实现
+   */
+  generateReport(params, config = {}) {
+    console.warn('[API未实现] POST analysis/report - 学情报告生成待后端实现');
+    return Promise.reject({
+      code: 'NOT_IMPLEMENTED',
+      message: '功能开发中，敬请期待',
+    });
+  },
+
+  /**
+   * 获取排名信息 (待实现)
+   * @deprecated 后端未实现
+   */
+  getRanking(params = {}, config = {}) {
+    console.warn('[API未实现] analysis/ranking - 排名功能待后端实现');
+    return Promise.resolve({
+      success: true,
+      data: { ranking: [] },
+      message: '功能开发中，敬请期待',
+    });
+  },
+
+  /**
+   * 获取学习成就 (待实现)
+   * @deprecated 后端未实现
+   */
+  getAchievements(config = {}) {
+    console.warn('[API未实现] learning/achievements - 成就系统待后端实现');
+    return Promise.resolve({
+      success: true,
+      data: { achievements: [] },
+      message: '功能开发中，敬请期待',
     });
   },
 };
