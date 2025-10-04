@@ -51,6 +51,26 @@ Page({
     imageProcessing: false,
     compressionProgress: 0,
     showCompressionDialog: false,
+
+    // 新增: 图片裁剪相关
+    showImageCropper: false,
+    currentCropImage: null,
+    currentCropIndex: -1,
+
+    // 新增: 质量选择器
+    showQualitySelector: false,
+    selectedQuality: 'standard', // high, standard, low
+    qualityConfig: {
+      quality: 0.8,
+      maxSizeKB: 500,
+      maxWidth: 1080,
+      maxHeight: 1920
+    },
+
+    // 新增: OCR进度
+    showOCRProgress: false,
+    ocrImages: [], // {id, path, status, ocrText, confidence, error}
+    ocrProgress: 0
   },
 
   /**
