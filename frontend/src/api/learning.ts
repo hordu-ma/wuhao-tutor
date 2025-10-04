@@ -3,7 +3,7 @@
  * 提供与学习问答系统相关的所有API方法
  */
 
-import http from "./http";
+import http from './http'
 import type {
   AskQuestionRequest,
   AskQuestionResponse,
@@ -17,45 +17,39 @@ import type {
   ChatSession,
   LearningAnalytics,
   RecommendationResponse,
-} from "@/types/learning";
+} from '@/types/learning'
 
-const API_PREFIX = "/api/v1/learning";
+const API_PREFIX = '/learning'
 
 export class LearningAPI {
   /**
    * 向AI助手提问
    */
-  static async askQuestion(
-    request: AskQuestionRequest
-  ): Promise<AskQuestionResponse> {
-    return http.post<AskQuestionResponse>(`${API_PREFIX}/ask`, request);
+  static async askQuestion(request: AskQuestionRequest): Promise<AskQuestionResponse> {
+    return http.post<AskQuestionResponse>(`${API_PREFIX}/ask`, request)
   }
 
   /**
    * 创建新的学习会话
    */
-  static async createSession(
-    request: CreateSessionRequest
-  ): Promise<ChatSession> {
-    return http.post<ChatSession>(`${API_PREFIX}/sessions`, request);
+  static async createSession(request: CreateSessionRequest): Promise<ChatSession> {
+    return http.post<ChatSession>(`${API_PREFIX}/sessions`, request)
   }
 
   /**
    * 获取会话列表
    */
-  static async getSessionList(
-    query: SessionListQuery = {}
-  ): Promise<SessionListResponse> {
+  static async getSessionList(query: SessionListQuery = {}): Promise<SessionListResponse> {
     return http.get<SessionListResponse>(`${API_PREFIX}/sessions`, {
       params: query,
-    });
+    })
   }
 
   /**
    * 获取单个会话详情
    */
   static async getSession(sessionId: string): Promise<ChatSession> {
-    return http.get<ChatSession>(`${API_PREFIX}/sessions/${sessionId}`);
+    return http.get<ChatSession>(`${API_PREFIX}/sessions/${sessionId}`)
   }
 
   /**
@@ -65,35 +59,28 @@ export class LearningAPI {
     sessionId: string,
     request: UpdateSessionRequest
   ): Promise<ChatSession> {
-    return http.patch<ChatSession>(
-      `${API_PREFIX}/sessions/${sessionId}`,
-      request
-    );
+    return http.patch<ChatSession>(`${API_PREFIX}/sessions/${sessionId}`, request)
   }
 
   /**
    * 删除会话
    */
   static async deleteSession(sessionId: string): Promise<void> {
-    await http.delete(`${API_PREFIX}/sessions/${sessionId}`);
+    await http.delete(`${API_PREFIX}/sessions/${sessionId}`)
   }
 
   /**
    * 归档会话
    */
   static async archiveSession(sessionId: string): Promise<ChatSession> {
-    return http.patch<ChatSession>(
-      `${API_PREFIX}/sessions/${sessionId}/archive`
-    );
+    return http.patch<ChatSession>(`${API_PREFIX}/sessions/${sessionId}/archive`)
   }
 
   /**
    * 恢复会话
    */
   static async activateSession(sessionId: string): Promise<ChatSession> {
-    return http.patch<ChatSession>(
-      `${API_PREFIX}/sessions/${sessionId}/activate`
-    );
+    return http.patch<ChatSession>(`${API_PREFIX}/sessions/${sessionId}/activate`)
   }
 
   /**
@@ -102,12 +89,9 @@ export class LearningAPI {
   static async getQuestionHistory(
     query: QuestionHistoryQuery = {}
   ): Promise<QuestionHistoryResponse> {
-    return http.get<QuestionHistoryResponse>(
-      `${API_PREFIX}/questions/history`,
-      {
-        params: query,
-      }
-    );
+    return http.get<QuestionHistoryResponse>(`${API_PREFIX}/questions/history`, {
+      params: query,
+    })
   }
 
   /**
@@ -118,33 +102,30 @@ export class LearningAPI {
     limit = 50,
     offset = 0
   ): Promise<QuestionHistoryResponse> {
-    return http.get<QuestionHistoryResponse>(
-      `${API_PREFIX}/sessions/${sessionId}/questions`,
-      {
-        params: { limit, offset },
-      }
-    );
+    return http.get<QuestionHistoryResponse>(`${API_PREFIX}/sessions/${sessionId}/questions`, {
+      params: { limit, offset },
+    })
   }
 
   /**
    * 提交答案反馈
    */
   static async submitFeedback(request: FeedbackRequest): Promise<void> {
-    await http.post(`${API_PREFIX}/feedback`, request);
+    await http.post(`${API_PREFIX}/feedback`, request)
   }
 
   /**
    * 获取学习分析数据
    */
   static async getLearningAnalytics(): Promise<LearningAnalytics> {
-    return http.get<LearningAnalytics>(`${API_PREFIX}/analytics`);
+    return http.get<LearningAnalytics>(`${API_PREFIX}/analytics`)
   }
 
   /**
    * 获取学习建议和推荐
    */
   static async getRecommendations(): Promise<RecommendationResponse> {
-    return http.get<RecommendationResponse>(`${API_PREFIX}/recommendations`);
+    return http.get<RecommendationResponse>(`${API_PREFIX}/recommendations`)
   }
 
   /**
@@ -153,11 +134,11 @@ export class LearningAPI {
   static async searchQuestions(
     keyword: string,
     filters: {
-      subject?: string;
-      question_type?: string;
-      session_id?: string;
-      limit?: number;
-      offset?: number;
+      subject?: string
+      question_type?: string
+      session_id?: string
+      limit?: number
+      offset?: number
     } = {}
   ): Promise<QuestionHistoryResponse> {
     return http.get<QuestionHistoryResponse>(`${API_PREFIX}/questions/search`, {
@@ -165,31 +146,31 @@ export class LearningAPI {
         q: keyword,
         ...filters,
       },
-    });
+    })
   }
 
   /**
    * 导出学习数据
    */
-  static async exportData(format: "json" | "csv" = "json"): Promise<Blob> {
+  static async exportData(format: 'json' | 'csv' = 'json'): Promise<Blob> {
     const response = await http.get(`${API_PREFIX}/export`, {
       params: { format },
-      responseType: "blob",
-    });
-    return response;
+      responseType: 'blob',
+    })
+    return response
   }
 
   /**
    * 获取系统统计信息
    */
   static async getSystemStats(): Promise<{
-    total_users: number;
-    total_questions: number;
-    total_sessions: number;
-    avg_response_time: number;
-    active_users_today: number;
+    total_users: number
+    total_questions: number
+    total_sessions: number
+    avg_response_time: number
+    active_users_today: number
   }> {
-    return http.get(`${API_PREFIX}/stats`);
+    return http.get(`${API_PREFIX}/stats`)
   }
 
   /**
@@ -197,38 +178,38 @@ export class LearningAPI {
    */
   static async batchOperateSessions(
     sessionIds: string[],
-    operation: "archive" | "activate" | "delete"
+    operation: 'archive' | 'activate' | 'delete'
   ): Promise<void> {
     await http.post(`${API_PREFIX}/sessions/batch`, {
       session_ids: sessionIds,
       operation,
-    });
+    })
   }
 
   /**
    * 获取用户的学习偏好设置
    */
   static async getUserPreferences(): Promise<{
-    default_subject?: string;
-    default_difficulty?: number;
-    auto_context?: boolean;
-    max_history?: number;
-    notification_enabled?: boolean;
+    default_subject?: string
+    default_difficulty?: number
+    auto_context?: boolean
+    max_history?: number
+    notification_enabled?: boolean
   }> {
-    return http.get(`${API_PREFIX}/preferences`);
+    return http.get(`${API_PREFIX}/preferences`)
   }
 
   /**
    * 更新用户的学习偏好设置
    */
   static async updateUserPreferences(preferences: {
-    default_subject?: string;
-    default_difficulty?: number;
-    auto_context?: boolean;
-    max_history?: number;
-    notification_enabled?: boolean;
+    default_subject?: string
+    default_difficulty?: number
+    auto_context?: boolean
+    max_history?: number
+    notification_enabled?: boolean
   }): Promise<void> {
-    await http.put(`${API_PREFIX}/preferences`, preferences);
+    await http.put(`${API_PREFIX}/preferences`, preferences)
   }
 
   /**
@@ -236,40 +217,40 @@ export class LearningAPI {
    */
   static async getKnowledgeGraph(subject?: string): Promise<{
     nodes: Array<{
-      id: string;
-      label: string;
-      category: string;
-      level: number;
-      mastery?: number;
-    }>;
+      id: string
+      label: string
+      category: string
+      level: number
+      mastery?: number
+    }>
     edges: Array<{
-      source: string;
-      target: string;
-      relationship: string;
-      strength: number;
-    }>;
+      source: string
+      target: string
+      relationship: string
+      strength: number
+    }>
   }> {
     return http.get(`${API_PREFIX}/knowledge-graph`, {
       params: subject ? { subject } : {},
-    });
+    })
   }
 
   /**
    * 生成学习报告
    */
   static async generateReport(
-    type: "daily" | "weekly" | "monthly",
+    type: 'daily' | 'weekly' | 'monthly',
     date?: string
   ): Promise<{
-    report_id: string;
-    report_url: string;
-    generated_at: string;
+    report_id: string
+    report_url: string
+    generated_at: string
   }> {
     return http.post(`${API_PREFIX}/reports`, {
       type,
       date,
-    });
+    })
   }
 }
 
-export default LearningAPI;
+export default LearningAPI
