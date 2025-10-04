@@ -7,36 +7,50 @@ import hashlib
 import logging
 import secrets
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
+from sqlalchemy import and_, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_, or_, desc
 from sqlalchemy.orm import selectinload
 
 from src.core.config import get_settings
 from src.core.exceptions import (
-    ServiceError, NotFoundError, ValidationError,
-    AuthenticationError, ConflictError
+    AuthenticationError,
+    ConflictError,
+    NotFoundError,
+    ServiceError,
+    ValidationError,
 )
-from src.models.user import User, UserSession, UserRole, GradeLevel
-from src.schemas.user import (
-    UserResponse, UserDetailResponse, UpdateUserRequest,
-    UpdateStudyPreferencesRequest, AddLearningGoalRequest,
-    UserListQuery, UserActivityResponse, UserProgressResponse,
-    PaginatedResponse
-)
-from src.schemas.auth import (
-    RegisterRequest, LoginRequest, LoginResponse,
-    RefreshTokenRequest, RefreshTokenResponse
-)
-from src.utils.cache import cache_result, cache_key
+from src.models.user import GradeLevel, User, UserRole, UserSession
 from src.repositories.base_repository import BaseRepository
-from src.utils.type_converters import (
-    extract_orm_str, extract_orm_bool, extract_orm_uuid_str,
-    extract_orm_int, safe_json_loads, wrap_orm,
-    build_user_response_data
+from src.schemas.auth import (
+    LoginRequest,
+    LoginResponse,
+    RefreshTokenRequest,
+    RefreshTokenResponse,
+    RegisterRequest,
 )
-
+from src.schemas.user import (
+    AddLearningGoalRequest,
+    PaginatedResponse,
+    UpdateStudyPreferencesRequest,
+    UpdateUserRequest,
+    UserActivityResponse,
+    UserDetailResponse,
+    UserListQuery,
+    UserProgressResponse,
+    UserResponse,
+)
+from src.utils.cache import cache_key, cache_result
+from src.utils.type_converters import (
+    build_user_response_data,
+    extract_orm_bool,
+    extract_orm_int,
+    extract_orm_str,
+    extract_orm_uuid_str,
+    safe_json_loads,
+    wrap_orm,
+)
 
 logger = logging.getLogger("user_service")
 settings = get_settings()
@@ -70,7 +84,9 @@ class UserService:
                 "nickname": request.nickname,
                 "avatar_url": request.avatar_url,
                 "school": request.school,
-                "grade_level": request.grade_level.value if request.grade_level else None,
+                "grade_level": (
+                    request.grade_level.value if request.grade_level else None
+                ),
                 "class_name": request.class_name,
                 "institution": request.institution,
                 "parent_contact": request.parent_contact,
@@ -78,23 +94,28 @@ class UserService:
                 "role": request.role.value,
                 "is_active": True,
                 "is_verified": True,  # 注册时假设已验证
-                "login_count": 0
+                "login_count": 0,
             }
 
             user = await self.user_repo.create(user_data)
 
-            logger.info("用户注册成功", extra={
-                "user_id": extract_orm_uuid_str(user, "id"),
-                "phone": request.phone,
-                "name": request.name
-            })
+            logger.info(
+                "用户注册成功",
+                extra={
+                    "user_id": extract_orm_uuid_str(user, "id"),
+                    "phone": request.phone,
+                    "name": request.name,
+                },
+            )
 
             return UserResponse.model_validate(user)
 
         except ConflictError:
             raise
         except Exception as e:
-            logger.error(f"用户注册失败: {str(e)}", extra={"phone": request.phone}, exc_info=True)
+            logger.error(
+                f"用户注册失败: {str(e)}", extra={"phone": request.phone}, exc_info=True
+            )
             raise ServiceError(f"用户注册失败: {str(e)}") from e
 
     async def authenticate_user(self, phone: str, password: str) -> Optional[User]:
@@ -107,7 +128,9 @@ class UserService:
             if not extract_orm_bool(user, "is_active"):
                 raise AuthenticationError("用户账号已被禁用")
 
-            if not self._verify_password(password, extract_orm_str(user, "password_hash")):
+            if not self._verify_password(
+                password, extract_orm_str(user, "password_hash")
+            ):
                 return None
 
             # 更新登录信息 - 暂时注释掉以绕过数据库错误
@@ -122,8 +145,92 @@ class UserService:
         except AuthenticationError:
             raise
         except Exception as e:
-            logger.error(f"用户认证失败: {str(e)}", extra={"phone": phone}, exc_info=True)
+            logger.error(
+                f"用户认证失败: {str(e)}", extra={"phone": phone}, exc_info=True
+            )
             return None
+
+    async def get_user_by_wechat_openid(self, openid: str) -> Optional[User]:
+        """根据微信openid获取用户"""
+        try:
+            result = await self.db.execute(
+                select(User).where(User.wechat_openid == openid)
+            )
+            return result.scalar_one_or_none()
+        except Exception as e:
+            logger.error(f"根据openid查找用户失败: {str(e)}", exc_info=True)
+            return None
+
+    async def create_wechat_user(
+        self,
+        openid: str,
+        unionid: Optional[str] = None,
+        nickname: str = "微信用户",
+        avatar_url: str = "",
+        name: Optional[str] = None,
+        phone: Optional[str] = None,
+        role: str = "student",
+    ) -> User:
+        """创建微信用户"""
+        try:
+            # 检查openid是否已存在
+            existing_user = await self.get_user_by_wechat_openid(openid)
+            if existing_user:
+                raise ConflictError("该微信账号已绑定其他用户")
+
+            # 如果提供了手机号，检查是否已被注册
+            if phone:
+                existing_phone_user = await self.user_repo.get_by_field("phone", phone)
+                if existing_phone_user:
+                    # 绑定微信到现有账号
+                    await self.user_repo.update(
+                        extract_orm_uuid_str(existing_phone_user, "id"),
+                        {
+                            "wechat_openid": openid,
+                            "wechat_unionid": unionid,
+                            "nickname": nickname
+                            or extract_orm_str(existing_phone_user, "nickname"),
+                            "avatar_url": avatar_url
+                            or extract_orm_str(existing_phone_user, "avatar_url"),
+                        },
+                    )
+                    return existing_phone_user
+
+            # 创建新用户
+            user_data = {
+                "phone": phone,  # 可能为None，后续可补充
+                "password_hash": "",  # 微信用户无密码
+                "name": name or nickname,
+                "nickname": nickname,
+                "avatar_url": avatar_url,
+                "wechat_openid": openid,
+                "wechat_unionid": unionid,
+                "role": role,
+                "is_active": True,
+                "is_verified": True,  # 微信登录默认已验证
+                "login_count": 0,
+            }
+
+            user = await self.user_repo.create(user_data)
+
+            logger.info(
+                "微信用户创建成功",
+                extra={
+                    "user_id": extract_orm_uuid_str(user, "id"),
+                    "openid": openid,
+                    "nickname": nickname,
+                },
+            )
+
+            return user
+
+        except ConflictError:
+            raise
+        except Exception as e:
+            logger.error(
+                f"创建微信用户失败: {str(e)}", extra={"openid": openid}, exc_info=True
+            )
+            raise ServiceError(f"创建微信用户失败: {str(e)}") from e
 
     async def get_user_by_id(self, user_id: str) -> Optional[UserResponse]:
         """根据ID获取用户信息"""
@@ -147,6 +254,7 @@ class UserService:
         if study_subjects_str:
             try:
                 import json
+
                 study_subjects = json.loads(study_subjects_str)
             except:
                 pass
@@ -155,6 +263,7 @@ class UserService:
         if study_goals_str:
             try:
                 import json
+
                 study_goals = json.loads(study_goals_str)
             except:
                 pass
@@ -168,9 +277,7 @@ class UserService:
         return user_detail
 
     async def update_user(
-        self,
-        user_id: str,
-        request: UpdateUserRequest
+        self, user_id: str, request: UpdateUserRequest
     ) -> UserResponse:
         """更新用户信息"""
         user = await self.user_repo.get_by_id(user_id)
@@ -182,7 +289,9 @@ class UserService:
         for field, value in request.model_dump(exclude_unset=True).items():
             if hasattr(user, field):
                 if field == "grade_level" and value:
-                    update_data[field] = value.value if hasattr(value, 'value') else value
+                    update_data[field] = (
+                        value.value if hasattr(value, "value") else value
+                    )
                 else:
                     update_data[field] = value
 
@@ -190,13 +299,14 @@ class UserService:
             await self.user_repo.update(user_id, update_data)
             user = await self.user_repo.get_by_id(user_id)
 
-        logger.info("用户信息更新成功", extra={"user_id": user_id, "fields": list(update_data.keys())})
+        logger.info(
+            "用户信息更新成功",
+            extra={"user_id": user_id, "fields": list(update_data.keys())},
+        )
         return UserResponse.model_validate(user)
 
     async def update_study_preferences(
-        self,
-        user_id: str,
-        request: UpdateStudyPreferencesRequest
+        self, user_id: str, request: UpdateStudyPreferencesRequest
     ) -> bool:
         """更新学习偏好"""
         user = await self.user_repo.get_by_id(user_id)
@@ -207,19 +317,19 @@ class UserService:
 
         # 更新学习学科
         if request.subjects is not None:
-            subjects_data = [s.value if hasattr(s, 'value') else s for s in request.subjects]
-            await self.user_repo.update(user_id, {
-                "study_subjects": json.dumps(subjects_data)
-            })
+            subjects_data = [
+                s.value if hasattr(s, "value") else s for s in request.subjects
+            ]
+            await self.user_repo.update(
+                user_id, {"study_subjects": json.dumps(subjects_data)}
+            )
 
         # 这里可以扩展更多学习偏好字段的更新
         logger.info("用户学习偏好更新成功", extra={"user_id": user_id})
         return True
 
     async def add_learning_goal(
-        self,
-        user_id: str,
-        request: AddLearningGoalRequest
+        self, user_id: str, request: AddLearningGoalRequest
     ) -> bool:
         """添加学习目标"""
         user = await self.user_repo.get_by_id(user_id)
@@ -239,23 +349,26 @@ class UserService:
 
         # 添加新目标
         new_goal = request.model_dump()
-        if hasattr(request.goal_type, 'value') and request.goal_type is not None:
-            new_goal['goal_type'] = request.goal_type.value
-        if hasattr(request.subject, 'value') and request.subject is not None:
-            new_goal['subject'] = request.subject.value
+        if hasattr(request.goal_type, "value") and request.goal_type is not None:
+            new_goal["goal_type"] = request.goal_type.value
+        if hasattr(request.subject, "value") and request.subject is not None:
+            new_goal["subject"] = request.subject.value
 
-        new_goal['id'] = secrets.token_hex(8)
-        new_goal['created_at'] = datetime.utcnow().isoformat()
-        new_goal['is_completed'] = False
+        new_goal["id"] = secrets.token_hex(8)
+        new_goal["created_at"] = datetime.utcnow().isoformat()
+        new_goal["is_completed"] = False
 
         existing_goals.append(new_goal)
 
         # 更新数据库
-        await self.user_repo.update(user_id, {
-            "study_goals": json.dumps(existing_goals)
-        })
+        await self.user_repo.update(
+            user_id, {"study_goals": json.dumps(existing_goals)}
+        )
 
-        logger.info("学习目标添加成功", extra={"user_id": user_id, "goal_type": str(request.goal_type)})
+        logger.info(
+            "学习目标添加成功",
+            extra={"user_id": user_id, "goal_type": str(request.goal_type)},
+        )
         return True
 
     # ========== 用户查询和统计 ==========
@@ -285,7 +398,7 @@ class UserService:
                 User.name.contains(query.search),
                 User.nickname.contains(query.search),
                 User.phone.contains(query.search),
-                User.school.contains(query.search)
+                User.school.contains(query.search),
             )
             conditions.append(search_condition)
 
@@ -327,7 +440,7 @@ class UserService:
             "page": query.page,
             "size": query.size,
             "pages": (total + query.size - 1) // query.size if total else 0,
-            "items": [UserResponse.model_validate(user) for user in users]
+            "items": [UserResponse.model_validate(user) for user in users],
         }
 
     @cache_result(ttl=300)  # 缓存5分钟
@@ -368,7 +481,9 @@ class UserService:
         new_users_month = month_result.scalar()
 
         # 已验证用户数
-        verified_users_stmt = select(func.count(User.id)).where(User.is_verified == True)
+        verified_users_stmt = select(func.count(User.id)).where(
+            User.is_verified == True
+        )
         verified_result = await self.db.execute(verified_users_stmt)
         verified_users = verified_result.scalar()
 
@@ -378,16 +493,22 @@ class UserService:
         role_distribution = {row[0]: row[1] for row in role_dist_result}
 
         # 年级分布
-        grade_dist_stmt = select(User.grade_level, func.count(User.id)).where(
-            User.grade_level.isnot(None)
-        ).group_by(User.grade_level)
+        grade_dist_stmt = (
+            select(User.grade_level, func.count(User.id))
+            .where(User.grade_level.isnot(None))
+            .group_by(User.grade_level)
+        )
         grade_dist_result = await self.db.execute(grade_dist_stmt)
         grade_distribution = {row[0]: row[1] for row in grade_dist_result}
 
         # 学校分布（前10）
-        school_dist_stmt = select(User.school, func.count(User.id)).where(
-            User.school.isnot(None)
-        ).group_by(User.school).order_by(desc(func.count(User.id))).limit(10)
+        school_dist_stmt = (
+            select(User.school, func.count(User.id))
+            .where(User.school.isnot(None))
+            .group_by(User.school)
+            .order_by(desc(func.count(User.id)))
+            .limit(10)
+        )
         school_dist_result = await self.db.execute(school_dist_stmt)
         school_distribution = {row[0]: row[1] for row in school_dist_result}
 
@@ -403,7 +524,7 @@ class UserService:
             "parent_count": role_distribution.get("parent", 0),
             "role_distribution": role_distribution,
             "grade_distribution": grade_distribution,
-            "school_distribution": school_distribution
+            "school_distribution": school_distribution,
         }
 
     # ========== 用户活动和进度 ==========
@@ -421,12 +542,14 @@ class UserService:
         return UserActivityResponse(
             user_id=user_id,
             total_questions=0,  # TODO: 查询问答记录
-            total_sessions=0,   # TODO: 查询会话记录
-            total_homework=0,   # TODO: 查询作业记录
+            total_sessions=0,  # TODO: 查询会话记录
+            total_homework=0,  # TODO: 查询作业记录
             study_streak_days=0,
             avg_daily_questions=0.0,
             most_active_subject=None,
-            last_activity_at=datetime.fromisoformat(last_login_str) if last_login_str else None
+            last_activity_at=(
+                datetime.fromisoformat(last_login_str) if last_login_str else None
+            ),
         )
 
     async def get_user_progress(self, user_id: str) -> Optional[UserProgressResponse]:
@@ -439,11 +562,7 @@ class UserService:
         return UserProgressResponse(
             user_id=user_id,
             overall_progress=65,  # 默认进度
-            subject_progress={
-                "math": 70,
-                "chinese": 60,
-                "english": 65
-            },
+            subject_progress={"math": 70, "chinese": 60, "english": 65},
             goal_completion_rate=50,
             knowledge_points_mastered=85,
             total_knowledge_points=120,
@@ -452,8 +571,8 @@ class UserService:
             recommendations=[
                 "建议加强语文写作练习",
                 "可以多做物理实验题目",
-                "继续保持数学优势"
-            ]
+                "继续保持数学优势",
+            ],
         )
 
     # ========== 会话管理 ==========
@@ -464,7 +583,7 @@ class UserService:
         device_type: str = "web",
         device_id: Optional[str] = None,
         ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None
+        user_agent: Optional[str] = None,
     ) -> UserSession:
         """创建用户会话"""
         # 生成token JTI
@@ -485,7 +604,7 @@ class UserService:
             "expires_at": expires_at.isoformat(),
             "ip_address": ip_address,
             "user_agent": user_agent,
-            "is_revoked": False
+            "is_revoked": False,
         }
 
         return await self.session_repo.create(session_data)
@@ -507,8 +626,7 @@ class UserService:
         """撤销用户所有会话"""
         # 查询用户所有活跃会话
         stmt = select(UserSession).where(
-            UserSession.user_id == user_id,
-            UserSession.is_revoked == False
+            UserSession.user_id == user_id, UserSession.is_revoked == False
         )
         result = await self.db.execute(stmt)
         sessions = result.scalars().all()
@@ -520,16 +638,15 @@ class UserService:
             await self.session_repo.update(session_id, {"is_revoked": True})
             revoked_count += 1
 
-        logger.info("撤销用户所有会话", extra={"user_id": user_id, "count": revoked_count})
+        logger.info(
+            "撤销用户所有会话", extra={"user_id": user_id, "count": revoked_count}
+        )
         return revoked_count
 
     # ========== 密码管理 ==========
 
     async def change_password(
-        self,
-        user_id: str,
-        old_password: str,
-        new_password: str
+        self, user_id: str, old_password: str, new_password: str
     ) -> bool:
         """修改密码"""
         user = await self.user_repo.get_by_id(user_id)
@@ -537,7 +654,9 @@ class UserService:
             raise NotFoundError("用户不存在")
 
         # 验证旧密码
-        if not self._verify_password(old_password, extract_orm_str(user, "password_hash")):
+        if not self._verify_password(
+            old_password, extract_orm_str(user, "password_hash")
+        ):
             raise AuthenticationError("原密码错误")
 
         # 更新密码
@@ -551,10 +670,7 @@ class UserService:
         return True
 
     async def reset_password(
-        self,
-        phone: str,
-        new_password: str,
-        verification_code: str
+        self, phone: str, new_password: str, verification_code: str
     ) -> bool:
         """重置密码（通过验证码）"""
         user = await self.user_repo.get_by_field("phone", phone)
@@ -583,22 +699,16 @@ class UserService:
         # 使用PBKDF2算法哈希密码
         salt = secrets.token_hex(16)
         password_hash = hashlib.pbkdf2_hmac(
-            'sha256',
-            password.encode('utf-8'),
-            salt.encode('utf-8'),
-            100000  # 迭代次数
+            "sha256", password.encode("utf-8"), salt.encode("utf-8"), 100000  # 迭代次数
         )
         return f"{salt}:{password_hash.hex()}"
 
     def _verify_password(self, password: str, password_hash: str) -> bool:
         """验证密码"""
         try:
-            salt, stored_hash = password_hash.split(':')
+            salt, stored_hash = password_hash.split(":")
             calculated_hash = hashlib.pbkdf2_hmac(
-                'sha256',
-                password.encode('utf-8'),
-                salt.encode('utf-8'),
-                100000
+                "sha256", password.encode("utf-8"), salt.encode("utf-8"), 100000
             )
             return calculated_hash.hex() == stored_hash
         except ValueError:
@@ -609,8 +719,7 @@ class UserService:
         current_time = datetime.utcnow().isoformat()
 
         stmt = select(UserSession).where(
-            UserSession.expires_at < current_time,
-            UserSession.is_revoked == False
+            UserSession.expires_at < current_time, UserSession.is_revoked == False
         )
         result = await self.db.execute(stmt)
         expired_sessions = result.scalars().all()
