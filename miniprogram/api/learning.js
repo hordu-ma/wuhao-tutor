@@ -60,10 +60,14 @@ const learningAPI = {
    * @returns {Promise<Object>} 会话详情
    */
   getSessionDetail(sessionId, config = {}) {
-    return request.get(`learning/sessions/${sessionId}`, {}, {
-      showLoading: false,
-      ...config,
-    });
+    return request.get(
+      `learning/sessions/${sessionId}`,
+      {},
+      {
+        showLoading: false,
+        ...config,
+      },
+    );
   },
 
   /**
@@ -89,11 +93,15 @@ const learningAPI = {
    * @returns {Promise<Object>} 删除结果
    */
   deleteSession(sessionId, config = {}) {
-    return request.delete(`learning/sessions/${sessionId}`, {}, {
-      showLoading: true,
-      loadingText: '删除中...',
-      ...config,
-    });
+    return request.delete(
+      `learning/sessions/${sessionId}`,
+      {},
+      {
+        showLoading: true,
+        loadingText: '删除中...',
+        ...config,
+      },
+    );
   },
 
   /**
@@ -159,10 +167,14 @@ const learningAPI = {
    * @returns {Promise<Object>} 问题详情
    */
   getQuestionDetail(questionId, config = {}) {
-    return request.get(`learning/questions/${questionId}`, {}, {
-      showLoading: false,
-      ...config,
-    });
+    return request.get(
+      `learning/questions/${questionId}`,
+      {},
+      {
+        showLoading: false,
+        ...config,
+      },
+    );
   },
 
   /**
@@ -216,11 +228,15 @@ const learningAPI = {
    * @returns {Promise<Object>} 收藏结果
    */
   favoriteQuestion(questionId, config = {}) {
-    return request.post(`learning/questions/${questionId}/favorite`, {}, {
-      showLoading: false,
-      showError: true,
-      ...config,
-    });
+    return request.post(
+      `learning/questions/${questionId}/favorite`,
+      {},
+      {
+        showLoading: false,
+        showError: true,
+        ...config,
+      },
+    );
   },
 
   /**
@@ -230,10 +246,14 @@ const learningAPI = {
    * @returns {Promise<Object>} 取消收藏结果
    */
   unfavoriteQuestion(questionId, config = {}) {
-    return request.delete(`learning/questions/${questionId}/favorite`, {}, {
-      showLoading: false,
-      ...config,
-    });
+    return request.delete(
+      `learning/questions/${questionId}/favorite`,
+      {},
+      {
+        showLoading: false,
+        ...config,
+      },
+    );
   },
 
   /**
@@ -243,18 +263,14 @@ const learningAPI = {
    * @param {number} [params.size=10] - 每页数量
    * @param {Object} [config] - 请求配置
    * @returns {Promise<Object>} 收藏列表
+   * @deprecated 后端未实现，功能开发中
    */
   getFavorites(params = {}, config = {}) {
-    const { page = 1, size = 10 } = params;
-
-    const queryParams = {
-      limit: size,
-      offset: (page - 1) * size,
-    };
-
-    return request.get('learning/favorites', queryParams, {
-      showLoading: false,
-      ...config,
+    console.warn('[API未实现] learning/favorites - 收藏功能待后端实现');
+    return Promise.resolve({
+      success: true,
+      data: { items: [], total: 0 },
+      message: '功能开发中，敬请期待',
     });
   },
 
@@ -264,13 +280,14 @@ const learningAPI = {
    * @param {number} [params.days=30] - 统计天数
    * @param {Object} [config] - 请求配置
    * @returns {Promise<Object>} 学习洞察数据
+   * @deprecated 后端未实现，功能开发中
    */
   getInsights(params = {}, config = {}) {
-    const { days = 30 } = params;
-
-    return request.get('learning/insights', { days }, {
-      showLoading: false,
-      ...config,
+    console.warn('[API未实现] learning/insights - 学习见解功能待后端实现');
+    return Promise.resolve({
+      success: true,
+      data: { insights: [] },
+      message: '功能开发中，敬请期待',
     });
   },
 
@@ -290,7 +307,7 @@ const learningAPI = {
         showLoading: true,
         loadingText: '上传图片中...',
         ...config,
-      }
+      },
     );
   },
 
@@ -377,16 +394,14 @@ const learningAPI = {
    * @param {number} [params.limit=10] - 返回数量
    * @param {Object} [config] - 请求配置
    * @returns {Promise<Object>} 热门问题列表
+   * @deprecated 后端未实现，功能开发中
    */
   getPopularQuestions(params = {}, config = {}) {
-    const { subject, days = 7, limit = 10 } = params;
-
-    const queryParams = { days, limit };
-    if (subject) queryParams.subject = subject;
-
-    return request.get('learning/popular', queryParams, {
-      showLoading: false,
-      ...config,
+    console.warn('[API未实现] learning/popular - 热门问题功能待后端实现');
+    return Promise.resolve({
+      success: true,
+      data: { items: [], total: 0 },
+      message: '功能开发中，敬请期待',
     });
   },
 
@@ -401,10 +416,14 @@ const learningAPI = {
   getSimilarQuestions(questionId, params = {}, config = {}) {
     const { limit = 5 } = params;
 
-    return request.get(`learning/questions/${questionId}/similar`, { limit }, {
-      showLoading: false,
-      ...config,
-    });
+    return request.get(
+      `learning/questions/${questionId}/similar`,
+      { limit },
+      {
+        showLoading: false,
+        ...config,
+      },
+    );
   },
 };
 
