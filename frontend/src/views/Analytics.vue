@@ -97,7 +97,7 @@
         <h2 class="section-title">学习统计图表</h2>
         <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <div>
-            <LearningStatsChart :auto-refresh="true" />
+            <LearningTrendChart :auto-refresh="true" :default-time-range="selectedTimeRange" />
           </div>
           <div>
             <LearningProgressChart :default-metric="selectedTimeRange" />
@@ -172,58 +172,10 @@
       </div>
 
       <!-- 学习日历和成就系统 -->
-      <div class="calendar-achievements-section">
+      <div class="calendar-achievements-section mb-8">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <!-- 学习日历 -->
-          <div class="calendar-card bg-white rounded-lg p-6 shadow-sm border">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-semibold text-gray-900">学习日历</h3>
-              <div class="flex items-center space-x-2">
-                <el-button
-                  size="small"
-                  :icon="ArrowLeft"
-                  @click="previousMonth"
-                  :disabled="loading"
-                />
-                <span class="text-sm font-medium px-2">
-                  {{ currentMonth.format("YYYY年MM月") }}
-                </span>
-                <el-button
-                  size="small"
-                  :icon="ArrowRight"
-                  @click="nextMonth"
-                  :disabled="loading"
-                />
-              </div>
-            </div>
-            <div ref="calendarContainer" class="calendar-container">
-              <!-- 学习日历热力图 -->
-              <div class="calendar-heatmap">
-                <div class="text-center py-4">
-                  <div class="grid grid-cols-7 gap-1 mb-4">
-                    <div
-                      v-for="day in ['日', '一', '二', '三', '四', '五', '六']"
-                      :key="day"
-                      class="text-xs text-gray-500 text-center py-1"
-                    >
-                      {{ day }}
-                    </div>
-                  </div>
-                  <div class="grid grid-cols-7 gap-1">
-                    <div
-                      v-for="(day, index) in generateCalendarDays()"
-                      :key="index"
-                      class="w-8 h-8 rounded text-xs flex items-center justify-center cursor-pointer transition-colors"
-                      :class="getCalendarDayClass(day)"
-                      @click="handleCalendarDayClick(day)"
-                    >
-                      {{ day.date }}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <LearningCalendar :auto-refresh="true" />
 
           <!-- 成就系统 -->
           <div class="achievements-section">
@@ -246,41 +198,36 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useAnalyticsStore } from "../stores/analytics";
-import LearningStatsChart from "../components/LearningStatsChart.vue";
+import LearningTrendChart from "../components/LearningTrendChart.vue";
 import KnowledgeRadarChart from "../components/KnowledgeRadarChart.vue";
 import LearningRecommendations from "../components/LearningRecommendations.vue";
 import AchievementDisplay from "../components/AchievementDisplay.vue";
 import LearningProgressChart from "../components/LearningProgressChart.vue";
 import LearningInsights from "../components/LearningInsights.vue";
+import LearningCalendar from "../components/LearningCalendar.vue";
 import {
   Refresh,
   Download,
   ArrowDown,
-  ArrowLeft,
-  ArrowRight,
   Clock,
   Document,
   Flag,
   TrendCharts,
 } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
-import dayjs from "dayjs";
 
 const analyticsStore = useAnalyticsStore();
 
 // 响应式数据
 const selectedTimeRange = ref("30d");
-const currentMonth = ref(dayjs());
-const calendarContainer = ref<HTMLDivElement>();
 
 // 计算属性
 const loading = computed(() => analyticsStore.loading);
 const error = computed(() => analyticsStore.error);
 const hasData = computed(() => analyticsStore.learningStats !== null);
 const weakKnowledgePoints = computed(() => analyticsStore.weakKnowledgePoints);
-const personalInsights = computed(() => analyticsStore.personalInsights);
 
 // 概览统计数据
 const overviewStats = computed(() => [
@@ -367,57 +314,6 @@ const knowledgeSummary = computed(() => {
   ];
 });
 
-// 最近成就
-
-// 日历相关计算
-const generateCalendarDays = () => {
-  const start = currentMonth.value.startOf("month").startOf("week");
-  const end = currentMonth.value.endOf("month").endOf("week");
-  const days = [];
-
-  let current = start;
-  while (current.isBefore(end) || current.isSame(end, "day")) {
-    days.push({
-      date: current.date(),
-      fullDate: current.format("YYYY-MM-DD"),
-      isCurrentMonth: current.isSame(currentMonth.value, "month"),
-      studyTime: Math.floor(Math.random() * 120), // 模拟学习时长
-      isToday: current.isSame(dayjs(), "day"),
-    });
-    current = current.add(1, "day");
-  }
-
-  return days;
-};
-
-const getCalendarDayClass = (day: any) => {
-  const baseClass = "border border-gray-200 hover:border-blue-300";
-
-  if (!day.isCurrentMonth) {
-    return `${baseClass} text-gray-300 bg-gray-50`;
-  }
-
-  if (day.isToday) {
-    return `${baseClass} bg-blue-500 text-white font-bold`;
-  }
-
-  if (day.studyTime > 60) {
-    return `${baseClass} bg-green-100 text-green-800 font-medium`;
-  } else if (day.studyTime > 30) {
-    return `${baseClass} bg-yellow-100 text-yellow-800`;
-  } else if (day.studyTime > 0) {
-    return `${baseClass} bg-blue-50 text-blue-700`;
-  }
-
-  return `${baseClass} text-gray-700 hover:bg-gray-50`;
-};
-
-const handleCalendarDayClick = (day: any) => {
-  if (day.isCurrentMonth) {
-    ElMessage.info(`${day.fullDate} 学习时长: ${day.studyTime}分钟`);
-  }
-};
-
 // 方法
 const handleTimeRangeChange = () => {
   analyticsStore.setTimeRange(selectedTimeRange.value);
@@ -442,47 +338,14 @@ const handleExport = (command: string) => {
   // 这里调用导出API
 };
 
-const previousMonth = () => {
-  currentMonth.value = currentMonth.value.subtract(1, "month");
-  fetchCalendarData();
-};
-
-const nextMonth = () => {
-  currentMonth.value = currentMonth.value.add(1, "month");
-  fetchCalendarData();
-};
-
-const fetchCalendarData = () => {
-  analyticsStore.fetchStudyCalendar(
-    currentMonth.value.year(),
-    currentMonth.value.month() + 1,
-  );
-};
-
-// 监听路由和数据变化
-watch(
-  () => selectedTimeRange.value,
-  () => {
-    analyticsStore.setTimeRange(selectedTimeRange.value);
-  },
-);
-
 onMounted(async () => {
   // 初始化数据
   await analyticsStore.initializeDashboard(selectedTimeRange.value);
-
-  // 获取个人洞察
-  if (!personalInsights.value) {
-    analyticsStore.fetchPersonalInsights();
-  }
 
   // 获取成就数据
   if (analyticsStore.achievements.length === 0) {
     analyticsStore.fetchAchievements();
   }
-
-  // 获取日历数据
-  fetchCalendarData();
 });
 </script>
 
