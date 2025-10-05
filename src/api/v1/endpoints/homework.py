@@ -14,10 +14,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.v1.endpoints.auth import get_current_user_id
 from src.core.database import get_db
+from src.core.logging import get_logger
 from src.schemas.common import DataResponse, SuccessResponse
 from src.schemas.homework import HomeworkCreate, HomeworkSubmissionCreate
 from src.services.homework_service import HomeworkService
 
+logger = get_logger(__name__)
 router = APIRouter(prefix="/homework", tags=["作业批改"])
 
 
@@ -289,10 +291,14 @@ async def submit_homework(
 async def get_submissions(
     page: int = Query(1, ge=1, description="页码"),
     size: int = Query(10, ge=1, le=50, description="每页数量"),
-    template_id: Optional[UUID] = Query(None, description="模板ID筛选"),
-    status: Optional[str] = Query(None, description="状态筛选"),
+    status: Optional[str] = Query(
+        None, description="状态筛选：uploaded/processing/reviewed/failed"
+    ),
+    subject: Optional[str] = Query(None, description="学科筛选"),
+    homework_type: Optional[str] = Query(None, description="作业类型筛选"),
     current_user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
+    homework_service: HomeworkService = Depends(get_homework_service),
 ):
     """
     获取作业提交列表
@@ -300,28 +306,81 @@ async def get_submissions(
     **查询参数:**
     - **page**: 页码，从1开始
     - **size**: 每页数量，最大50
-    - **template_id**: 按模板ID筛选（可选）
-    - **status**: 按状态筛选（可选）：pending/processing/completed/failed
+    - **status**: 按状态筛选（可选）：uploaded/processing/reviewed/failed
+    - **subject**: 按学科筛选（可选）
+    - **homework_type**: 按作业类型筛选（可选）
 
     **返回数据:**
     - 提交记录列表，包含批改状态和结果
+    - 分页信息（总数、页码、总页数等）
     """
-    # 简化实现：返回示例数据
-    submissions = [
-        {
-            "id": "660e8400-e29b-41d4-a716-446655440001",
-            "template_id": "550e8400-e29b-41d4-a716-446655440000",
-            "student_name": "张小明",
-            "status": "completed",
-            "score": 85,
-            "submitted_at": "2024-01-15T10:35:00Z",
-            "completed_at": "2024-01-15T10:37:30Z",
-        }
-    ]
+    try:
+        # 构建过滤条件
+        filters = {}
+        if status:
+            filters["status"] = status
+        if subject:
+            filters["subject"] = subject
+        if homework_type:
+            filters["homework_type"] = homework_type
 
-    return DataResponse[List[Dict[str, Any]]](
-        success=True, data=submissions, message="获取提交列表成功"
-    )
+        # 调用服务层获取数据
+        result = await homework_service.list_submissions(
+            session=db,
+            student_id=current_user_id,
+            filters=filters,
+            page=page,
+            size=size,
+        )
+
+        # 转换数据格式以适配前端期望
+        submissions_data = []
+        for item in result.data:
+            submission_dict = {
+                "id": str(item.id),
+                "homework_id": str(item.homework_id) if item.homework_id else None,
+                "student_name": item.student_name,
+                "status": item.status,
+                "score": item.total_score,
+                "submitted_at": (
+                    item.submitted_at.isoformat() if item.submitted_at else None
+                ),
+                "completed_at": None,  # 需要从review中获取
+                # 添加作业基本信息
+                "homework_title": (
+                    getattr(item.homework, "title", None)
+                    if hasattr(item, "homework")
+                    else None
+                ),
+                "subject": (
+                    getattr(item.homework, "subject", None)
+                    if hasattr(item, "homework")
+                    else None
+                ),
+            }
+            submissions_data.append(submission_dict)
+
+        # 构建包含分页信息的响应数据
+        response_data = {
+            "items": submissions_data,
+            "pagination": {
+                "total": result.pagination.total,
+                "page": result.pagination.page,
+                "size": result.pagination.size,
+                "pages": result.pagination.pages,
+            },
+        }
+
+        return DataResponse[Dict[str, Any]](
+            success=True, data=response_data, message="获取提交列表成功"
+        )
+
+    except Exception as e:
+        logger.error(f"获取作业提交列表失败: {e}")
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取提交列表失败: {str(e)}",
+        )
 
 
 @router.get(
@@ -334,6 +393,7 @@ async def get_submission(
     submission_id: UUID,
     current_user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
+    homework_service: HomeworkService = Depends(get_homework_service),
 ):
     """
     获取作业提交详情
@@ -344,30 +404,142 @@ async def get_submission(
     **返回数据:**
     - 完整的提交信息，包括：
       - 基本信息（学生姓名、提交时间等）
+      - 作业模板信息
+      - 上传的图片列表
       - 批改状态和进度
       - AI批改结果（如果已完成）
-      - 错误信息（如果批改失败）
+      - OCR识别结果
+
+    **权限:**
+    - 用户只能查看自己提交的作业
     """
-    # 简化实现：返回示例数据或404
-    if str(submission_id) == "660e8400-e29b-41d4-a716-446655440001":
-        submission = {
-            "id": str(submission_id),
-            "template_id": "550e8400-e29b-41d4-a716-446655440000",
-            "student_name": "张小明",
-            "file_url": "/api/v1/files/homework_image.jpg",
-            "status": "completed",
-            "score": 85,
-            "submitted_at": "2024-01-15T10:35:00Z",
-            "completed_at": "2024-01-15T10:37:30Z",
-            "additional_info": "第一次提交数学作业",
+    try:
+        # 获取作业提交详情
+        submission = await homework_service.get_submission_with_details(
+            session=db, submission_id=submission_id
+        )
+
+        if not submission:
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND, detail="作业提交不存在"
+            )
+
+        # 权限验证：确保用户只能查看自己的提交
+        if str(submission.student_id) != current_user_id:
+            raise HTTPException(
+                status_code=http_status.HTTP_403_FORBIDDEN, detail="无权访问该作业提交"
+            )
+
+        # 安全格式化日期时间的辅助函数
+        def safe_isoformat(dt):
+            return dt.isoformat() if dt is not None else None
+
+        # 构建详细的响应数据
+        submission_data = {
+            "id": str(submission.id),
+            "homework_id": (
+                str(getattr(submission, "homework_id", None))
+                if getattr(submission, "homework_id", None)
+                else None
+            ),
+            "student_id": str(getattr(submission, "student_id", "")),
+            "student_name": getattr(submission, "student_name", ""),
+            "submission_title": getattr(submission, "submission_title", ""),
+            "submission_note": getattr(submission, "submission_note", ""),
+            "status": getattr(submission, "status", ""),
+            "submitted_at": safe_isoformat(getattr(submission, "submitted_at", None)),
+            "total_score": getattr(submission, "total_score", None),
+            "accuracy_rate": getattr(submission, "accuracy_rate", None),
+            "completion_time": getattr(submission, "completion_time", None),
+            "ai_review_data": getattr(submission, "ai_review_data", None),
+            "weak_knowledge_points": getattr(submission, "weak_knowledge_points", None),
+            "improvement_suggestions": getattr(
+                submission, "improvement_suggestions", None
+            ),
+            "device_info": getattr(submission, "device_info", None),
+            "ip_address": getattr(submission, "ip_address", None),
+            "created_at": safe_isoformat(getattr(submission, "created_at", None)),
+            "updated_at": safe_isoformat(getattr(submission, "updated_at", None)),
         }
 
+        # 添加作业模板信息
+        if hasattr(submission, "homework") and submission.homework:
+            homework = submission.homework
+            submission_data["homework"] = {
+                "id": str(homework.id),
+                "title": homework.title,
+                "description": homework.description,
+                "subject": homework.subject,
+                "homework_type": homework.homework_type,
+                "difficulty_level": homework.difficulty_level,
+                "grade_level": homework.grade_level,
+                "chapter": homework.chapter,
+                "knowledge_points": homework.knowledge_points,
+                "estimated_duration": homework.estimated_duration,
+            }
+
+        # 添加图片信息
+        if hasattr(submission, "images") and submission.images:
+            images_data = []
+            for image in submission.images:
+                image_data = {
+                    "id": str(image.id),
+                    "file_path": image.file_path,
+                    "file_name": image.file_name,
+                    "file_size": image.file_size,
+                    "mime_type": image.mime_type,
+                    "page_number": image.page_number,
+                    "ocr_result": image.ocr_result,
+                    "ocr_confidence": image.ocr_confidence,
+                    "created_at": safe_isoformat(getattr(image, "created_at", None)),
+                }
+                images_data.append(image_data)
+            submission_data["images"] = images_data
+        else:
+            submission_data["images"] = []
+
+        # 添加批改结果信息
+        if hasattr(submission, "reviews") and submission.reviews:
+            reviews_data = []
+            for review in submission.reviews:
+                review_data = {
+                    "id": str(review.id),
+                    "review_type": review.review_type,
+                    "status": review.status,
+                    "total_score": review.total_score,
+                    "max_score": review.max_score,
+                    "accuracy_rate": review.accuracy_rate,
+                    "overall_comment": review.overall_comment,
+                    "strengths": review.strengths,
+                    "weaknesses": review.weaknesses,
+                    "suggestions": review.suggestions,
+                    "knowledge_point_analysis": review.knowledge_point_analysis,
+                    "question_reviews": review.question_reviews,
+                    "started_at": safe_isoformat(getattr(review, "started_at", None)),
+                    "completed_at": safe_isoformat(
+                        getattr(review, "completed_at", None)
+                    ),
+                    "processing_duration": review.processing_duration,
+                    "ai_model_version": review.ai_model_version,
+                    "ai_confidence_score": review.ai_confidence_score,
+                }
+                reviews_data.append(review_data)
+            submission_data["reviews"] = reviews_data
+        else:
+            submission_data["reviews"] = []
+
         return DataResponse[Dict[str, Any]](
-            success=True, data=submission, message="获取提交详情成功"
+            success=True, data=submission_data, message="获取提交详情成功"
         )
-    else:
+
+    except HTTPException:
+        # 重新抛出HTTP异常
+        raise
+    except Exception as e:
+        logger.error(f"获取作业提交详情失败: {e}")
         raise HTTPException(
-            status_code=http_status.HTTP_404_NOT_FOUND, detail="提交记录不存在"
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取提交详情失败: {str(e)}",
         )
 
 
@@ -379,8 +551,12 @@ async def get_submission(
 )
 async def get_correction_result(
     submission_id: UUID,
+    format_type: Optional[str] = Query(
+        "json", description="结果格式：json/markdown/html"
+    ),
     current_user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
+    homework_service: HomeworkService = Depends(get_homework_service),
 ):
     """
     获取批改结果
@@ -388,50 +564,287 @@ async def get_correction_result(
     **路径参数:**
     - **submission_id**: 提交记录UUID
 
+    **查询参数:**
+    - **format_type**: 结果格式（json/markdown/html），默认json
+
     **返回数据:**
     - 详细的批改结果，包括：
       - 总体评分和评语
       - 逐题分析和建议
       - 知识点掌握情况
-      - 学习建议
+      - 错误类型分类
+      - 改进建议
+
+    **权限验证:**
+    - 用户只能查看自己提交的作业批改结果
 
     **注意:**
     - 只有批改完成的作业才有批改结果
     - 如果批改还在进行中，请稍后再试
     """
-    # 简化实现：返回示例批改结果
-    if str(submission_id) == "660e8400-e29b-41d4-a716-446655440001":
-        correction = {
-            "submission_id": str(submission_id),
-            "total_score": 85,
-            "max_score": 100,
-            "overall_comment": "整体完成得不错，计算能力较强，但需要注意解题步骤的完整性。",
-            "detailed_feedback": [
-                {
-                    "question_number": 1,
-                    "score": 10,
-                    "max_score": 10,
-                    "comment": "答案正确，计算准确。",
-                },
-                {
-                    "question_number": 2,
-                    "score": 7,
-                    "max_score": 10,
-                    "comment": "答案正确，但缺少解题步骤说明。",
-                },
-            ],
-            "suggestions": ["建议在解题时写出完整的计算步骤", "可以多练习类似的应用题"],
-            "corrected_at": "2024-01-15T10:37:30Z",
+    try:
+        # 首先验证提交是否存在且用户有权限访问
+        submission = await homework_service.get_submission_with_details(
+            session=db, submission_id=submission_id
+        )
+
+        if not submission:
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND, detail="作业提交不存在"
+            )
+
+        # 权限验证：确保用户只能查看自己的批改结果
+        if str(getattr(submission, "student_id", "")) != current_user_id:
+            raise HTTPException(
+                status_code=http_status.HTTP_403_FORBIDDEN, detail="无权访问该批改结果"
+            )
+
+        # 检查批改状态
+        if getattr(submission, "status", "") not in ["reviewed", "completed"]:
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail="作业尚未完成批改，请稍后再试",
+            )
+
+        # 安全格式化日期时间的辅助函数
+        def safe_isoformat(dt):
+            return dt.isoformat() if dt is not None else None
+
+        # 获取批改结果（从reviews关联表或ai_review_data字段）
+        correction_data = {
+            "submission_id": str(submission.id),
+            "status": getattr(submission, "status", ""),
+            "total_score": getattr(submission, "total_score", None),
+            "accuracy_rate": getattr(submission, "accuracy_rate", None),
+            "weak_knowledge_points": getattr(submission, "weak_knowledge_points", []),
+            "improvement_suggestions": getattr(
+                submission, "improvement_suggestions", []
+            ),
+            "ai_review_data": getattr(submission, "ai_review_data", {}),
         }
 
+        # 如果有关联的批改记录，使用最新的记录
+        reviews = []
+        if hasattr(submission, "reviews") and submission.reviews:
+            for review in submission.reviews:
+                review_data = {
+                    "id": str(getattr(review, "id", "")),
+                    "review_type": getattr(review, "review_type", "ai_auto"),
+                    "status": getattr(review, "status", ""),
+                    "total_score": getattr(review, "total_score", None),
+                    "max_score": getattr(review, "max_score", 100),
+                    "accuracy_rate": getattr(review, "accuracy_rate", None),
+                    "overall_comment": getattr(review, "overall_comment", ""),
+                    "strengths": getattr(review, "strengths", []),
+                    "weaknesses": getattr(review, "weaknesses", []),
+                    "suggestions": getattr(review, "suggestions", []),
+                    "knowledge_point_analysis": getattr(
+                        review, "knowledge_point_analysis", {}
+                    ),
+                    "difficulty_analysis": getattr(review, "difficulty_analysis", {}),
+                    "question_reviews": getattr(review, "question_reviews", []),
+                    "ai_model_version": getattr(review, "ai_model_version", ""),
+                    "ai_confidence_score": getattr(review, "ai_confidence_score", None),
+                    "processing_duration": getattr(review, "processing_duration", None),
+                    "started_at": safe_isoformat(getattr(review, "started_at", None)),
+                    "completed_at": safe_isoformat(
+                        getattr(review, "completed_at", None)
+                    ),
+                }
+                reviews.append(review_data)
+
+            # 使用最新的完成的批改记录
+            completed_reviews = [r for r in reviews if r["status"] == "completed"]
+            if completed_reviews:
+                latest_review = max(
+                    completed_reviews, key=lambda x: x["completed_at"] or ""
+                )
+                correction_data.update(
+                    {
+                        "total_score": latest_review["total_score"],
+                        "max_score": latest_review["max_score"],
+                        "overall_comment": latest_review["overall_comment"],
+                        "strengths": latest_review["strengths"],
+                        "weaknesses": latest_review["weaknesses"],
+                        "suggestions": latest_review["suggestions"],
+                        "knowledge_point_analysis": latest_review[
+                            "knowledge_point_analysis"
+                        ],
+                        "question_reviews": latest_review["question_reviews"],
+                        "ai_model_version": latest_review["ai_model_version"],
+                        "ai_confidence_score": latest_review["ai_confidence_score"],
+                        "corrected_at": latest_review["completed_at"],
+                    }
+                )
+
+        # 格式化输出处理
+        if format_type == "markdown":
+            correction_data["formatted_content"] = _format_correction_as_markdown(
+                correction_data
+            )
+        elif format_type == "html":
+            correction_data["formatted_content"] = _format_correction_as_html(
+                correction_data
+            )
+
+        correction_data["reviews"] = reviews
+
         return DataResponse[Dict[str, Any]](
-            success=True, data=correction, message="获取批改结果成功"
+            success=True, data=correction_data, message="获取批改结果成功"
         )
-    else:
+
+    except HTTPException:
+        # 重新抛出HTTP异常
+        raise
+    except Exception as e:
+        logger.error(f"获取批改结果失败: {e}")
         raise HTTPException(
-            status_code=http_status.HTTP_404_NOT_FOUND,
-            detail="批改结果不存在或批改尚未完成",
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取批改结果失败: {str(e)}",
         )
+
+
+def _format_correction_as_markdown(correction_data: Dict[str, Any]) -> str:
+    """将批改结果格式化为Markdown"""
+    markdown_content = []
+
+    # 标题
+    markdown_content.append("# 作业批改结果")
+    markdown_content.append("")
+
+    # 基本信息
+    total_score = correction_data.get("total_score", 0)
+    max_score = correction_data.get("max_score", 100)
+    markdown_content.append(f"## 总体评分")
+    markdown_content.append(f"**得分：{total_score} / {max_score}**")
+    if correction_data.get("accuracy_rate"):
+        markdown_content.append(f"**正确率：{correction_data['accuracy_rate']:.1%}**")
+    markdown_content.append("")
+
+    # 总体评价
+    if correction_data.get("overall_comment"):
+        markdown_content.append("## 总体评价")
+        markdown_content.append(correction_data["overall_comment"])
+        markdown_content.append("")
+
+    # 优点
+    if correction_data.get("strengths"):
+        markdown_content.append("## 优点")
+        for strength in correction_data["strengths"]:
+            markdown_content.append(f"- {strength}")
+        markdown_content.append("")
+
+    # 需要改进的地方
+    if correction_data.get("weaknesses"):
+        markdown_content.append("## 需要改进")
+        for weakness in correction_data["weaknesses"]:
+            markdown_content.append(f"- {weakness}")
+        markdown_content.append("")
+
+    # 逐题分析
+    if correction_data.get("question_reviews"):
+        markdown_content.append("## 逐题分析")
+        for i, question in enumerate(correction_data["question_reviews"], 1):
+            markdown_content.append(f"### 第{i}题")
+            if question.get("score") is not None:
+                markdown_content.append(
+                    f"**得分：{question['score']} / {question.get('max_score', 10)}**"
+                )
+            if question.get("comment"):
+                markdown_content.append(question["comment"])
+            markdown_content.append("")
+
+    # 改进建议
+    if correction_data.get("suggestions"):
+        markdown_content.append("## 改进建议")
+        for suggestion in correction_data["suggestions"]:
+            markdown_content.append(f"- {suggestion}")
+        markdown_content.append("")
+
+    return "\n".join(markdown_content)
+
+
+def _format_correction_as_html(correction_data: Dict[str, Any]) -> str:
+    """将批改结果格式化为HTML"""
+    html_content = []
+
+    # 样式
+    html_content.append(
+        '<div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">'
+    )
+
+    # 标题
+    html_content.append(
+        '<h1 style="color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px;">作业批改结果</h1>'
+    )
+
+    # 基本信息
+    total_score = correction_data.get("total_score", 0)
+    max_score = correction_data.get("max_score", 100)
+    score_color = (
+        "#28a745"
+        if total_score >= max_score * 0.8
+        else "#ffc107" if total_score >= max_score * 0.6 else "#dc3545"
+    )
+
+    html_content.append(
+        '<div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">'
+    )
+    html_content.append(
+        f'<h2 style="color: {score_color}; margin-top: 0;">总体评分：{total_score} / {max_score}</h2>'
+    )
+    if correction_data.get("accuracy_rate"):
+        html_content.append(
+            f'<p><strong>正确率：{correction_data["accuracy_rate"]:.1%}</strong></p>'
+        )
+    html_content.append("</div>")
+
+    # 总体评价
+    if correction_data.get("overall_comment"):
+        html_content.append('<h3 style="color: #007bff;">总体评价</h3>')
+        html_content.append(
+            f'<p style="line-height: 1.6;">{correction_data["overall_comment"]}</p>'
+        )
+
+    # 优点和改进点
+    if correction_data.get("strengths") or correction_data.get("weaknesses"):
+        html_content.append('<div style="display: flex; gap: 20px; margin: 20px 0;">')
+
+        if correction_data.get("strengths"):
+            html_content.append(
+                '<div style="flex: 1; background: #d4edda; padding: 15px; border-radius: 5px;">'
+            )
+            html_content.append('<h4 style="color: #155724; margin-top: 0;">优点</h4>')
+            html_content.append("<ul>")
+            for strength in correction_data["strengths"]:
+                html_content.append(f"<li>{strength}</li>")
+            html_content.append("</ul></div>")
+
+        if correction_data.get("weaknesses"):
+            html_content.append(
+                '<div style="flex: 1; background: #f8d7da; padding: 15px; border-radius: 5px;">'
+            )
+            html_content.append(
+                '<h4 style="color: #721c24; margin-top: 0;">需要改进</h4>'
+            )
+            html_content.append("<ul>")
+            for weakness in correction_data["weaknesses"]:
+                html_content.append(f"<li>{weakness}</li>")
+            html_content.append("</ul></div>")
+
+        html_content.append("</div>")
+
+    # 改进建议
+    if correction_data.get("suggestions"):
+        html_content.append('<h3 style="color: #007bff;">改进建议</h3>')
+        html_content.append('<ul style="line-height: 1.6;">')
+        for suggestion in correction_data["suggestions"]:
+            html_content.append(f"<li>{suggestion}</li>")
+        html_content.append("</ul>")
+
+    html_content.append("</div>")
+
+    return "".join(html_content)
 
 
 # ========== 前端兼容性别名路由 ==========
@@ -441,24 +854,28 @@ async def get_correction_result(
     "/list",
     summary="获取作业列表（别名）",
     description="与 /submissions 相同，为前端兼容性提供的别名路由",
-    response_model=DataResponse[List[Dict[str, Any]]],
+    response_model=DataResponse[Dict[str, Any]],
 )
 async def get_homework_list(
     page: int = Query(1, ge=1, description="页码"),
     size: int = Query(10, ge=1, le=50, description="每页数量"),
-    template_id: Optional[UUID] = Query(None, description="模板ID筛选"),
     status: Optional[str] = Query(None, description="状态筛选"),
+    subject: Optional[str] = Query(None, description="学科筛选"),
+    homework_type: Optional[str] = Query(None, description="作业类型筛选"),
     current_user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
+    homework_service: HomeworkService = Depends(get_homework_service),
 ):
     """获取作业列表 - 前端兼容性别名"""
     return await get_submissions(
         page=page,
         size=size,
-        template_id=template_id,
         status=status,
+        subject=subject,
+        homework_type=homework_type,
         current_user_id=current_user_id,
         db=db,
+        homework_service=homework_service,
     )
 
 
@@ -469,11 +886,20 @@ async def get_homework_list(
     response_model=DataResponse[Dict[str, Any]],
 )
 async def get_homework_stats(
+    start_date: Optional[str] = Query(None, description="开始日期 (YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="结束日期 (YYYY-MM-DD)"),
+    granularity: str = Query("day", description="时间粒度: day/week/month"),
     current_user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
+    homework_service: HomeworkService = Depends(get_homework_service),
 ):
     """
     获取作业统计信息
+
+    **查询参数:**
+    - **start_date**: 开始日期，格式YYYY-MM-DD，默认30天前
+    - **end_date**: 结束日期，格式YYYY-MM-DD，默认今天
+    - **granularity**: 时间粒度，可选值：day/week/month
 
     **返回数据:**
     - **total**: 总作业数
@@ -482,21 +908,85 @@ async def get_homework_stats(
     - **failed**: 失败数量
     - **by_subject**: 按学科统计
     - **by_grade**: 按年级统计
-    """
-    # TODO: 实现真实的统计逻辑
-    # 当前返回示例数据
-    stats = {
-        "total": 0,
-        "completed": 0,
-        "processing": 0,
-        "failed": 0,
-        "by_subject": {},
-        "by_grade": {},
-    }
+    - **time_trend**: 时间趋势数据
+    - **recent_performance**: 最近表现分析
 
-    return DataResponse[Dict[str, Any]](
-        success=True, data=stats, message="获取统计信息成功"
-    )
+    **权限验证:**
+    - 用户只能查看自己的统计数据
+    """
+    try:
+        # 解析日期参数
+        parsed_start_date = None
+        parsed_end_date = None
+
+        if start_date:
+            try:
+                parsed_start_date = datetime.fromisoformat(start_date)
+            except ValueError:
+                raise HTTPException(
+                    status_code=http_status.HTTP_400_BAD_REQUEST,
+                    detail="开始日期格式错误，请使用YYYY-MM-DD格式",
+                )
+
+        if end_date:
+            try:
+                parsed_end_date = datetime.fromisoformat(end_date)
+            except ValueError:
+                raise HTTPException(
+                    status_code=http_status.HTTP_400_BAD_REQUEST,
+                    detail="结束日期格式错误，请使用YYYY-MM-DD格式",
+                )
+
+        # 验证日期范围
+        if (
+            parsed_start_date
+            and parsed_end_date
+            and parsed_start_date > parsed_end_date
+        ):
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail="开始日期不能晚于结束日期",
+            )
+
+        # 验证时间粒度
+        if granularity not in ["day", "week", "month"]:
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail="时间粒度必须是day、week或month之一",
+            )
+
+        # 调用服务获取统计数据
+        try:
+            # 确保user_id是UUID格式
+            import uuid
+
+            user_uuid = uuid.UUID(current_user_id)
+        except ValueError:
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST, detail="用户ID格式错误"
+            )
+
+        stats = await homework_service.get_homework_statistics(
+            session=db,
+            student_id=user_uuid,
+            start_date=parsed_start_date,
+            end_date=parsed_end_date,
+            time_granularity=granularity,
+        )
+
+        return DataResponse[Dict[str, Any]](
+            success=True, data=stats, message="获取统计信息成功"
+        )
+
+    except HTTPException:
+        # 重新抛出HTTP异常
+        raise
+    except Exception as e:
+        logger.error(f"获取作业统计失败 - user_id: {current_user_id}, error: {e}")
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取统计信息失败: {str(e)}",
+        )
 
 
 @router.get(
