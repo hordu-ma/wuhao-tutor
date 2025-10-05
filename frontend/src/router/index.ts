@@ -195,6 +195,31 @@ const routes: RouteRecordRaw[] = [
     ],
   },
 
+  // 学习进度（重定向到学情分析）
+  {
+    path: '/progress',
+    redirect: '/analytics',
+  },
+
+  // 个人中心
+  {
+    path: '/profile',
+    children: [
+      {
+        path: '',
+        name: 'Profile',
+        component: () => import(/* webpackChunkName: "profile" */ '@/views/Profile.vue'),
+        meta: {
+          title: '个人中心',
+          requiresAuth: true,
+          icon: 'User',
+          keepAlive: true,
+          layout: 'main',
+        },
+      },
+    ],
+  },
+
   // 404页面
   {
     path: '/:pathMatch(.*)*',
