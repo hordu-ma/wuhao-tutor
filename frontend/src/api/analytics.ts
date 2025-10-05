@@ -7,7 +7,6 @@ import type {
   AnalyticsResponse,
   LearningStats,
   LearningProgress,
-  KnowledgePoint,
   SubjectStats,
   LearningRecommendation,
   LearningGoal,
@@ -21,234 +20,304 @@ import type {
   HeatmapData,
 } from '../types/analytics'
 
-// 获取学习统计数据
+// 获取学习统计数据 (使用后端实际端点)
 export const getLearningStats = (timeRange: string = '30d') => {
-  return http.get<AnalyticsResponse<LearningStats>>('/analytics/stats', {
-    params: { timeRange },
+  return http.get<AnalyticsResponse<LearningStats>>('/analytics/learning-stats', {
+    params: { time_range: timeRange },
   })
 }
 
-// 获取学习进度数据
-export const getLearningProgress = (startDate: string, endDate: string) => {
-  return http.get<AnalyticsResponse<LearningProgress[]>>('/analytics/progress', {
-    params: { startDate, endDate },
+// 获取用户统计数据 (使用后端实际端点)
+export const getUserStats = () => {
+  return http.get<AnalyticsResponse<any>>('/analytics/user/stats')
+}
+
+// 获取知识图谱 (使用后端实际端点)
+export const getKnowledgeMap = (subject?: string) => {
+  return http.get<AnalyticsResponse<any>>('/analytics/knowledge-map', {
+    params: { subject },
   })
 }
 
-// 获取知识点掌握情况
+// 获取学习进度数据 (TODO: 后端待实现，暂时返回空数据)
+export const getLearningProgress = (_startDate: string, _endDate: string) => {
+  return Promise.resolve({
+    code: 200,
+    success: true,
+    data: [] as LearningProgress[],
+    message: '功能开发中',
+    timestamp: new Date().toISOString(),
+  } as AnalyticsResponse<LearningProgress[]>)
+}
+
+// 获取知识点掌握情况 (TODO: 后端待实现，使用 knowledge-map 替代)
 export const getKnowledgePoints = (subject?: string) => {
-  return http.get<AnalyticsResponse<KnowledgePoint[]>>('/analytics/knowledge-points', {
-    params: { subject },
-  })
+  return getKnowledgeMap(subject).then((res) => ({
+    ...res,
+    data: res.data?.knowledge_points || [],
+  }))
 }
 
-// 获取学科统计数据
-export const getSubjectStats = (timeRange: string = '30d') => {
-  return http.get<AnalyticsResponse<SubjectStats[]>>('/analytics/subjects', {
-    params: { timeRange },
-  })
+// 获取学科统计数据 (TODO: 后端待实现，暂时返回空数据)
+export const getSubjectStats = (_timeRange: string = '30d') => {
+  return Promise.resolve({
+    code: 200,
+    success: true,
+    data: [] as SubjectStats[],
+    message: '功能开发中',
+    timestamp: new Date().toISOString(),
+  } as AnalyticsResponse<SubjectStats[]>)
 }
 
-// 获取学习建议
-export const getLearningRecommendations = (limit: number = 10) => {
-  return http.get<AnalyticsResponse<LearningRecommendation[]>>('/analytics/recommendations', {
-    params: { limit },
-  })
+// 获取学习建议 (TODO: 后端待实现)
+export const getLearningRecommendations = (_limit: number = 10) => {
+  return Promise.resolve({
+    code: 200,
+    success: true,
+    data: [] as LearningRecommendation[],
+    message: '功能开发中',
+    timestamp: new Date().toISOString(),
+  } as AnalyticsResponse<LearningRecommendation[]>)
 }
 
-// 获取学习目标
-export const getLearningGoals = (status?: string) => {
-  return http.get<AnalyticsResponse<LearningGoal[]>>('/analytics/goals', {
-    params: { status },
-  })
+// 获取学习目标 (TODO: 后端待实现)
+export const getLearningGoals = (_status?: string) => {
+  return Promise.resolve({
+    code: 200,
+    success: true,
+    data: [] as LearningGoal[],
+    message: '功能开发中',
+    timestamp: new Date().toISOString(),
+  } as AnalyticsResponse<LearningGoal[]>)
 }
 
-// 创建学习目标
+// 创建学习目标 (TODO: 后端待实现)
 export const createLearningGoal = (
-  goal: Omit<LearningGoal, 'id' | 'createdAt' | 'currentValue'>
+  _goal: Omit<LearningGoal, 'id' | 'createdAt' | 'currentValue'>
 ) => {
-  return http.post<AnalyticsResponse<LearningGoal>>('/analytics/goals', goal)
+  return Promise.reject(new Error('功能开发中'))
 }
 
-// 更新学习目标
-export const updateLearningGoal = (id: string, updates: Partial<LearningGoal>) => {
-  return http.put<AnalyticsResponse<LearningGoal>>(`/analytics/goals/${id}`, updates)
+// 更新学习目标 (TODO: 后端待实现)
+export const updateLearningGoal = (_id: string, _updates: Partial<LearningGoal>) => {
+  return Promise.reject(new Error('功能开发中'))
 }
 
-// 删除学习目标
-export const deleteLearningGoal = (id: string) => {
-  return http.delete<AnalyticsResponse<void>>(`/analytics/goals/${id}`)
+// 删除学习目标 (TODO: 后端待实现)
+export const deleteLearningGoal = (_id: string) => {
+  return Promise.reject(new Error('功能开发中'))
 }
 
-// 获取错题分析
-export const getErrorAnalysis = (subject?: string, limit: number = 20) => {
-  return http.get<AnalyticsResponse<ErrorAnalysis[]>>('/analytics/errors', {
-    params: { subject, limit },
-  })
+// 获取错题分析 (TODO: 后端待实现)
+export const getErrorAnalysis = (_subject?: string, _limit: number = 20) => {
+  return Promise.resolve({
+    code: 200,
+    success: true,
+    data: [] as ErrorAnalysis[],
+    message: '功能开发中',
+    timestamp: new Date().toISOString(),
+  } as AnalyticsResponse<ErrorAnalysis[]>)
 }
 
-// 获取学习报告
-export const getLearningReport = (type: 'daily' | 'weekly' | 'monthly', date?: string) => {
-  return http.get<AnalyticsResponse<LearningReport>>('/analytics/report', {
-    params: { type, date },
-  })
+// 获取学习报告 (TODO: 后端待实现)
+export const getLearningReport = (_type: 'daily' | 'weekly' | 'monthly', _date?: string) => {
+  return Promise.resolve({
+    code: 200,
+    success: true,
+    data: {} as LearningReport,
+    message: '功能开发中',
+    timestamp: new Date().toISOString(),
+  } as AnalyticsResponse<LearningReport>)
 }
 
-// 生成学习报告
+// 生成学习报告 (TODO: 后端待实现)
 export const generateLearningReport = (
-  type: 'daily' | 'weekly' | 'monthly',
-  startDate: string,
-  endDate: string
+  _type: 'daily' | 'weekly' | 'monthly',
+  _startDate: string,
+  _endDate: string
 ) => {
-  return http.post<AnalyticsResponse<LearningReport>>('/analytics/report/generate', {
-    type,
-    startDate,
-    endDate,
-  })
+  return Promise.reject(new Error('功能开发中'))
 }
 
-// 获取学习时间分布
-export const getTimeDistribution = (timeRange: string = '7d') => {
-  return http.get<AnalyticsResponse<TimeDistribution[]>>('/analytics/time-distribution', {
-    params: { timeRange },
-  })
+// 获取学习时间分布 (TODO: 后端待实现)
+export const getTimeDistribution = (_timeRange: string = '7d') => {
+  return Promise.resolve({
+    code: 200,
+    success: true,
+    data: [] as TimeDistribution[],
+    message: '功能开发中',
+    timestamp: new Date().toISOString(),
+  } as AnalyticsResponse<TimeDistribution[]>)
 }
 
-// 获取学习热力图数据
-export const getStudyHeatmap = (year: number) => {
-  return http.get<AnalyticsResponse<HeatmapData[]>>('/analytics/heatmap', {
-    params: { year },
-  })
+// 获取学习热力图数据 (TODO: 后端待实现)
+export const getStudyHeatmap = (_year: number) => {
+  return Promise.resolve({
+    code: 200,
+    success: true,
+    data: [] as HeatmapData[],
+    message: '功能开发中',
+    timestamp: new Date().toISOString(),
+  } as AnalyticsResponse<HeatmapData[]>)
 }
 
-// 获取知识点网络关系
-export const getKnowledgeNetwork = (subject?: string) => {
-  return http.get<AnalyticsResponse<KnowledgeNetwork>>('/analytics/knowledge-network', {
-    params: { subject },
-  })
+// 获取知识点网络关系 (TODO: 后端待实现)
+export const getKnowledgeNetwork = (_subject?: string) => {
+  return Promise.resolve({
+    code: 200,
+    success: true,
+    data: { nodes: [], links: [], edges: [] } as KnowledgeNetwork,
+    message: '功能开发中',
+    timestamp: new Date().toISOString(),
+  } as AnalyticsResponse<KnowledgeNetwork>)
 }
 
-// 获取学习效率分析
-export const getEfficiencyAnalysis = (timeRange: string = '30d') => {
-  return http.get<AnalyticsResponse<EfficiencyAnalysis>>('/analytics/efficiency', {
-    params: { timeRange },
-  })
+// 获取学习效率分析 (TODO: 后端待实现)
+export const getEfficiencyAnalysis = (_timeRange: string = '30d') => {
+  return Promise.resolve({
+    code: 200,
+    success: true,
+    data: {} as EfficiencyAnalysis,
+    message: '功能开发中',
+    timestamp: new Date().toISOString(),
+  } as AnalyticsResponse<EfficiencyAnalysis>)
 }
 
-// 获取成就列表
-export const getAchievements = (type?: string) => {
-  return http.get<AnalyticsResponse<Achievement[]>>('/analytics/achievements', {
-    params: { type },
-  })
+// 获取成就列表 (TODO: 后端待实现)
+export const getAchievements = (_type?: string) => {
+  return Promise.resolve({
+    code: 200,
+    success: true,
+    data: [] as Achievement[],
+    message: '功能开发中',
+    timestamp: new Date().toISOString(),
+  } as AnalyticsResponse<Achievement[]>)
 }
 
-// 获取学习模式分析
-export const getStudyPatternAnalysis = (timeRange: string = '30d') => {
-  return http.get<AnalyticsResponse<StudyPatternAnalysis>>('/analytics/study-pattern', {
-    params: { timeRange },
-  })
+// 获取学习模式分析 (TODO: 后端待实现)
+export const getStudyPatternAnalysis = (_timeRange: string = '30d') => {
+  return Promise.resolve({
+    code: 200,
+    success: true,
+    data: {} as StudyPatternAnalysis,
+    message: '功能开发中',
+    timestamp: new Date().toISOString(),
+  } as AnalyticsResponse<StudyPatternAnalysis>)
 }
 
-// 获取学习排行榜
+// 获取学习排行榜 (TODO: 后端待实现)
 export const getLeaderboard = (
-  type: 'study_time' | 'homework_count' | 'avg_score' | 'streak',
-  period: string = 'week'
+  _type: 'study_time' | 'homework_count' | 'avg_score' | 'streak',
+  _period: string = 'week'
 ) => {
-  return http.get<
-    AnalyticsResponse<
-      {
-        rank: number
-        userId: string
-        username: string
-        avatar?: string
-        value: number
-        improvement: number
-      }[]
-    >
-  >('/analytics/leaderboard', {
-    params: { type, period },
-  })
+  return Promise.resolve({
+    code: 200,
+    success: true,
+    data: [],
+    message: '功能开发中',
+    timestamp: new Date().toISOString(),
+  } as AnalyticsResponse<
+    {
+      rank: number
+      userId: string
+      username: string
+      avatar?: string
+      value: number
+      improvement: number
+    }[]
+  >)
 }
 
-// 获取个人学习洞察
+// 获取个人学习洞察 (TODO: 后端待实现)
 export const getPersonalInsights = () => {
-  return http.get<
-    AnalyticsResponse<{
-      strengths: string[]
-      weaknesses: string[]
-      trends: string[]
-      suggestions: string[]
-    }>
-  >('/analytics/insights')
+  return Promise.resolve({
+    code: 200,
+    success: true,
+    data: {
+      strengths: [],
+      weaknesses: [],
+      trends: [],
+      suggestions: [],
+    },
+    message: '功能开发中',
+    timestamp: new Date().toISOString(),
+  } as AnalyticsResponse<{
+    strengths: string[]
+    weaknesses: string[]
+    trends: string[]
+    suggestions: string[]
+  }>)
 }
 
-// 导出学习数据
-export const exportLearningData = (format: 'csv' | 'json' | 'pdf', timeRange: string = '30d') => {
-  return http.get(`/analytics/export`, {
-    params: { format, timeRange },
-    responseType: 'blob',
-  })
+// 导出学习数据 (TODO: 后端待实现)
+export const exportLearningData = (_format: 'csv' | 'json' | 'pdf', _timeRange: string = '30d') => {
+  return Promise.reject(new Error('功能开发中'))
 }
 
-// 获取学习日历数据
-export const getStudyCalendar = (year: number, month: number) => {
-  return http.get<
-    AnalyticsResponse<
-      {
-        date: string
-        studyTime: number
-        homeworkCount: number
-        events: {
-          type: 'homework' | 'goal' | 'achievement'
-          title: string
-          time?: string
-        }[]
+// 获取学习日历数据 (TODO: 后端待实现)
+export const getStudyCalendar = (_year: number, _month: number) => {
+  return Promise.resolve({
+    code: 200,
+    success: true,
+    data: [],
+    message: '功能开发中',
+    timestamp: new Date().toISOString(),
+  } as AnalyticsResponse<
+    {
+      date: string
+      studyTime: number
+      homeworkCount: number
+      events: {
+        type: 'homework' | 'goal' | 'achievement'
+        title: string
+        time?: string
       }[]
-    >
-  >('/analytics/calendar', {
-    params: { year, month },
-  })
+    }[]
+  >)
 }
 
-// 设置学习提醒
-export const setStudyReminder = (reminder: {
+// 设置学习提醒 (TODO: 后端待实现)
+export const setStudyReminder = (_reminder: {
   type: 'daily' | 'weekly' | 'goal'
   time: string
   message: string
   enabled: boolean
 }) => {
-  return http.post<AnalyticsResponse<void>>('/analytics/reminders', reminder)
+  return Promise.reject(new Error('功能开发中'))
 }
 
-// 获取学习提醒设置
+// 获取学习提醒设置 (TODO: 后端待实现)
 export const getStudyReminders = () => {
-  return http.get<
-    AnalyticsResponse<
-      {
-        id: string
-        type: 'daily' | 'weekly' | 'goal'
-        time: string
-        message: string
-        enabled: boolean
-        createdAt: string
-      }[]
-    >
-  >('/analytics/reminders')
+  return Promise.resolve({
+    code: 200,
+    success: true,
+    data: [],
+    message: '功能开发中',
+    timestamp: new Date().toISOString(),
+  } as AnalyticsResponse<
+    {
+      id: string
+      type: 'daily' | 'weekly' | 'goal'
+      time: string
+      message: string
+      enabled: boolean
+    }[]
+  >)
 }
 
-// 更新学习提醒
+// 更新学习提醒 (TODO: 后端待实现)
 export const updateStudyReminder = (
-  id: string,
-  updates: {
+  _id: string,
+  _updates: {
     time?: string
     message?: string
     enabled?: boolean
   }
 ) => {
-  return http.put<AnalyticsResponse<void>>(`/analytics/reminders/${id}`, updates)
+  return Promise.reject(new Error('功能开发中'))
 }
 
-// 删除学习提醒
-export const deleteStudyReminder = (id: string) => {
-  return http.delete<AnalyticsResponse<void>>(`/analytics/reminders/${id}`)
+// 删除学习提醒 (TODO: 后端待实现)
+export const deleteStudyReminder = (_id: string) => {
+  return Promise.reject(new Error('功能开发中'))
 }

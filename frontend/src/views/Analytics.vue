@@ -95,9 +95,10 @@
           <div>
             <LearningTrendChart :auto-refresh="true" :default-time-range="selectedTimeRange" />
           </div>
-          <div>
+          <!-- TODO: 待后端实现 learning-progress API 后启用 -->
+          <!-- <div>
             <LearningProgressChart :default-metric="selectedTimeRange" />
-          </div>
+          </div> -->
         </div>
       </div>
 
@@ -152,23 +153,22 @@
       </div>
 
       <!-- 学习建议和目标管理 -->
-      <div class="recommendations-section mb-8">
+      <!-- TODO: 待后端实现推荐 API 后启用 -->
+      <!-- <div class="recommendations-section mb-8">
         <h2 class="section-title">智能学习建议</h2>
         <LearningRecommendations />
-      </div>
+      </div> -->
 
       <!-- 学习日历和成就系统 -->
-      <div class="calendar-achievements-section mb-8">
+      <!-- TODO: 待后端实现日历和成就 API 后启用 -->
+      <!-- <div class="calendar-achievements-section mb-8">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <!-- 学习日历 -->
           <LearningCalendar :auto-refresh="true" />
-
-          <!-- 成就系统 -->
           <div class="achievements-section">
             <AchievementDisplay :max-display="6" :show-categories="false" :auto-refresh="true" />
           </div>
         </div>
-      </div>
+      </div> -->
 
       <!-- 智能学习洞察 -->
       <div class="insights-section mt-8">
@@ -184,11 +184,12 @@ import { ref, computed, onMounted } from 'vue'
 import { useAnalyticsStore } from '../stores/analytics'
 import LearningTrendChart from '../components/LearningTrendChart.vue'
 import KnowledgeRadarChart from '../components/KnowledgeRadarChart.vue'
-import LearningRecommendations from '../components/LearningRecommendations.vue'
-import AchievementDisplay from '../components/AchievementDisplay.vue'
-import LearningProgressChart from '../components/LearningProgressChart.vue'
+// TODO: 待后端 API 实现后启用这些组件
+// import LearningRecommendations from '../components/LearningRecommendations.vue'
+// import AchievementDisplay from '../components/AchievementDisplay.vue'
+// import LearningProgressChart from '../components/LearningProgressChart.vue'
 import LearningInsights from '../components/LearningInsights.vue'
-import LearningCalendar from '../components/LearningCalendar.vue'
+// import LearningCalendar from '../components/LearningCalendar.vue'
 import {
   Refresh,
   Download,
@@ -322,10 +323,11 @@ onMounted(async () => {
   // 初始化数据
   await analyticsStore.initializeDashboard(selectedTimeRange.value)
 
-  // 获取成就数据
-  if (analyticsStore.achievements.length === 0) {
-    analyticsStore.fetchAchievements()
-  }
+  // TODO: 待后端实现成就 API 后启用
+  // // 获取成就数据
+  // if (analyticsStore.achievements.length === 0) {
+  //   analyticsStore.fetchAchievements()
+  // }
 })
 </script>
 
