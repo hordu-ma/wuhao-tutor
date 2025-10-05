@@ -1,0 +1,20 @@
+.empty-state-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80rpx 40rpx;
+  min-height: 400rpx;
+}
+
+.empty-description {
+  margin-top: 16rpx;
+  font-size: 26rpx;
+  color: #969799;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.empty-button {
+  margin-top: 32rpx;
+}

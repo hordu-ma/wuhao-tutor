@@ -13,6 +13,6 @@
     "van-popup": "@vant/weapp/popup/index",
     "van-field": "@vant/weapp/field/index",
     "van-calendar": "@vant/weapp/calendar/index",
-    "ec-canvas": "../../components/ec-canvas/ec-canvas"
+    "ec-canvas": "/components/ec-canvas/ec-canvas"
   }
 }

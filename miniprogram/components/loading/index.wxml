@@ -1,0 +1,6 @@
+<view wx:if="{{show}}" class="loading-container {{fullscreen ? 'fullscreen' : ''}}">
+  <view class="loading-content">
+    <van-loading type="{{type}}" size="{{size}}" color="#1890ff" />
+    <text class="loading-text">{{text}}</text>
+  </view>
+</view>

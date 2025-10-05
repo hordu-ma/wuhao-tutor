@@ -29,6 +29,9 @@ Component({
   data: {
     // 展开的图片ID
     expandedIds: [],
+    // 统计数据
+    successCount: 0,
+    failedCount: 0,
     // 状态图标映射
     statusIcons: {
       pending: '⏳',

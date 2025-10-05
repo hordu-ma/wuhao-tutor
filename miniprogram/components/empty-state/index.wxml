@@ -1,0 +1,20 @@
+<view wx:if="{{show}}" class="empty-state-container">
+  <van-empty
+    image="{{image || defaultImages[type]}}"
+    description="{{text}}"
+  >
+    <view wx:if="{{description}}" class="empty-description">
+      {{description}}
+    </view>
+    <van-button
+      wx:if="{{buttonText}}"
+      type="primary"
+      size="small"
+      round
+      class="empty-button"
+      bind:click="onButtonClick"
+    >
+      {{buttonText}}
+    </van-button>
+  </van-empty>
+</view>
