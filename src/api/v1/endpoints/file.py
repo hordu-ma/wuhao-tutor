@@ -3,20 +3,20 @@
 提供文件上传、下载、管理等功能的基础框架
 """
 
-from typing import List, Optional, Dict, Any
-from uuid import UUID
 import os
 from pathlib import Path
+from typing import Any, Dict, List, Optional
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi import status as http_status
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.database import get_db
-from src.core.config import get_settings
-from src.schemas.common import SuccessResponse, DataResponse
 from src.api.v1.endpoints.auth import get_current_user_id
+from src.core.config import get_settings
+from src.core.database import get_db
+from src.schemas.common import DataResponse, SuccessResponse
 
 settings = get_settings()
 router = APIRouter(prefix="/files", tags=["文件管理"])
@@ -48,11 +48,12 @@ def format_file_size(size_bytes: int) -> str:
 
 # ========== 健康检查 ==========
 
+
 @router.get(
     "/health",
     summary="文件模块健康检查",
     description="检查文件管理模块的健康状态和存储空间",
-    response_model=Dict[str, Any]
+    response_model=Dict[str, Any],
 )
 async def file_health():
     """
@@ -68,7 +69,11 @@ async def file_health():
 
         # 检查上传目录
         upload_dir_exists = upload_dir.exists()
-        upload_dir_writable = upload_dir.is_dir() and os.access(upload_dir, os.W_OK) if upload_dir_exists else False
+        upload_dir_writable = (
+            upload_dir.is_dir() and os.access(upload_dir, os.W_OK)
+            if upload_dir_exists
+            else False
+        )
 
         # 获取磁盘空间信息
         if upload_dir_exists:
@@ -77,14 +82,18 @@ async def file_health():
                 free_space = stat.f_bavail * stat.f_frsize
                 total_space = stat.f_blocks * stat.f_frsize
                 used_space = total_space - free_space
-                space_usage_percent = (used_space / total_space) * 100 if total_space > 0 else 0
+                space_usage_percent = (
+                    (used_space / total_space) * 100 if total_space > 0 else 0
+                )
             except:
                 free_space = total_space = used_space = space_usage_percent = 0
         else:
             free_space = total_space = used_space = space_usage_percent = 0
 
         health_info = {
-            "status": "healthy" if upload_dir_exists and upload_dir_writable else "unhealthy",
+            "status": (
+                "healthy" if upload_dir_exists and upload_dir_writable else "unhealthy"
+            ),
             "module": "file_management",
             "version": "1.0.0",
             "storage": {
@@ -96,38 +105,60 @@ async def file_health():
                 "space_usage_percent": round(space_usage_percent, 2),
                 "max_file_size_bytes": MAX_FILE_SIZE,
                 "free_space_formatted": format_file_size(free_space),
-                "total_space_formatted": format_file_size(total_space)
+                "total_space_formatted": format_file_size(total_space),
             },
             "supported_types": {
                 "images": list(ALLOWED_IMAGE_TYPES),
-                "documents": list(ALLOWED_DOCUMENT_TYPES)
-            }
+                "documents": list(ALLOWED_DOCUMENT_TYPES),
+            },
         }
 
         return health_info
 
     except Exception as e:
-        return {
-            "status": "unhealthy",
-            "module": "file_management",
-            "error": str(e)
-        }
+        return {"status": "unhealthy", "module": "file_management", "error": str(e)}
+
+
+@router.get(
+    "/avatars/{filename}", summary="获取头像文件", description="获取用户头像图片文件"
+)
+async def get_avatar(filename: str, db: AsyncSession = Depends(get_db)):
+    """
+    获取头像文件
+
+    **路径参数:**
+    - **filename**: 头像文件名
+
+    **返回:**
+    - 头像图片文件
+    """
+    upload_dir = Path(settings.UPLOAD_DIR) / "avatars"
+    file_path = upload_dir / filename
+
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND, detail="头像文件不存在"
+        )
+
+    # 返回头像文件
+    return FileResponse(path=str(file_path), headers={"Content-Disposition": "inline"})
 
 
 # ========== 文件上传 ==========
+
 
 @router.post(
     "/upload",
     summary="上传文件",
     description="上传单个文件到服务器",
-    response_model=DataResponse[Dict[str, Any]]
+    response_model=DataResponse[Dict[str, Any]],
 )
 async def upload_file(
     file: UploadFile = File(..., description="要上传的文件"),
     category: Optional[str] = Query("general", description="文件分类"),
     description: Optional[str] = Query(None, description="文件描述"),
     current_user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     上传文件
@@ -146,15 +177,14 @@ async def upload_file(
     # 验证文件
     if not file.filename:
         raise HTTPException(
-            status_code=http_status.HTTP_400_BAD_REQUEST,
-            detail="文件名不能为空"
+            status_code=http_status.HTTP_400_BAD_REQUEST, detail="文件名不能为空"
         )
 
     # 检查文件类型
     if not file.content_type or file.content_type not in ALLOWED_TYPES:
         raise HTTPException(
             status_code=http_status.HTTP_400_BAD_REQUEST,
-            detail=f"不支持的文件类型: {file.content_type}。支持的类型: {', '.join(ALLOWED_TYPES)}"
+            detail=f"不支持的文件类型: {file.content_type}。支持的类型: {', '.join(ALLOWED_TYPES)}",
         )
 
     # 检查文件大小
@@ -162,7 +192,7 @@ async def upload_file(
     if len(content) > MAX_FILE_SIZE:
         raise HTTPException(
             status_code=http_status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"文件大小超过限制 ({format_file_size(MAX_FILE_SIZE)})"
+            detail=f"文件大小超过限制 ({format_file_size(MAX_FILE_SIZE)})",
         )
 
     # 重置文件指针
@@ -174,6 +204,7 @@ async def upload_file(
 
     # 生成文件ID和保存路径
     import uuid
+
     file_id = str(uuid.uuid4())
     file_extension = Path(file.filename).suffix
     stored_filename = f"{file_id}{file_extension}"
@@ -186,7 +217,7 @@ async def upload_file(
     except Exception as e:
         raise HTTPException(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"文件保存失败: {str(e)}"
+            detail=f"文件保存失败: {str(e)}",
         )
 
     # 返回响应
@@ -200,25 +231,28 @@ async def upload_file(
         "category": category,
         "description": description,
         "download_url": f"/api/v1/files/{file_id}/download",
-        "preview_url": f"/api/v1/files/{file_id}/preview" if file.content_type.startswith('image/') else None,
+        "preview_url": (
+            f"/api/v1/files/{file_id}/preview"
+            if file.content_type.startswith("image/")
+            else None
+        ),
         "uploaded_at": "2024-01-15T10:45:00Z",
-        "success": True
+        "success": True,
     }
 
     return DataResponse[Dict[str, Any]](
-        success=True,
-        data=uploaded_file,
-        message="文件上传成功"
+        success=True, data=uploaded_file, message="文件上传成功"
     )
 
 
 # ========== 文件查询 ==========
 
+
 @router.get(
     "/",
     summary="获取文件列表",
     description="获取用户上传的文件列表",
-    response_model=DataResponse[List[Dict[str, Any]]]
+    response_model=DataResponse[List[Dict[str, Any]]],
 )
 async def get_files(
     page: int = Query(1, ge=1, description="页码"),
@@ -227,7 +261,7 @@ async def get_files(
     file_type: Optional[str] = Query(None, description="文件类型筛选 (image/document)"),
     search: Optional[str] = Query(None, description="文件名搜索"),
     current_user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     获取文件列表
@@ -255,14 +289,12 @@ async def get_files(
             "download_url": "/api/v1/files/990e8400-e29b-41d4-a716-446655440005/download",
             "preview_url": "/api/v1/files/990e8400-e29b-41d4-a716-446655440005/preview",
             "uploaded_at": "2024-01-15T10:45:00Z",
-            "download_count": 0
+            "download_count": 0,
         }
     ]
 
     return DataResponse[List[Dict[str, Any]]](
-        success=True,
-        data=files,
-        message="获取文件列表成功"
+        success=True, data=files, message="获取文件列表成功"
     )
 
 
@@ -270,12 +302,12 @@ async def get_files(
     "/{file_id}",
     summary="获取文件信息",
     description="获取特定文件的详细信息",
-    response_model=DataResponse[Dict[str, Any]]
+    response_model=DataResponse[Dict[str, Any]],
 )
 async def get_file_info(
     file_id: UUID,
     current_user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     获取文件详细信息
@@ -301,32 +333,26 @@ async def get_file_info(
             "preview_url": f"/api/v1/files/{file_id}/preview",
             "uploaded_at": "2024-01-15T10:45:00Z",
             "download_count": 0,
-            "preview_count": 0
+            "preview_count": 0,
         }
 
         return DataResponse[Dict[str, Any]](
-            success=True,
-            data=file_info,
-            message="获取文件信息成功"
+            success=True, data=file_info, message="获取文件信息成功"
         )
     else:
         raise HTTPException(
-            status_code=http_status.HTTP_404_NOT_FOUND,
-            detail="文件不存在"
+            status_code=http_status.HTTP_404_NOT_FOUND, detail="文件不存在"
         )
 
 
 # ========== 文件下载 ==========
 
-@router.get(
-    "/{file_id}/download",
-    summary="下载文件",
-    description="下载指定的文件"
-)
+
+@router.get("/{file_id}/download", summary="下载文件", description="下载指定的文件")
 async def download_file(
     file_id: UUID,
     current_user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     下载文件
@@ -349,26 +375,22 @@ async def download_file(
 
     if not file_path or not file_path.exists():
         raise HTTPException(
-            status_code=http_status.HTTP_404_NOT_FOUND,
-            detail="文件不存在"
+            status_code=http_status.HTTP_404_NOT_FOUND, detail="文件不存在"
         )
 
     # 返回文件
-    return FileResponse(
-        path=str(file_path),
-        filename=f"download_{file_path.name}"
-    )
+    return FileResponse(path=str(file_path), filename=f"download_{file_path.name}")
 
 
 @router.get(
     "/{file_id}/preview",
     summary="预览文件",
-    description="在线预览文件（适用于图片和部分文档）"
+    description="在线预览文件（适用于图片和部分文档）",
 )
 async def preview_file(
     file_id: UUID,
     current_user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     预览文件
@@ -395,37 +417,33 @@ async def preview_file(
 
     if not file_path or not file_path.exists():
         raise HTTPException(
-            status_code=http_status.HTTP_404_NOT_FOUND,
-            detail="文件不存在"
+            status_code=http_status.HTTP_404_NOT_FOUND, detail="文件不存在"
         )
 
     # 检查文件类型是否支持预览
     file_extension = file_path.suffix.lower()
-    if file_extension not in ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf']:
+    if file_extension not in [".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf"]:
         raise HTTPException(
-            status_code=http_status.HTTP_400_BAD_REQUEST,
-            detail="该文件类型不支持预览"
+            status_code=http_status.HTTP_400_BAD_REQUEST, detail="该文件类型不支持预览"
         )
 
     # 返回文件用于预览
-    return FileResponse(
-        path=str(file_path),
-        headers={"Content-Disposition": "inline"}
-    )
+    return FileResponse(path=str(file_path), headers={"Content-Disposition": "inline"})
 
 
 # ========== 文件管理 ==========
+
 
 @router.delete(
     "/{file_id}",
     summary="删除文件",
     description="删除指定的文件",
-    response_model=SuccessResponse
+    response_model=SuccessResponse,
 )
 async def delete_file(
     file_id: UUID,
     current_user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     删除文件
@@ -450,8 +468,7 @@ async def delete_file(
 
     if not file_path or not file_path.exists():
         raise HTTPException(
-            status_code=http_status.HTTP_404_NOT_FOUND,
-            detail="文件不存在"
+            status_code=http_status.HTTP_404_NOT_FOUND, detail="文件不存在"
         )
 
     try:
@@ -459,26 +476,24 @@ async def delete_file(
     except Exception as e:
         raise HTTPException(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"删除文件失败: {str(e)}"
+            detail=f"删除文件失败: {str(e)}",
         )
 
-    return SuccessResponse(
-        success=True,
-        message="文件删除成功"
-    )
+    return SuccessResponse(success=True, message="文件删除成功")
 
 
 # ========== 统计信息 ==========
+
 
 @router.get(
     "/stats/summary",
     summary="获取文件统计",
     description="获取用户文件的统计信息",
-    response_model=DataResponse[Dict[str, Any]]
+    response_model=DataResponse[Dict[str, Any]],
 )
 async def get_file_stats(
     current_user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     获取文件统计信息
@@ -510,17 +525,15 @@ async def get_file_stats(
             "category_stats": {"general": total_files},
             "recent_uploads": 0,
             "upload_directory": str(upload_dir),
-            "directory_exists": upload_dir.exists()
+            "directory_exists": upload_dir.exists(),
         }
 
         return DataResponse[Dict[str, Any]](
-            success=True,
-            data=stats,
-            message="获取统计信息成功"
+            success=True, data=stats, message="获取统计信息成功"
         )
 
     except Exception as e:
         raise HTTPException(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取统计信息失败: {str(e)}"
+            detail=f"获取统计信息失败: {str(e)}",
         )
