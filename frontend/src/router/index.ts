@@ -106,7 +106,7 @@ const routes: RouteRecordRaw[] = [
         path: 'analytics',
         component: () => import(/* webpackChunkName: "analytics" */ '@/views/Analytics.vue'),
         meta: {
-          title: '学情分析',
+          title: '学习进度',
           requiresAuth: true,
         },
       },
@@ -176,7 +176,7 @@ const routes: RouteRecordRaw[] = [
     ],
   },
 
-  // 学情分析
+  // 学习进度
   {
     path: '/analytics',
     children: [
@@ -185,7 +185,7 @@ const routes: RouteRecordRaw[] = [
         name: 'Analytics',
         component: () => import(/* webpackChunkName: "analytics" */ '@/views/Analytics.vue'),
         meta: {
-          title: '学情分析',
+          title: '学习进度',
           requiresAuth: true,
           icon: 'DataAnalysis',
           keepAlive: true,
@@ -195,7 +195,7 @@ const routes: RouteRecordRaw[] = [
     ],
   },
 
-  // 学习进度（重定向到学情分析）
+  // 学习进度（重定向到学习进度分析页面）
   {
     path: '/progress',
     redirect: '/analytics',
