@@ -26,9 +26,9 @@
         <view class="progress-bar" style="width: {{progress}}%"></view>
       </view>
       <view class="progress-stats">
-        <text class="stat-item success">✓ {{images.filter(img => img.status === 'success').length}}张成功</text>
-        <text class="stat-item failed" wx:if="{{images.filter(img => img.status === 'failed').length > 0}}">
-          ✕ {{images.filter(img => img.status === 'failed').length}}张失败
+        <text class="stat-item success">✓ {{successCount}}张成功</text>
+        <text class="stat-item failed" wx:if="{{failedCount > 0}}">
+          ✕ {{failedCount}}张失败
         </text>
       </view>
     </view>
@@ -126,7 +126,7 @@
     <view class="progress-footer">
       <button class="footer-btn secondary" bindtap="onClose">关闭</button>
       <button 
-        wx:if="{{images.filter(img => img.status === 'failed').length > 0}}" 
+        wx:if="{{failedCount > 0}}" 
         class="footer-btn primary" 
         bindtap="onRetryAll"
       >
