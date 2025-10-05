@@ -6,9 +6,8 @@
 import secrets
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import AnyHttpUrl, field_validator, model_validator, HttpUrl, PostgresDsn
+from pydantic import AnyHttpUrl, HttpUrl, PostgresDsn, field_validator, model_validator
 from pydantic_settings import BaseSettings
-from typing import Union
 
 
 class Settings(BaseSettings):
@@ -32,36 +31,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
 
     # CORS配置
-    BACKEND_CORS_ORIGINS: List[str] = []
-
-    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
-    @classmethod
-    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
-        """CORS源地址预处理
-
-        支持两种格式：
-        1. 逗号分隔的字符串: "http://localhost:3000,http://localhost:8080"
-        2. 字符串数组: ["http://localhost:3000", "http://localhost:8080"]
-        """
-        if isinstance(v, str):
-            if not v.strip():  # 空字符串返回空数组
-                return []
-            if v.startswith("[") and v.endswith("]"):
-                # JSON数组格式
-                import json
-                try:
-                    return json.loads(v)
-                except json.JSONDecodeError:
-                    pass
-            # 逗号分隔格式
-            return [origin.strip() for origin in v.split(",") if origin.strip()]
-        elif isinstance(v, list):
-            return v
-        elif v is None:
-            return []
-        raise ValueError(f"Invalid CORS origins format: {v}")
-
-    # 数据库配置
+    BACKEND_CORS_ORIGINS: List[str] = []  # 数据库配置
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = ""
@@ -70,7 +40,7 @@ class Settings(BaseSettings):
     SQLALCHEMY_DATABASE_URI: Optional[Union[PostgresDsn, str]] = None
 
     @model_validator(mode="after")
-    def assemble_db_connection(self) -> 'Settings':
+    def assemble_db_connection(self) -> "Settings":
         if isinstance(self.SQLALCHEMY_DATABASE_URI, str):
             return self
 
@@ -174,6 +144,7 @@ class Settings(BaseSettings):
 
 class DevelopmentSettings(Settings):
     """开发环境配置"""
+
     DEBUG: bool = True
     LOG_LEVEL: str = "DEBUG"
     POSTGRES_DB: str = "wuhao_tutor_dev"
@@ -189,7 +160,9 @@ class DevelopmentSettings(Settings):
     ]
 
     # 开发环境使用SQLite
-    SQLALCHEMY_DATABASE_URI: Optional[Union[PostgresDsn, str]] = "sqlite+aiosqlite:///./wuhao_tutor_dev.db"
+    SQLALCHEMY_DATABASE_URI: Optional[Union[PostgresDsn, str]] = (
+        "sqlite+aiosqlite:///./wuhao_tutor_dev.db"
+    )
 
     # 开发环境宽松的限流配置
     RATE_LIMIT_PER_IP: int = 1000
@@ -199,6 +172,7 @@ class DevelopmentSettings(Settings):
 
 class TestingSettings(Settings):
     """测试环境配置"""
+
     DEBUG: bool = True
     LOG_LEVEL: str = "DEBUG"
     POSTGRES_DB: str = "wuhao_tutor_test"
@@ -208,7 +182,9 @@ class TestingSettings(Settings):
     BACKEND_CORS_ORIGINS: List[str] = []
 
     # 测试环境使用内存SQLite
-    SQLALCHEMY_DATABASE_URI: Optional[Union[PostgresDsn, str]] = "sqlite+aiosqlite:///:memory:"
+    SQLALCHEMY_DATABASE_URI: Optional[Union[PostgresDsn, str]] = (
+        "sqlite+aiosqlite:///:memory:"
+    )
 
     # 测试环境禁用某些功能
     ENABLE_METRICS: bool = False
@@ -220,6 +196,7 @@ class TestingSettings(Settings):
 
 class ProductionSettings(Settings):
     """生产环境配置"""
+
     DEBUG: bool = False
     LOG_LEVEL: str = "INFO"
     AI_CACHE_ENABLED: bool = True
