@@ -19,7 +19,7 @@ import type {
   EfficiencyAnalysis,
   Achievement,
   StudyPatternAnalysis,
-  HeatmapData
+  HeatmapData,
 } from '../types/analytics'
 import {
   getLearningStats,
@@ -28,8 +28,6 @@ import {
   getSubjectStats,
   getLearningRecommendations,
   getLearningGoals,
-  createLearningGoal,
-  updateLearningGoal,
   deleteLearningGoal,
   getErrorAnalysis,
   getLearningReport,
@@ -41,7 +39,7 @@ import {
   getStudyPatternAnalysis,
   getLeaderboard,
   getPersonalInsights,
-  getStudyCalendar
+  getStudyCalendar,
 } from '../api/analytics'
 
 export const useAnalyticsStore = defineStore('analytics', () => {
@@ -81,36 +79,36 @@ export const useAnalyticsStore = defineStore('analytics', () => {
 
   const completionRate = computed(() => {
     if (!learningStats.value || learningStats.value.totalHomework === 0) return 0
-    return Math.round((learningStats.value.completedHomework / learningStats.value.totalHomework) * 100)
+    return Math.round(
+      (learningStats.value.completedHomework / learningStats.value.totalHomework) * 100
+    )
   })
 
   const weakKnowledgePoints = computed(() => {
     return knowledgePoints.value
-      .filter(point => point.masteryLevel < 60)
+      .filter((point) => point.masteryLevel < 60)
       .sort((a, b) => a.masteryLevel - b.masteryLevel)
       .slice(0, 10)
   })
 
   const topSubjects = computed(() => {
-    return subjectStats.value
-      .sort((a, b) => b.averageScore - a.averageScore)
-      .slice(0, 5)
+    return subjectStats.value.sort((a, b) => b.averageScore - a.averageScore).slice(0, 5)
   })
 
   const activeGoals = computed(() => {
-    return learningGoals.value.filter(goal => goal.status === 'active')
+    return learningGoals.value.filter((goal) => goal.status === 'active')
   })
 
   const completedGoals = computed(() => {
-    return learningGoals.value.filter(goal => goal.status === 'completed')
+    return learningGoals.value.filter((goal) => goal.status === 'completed')
   })
 
   const unlockedAchievements = computed(() => {
-    return achievements.value.filter(achievement => achievement.unlocked)
+    return achievements.value.filter((achievement) => achievement.unlocked)
   })
 
   const availableAchievements = computed(() => {
-    return achievements.value.filter(achievement => !achievement.unlocked)
+    return achievements.value.filter((achievement) => !achievement.unlocked)
   })
 
   const studyStreak = computed(() => {
@@ -211,37 +209,16 @@ export const useAnalyticsStore = defineStore('analytics', () => {
     }
   }
 
-  // 创建目标
-  const createGoal = async (goal: Omit<LearningGoal, 'id' | 'createdAt' | 'currentValue'>) => {
-    try {
-      setLoading(true)
-      const response = await createLearningGoal(goal)
-      learningGoals.value.push(response.data)
-      return response.data
-    } catch (err) {
-      handleError(err)
-      throw err
-    } finally {
-      setLoading(false)
-    }
+  // 创建目标 - TODO: 待后端实现
+  const createGoal = async (_goal: Omit<LearningGoal, 'id' | 'createdAt' | 'currentValue'>) => {
+    console.warn('createGoal: 后端 API 未实现')
+    return null
   }
 
-  // 更新目标
-  const updateGoal = async (id: string, updates: Partial<LearningGoal>) => {
-    try {
-      setLoading(true)
-      const response = await updateLearningGoal(id, updates)
-      const index = learningGoals.value.findIndex(goal => goal.id === id)
-      if (index !== -1) {
-        learningGoals.value[index] = response.data
-      }
-      return response.data
-    } catch (err) {
-      handleError(err)
-      throw err
-    } finally {
-      setLoading(false)
-    }
+  // 更新目标 - TODO: 待后端实现
+  const updateGoal = async (_id: string, _updates: Partial<LearningGoal>) => {
+    console.warn('updateGoal: 后端 API 未实现')
+    return null
   }
 
   // 删除目标
@@ -249,7 +226,7 @@ export const useAnalyticsStore = defineStore('analytics', () => {
     try {
       setLoading(true)
       await deleteLearningGoal(id)
-      learningGoals.value = learningGoals.value.filter(goal => goal.id !== id)
+      learningGoals.value = learningGoals.value.filter((goal) => goal.id !== id)
     } catch (err) {
       handleError(err)
       throw err
@@ -381,14 +358,11 @@ export const useAnalyticsStore = defineStore('analytics', () => {
   const initializeDashboard = async (timeRange: string = '30d') => {
     try {
       setLoading(true)
+      // 仅调用后端已实现的 API
+      // TODO: 其他功能待后端实现后启用
       await Promise.allSettled([
         fetchLearningStats(timeRange),
-        fetchSubjectStats(timeRange),
-        fetchKnowledgePoints(),
-        fetchRecommendations(5),
-        fetchGoals('active'),
-        fetchAchievements(),
-        fetchTimeDistribution('7d')
+        fetchKnowledgePoints(), // 使用 getKnowledgeMap API
       ])
     } catch (err) {
       handleError(err)
@@ -446,10 +420,12 @@ export const useAnalyticsStore = defineStore('analytics', () => {
   const getFormattedStats = computed(() => ({
     studyTime: `${totalStudyHours.value}小时`,
     completionRate: `${completionRate.value}%`,
-    averageScore: learningStats.value?.averageScore ? `${learningStats.value.averageScore}分` : '0分',
+    averageScore: learningStats.value?.averageScore
+      ? `${learningStats.value.averageScore}分`
+      : '0分',
     streak: `${studyStreak.value}天`,
     totalHomework: learningStats.value?.totalHomework || 0,
-    totalQuestions: learningStats.value?.totalQuestions || 0
+    totalQuestions: learningStats.value?.totalQuestions || 0,
   }))
 
   return {
@@ -519,6 +495,6 @@ export const useAnalyticsStore = defineStore('analytics', () => {
     setTimeRange,
     setSubject,
     setShowOnlyWeakPoints,
-    setChartTheme
+    setChartTheme,
   }
 })
