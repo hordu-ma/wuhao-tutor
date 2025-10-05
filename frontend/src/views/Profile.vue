@@ -646,6 +646,10 @@ const handleAvatarUpload = async (file: UploadRawFile): Promise<boolean> => {
     // 更新全局用户信息
     if (authStore.user) {
       authStore.user.avatar = response.avatar_url
+
+      // 同时更新localStorage中的用户信息，确保页面刷新后头像不会丢失
+      const storage = authStore.rememberMe ? localStorage : sessionStorage
+      storage.setItem('user_info', JSON.stringify(authStore.user))
     }
 
     ElMessage.success('头像上传成功！')
