@@ -6,12 +6,7 @@
 import { defineStore } from 'pinia'
 import { ElMessage } from 'element-plus'
 import AuthAPI from '@/api/auth'
-import type {
-  User,
-  LoginRequest,
-  RegisterRequest,
-  LoginResponse
-} from '@/types'
+import type { User, LoginRequest, RegisterRequest, LoginResponse } from '@/types'
 
 interface AuthState {
   // 用户信息
@@ -56,22 +51,22 @@ export const useAuthStore = defineStore('auth', {
     /**
      * 获取用户头像
      */
-    userAvatar: (state): string =>
-      state.user?.avatar || '/default-avatar.png',
+    userAvatar: (state): string => state.user?.avatar || '/default-avatar.png',
 
     /**
      * 获取用户昵称
      */
-    userNickname: (state): string =>
-      state.user?.nickname || state.user?.name || '未知用户',
+    userNickname: (state): string => state.user?.nickname || state.user?.name || '未知用户',
 
     /**
      * 检查是否有特定权限
      */
-    hasRole: (state) => (role: string): boolean => {
-      if (!state.user) return false
-      return state.user.role === role || state.user.role === 'admin'
-    },
+    hasRole:
+      (state) =>
+      (role: string): boolean => {
+        if (!state.user) return false
+        return state.user.role === role || state.user.role === 'admin'
+      },
 
     /**
      * 检查是否为管理员
@@ -81,8 +76,7 @@ export const useAuthStore = defineStore('auth', {
     /**
      * 检查是否为教师
      */
-    isTeacher: (state): boolean =>
-      state.user?.role === 'teacher' || state.user?.role === 'admin',
+    isTeacher: (state): boolean => state.user?.role === 'teacher' || state.user?.role === 'admin',
 
     /**
      * 检查是否为学生
@@ -148,14 +142,12 @@ export const useAuthStore = defineStore('auth', {
     /**
      * 设置认证信息
      */
-    setAuth(
-      response: LoginResponse,
-      rememberMe: boolean = false
-    ): void {
-      const { access_token, user, expires_in } = response
+    setAuth(response: LoginResponse, rememberMe: boolean = false): void {
+      const { access_token, refresh_token, user, expires_in } = response
 
       // 更新状态
       this.accessToken = access_token
+      this.refreshToken = refresh_token || null // 保存 refresh_token
       this.user = user
       this.isAuthenticated = true
       this.rememberMe = rememberMe
@@ -165,6 +157,12 @@ export const useAuthStore = defineStore('auth', {
 
       // 保存到本地存储
       storage.setItem('access_token', access_token)
+
+      // 保存 refresh_token
+      if (refresh_token) {
+        storage.setItem('refresh_token', refresh_token)
+      }
+
       storage.setItem('user_info', JSON.stringify(user))
       storage.setItem('remember_me', rememberMe.toString())
 
@@ -208,12 +206,14 @@ export const useAuthStore = defineStore('auth', {
       try {
         // 优先从localStorage读取
         let token = localStorage.getItem('access_token')
+        let refreshToken = localStorage.getItem('refresh_token')
         let userInfo = localStorage.getItem('user_info')
         let rememberMe = localStorage.getItem('remember_me') === 'true'
 
         // 如果localStorage没有，从sessionStorage读取
         if (!token) {
           token = sessionStorage.getItem('access_token')
+          refreshToken = sessionStorage.getItem('refresh_token')
           userInfo = sessionStorage.getItem('user_info')
           rememberMe = sessionStorage.getItem('remember_me') === 'true'
         }
@@ -227,6 +227,7 @@ export const useAuthStore = defineStore('auth', {
 
           // 恢复状态
           this.accessToken = token
+          this.refreshToken = refreshToken || null
           this.user = JSON.parse(userInfo)
           this.isAuthenticated = true
           this.rememberMe = rememberMe
@@ -363,8 +364,7 @@ export const useAuthStore = defineStore('auth', {
      */
     getTokenExpiry(): number | null {
       try {
-        const token = localStorage.getItem('access_token') ||
-          sessionStorage.getItem('access_token')
+        const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token')
         if (!token) return null
 
         const payload = JSON.parse(atob(token.split('.')[1]))
@@ -379,16 +379,19 @@ export const useAuthStore = defineStore('auth', {
      */
     startTokenRefreshTimer(): void {
       // 每5分钟检查一次token状态
-      setInterval(() => {
-        if (this.isAuthenticated) {
-          const tokenExpiry = this.getTokenExpiry()
-          const isExpiringSoon = tokenExpiry ? Date.now() > tokenExpiry - 5 * 60 * 1000 : true
+      setInterval(
+        () => {
+          if (this.isAuthenticated) {
+            const tokenExpiry = this.getTokenExpiry()
+            const isExpiringSoon = tokenExpiry ? Date.now() > tokenExpiry - 5 * 60 * 1000 : true
 
-          if (isExpiringSoon) {
-            this.refreshAccessToken()
+            if (isExpiringSoon) {
+              this.refreshAccessToken()
+            }
           }
-        }
-      }, 5 * 60 * 1000) // 5分钟
+        },
+        5 * 60 * 1000
+      ) // 5分钟
     },
 
     /**
