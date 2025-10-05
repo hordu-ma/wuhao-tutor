@@ -224,9 +224,17 @@ const updateChart = () => {
   const dates: string[] = []
   const values: number[] = []
 
-  for (let i = days - 1; i >= 0; i--) {
-    dates.push(dayjs().subtract(i, 'day').format('MM-DD'))
-    values.push(Math.floor(Math.random() * 100) + 20)
+  // 安全地生成数据
+  try {
+    for (let i = days - 1; i >= 0; i--) {
+      dates.push(dayjs().subtract(i, 'day').format('MM-DD'))
+      values.push(Math.floor(Math.random() * 100) + 20)
+    }
+  } catch (error) {
+    console.warn('生成图表数据失败', error)
+    // 提供默认数据
+    dates.push(dayjs().format('MM-DD'))
+    values.push(50)
   }
 
   const option: echarts.EChartsOption = {
@@ -239,13 +247,20 @@ const updateChart = () => {
         color: '#374151',
       },
       formatter: (params: any) => {
-        const data = params[0]
-        return `
-          <div style="padding: 8px;">
-            <div style="font-weight: 600; margin-bottom: 4px;">${data.name}</div>
-            <div style="color: #3b82f6;">${getMetricLabel(selectedMetric.value)}: ${data.value}</div>
-          </div>
-        `
+        try {
+          const data = Array.isArray(params) ? params[0] : params
+          if (!data) return '暂无数据'
+
+          return `
+            <div style="padding: 8px;">
+              <div style="font-weight: 600; margin-bottom: 4px;">${data.name || '日期'}</div>
+              <div style="color: #3b82f6;">${getMetricLabel(selectedMetric.value)}: ${data.value || 0}</div>
+            </div>
+          `
+        } catch (error) {
+          console.warn('Tooltip 格式化失败', error)
+          return '数据加载中...'
+        }
       },
     },
     grid: {
