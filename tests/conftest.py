@@ -13,7 +13,7 @@ from typing import AsyncGenerator, Generator
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 # 添加项目根目录到路径
@@ -37,8 +37,8 @@ test_engine = create_async_engine(
 )
 
 # 创建测试会话工厂
-TestingSessionLocal = sessionmaker(
-    test_engine, class_=AsyncSession, expire_on_commit=False
+TestingSessionLocal = async_sessionmaker(
+    bind=test_engine, class_=AsyncSession, expire_on_commit=False
 )
 
 
@@ -109,7 +109,7 @@ def mock_get_user_service(db=None):
     return MockUserService()
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest.fixture(scope="session")
 def event_loop():
     """创建事件循环"""
     loop = asyncio.get_event_loop_policy().new_event_loop()
@@ -131,9 +131,13 @@ async def test_db_setup():
 
 
 @pytest.fixture(scope="session")
-def test_client(test_db_setup) -> Generator[TestClient, None, None]:
+def test_client() -> Generator[TestClient, None, None]:
     """创建测试客户端"""
+    # 重写所有依赖项
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+    app.dependency_overrides[get_current_user_id] = mock_get_current_user_id
+
     with TestClient(app) as client:
         yield client
     app.dependency_overrides.clear()
