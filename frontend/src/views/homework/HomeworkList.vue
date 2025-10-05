@@ -12,15 +12,15 @@
         </h1>
         <div class="stats-cards">
           <div class="stat-card">
-            <div class="stat-number">{{ stats.total }}</div>
+            <div class="stat-number">{{ stats?.total || 0 }}</div>
             <div class="stat-label">总数</div>
           </div>
           <div class="stat-card">
-            <div class="stat-number">{{ stats.completed }}</div>
+            <div class="stat-number">{{ stats?.completed || 0 }}</div>
             <div class="stat-label">已完成</div>
           </div>
           <div class="stat-card">
-            <div class="stat-number">{{ stats.processing }}</div>
+            <div class="stat-number">{{ stats?.processing || 0 }}</div>
             <div class="stat-label">处理中</div>
           </div>
         </div>
@@ -136,13 +136,16 @@
     <div class="homework-list">
       <el-card>
         <!-- 加载状态 -->
-        <div v-if="homeworkStore.listLoading && homeworkList.length === 0" class="loading-state">
+        <div
+          v-if="homeworkStore.listLoading && (!homeworkList || homeworkList.length === 0)"
+          class="loading-state"
+        >
           <el-skeleton :rows="5" animated />
         </div>
 
         <!-- 空状态 -->
         <div
-          v-else-if="!homeworkStore.listLoading && homeworkList.length === 0"
+          v-else-if="!homeworkStore.listLoading && (!homeworkList || homeworkList.length === 0)"
           class="empty-state"
         >
           <el-empty description="暂无作业数据">

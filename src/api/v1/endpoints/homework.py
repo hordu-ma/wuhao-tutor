@@ -463,6 +463,43 @@ async def get_homework_list(
 
 
 @router.get(
+    "/stats",
+    summary="获取作业统计信息",
+    description="获取当前用户的作业统计数据",
+    response_model=DataResponse[Dict[str, Any]],
+)
+async def get_homework_stats(
+    current_user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    获取作业统计信息
+
+    **返回数据:**
+    - **total**: 总作业数
+    - **completed**: 已完成数量
+    - **processing**: 处理中数量
+    - **failed**: 失败数量
+    - **by_subject**: 按学科统计
+    - **by_grade**: 按年级统计
+    """
+    # TODO: 实现真实的统计逻辑
+    # 当前返回示例数据
+    stats = {
+        "total": 0,
+        "completed": 0,
+        "processing": 0,
+        "failed": 0,
+        "by_subject": {},
+        "by_grade": {},
+    }
+
+    return DataResponse[Dict[str, Any]](
+        success=True, data=stats, message="获取统计信息成功"
+    )
+
+
+@router.get(
     "/{id}",
     summary="获取作业详情（别名）",
     description="与 /submissions/{id} 相同，为前端兼容性提供的别名路由",
