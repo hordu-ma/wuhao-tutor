@@ -1,13 +1,13 @@
 <template>
   <div class="dashboard-container">
-    <!-- 欢迎横幅 -->
-    <div class="welcome-banner">
-      <div class="welcome-content">
-        <div class="welcome-text">
-          <h1>欢迎回来，{{ userNickname }}！</h1>
+    <!-- 学习统计横幅 -->
+    <div class="stats-banner">
+      <div class="stats-content">
+        <div class="banner-text">
+          <h2>学习概览</h2>
           <p>今天是学习的好日子，让我们一起进步吧</p>
         </div>
-        <div class="welcome-stats">
+        <div class="stats-grid">
           <div class="stat-item">
             <el-icon class="stat-icon"><Trophy /></el-icon>
             <div class="stat-info">
@@ -31,10 +31,7 @@
       <el-row :gutter="24">
         <!-- 学习问答 -->
         <el-col :xs="24" :sm="12" :lg="6">
-          <el-card
-            class="feature-card learning-card"
-            @click="navigateTo('/learning')"
-          >
+          <el-card class="feature-card learning-card" @click="navigateTo('/learning')">
             <div class="card-content">
               <el-icon class="card-icon"><ChatLineSquare /></el-icon>
               <h3>学习问答</h3>
@@ -48,10 +45,7 @@
 
         <!-- 作业批改 -->
         <el-col :xs="24" :sm="12" :lg="6">
-          <el-card
-            class="feature-card homework-card"
-            @click="navigateTo('/homework')"
-          >
+          <el-card class="feature-card homework-card" @click="navigateTo('/homework')">
             <div class="card-content">
               <el-icon class="card-icon"><EditPen /></el-icon>
               <h3>作业批改</h3>
@@ -65,10 +59,7 @@
 
         <!-- 学习进度 -->
         <el-col :xs="24" :sm="12" :lg="6">
-          <el-card
-            class="feature-card progress-card"
-            @click="navigateTo('/progress')"
-          >
+          <el-card class="feature-card progress-card" @click="navigateTo('/progress')">
             <div class="card-content">
               <el-icon class="card-icon"><TrendCharts /></el-icon>
               <h3>学习进度</h3>
@@ -82,10 +73,7 @@
 
         <!-- 个人中心 -->
         <el-col :xs="24" :sm="12" :lg="6">
-          <el-card
-            class="feature-card profile-card"
-            @click="navigateTo('/profile')"
-          >
+          <el-card class="feature-card profile-card" @click="navigateTo('/profile')">
             <div class="card-content">
               <el-icon class="card-icon"><User /></el-icon>
               <h3>个人中心</h3>
@@ -107,17 +95,11 @@
           <template #header>
             <div class="card-header">
               <h3>最近活动</h3>
-              <el-button text type="primary" @click="viewAllActivities"
-                >查看全部</el-button
-              >
+              <el-button text type="primary" @click="viewAllActivities">查看全部</el-button>
             </div>
           </template>
           <div class="activity-list">
-            <div
-              v-for="activity in recentActivities"
-              :key="activity.id"
-              class="activity-item"
-            >
+            <div v-for="activity in recentActivities" :key="activity.id" class="activity-item">
               <div class="activity-icon">
                 <el-icon>
                   <component :is="getActivityIcon(activity.type)" />
@@ -167,18 +149,11 @@
           </template>
           <div class="goals-list">
             <div v-for="goal in todayGoals" :key="goal.id" class="goal-item">
-              <el-checkbox
-                v-model="goal.completed"
-                @change="updateGoalStatus(goal)"
-              >
+              <el-checkbox v-model="goal.completed" @change="updateGoalStatus(goal)">
                 {{ goal.title }}
               </el-checkbox>
               <div class="goal-progress">
-                <el-progress
-                  :percentage="goal.progress"
-                  :show-text="false"
-                  size="small"
-                />
+                <el-progress :percentage="goal.progress" :show-text="false" size="small" />
               </div>
             </div>
           </div>
@@ -189,10 +164,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
-import { useRouter } from "vue-router";
-import { useAuthStore } from "@/stores/auth";
-import { ElMessage } from "element-plus";
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { ElMessage } from 'element-plus'
 import {
   Trophy,
   Calendar,
@@ -203,175 +178,170 @@ import {
   QuestionFilled,
   DocumentChecked,
   DataAnalysis,
-} from "@element-plus/icons-vue";
+} from '@element-plus/icons-vue'
 
-const router = useRouter();
-const authStore = useAuthStore();
-
-// 计算属性
-const userNickname = computed(() => authStore.userNickname);
+const router = useRouter()
+const authStore = useAuthStore()
 
 // 响应式数据
 const userStats = ref({
   totalPoints: 1250,
   studyDays: 45,
-});
+})
 
 const todayStats = ref({
   questions: 3,
   pendingHomework: 2,
-});
+})
 
-const weekProgress = ref(75);
-const userLevel = ref("中级");
+const weekProgress = ref(75)
+const userLevel = ref('中级')
 
 const recentActivities = ref([
   {
     id: 1,
-    type: "question",
-    title: "提问：三角函数的应用",
+    type: 'question',
+    title: '提问：三角函数的应用',
     time: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2小时前
-    status: "已解答",
+    status: '已解答',
   },
   {
     id: 2,
-    type: "homework",
-    title: "数学作业：二次函数练习",
+    type: 'homework',
+    title: '数学作业：二次函数练习',
     time: new Date(Date.now() - 5 * 60 * 60 * 1000), // 5小时前
-    status: "已批改",
+    status: '已批改',
   },
   {
     id: 3,
-    type: "study",
-    title: "完成英语单词学习",
+    type: 'study',
+    title: '完成英语单词学习',
     time: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1天前
-    status: "已完成",
+    status: '已完成',
   },
-]);
+])
 
 const quickActions = ref([
   {
-    key: "ask",
-    label: "快速提问",
-    type: "primary" as const,
-    icon: "QuestionFilled",
+    key: 'ask',
+    label: '快速提问',
+    type: 'primary' as const,
+    icon: 'QuestionFilled',
   },
   {
-    key: "upload",
-    label: "上传作业",
-    type: "success" as const,
-    icon: "DocumentAdd",
+    key: 'upload',
+    label: '上传作业',
+    type: 'success' as const,
+    icon: 'DocumentAdd',
   },
   {
-    key: "practice",
-    label: "练习题目",
-    type: "warning" as const,
-    icon: "Edit",
+    key: 'practice',
+    label: '练习题目',
+    type: 'warning' as const,
+    icon: 'Edit',
   },
   {
-    key: "review",
-    label: "复习笔记",
-    type: "info" as const,
-    icon: "Document",
+    key: 'review',
+    label: '复习笔记',
+    type: 'info' as const,
+    icon: 'Document',
   },
-]);
+])
 
 const todayGoals = ref([
   {
     id: 1,
-    title: "完成数学作业",
+    title: '完成数学作业',
     completed: true,
     progress: 100,
   },
   {
     id: 2,
-    title: "背诵20个英语单词",
+    title: '背诵20个英语单词',
     completed: false,
     progress: 60,
   },
   {
     id: 3,
-    title: "阅读科学文章",
+    title: '阅读科学文章',
     completed: false,
     progress: 30,
   },
-]);
+])
 
 // 方法
 const navigateTo = (path: string) => {
-  router.push(path);
-};
+  router.push(path)
+}
 
 const getActivityIcon = (type: string) => {
   const iconMap: Record<string, any> = {
     question: QuestionFilled,
     homework: DocumentChecked,
     study: DataAnalysis,
-  };
-  return iconMap[type] || QuestionFilled;
-};
+  }
+  return iconMap[type] || QuestionFilled
+}
 
-const getStatusType = (
-  status: string,
-): "success" | "warning" | "danger" | "info" => {
-  const statusMap: Record<string, "success" | "warning" | "danger" | "info"> = {
-    已解答: "success",
-    已批改: "success",
-    已完成: "success",
-    进行中: "info",
-    待处理: "warning",
-  };
-  return statusMap[status] || "info";
-};
+const getStatusType = (status: string): 'success' | 'warning' | 'danger' | 'info' => {
+  const statusMap: Record<string, 'success' | 'warning' | 'danger' | 'info'> = {
+    已解答: 'success',
+    已批改: 'success',
+    已完成: 'success',
+    进行中: 'info',
+    待处理: 'warning',
+  }
+  return statusMap[status] || 'info'
+}
 
 const formatTime = (time: Date) => {
-  const now = new Date();
-  const diff = now.getTime() - time.getTime();
+  const now = new Date()
+  const diff = now.getTime() - time.getTime()
 
-  const minutes = Math.floor(diff / (1000 * 60));
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const minutes = Math.floor(diff / (1000 * 60))
+  const hours = Math.floor(diff / (1000 * 60 * 60))
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
 
   if (minutes < 60) {
-    return `${minutes}分钟前`;
+    return `${minutes}分钟前`
   } else if (hours < 24) {
-    return `${hours}小时前`;
+    return `${hours}小时前`
   } else {
-    return `${days}天前`;
+    return `${days}天前`
   }
-};
+}
 
 const viewAllActivities = () => {
-  router.push("/activities");
-};
+  router.push('/activities')
+}
 
 const handleQuickAction = (actionKey: string) => {
   switch (actionKey) {
-    case "ask":
-      router.push("/learning");
-      break;
-    case "upload":
-      router.push("/homework/upload");
-      break;
-    case "practice":
-      router.push("/practice");
-      break;
-    case "review":
-      router.push("/notes");
-      break;
+    case 'ask':
+      router.push('/learning')
+      break
+    case 'upload':
+      router.push('/homework/upload')
+      break
+    case 'practice':
+      router.push('/practice')
+      break
+    case 'review':
+      router.push('/notes')
+      break
     default:
-      ElMessage.info("功能开发中，敬请期待！");
+      ElMessage.info('功能开发中，敬请期待！')
   }
-};
+}
 
 const updateGoalStatus = (goal: any) => {
   if (goal.completed) {
-    goal.progress = 100;
-    ElMessage.success(`恭喜完成目标：${goal.title}`);
+    goal.progress = 100
+    ElMessage.success(`恭喜完成目标：${goal.title}`)
   } else {
     // 这里可以根据实际情况调整进度
   }
-};
+}
 
 // 组件挂载时获取数据
 onMounted(async () => {
@@ -379,7 +349,7 @@ onMounted(async () => {
   // await fetchUserStats()
   // await fetchRecentActivities()
   // await fetchTodayGoals()
-});
+})
 </script>
 
 <style lang="scss" scoped>
@@ -389,7 +359,7 @@ onMounted(async () => {
   background-color: var(--el-bg-color-page);
 }
 
-.welcome-banner {
+.stats-banner {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 12px;
   padding: 32px;
@@ -399,31 +369,27 @@ onMounted(async () => {
   overflow: hidden;
 
   &::before {
-    content: "";
+    content: '';
     position: absolute;
     top: -50%;
     right: -50%;
     width: 200%;
     height: 200%;
-    background: radial-gradient(
-      circle,
-      rgba(255, 255, 255, 0.1) 0%,
-      transparent 70%
-    );
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
     pointer-events: none;
   }
 
-  .welcome-content {
+  .stats-content {
     display: flex;
     justify-content: space-between;
     align-items: center;
     position: relative;
     z-index: 1;
 
-    .welcome-text {
-      h1 {
-        font-size: 32px;
-        font-weight: 700;
+    .banner-text {
+      h2 {
+        font-size: 28px;
+        font-weight: 600;
         margin: 0 0 8px 0;
       }
 
@@ -434,7 +400,7 @@ onMounted(async () => {
       }
     }
 
-    .welcome-stats {
+    .stats-grid {
       display: flex;
       gap: 32px;
 
@@ -651,15 +617,15 @@ onMounted(async () => {
     padding: 16px;
   }
 
-  .welcome-banner {
+  .stats-banner {
     padding: 20px;
 
-    .welcome-content {
+    .stats-content {
       flex-direction: column;
       text-align: center;
       gap: 20px;
 
-      .welcome-stats {
+      .stats-grid {
         gap: 20px;
       }
     }
@@ -677,7 +643,7 @@ onMounted(async () => {
 }
 
 @media (max-width: 480px) {
-  .welcome-stats {
+  .stats-grid {
     flex-direction: column;
     gap: 16px !important;
   }
