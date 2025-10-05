@@ -1553,15 +1553,37 @@ class HomeworkService:
     ) -> List[Dict[str, Any]]:
         """获取时间趋势统计"""
         try:
-            # 根据粒度选择日期格式化函数
+            # 检测数据库类型
+            is_sqlite = "sqlite" in str(session.bind.engine.url)
+
+            # 根据粒度和数据库类型选择日期格式化函数
             if granularity == "day":
                 date_format = func.date(HomeworkSubmission.created_at)
                 date_label = "date"
             elif granularity == "week":
-                date_format = func.date_trunc("week", HomeworkSubmission.created_at)
+                if is_sqlite:
+                    # SQLite: 使用strftime获取周开始日期
+                    date_format = func.date(
+                        HomeworkSubmission.created_at,
+                        "-"
+                        + func.strftime("%w", HomeworkSubmission.created_at)
+                        + " days",
+                    )
+                else:
+                    # PostgreSQL: 使用date_trunc
+                    date_format = func.date_trunc("week", HomeworkSubmission.created_at)
                 date_label = "week"
             elif granularity == "month":
-                date_format = func.date_trunc("month", HomeworkSubmission.created_at)
+                if is_sqlite:
+                    # SQLite: 使用strftime格式化为月份
+                    date_format = func.strftime(
+                        "%Y-%m-01", HomeworkSubmission.created_at
+                    )
+                else:
+                    # PostgreSQL: 使用date_trunc
+                    date_format = func.date_trunc(
+                        "month", HomeworkSubmission.created_at
+                    )
                 date_label = "month"
             else:
                 date_format = func.date(HomeworkSubmission.created_at)

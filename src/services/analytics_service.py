@@ -384,11 +384,33 @@ class AnalyticsService:
             start_dt = datetime.fromisoformat(start_date)
             end_dt = datetime.fromisoformat(end_date)
 
-            # 根据粒度调整查询
+            # 检测数据库类型
+            is_sqlite = "sqlite" in str(self.db.bind.engine.url)
+
+            # 根据粒度和数据库类型调整查询
             if granularity == "weekly":
-                date_format = func.date_trunc("week", HomeworkSubmission.created_at)
+                if is_sqlite:
+                    # SQLite: 使用strftime获取周开始日期
+                    date_format = func.date(
+                        HomeworkSubmission.created_at,
+                        "-"
+                        + func.strftime("%w", HomeworkSubmission.created_at)
+                        + " days",
+                    )
+                else:
+                    # PostgreSQL: 使用date_trunc
+                    date_format = func.date_trunc("week", HomeworkSubmission.created_at)
             elif granularity == "monthly":
-                date_format = func.date_trunc("month", HomeworkSubmission.created_at)
+                if is_sqlite:
+                    # SQLite: 使用strftime格式化为月份开始
+                    date_format = func.strftime(
+                        "%Y-%m-01", HomeworkSubmission.created_at
+                    )
+                else:
+                    # PostgreSQL: 使用date_trunc
+                    date_format = func.date_trunc(
+                        "month", HomeworkSubmission.created_at
+                    )
             else:  # daily
                 date_format = func.date(HomeworkSubmission.created_at)
 
