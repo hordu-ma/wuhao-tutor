@@ -3,7 +3,7 @@
   <!-- 页面头部 -->
   <view class="header">
     <view class="title">我的收藏</view>
-    <view class="subtitle">{{categories.find(c => c.id === currentCategory).count}} 个收藏</view>
+    <view class="subtitle">{{currentCategoryCount}} 个收藏</view>
   </view>
 
   <!-- 分类导航 -->

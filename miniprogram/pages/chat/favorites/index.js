@@ -28,6 +28,7 @@ Page({
 
     // 当前选中分类
     currentCategory: 'all',
+    currentCategoryCount: 0,
 
     // 分页信息
     currentPage: 1,
@@ -269,7 +270,13 @@ Page({
         count: mockCounts[cat.id] || 0,
       }));
 
-      this.setData({ categories });
+      const currentCategory = categories.find(cat => cat.id === this.data.currentCategory);
+      const currentCategoryCount = currentCategory ? currentCategory.count : 0;
+
+      this.setData({
+        categories,
+        currentCategoryCount,
+      });
     } catch (error) {
       console.error('更新分类统计失败:', error);
     }
@@ -302,9 +309,13 @@ Page({
       active: cat.id === categoryId,
     }));
 
+    const currentCategory = categories.find(cat => cat.id === categoryId);
+    const currentCategoryCount = currentCategory ? currentCategory.count : 0;
+
     this.setData({
       categories,
       currentCategory: categoryId,
+      currentCategoryCount,
     });
 
     this.loadFavoritesData(true);

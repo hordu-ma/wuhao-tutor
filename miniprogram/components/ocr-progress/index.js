@@ -56,6 +56,29 @@ Component({
   },
 
   /**
+   * 观察器
+   */
+  observers: {
+    images: function (images) {
+      if (!images || !Array.isArray(images)) {
+        this.setData({
+          successCount: 0,
+          failedCount: 0,
+        });
+        return;
+      }
+
+      const successCount = images.filter(img => img.status === 'success').length;
+      const failedCount = images.filter(img => img.status === 'failed').length;
+
+      this.setData({
+        successCount,
+        failedCount,
+      });
+    },
+  },
+
+  /**
    * 组件的方法列表
    */
   methods: {

@@ -27,13 +27,25 @@ Page({
   },
 
   async onLoad() {
-    console.log('首页加载');
+    console.log('首页加载开始');
 
-    // 检查登录状态，但不强制要求登录（首页可以部分访问）
-    const isLoggedIn = await authManager.isLoggedIn();
-    this.setData({ isLoggedIn });
+    try {
+      // 检查登录状态，但不强制要求登录（首页可以部分访问）
+      const isLoggedIn = await authManager.isLoggedIn();
+      console.log('登录状态:', isLoggedIn);
+      this.setData({ isLoggedIn });
 
-    await this.initPage();
+      await this.initPage();
+      console.log('首页加载完成');
+    } catch (error) {
+      console.error('首页 onLoad 失败:', error);
+      this.setData({
+        loading: false,
+        userInfo: { nickName: '游客' },
+        role: null,
+        quickActions: [],
+      });
+    }
   },
 
   async onShow() {
@@ -1340,6 +1352,46 @@ Page({
           });
         }
       },
+    });
+  },
+
+  /**
+   * 测试登录
+   */
+  handleTestLogin() {
+    console.log('测试登录按钮点击');
+    wx.navigateTo({
+      url: '/pages/login/index',
+    });
+  },
+
+  /**
+   * 测试刷新
+   */
+  async handleTestRefresh() {
+    console.log('测试刷新按钮点击');
+    try {
+      this.setData({ loading: true, error: null });
+      await this.refreshData();
+      wx.showToast({
+        title: '刷新成功',
+        icon: 'success',
+      });
+    } catch (error) {
+      console.error('刷新失败:', error);
+      this.setData({ error: error.message || '刷新失败' });
+    } finally {
+      this.setData({ loading: false });
+    }
+  },
+
+  /**
+   * 进入作业页
+   */
+  handleGoToHomework() {
+    console.log('进入作业页按钮点击');
+    wx.navigateTo({
+      url: '/pages/homework/list/index',
     });
   },
 });
