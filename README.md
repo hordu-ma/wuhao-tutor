@@ -1,8 +1,9 @@
 # 五好伴学 (Wuhao Tutor)
 
-> 基于阿里云百炼智能体的 K12 智能学习支持平台
+> 基于阿里云百炼智能体的 K12 智能学习支持平台  
+> 智能作业批改 + 个性化学习问答 + 全面学情分析
 
-一个现代化的教育科技平台，利用AI技术为K12学生提供智能作业批改、个性化学习问答和全面的学情分析服务。
+一个现代化的教育科技平台，利用 AI 技术为 K12 学生提供智能作业批改、个性化学习问答和全面的学情分析服务。
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.11+-blue.svg)
@@ -10,339 +11,501 @@
 ![Vue](https://img.shields.io/badge/Vue-3.4+-4FC08D.svg)
 ![Status](https://img.shields.io/badge/status-Phase_4-green.svg)
 
-## 📊 项目状态
+---
 
-**当前阶段**: Phase 4 - 生产部署优化
-**开发进度**: 后端100%完成，前端95%完成
-**测试状态**: 端到端测试100%通过
-**代码质量**: 零错误零警告，生产就绪
+## 📊 项目状态总览
 
-📋 **[项目状态报告](docs/PROJECT_STATUS_REPORT.md)** - 全面的开发状态和关键指标
-🎯 **[下一步开发计划](NEXT_DEVELOPMENT_PLAN.md)** - Phase 4生产部署计划
-📚 **[文档中心](docs/README.md)** - 完整的项目文档导航
-🏆 **[MVP开发计划](MVP-DEVELOPMENT-PLAN.md)** - 历史开发进程和里程碑
+**当前版本**: 0.4.x (Phase 4 - 生产部署优化)  
+**整体状况**: **B+ (良好)** - 架构清晰，核心功能完备，待优化 RAG 系统  
+**最后更新**: 2025-10-05
+
+| 维度           | 评分 | 说明                         |
+| -------------- | ---- | ---------------------------- |
+| **架构设计**   | A    | 四层架构清晰，异步编程规范   |
+| **代码质量**   | B+   | 类型安全，部分模块需重构     |
+| **功能完整度** | B    | 核心功能完备，知识库建设不足 |
+| **生产就绪度** | B-   | 缺少向量数据库和 RAG 实现    |
+| **技术债务**   | B    | 可控范围内，需要专项优化     |
+
+### 📋 核心文档
+
+- **[📊 项目开发状况深度分析](docs/PROJECT_DEVELOPMENT_STATUS.md)** ⭐ - 技术债务审计 + 功能完整性检查 + 下一阶段规划
+- **[🎨 前端重构总结](docs/FRONTEND_REFACTOR_SUMMARY.md)** - Learning.vue 通义千问风格重构成果
+- **[🤖 AI 助手上下文](AI-CONTEXT.md)** - AI 协作必读的项目核心信息
+- **[📚 文档中心](docs/README.md)** - 完整的项目文档导航
+
+### 🎯 最近更新 (2025-10-05)
+
+- ✅ **Learning.vue 重构完成** - 采用通义千问极简风格，三栏可折叠布局
+- ✅ **数学公式渲染支持** - 集成 KaTeX + Marked，支持行内和块级公式
+- ✅ **登录重复问题修复** - refresh_token 机制正常工作，自动续期
+- ✅ **文档体系重组** - 完成项目开发状况深度分析报告
+
+---
 
 ## ✨ 核心特性
 
-### 🤖 智能作业批改
+### 🤖 智能作业批改 (完成度: 95%)
 
-- **AI驱动评分**：基于阿里云百炼智能体的自动批改系统
-- **多维度反馈**：提供详细的评分解释和改进建议
-- **多媒体支持**：支持文本、图片等多种作业形式
+- **✅ AI 驱动评分**：基于阿里云百炼智能体的自动批改系统
+- **✅ 多维度反馈**：提供详细的评分解释和改进建议
+- **✅ 多媒体支持**：支持文本、图片等多种作业形式
+- **⚠️ 知识点提取**: 当前为关键词匹配，计划使用 NLP/LLM 提取
 
-### 💬 智能学习问答
+### 💬 智能学习问答 (完成度: 90%)
 
-- **对话式学习**：自然语言交互，个性化解答学习疑问
-- **上下文记忆**：维持连贯的对话会话，深度理解学习需求
-- **知识追踪**：记录学习轨迹，构建个人知识图谱
+- **✅ 对话式学习**：自然语言交互，个性化解答学习疑问
+- **✅ 上下文记忆**：维持连贯的对话会话，深度理解学习需求
+- **✅ 数学公式支持**: KaTeX 渲染，支持 LaTeX 语法
+- **✅ 通义千问风格**: 极简交互，三栏可折叠布局
+- **⚠️ 缺少向量检索**: 无法检索历史相似问题 (计划集成 RAG)
 
-### 📊 学情分析
+### 📊 学情分析 (完成度: 70%)
 
-- **学习数据统计**：全面的学习活跃度和频次分析
-- **知识掌握评估**：智能推断学生对不同知识点的掌握程度
-- **个性化建议**：基于数据分析提供针对性学习建议
+- **✅ 学习数据统计**：全面的学习活跃度和频次分析
+- **✅ 知识掌握评估**：智能推断学生对不同知识点的掌握程度
+- **✅ 个性化建议**：基于数据分析提供针对性学习建议
+- **⚠️ 算法简化**: 仅计数统计，未考虑遗忘曲线和时间衰减
+- **❌ 知识图谱为空**: 表结构完整但无数据
 
 ### 🔒 企业级特性
 
-- **多维限流保护**：IP/用户/AI服务多层限流机制
-- **安全头配置**：CSP、HSTS等完整安全策略
-- **性能监控**：实时性能指标收集和慢查询监控
-- **结构化日志**：便于问题排查和系统优化
+- **✅ 多维限流保护**：IP/用户/AI 服务多层限流机制
+- **✅ 安全头配置**：CSP、HSTS 等完整安全策略
+- **✅ 性能监控**：实时性能指标收集和慢查询监控
+- **✅ 结构化日志**：便于问题排查和系统优化
+- **✅ JWT 双 Token 认证**: access_token + refresh_token 自动续期
+
+---
 
 ## 🏗️ 技术架构
 
-### 后端技术栈
+### 技术栈
 
-- **核心框架**：Python 3.11+ + FastAPI + SQLAlchemy 2.x (Async)
-- **数据验证**：Pydantic v2 严格类型校验
-- **数据库**：PostgreSQL 14+ (生产) / SQLite (开发)
-- **缓存**：Redis 6+ (限流/缓存)
-- **AI服务**：阿里云百炼智能体统一封装
+```yaml
+后端:
+  框架: FastAPI 0.104+ (异步高性能)
+  ORM: SQLAlchemy 2.x (Async)
+  验证: Pydantic v2
+  语言: Python 3.11+
 
-### 前端技术栈
+数据库:
+  主库: PostgreSQL 14+ (生产) / SQLite (开发)
+  缓存: Redis 6+
+  向量库: ❌ 未集成 (计划: PGVector)
 
-- **框架**：Vue 3 + TypeScript + Composition API
-- **构建工具**：Vite 5.x
-- **UI组件**：Element Plus + Tailwind CSS
-- **状态管理**：Pinia + Vue Router 4
+AI 服务:
+  提供商: 阿里云百炼智能体
+  模型: 通义千问
+  功能: 作业批改 + 学习问答
 
-### 架构特点
+前端:
+  框架: Vue 3.4+ (Composition API)
+  语言: TypeScript 5.6+
+  UI: Element Plus 2.5+
+  构建: Vite 5+
+  状态: Pinia 2.1+
+  公式: KaTeX + Marked
 
-- **分层设计**：API → Service → Repository → Model 清晰分层
-- **类型安全**：全量TypeScript类型注解，mypy零错误
-- **可观测性**：完整的监控、限流、性能指标体系
-- **容器化部署**：Docker + Nginx + 脚本化管理
+开发工具:
+  Python: uv (快速包管理)
+  Node.js: npm
+  容器: Docker + Docker Compose
+
+运维:
+  反向代理: Nginx
+  监控: Prometheus (配置已就绪)
+  日志: 结构化日志 (JSON)
+```
+
+### 四层架构设计
+
+```
+┌─────────────────────────────────────────────┐
+│  API Layer (api/v1/endpoints/)             │ → HTTP 请求处理
+├─────────────────────────────────────────────┤
+│  Service Layer (services/)                  │ → 业务逻辑
+├─────────────────────────────────────────────┤
+│  Repository Layer (repositories/)           │ → 数据访问
+├─────────────────────────────────────────────┤
+│  Model Layer (models/)                      │ → ORM 数据模型
+└─────────────────────────────────────────────┘
+
+核心基础设施 (core/):
+├── config.py       # 环境配置管理
+├── database.py     # 数据库连接池
+├── security.py     # 认证 + 限流
+├── monitoring.py   # 性能监控
+└── logging.py      # 结构化日志
+```
+
+**架构评价**: ⭐⭐⭐⭐⭐ 层次分明，符合 DDD 思想，异步编程实践规范
+
+---
 
 ## 🚀 快速开始
 
 ### 环境要求
 
-- Python ≥ 3.11
-- Node.js ≥ 18 (如需前端开发)
-- PostgreSQL 14+ (生产) 或 SQLite (开发)
-- Redis 6+ (可选)
+```bash
+# 必需
+Python 3.11+
+Node.js 18+
+uv (Python 包管理器)
 
-### 安装与运行
+# 可选
+PostgreSQL 14+ (生产环境)
+Redis 6+ (缓存和限流)
+Docker + Docker Compose
+```
+
+### 安装步骤
+
+#### 1. 克隆项目
 
 ```bash
-# 1. 克隆项目
 git clone <repository-url>
 cd wuhao-tutor
+```
 
-# 2. 安装Python依赖
+#### 2. 环境诊断 (首次必运行)
+
+```bash
+uv run python scripts/diagnose.py
+```
+
+这会检查：
+
+- ✅ Python 版本和依赖
+- ✅ Node.js 环境
+- ✅ 数据库连接
+- ✅ Redis 连接 (可选)
+- ✅ 环境变量配置
+
+#### 3. 安装依赖
+
+```bash
+# 后端依赖
 uv sync
 
-# 3. 配置环境变量
-cp .env.example .env
-# 编辑 .env 文件，配置数据库和AI服务密钥
-
-# 4. 环境诊断
-uv run python scripts/diagnose.py
-
-# 5. 启动后端服务
-./scripts/start-dev.sh
+# 前端依赖
+cd frontend
+npm install
 ```
 
-访问应用：
+#### 4. 配置环境变量
 
-- **API文档**: http://localhost:8000/docs
-- **健康检查**: http://localhost:8000/health
-- **前端界面**: http://localhost:5173 (如果启动前端)
-
-### 最小配置
-
-创建 `.env` 文件：
-
-```env
-# 基础配置
-ENVIRONMENT=development
-DEBUG=true
-SQLALCHEMY_DATABASE_URI=sqlite+aiosqlite:///./wuhao_tutor_dev.db
-
-# AI服务配置 (可选)
-BAILIAN_API_KEY=your-api-key
-BAILIAN_APPLICATION_ID=your-app-id
+```bash
+cp .env.dev .env
+# 编辑 .env 配置以下关键变量:
+# - BAILIAN_API_KEY: 阿里云百炼 API 密钥
+# - BAILIAN_APPLICATION_ID: 百炼应用 ID
+# - SECRET_KEY: JWT 密钥 (可自动生成)
 ```
 
-## 📋 项目结构
+#### 5. 初始化数据库
 
-```
-wuhao-tutor/
-├── src/                    # 🔥 核心应用代码
-│   ├── api/               # FastAPI 路由与端点
-│   ├── core/              # 配置、安全、监控、性能
-│   ├── models/            # SQLAlchemy ORM 模型
-│   ├── repositories/      # 数据访问层抽象
-│   ├── schemas/           # Pydantic 数据模型
-│   ├── services/          # 业务逻辑与AI封装
-│   └── utils/             # 工具函数
-├── frontend/              # 🎨 Vue3 前端项目
-├── scripts/               # 🛠️ 开发运维脚本
-├── tests/                 # 🧪 测试代码
-├── docs/                  # 📚 项目文档
-├── alembic/               # 🗄️ 数据库迁移
-├── Makefile              # 📋 任务自动化
-└── pyproject.toml        # 📦 项目配置
+```bash
+make db-reset   # 重置数据库 + 创建示例用户
+# 默认测试账号: 13800000001 / password123
 ```
 
-## 🛠️ 开发指南
+#### 6. 启动开发服务器
 
-### 代码规范
+```bash
+# 方法 1: 使用启动脚本 (推荐)
+./scripts/start-dev.sh    # 同时启动后端 + 前端
 
-- **函数长度**: ≤60行，单一职责原则
-- **类型注解**: 必须包含完整类型注解
-- **异常处理**: 精确捕获，禁用裸 `except:`
-- **命名规范**: snake_case(变量/函数)，PascalCase(类)，UPPER_CASE(常量)
+# 方法 2: 分别启动
+make dev                  # 后端 (端口 8000)
+cd frontend && npm run dev # 前端 (端口 5173)
+```
+
+#### 7. 访问应用
+
+- **前端界面**: http://localhost:5173
+- **后端 API**: http://localhost:8000
+- **API 文档**: http://localhost:8000/docs (Swagger UI)
+- **备用 API 文档**: http://localhost:8000/redoc
+
+---
+
+## 📖 开发指南
 
 ### 常用命令
 
 ```bash
-# 代码质量检查
-make format                # 代码格式化 (Black + isort)
-make type-check           # 类型检查 (mypy)
-make test                 # 运行测试
-make pre-commit          # 提交前完整检查
+# 开发
+make dev           # 启动后端开发服务器
+make test          # 运行测试套件
+make lint          # 代码质量检查 (black + flake8 + mypy)
 
-# 数据库管理
-make db-migrate          # 生成迁移文件
-make db-upgrade          # 应用迁移
+# 数据库
+make db-reset      # 重置数据库 + 示例数据
+make db-backup     # 备份数据库
+make db-migrate    # 运行数据库迁移
 
-# 服务管理
-./scripts/start-dev.sh   # 启动开发环境
-./scripts/status-dev.sh  # 检查服务状态
-./scripts/stop-dev.sh    # 停止服务
+# Docker
+make docker-dev    # Docker 开发环境
+make docker-prod   # Docker 生产环境
+
+# 清理
+make clean         # 清理临时文件
+make help          # 查看所有命令
 ```
 
-### Git 提交规范
+### 项目结构
+
+```
+wuhao-tutor/
+├── src/                      # 后端源码
+│   ├── api/v1/endpoints/    # API 路由
+│   ├── services/            # 业务逻辑
+│   ├── repositories/        # 数据访问
+│   ├── models/              # 数据模型
+│   └── core/                # 核心基础设施
+│
+├── frontend/                 # Vue3 前端
+│   ├── src/views/           # 页面组件
+│   ├── src/stores/          # Pinia 状态
+│   └── src/api/             # API 封装
+│
+├── docs/                    # 📚 文档中心
+│   ├── PROJECT_DEVELOPMENT_STATUS.md   ⭐ 开发状况深度分析
+│   ├── FRONTEND_REFACTOR_SUMMARY.md    前端重构总结
+│   ├── api/                 # API 文档
+│   ├── architecture/        # 架构设计
+│   ├── guide/               # 开发指南
+│   └── operations/          # 运维文档
+│
+├── scripts/                 # 开发脚本
+│   ├── diagnose.py          # 环境诊断
+│   ├── init_database.py     # 数据库初始化
+│   └── start-dev.sh         # 开发服务器
+│
+├── tests/                   # 测试套件
+├── alembic/                 # 数据库迁移
+├── AI-CONTEXT.md            # 🤖 AI 助手上下文
+└── README.md                # 📖 本文档
+```
+
+### 开发规范
+
+#### Git 提交规范
 
 ```bash
-feat: 新功能开发
-fix: 问题修复
-docs: 文档更新
-style: 代码格式调整
-refactor: 代码重构
-test: 测试相关
-chore: 其他杂项
+feat(api): 添加学习路径推荐接口
+fix(auth): 修复 refresh_token 未保存问题
+refactor(learning): 重构学习问答页面为通义千问风格
+docs(readme): 更新项目状态和技术栈说明
+test(homework): 添加作业批改单元测试
+chore(deps): 更新依赖版本
 ```
 
-## 📚 API 文档
+#### 代码质量标准
 
-### 核心端点
+- ✅ 所有 Python 代码使用 Black 格式化
+- ✅ 所有 TypeScript 代码使用 Prettier 格式化
+- ✅ 所有函数必须有类型注解
+- ✅ 核心功能必须有单元测试 (目标覆盖率 80%)
+- ✅ 优先正确性和可读性，瓶颈出现后再优化
 
-- `POST /api/v1/homework/submit` - 提交作业
-- `POST /api/v1/chat/ask` - 发起学习问答
-- `GET /api/v1/analytics/learning-stats` - 获取学情分析
+---
 
-### 统一响应格式
+## 🚨 已知问题与改进方向
 
-```json
-{
-  "success": true,
-  "data": { ... },
-  "message": "操作成功"
-}
-```
+### 高优先级技术债务
 
-### 错误响应格式
+| ID         | 债务项                   | 影响             | 预估工时 | 状态      |
+| ---------- | ------------------------ | ---------------- | -------- | --------- |
+| TD-001     | **RAG 系统缺失**         | 核心卖点无法实现 | 40h      | ⚠️ 计划中 |
+| TD-002     | **知识点提取简化**       | 学情分析不准确   | 24h      | ⚠️ 计划中 |
+| TD-003     | **知识图谱数据为空**     | 无法推荐学习路径 | 16h      | ⚠️ 计划中 |
+| ~~TD-004~~ | ~~学习问答页面交互复杂~~ | ~~用户体验差~~   | 16h      | ✅ 已修复 |
 
-```json
-{
-    "success": false,
-    "error": {
-        "code": "VALIDATION_ERROR",
-        "message": "请求参数验证失败"
-    }
-}
-```
+### 下一步开发计划 (Week 1-4)
 
-完整API文档请访问：http://localhost:8000/docs
+1. **🔥 实现 RAG 知识库系统** (Week 1-2)
 
-## 🧪 测试
+   - 集成 PGVector 向量数据库
+   - 使用通义千问 Embedding API
+   - 实现混合检索 (语义+关键词)
 
-### 运行测试
+2. **🔥 优化知识点提取** (Week 2-3)
+
+   - 集成 NLP 库或调用百炼 API
+   - 建立学科知识点标准库
+   - 实现知识点置信度评分
+
+3. **🔥 初始化知识图谱数据** (Week 3-4)
+   - 导入 K12 各学科知识点
+   - 构建知识点关联关系
+   - 生成学习路径模板
+
+详细信息参见 **[项目开发状况深度分析](docs/PROJECT_DEVELOPMENT_STATUS.md)**
+
+---
+
+## 📚 文档资源
+
+### 核心文档
+
+- **[📊 项目开发状况深度分析](docs/PROJECT_DEVELOPMENT_STATUS.md)** ⭐ - 技术债务审计 + 下一阶段规划
+- **[🎨 前端重构总结](docs/FRONTEND_REFACTOR_SUMMARY.md)** - Learning.vue 重构成果
+- **[🤖 AI 助手上下文](AI-CONTEXT.md)** - AI 协作必读
+
+### 技术文档
+
+- **[API 文档](docs/api/)** - RESTful API 接口文档
+- **[架构设计](docs/architecture/)** - 系统架构和设计模式
+- **[开发指南](docs/guide/)** - 开发规范和最佳实践
+- **[运维文档](docs/operations/)** - 部署和监控指南
+
+### 参考资料
+
+- **[术语表](docs/reference/glossary.md)** - 项目术语定义
+- **[学习指南](docs/reference/learning-guide.md)** - 技术学习资源
+- **[技术报告](docs/reports/)** - 历史技术报告和分析
+
+---
+
+## 🐛 故障排查
+
+### 常见问题
+
+#### 1. 后端启动失败
 
 ```bash
-# 快速测试
-uv run pytest -q
+# 运行环境诊断
+uv run python scripts/diagnose.py
 
-# 详细测试
-uv run pytest tests/ -v
-
-# 覆盖率测试
-uv run pytest --cov=src --cov-report=html
-
-# 性能测试
-uv run pytest tests/performance
+# 查看详细错误
+uv run uvicorn src.main:app --reload --log-level debug
 ```
 
-### 测试分类
-
-- **单元测试**: `tests/unit/` - 独立函数/类测试
-- **集成测试**: `tests/integration/` - API端到端测试
-- **性能测试**: `tests/performance/` - 基准性能测试
-
-## 🚀 部署
-
-### Docker 部署
+#### 2. 数据库连接失败
 
 ```bash
-# 构建镜像
-docker-compose build
+# 重置数据库
+make db-reset
 
-# 启动服务
-docker-compose up -d
-
-# 查看状态
-docker-compose ps
+# 检查配置
+cat .env | grep SQLALCHEMY_DATABASE_URI
 ```
 
-### 生产环境
+#### 3. 前端重复要求登录
 
-详细部署指南请参考：[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
+```bash
+# 检查 token 保存 (浏览器控制台)
+localStorage.getItem('access_token')
+localStorage.getItem('refresh_token')
 
-## 📊 监控与观测
+# 如果缺失，清除缓存重新登录
+localStorage.clear()
+sessionStorage.clear()
 
-### 健康检查端点
+# 参考文档: frontend/LOGIN_FIX_SUMMARY.md
+```
 
-- `/health` - 基础健康检查
-- `/api/v1/health/performance` - 性能指标
-- `/api/v1/health/rate-limits` - 限流状态
-- `/api/v1/health/metrics` - 系统指标
+#### 4. 数学公式不显示
 
-### 性能目标
+```bash
+# 检查依赖
+cd frontend && npm list katex marked
 
-- API响应：P95 < 200ms
-- 数据库查询：P95 < 50ms
-- AI服务调用：P95 < 3s
+# 重新安装
+npm install
 
-## 🔐 安全特性
+# 参考文档: frontend/MATH_FORMULA_TEST.md
+```
 
-- **多维限流**：IP/用户/AI服务/登录尝试
-- **安全头**：CSP, HSTS, X-Frame-Options
-- **输入验证**：Pydantic严格校验
-- **错误处理**：统一异常处理，避免信息泄露
-- **密钥管理**：脚本化密钥生成与轮换
+#### 5. AI 服务调用失败
 
-## 📖 文档
+```bash
+# 检查 API Key
+cat .env | grep BAILIAN_API_KEY
 
-| 文档                                                                   | 说明               |
-| ---------------------------------------------------------------------- | ------------------ |
-| [📚 文档导航](docs/README.md)                                          | **文档中心入口**   |
-| [🤖 AI助手上下文](AI-CONTEXT.md)                                       | AI开发助手必读     |
-| [🤖 Warp AI 指南](WARP.md)                                            | Warp 终端开发指南     |
-| [架构设计](docs/architecture/overview.md)                              | 系统分层与模块设计 |
-| [开发指南](docs/guide/development.md)                                  | 详细开发工作流     |
-| [API文档](docs/api/)                                                   | 接口规范与示例     |
-| [学习指南](docs/reference/learning-guide.md)                           | 学习现代Python开发 |
-| [小程序开发](docs/integration/wechat-miniprogram.md)                 | 微信小程序指南     |
-| [历史文档](docs/history/)                                              | Phase 1-3 完成总结 |
+# 查看日志
+tail -f logs/app.log
+```
 
-## 🗓️ 版本规划
-
-| 版本  | 状态    | 主要特性                  |
-| ----- | ------- | ------------------------- |
-| 0.1.x | ✅ 完成 | Phase 1: 核心功能打通     |
-| 0.2.x | ✅ 完成 | Phase 2: 数据持久化完善   |
-| 0.3.x | ✅ 完成 | Phase 3: 前后端联调       |
-| 0.4.x | 🔄 当前 | Phase 4: 生产部署优化     |
-| 1.0.0 | 🎯 目标 | 正式发布版本 (2025-10-15) |
+---
 
 ## 🤝 贡献指南
 
+我们欢迎各种形式的贡献！请查看以下资源：
+
+- **[开发指南](docs/guide/)** - 开发规范和最佳实践
+- **[架构设计](docs/architecture/)** - 了解系统设计
+- **[技术债务清单](docs/PROJECT_DEVELOPMENT_STATUS.md#7-技术债务清单)** - 待改进项
+
+### 提交流程
+
 1. Fork 项目
-2. 创建功能分支：`git checkout -b feature/amazing-feature`
-3. 提交更改：`git commit -m 'feat: add amazing feature'`
-4. 推送分支：`git push origin feature/amazing-feature`
+2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交变更 (`git commit -m 'feat(scope): 添加某功能'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
 5. 创建 Pull Request
 
-### 贡献要求
+---
 
-- 遵循项目代码规范
-- 包含必要的测试用例
-- 通过所有CI检查
-- 更新相关文档
+## 📄 许可证
 
-## 📞 支持与反馈
-
-- **维护者**: Liguo Ma <maliguo@outlook.com>
-- **问题反馈**: [GitHub Issues](../../issues)
-- **功能建议**: [Pull Requests](../../pulls)
-- **文档问题**: 创建Issue标记 `docs` 标签
-
-## 📜 许可证
-
-本项目采用 [MIT 许可证](LICENSE)。
+本项目采用 MIT 许可证。详见 [LICENSE](LICENSE) 文件。
 
 ---
 
-## ⭐ Star History
+## 👥 团队与支持
 
-如果这个项目对你有帮助，请给我们一个Star⭐，这是对我们最大的鼓励！
+- **项目维护者**: Liguo Ma
+- **邮箱**: maliguo@outlook.com
+- **技术支持**: 查看 `scripts/diagnose.py` 诊断报告
 
 ---
 
-<div align="center">
+## 🎯 路线图
 
-**🎓 让AI为教育赋能，让学习更智能更高效**
+### Phase 4 (当前阶段)
 
-</div>
+- ✅ 前端学习问答页面重构 (通义千问风格)
+- ✅ 数学公式渲染支持 (KaTeX)
+- ✅ 登录重复问题修复 (refresh_token)
+- ✅ 文档体系重组
+- 🔄 RAG 知识库系统实现 (进行中)
+
+### Phase 5 (计划中)
+
+- 知识点智能提取优化
+- 知识图谱数据导入
+- 流式响应实现
+- 学情分析算法优化
+
+### Phase 6 (未来)
+
+- 错题本功能
+- 教师管理后台
+- 移动端优化
+- 多语言支持
+
+详细路线图参见 **[项目开发状况深度分析](docs/PROJECT_DEVELOPMENT_STATUS.md)**
+
+---
+
+## 🌟 致谢
+
+感谢以下开源项目：
+
+- [FastAPI](https://fastapi.tiangolo.com/) - 高性能 Python Web 框架
+- [Vue.js](https://vuejs.org/) - 渐进式 JavaScript 框架
+- [SQLAlchemy](https://www.sqlalchemy.org/) - Python ORM
+- [Element Plus](https://element-plus.org/) - Vue 3 UI 组件库
+- [Pinia](https://pinia.vuejs.org/) - Vue 状态管理
+- [阿里云百炼](https://www.aliyun.com/product/bailian) - AI 智能体服务
+
+---
+
+**最后更新**: 2025-10-05  
+**项目版本**: 0.4.x  
+**整体状况**: B+ (良好)
+
+**🔥 下一步**: 实现 RAG 知识库系统，提升问答质量和个性化程度！

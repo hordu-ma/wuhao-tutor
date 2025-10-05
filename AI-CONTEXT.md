@@ -1,10 +1,11 @@
 # 五好伴学 - AI 助手上下文指南
 
-> **🤖 AI 助手必读**
+> **🤖 AI 助手必读**  
 > 本文档是与 AI 助手交互的核心上下文文件，包含项目关键信息、技术架构、开发约定和常用命令。
 
-**最后更新**: 2025-10-02
-**项目版本**: 0.2.0 (Beta)
+**最后更新**: 2025-10-05  
+**项目版本**: 0.4.x (Phase 4 - 生产部署优化)  
+**整体状况**: B+ (良好) - 架构清晰，核心功能完备，待优化 RAG 系统
 
 ---
 
@@ -13,282 +14,407 @@
 ### 项目身份
 
 - **名称**: 五好伴学 (Wuhao Tutor)
-- **类型**: K12 AI 学情管理平台
+- **类型**: K12 AI 学情管理平台 (智能作业批改 + 个性化问答 + 学情分析)
 - **路径**: `~/my-devs/python/wuhao-tutor`
 - **维护者**: Liguo Ma <maliguo@outlook.com>
 
 ### 核心功能
 
-1. **智能作业批改** - AI 驱动的作业自动评分与反馈
-2. **学习问答互动** - 个性化学习问题解答
-3. **学情分析反馈** - 学习数据分析与建议
+1. **✅ 智能作业批改** - AI 驱动的作业自动评分与反馈 (完成度: 95%)
+2. **✅ 学习问答互动** - 个性化学习问题解答 (完成度: 90%)
+3. **⚠️ 学情分析反馈** - 学习数据分析与建议 (完成度: 70%)
 
-### 当前状态
+### 当前开发状态 (2025-10-05)
 
-- **开发阶段**: Beta (Phase 2 完成，Phase 3 进行中)
-- **Phase 1**: ✅ 核心功能打通 (作业批改功能)
-- **Phase 2**: ✅ 数据持久化完善 (Analytics API + 数据库迁移)
-- **Phase 3**: 🔄 前后端联调 (进行中)
-- **技术债务**: 测试覆盖率需提升至80%+、前端集成测试待完成
+| 维度           | 评分 | 说明                                  |
+| -------------- | ---- | ------------------------------------- |
+| **架构设计**   | A    | FastAPI + SQLAlchemy 2.x 异步架构清晰 |
+| **代码质量**   | B+   | 类型安全，部分模块需重构              |
+| **功能完整度** | B    | 核心功能完备，知识库建设不足          |
+| **生产就绪度** | B-   | 缺少向量数据库和 RAG 实现             |
+| **技术债务**   | B    | 可控范围内，需要专项优化              |
+
+**关键待改进项**:
+
+- ⚠️ **RAG 系统缺失** - 缺少向量数据库集成(PGVector/Milvus/Chroma)
+- ⚠️ **知识点提取简化** - 仅基于关键词匹配，未使用 NLP/LLM 提取
+- ⚠️ **知识图谱数据为空** - 表结构完整但无数据
+- ✅ **前端学习问答页面已重构** - 采用通义千问极简风格
+- ✅ **登录重复问题已修复** - refresh_token 机制正常工作
+
+**📋 参考文档**:
+
+- **[项目开发状况深度分析](docs/PROJECT_DEVELOPMENT_STATUS.md)** - 技术债务审计 + 功能完整性检查
+- **[前端重构总结](docs/FRONTEND_REFACTOR_SUMMARY.md)** - Learning.vue 重构成果
 
 ---
 
 ## 🏗️ 技术架构
 
-### 技术栈
+### 技术栈全览
+
+```yaml
+后端:
+  框架: FastAPI 0.104+
+  ORM: SQLAlchemy 2.x (Async)
+  验证: Pydantic v2
+  语言: Python 3.11+
+
+数据库:
+  主库: PostgreSQL 14+ (生产) / SQLite (开发)
+  缓存: Redis 6+
+  向量库: ❌ 未集成 (计划: PGVector)
+
+AI 服务:
+  提供商: 阿里云百炼智能体
+  模型: 通义千问
+  功能: 作业批改 + 学习问答
+
+前端:
+  框架: Vue 3.4+ (Composition API)
+  语言: TypeScript 5.6+
+  UI: Element Plus 2.5+
+  构建: Vite 5+
+  状态: Pinia 2.1+
+  数学公式: KaTeX + Marked
+
+开发工具:
+  Python: uv (包管理)
+  Node.js: npm
+  容器: Docker + Docker Compose
+
+运维:
+  反向代理: Nginx
+  监控: Prometheus (配置已就绪)
+  日志: 结构化日志 (JSON)
+```
+
+### 架构分层 (四层架构)
 
 ```
-后端:  Python 3.11+ + FastAPI + SQLAlchemy 2.x (Async) + Pydantic v2
-数据库: PostgreSQL 14+ (生产) / SQLite (开发)
-缓存:  Redis 6+
-AI:    阿里云百炼智能体
-前端:  Vue 3 + TypeScript + Vite + Element Plus
-依赖:  uv (Python) + npm (Node.js)
-运维:  Docker + Nginx
+┌─────────────────────────────────────────────┐
+│  API Layer (api/v1/endpoints/)             │  HTTP 请求处理
+├─────────────────────────────────────────────┤
+│  Service Layer (services/)                  │  业务逻辑
+├─────────────────────────────────────────────┤
+│  Repository Layer (repositories/)           │  数据访问
+├─────────────────────────────────────────────┤
+│  Model Layer (models/)                      │  ORM 数据模型
+└─────────────────────────────────────────────┘
+
+核心基础设施 (core/):
+- config.py: 环境配置管理
+- database.py: 数据库连接池
+- security.py: 认证 + 限流
+- monitoring.py: 性能监控
+- logging.py: 结构化日志
 ```
 
-### 架构分层
+**架构评价**: ⭐⭐⭐⭐⭐
+
+- 层次分明，符合 DDD 思想
+- 依赖倒置原则应用得当
+- 异步编程实践规范
+
+---
+
+## 📂 项目目录结构
 
 ```
-API 层 (src/api/)         ← HTTP 路由、请求验证、响应封装
-  ↓
-Service 层 (src/services/) ← 业务逻辑编排、AI 服务封装
-  ↓
-Repository 层 (src/repositories/) ← 数据访问抽象、查询优化
-  ↓
-Model 层 (src/models/)     ← ORM 模型、数据结构定义
-```
-
-**设计原则**: 单一职责、依赖倒置、接口隔离
-
-### 关键目录
-
-```
-src/           # 核心应用代码
-scripts/       # 开发运维脚本 (重要！)
-docs/          # 结构化文档
-tests/         # 测试代码
-frontend/      # Vue3 前端
-alembic/       # 数据库迁移
+wuhao-tutor/
+├── src/                      # 后端源码
+│   ├── api/v1/endpoints/    # API 路由层
+│   ├── services/            # 业务逻辑层
+│   ├── repositories/        # 数据访问层
+│   ├── models/              # ORM 数据模型
+│   ├── schemas/             # Pydantic 数据验证
+│   └── core/                # 核心基础设施
+│
+├── frontend/                 # Vue3 前端
+│   ├── src/views/           # 页面组件
+│   ├── src/stores/          # Pinia 状态管理
+│   ├── src/api/             # API 封装
+│   └── src/components/      # 可复用组件
+│
+├── miniprogram/             # 微信小程序
+│   ├── pages/               # 页面
+│   ├── api/                 # API 封装
+│   └── utils/               # 工具函数
+│
+├── docs/                    # 📚 文档中心
+│   ├── PROJECT_DEVELOPMENT_STATUS.md  # 开发状况深度分析
+│   ├── FRONTEND_REFACTOR_SUMMARY.md   # 前端重构总结
+│   ├── api/                 # API 文档
+│   ├── architecture/        # 架构设计
+│   ├── guide/               # 开发指南
+│   ├── operations/          # 运维文档
+│   └── reports/             # 技术报告
+│
+├── scripts/                 # 开发脚本
+│   ├── diagnose.py          # 环境诊断
+│   ├── init_database.py     # 数据库初始化
+│   └── start-dev.sh         # 开发服务器启动
+│
+├── tests/                   # 测试套件
+├── alembic/                 # 数据库迁移
+├── config/                  # 配置模板
+├── monitoring/              # 监控配置
+├── nginx/                   # Nginx 配置
+│
+├── AI-CONTEXT.md            # 🤖 AI 助手上下文 (本文档)
+├── README.md                # 📖 项目概述
+├── pyproject.toml           # Python 项目配置
+└── Makefile                 # 快捷命令
 ```
 
 ---
 
-## ⚡ 快速命令参考
+## 🔧 开发环境
 
-### 环境管理
-
-```bash
-# 依赖安装与环境准备
-uv sync                              # 安装依赖
-cp .env.example .env                 # 配置环境变量
-uv run python scripts/diagnose.py   # 环境诊断
-
-# 服务启动与状态
-./scripts/start-dev.sh               # 启动前后端 (推荐)
-./scripts/status-dev.sh              # 检查服务状态
-./scripts/stop-dev.sh                # 停止所有服务
-```
-
-### 代码质量
+### 必需工具
 
 ```bash
-make format                          # 代码格式化 (Black + isort)
-make type-check                      # 类型检查 (mypy)
-make test                            # 运行测试
-make pre-commit                      # 提交前完整检查 (必须通过!)
+# Python 环境
+Python 3.11+
+uv (包管理器)
+
+# Node.js 环境
+Node.js 18+
+npm 8+
+
+# 数据库
+PostgreSQL 14+ (生产) / SQLite (开发，已内置)
+Redis 6+ (可选，用于限流缓存)
+
+# 容器 (可选)
+Docker + Docker Compose
 ```
 
-### 数据库
+### 快速启动
 
 ```bash
-make db-migrate                      # 生成迁移文件
-make db-upgrade                      # 应用迁移
-uv run python scripts/manage_db.py --help  # 数据库管理工具
+# 1. 环境诊断 (首次必运行)
+uv run python scripts/diagnose.py
+
+# 2. 安装依赖
+uv sync                    # 后端依赖
+cd frontend && npm install # 前端依赖
+
+# 3. 配置环境变量
+cp .env.dev .env
+# 编辑 .env 配置 BAILIAN_API_KEY 等
+
+# 4. 初始化数据库
+make db-reset              # 重置数据库 + 示例数据
+
+# 5. 启动开发服务器
+./scripts/start-dev.sh     # 同时启动后端 + 前端
+
+# 访问:
+# - 后端 API: http://localhost:8000
+# - API 文档: http://localhost:8000/docs
+# - 前端界面: http://localhost:5173
 ```
 
-### 核心端点
+### 常用 Make 命令
 
-- **API 文档**: http://localhost:8000/docs (Swagger)
-- **健康检查**: http://localhost:8000/health
-- **性能指标**: http://localhost:8000/api/v1/health/performance
-- **前端**: http://localhost:5173
+```bash
+make help          # 查看所有命令
+make dev           # 启动后端开发服务器
+make test          # 运行测试套件
+make lint          # 代码质量检查
+make db-reset      # 重置数据库
+make db-backup     # 备份数据库
+make docker-dev    # Docker 开发环境
+```
 
 ---
 
-## 📋 开发约定与规范
+## 🔑 关键技术要点
 
-### 代码规范
+### 1. 异步编程模式
+
+**所有数据库操作和外部 API 调用必须使用 async/await**
 
 ```python
-# 函数设计
-def function_name(param: Type) -> ReturnType:
-    """
-    必须: 类型注解 + Docstring
-    限制: ≤60 行，单一职责
-    """
-    try:
-        # 业务逻辑
-        pass
-    except SpecificError as e:  # 精确捕获，禁用裸 except:
-        logger.error("具体错误", error=str(e))
-        raise
+# ✅ 正确
+async def ask_question(self, user_id: str, request: AskQuestionRequest):
+    session = await self.repository.get_session(session_id)
+    answer = await self.bailian_service.chat_completion(messages)
 
-# 命名约定
-user_service = UserService()           # 变量/函数: snake_case
-class UserService:                     # 类: PascalCase
-    pass
-DEFAULT_PAGE_SIZE = 20                 # 常量: UPPER_CASE
+# ❌ 错误
+def ask_question(self, user_id: str, request: AskQuestionRequest):
+    session = self.repository.get_session(session_id)  # 阻塞调用!
 ```
 
-### Git 提交规范
+### 2. 类型安全
 
-```bash
-# 格式
-<type>: <简述>
+**所有函数必须有完整的类型注解**
 
-# 类型
-feat     # 新功能
-fix      # 缺陷修复
-docs     # 文档更新
-refactor # 代码重构
-test     # 测试相关
-chore    # 其他杂项
+```python
+# ✅ 正确
+async def create_session(
+    self,
+    user_id: str,
+    title: Optional[str] = None
+) -> ChatSession:
+    ...
 
-# 示例
-feat: 增加学情分析知识点掌握度算法
-fix: 修复用户登录 session 超时问题
-docs: 更新 API 文档错误码说明
+# ❌ 错误
+async def create_session(user_id, title=None):  # 缺少类型
+    ...
 ```
 
-### API 设计约定
+### 3. 错误处理
 
-```json
-// 成功响应
-{
-  "success": true,
-  "data": {...},
-  "message": "OK"
-}
+**使用具体的异常类型，禁用裸 except**
 
-// 错误响应
-{
-  "success": false,
-  "error": {
-    "code": "ERROR_CODE",
-    "message": "错误描述"
-  }
-}
+```python
+# ✅ 正确
+try:
+    result = await self.api_call()
+except httpx.TimeoutException:
+    raise ServiceError("服务请求超时")
+except httpx.HTTPStatusError as e:
+    raise ServiceError(f"HTTP 错误: {e.response.status_code}")
 
-// 路由规范
-/api/v1/users          # GET: 列表, POST: 创建
-/api/v1/users/{id}     # GET: 详情, PUT: 更新, DELETE: 删除
+# ❌ 错误
+try:
+    result = await self.api_call()
+except:  # 裸 except 会捕获所有异常
+    raise ServiceError("调用失败")
 ```
 
----
+### 4. 数据库事务管理
 
-## 🔄 标准开发流程
-
-### 日常开发循环
-
-```bash
-# 1. 环境准备
-uv sync                           # 同步依赖
-./scripts/diagnose.py             # 环境诊断
-./scripts/start-dev.sh            # 启动服务
-
-# 2. 开发过程
-# 编码 → 热更新自动生效 → 测试
-
-# 3. 提交前检查 (必须!)
-make pre-commit                   # 格式化 + 类型检查 + 测试
-# 必须全部通过才能提交!
-
-# 4. 提交代码
-git add .
-git commit -m "feat: 功能描述"
-git push
-
-# 5. 清理环境
-./scripts/stop-dev.sh
+```python
+# 使用 Repository 模式，事务在 Service 层管理
+async with self.repository.transaction():
+    session = await self.repository.create_session(data)
+    await self.repository.create_question(question_data)
+    # 自动提交或回滚
 ```
 
-### 数据库迁移流程
+### 5. AI 服务调用
 
-```bash
-# 1. 修改模型 (src/models/)
-# 2. 生成迁移
-make db-migrate                   # 或 alembic revision --autogenerate -m "描述"
-# 3. 检查生成的迁移文件 (alembic/versions/)
-# 4. 应用迁移
-make db-upgrade                   # 或 alembic upgrade head
+```python
+# 通过 BailianService 统一调用
+response = await self.bailian_service.chat_completion(
+    messages=[
+        {"role": "system", "content": "你是 K12 学习助手"},
+        {"role": "user", "content": "问题内容"}
+    ],
+    context=ai_context,  # 包含学生档案和作业历史
+    temperature=0.7,
+    max_tokens=2000
+)
 ```
 
 ---
 
-## 🛠️ 关键脚本说明
+## 📊 核心数据模型
 
-| 脚本                             | 功能               | 使用场景 |
-| -------------------------------- | ------------------ | -------- |
-| `./scripts/start-dev.sh`         | 启动完整开发环境   | 开始开发 |
-| `./scripts/stop-dev.sh`          | 优雅停止所有服务   | 结束工作 |
-| `./scripts/status-dev.sh`        | 检查服务状态与诊断 | 排查问题 |
-| `./scripts/diagnose.py`          | 环境诊断与问题检查 | 环境异常 |
-| `scripts/manage_db.py`           | 数据库统一管理     | DB 操作  |
-| `scripts/performance_monitor.py` | 性能监控           | 性能分析 |
+### 用户相关
 
-**原则**: 优先使用项目提供的脚本，而非直接执行底层命令
+```python
+User                 # 用户 (学生/教师/家长)
+UserSession          # 用户登录会话
+```
+
+### 学习问答
+
+```python
+ChatSession          # 问答会话
+Question             # 用户提问
+Answer               # AI 回答
+LearningAnalytics    # 学习分析数据
+```
+
+### 作业批改
+
+```python
+HomeworkSubmission   # 作业提交
+HomeworkGrading      # 批改结果
+```
+
+### 知识图谱 (⚠️ 数据为空)
+
+```python
+KnowledgeNode        # 知识节点 (概念/技能/题型)
+KnowledgeRelation    # 知识关系 (前置/包含/相似)
+LearningPath         # 学习路径
+UserLearningPath     # 用户学习进度
+```
 
 ---
 
-## 🔐 安全要点
+## 🚨 已知技术债务与改进方向
 
-### 安全基线
+### 高优先级 (Critical)
 
-- **多维限流**: IP/用户/AI 服务/登录尝试
-- **安全头**: CSP, HSTS(生产), X-Frame-Options
-- **输入验证**: Pydantic 严格校验
-- **敏感数据**: 加密存储，不记录到日志
+| ID         | 债务项                   | 影响             | 预估工时 | 状态      |
+| ---------- | ------------------------ | ---------------- | -------- | --------- |
+| TD-001     | **RAG 系统缺失**         | 核心卖点无法实现 | 40h      | ⚠️ 待开发 |
+| TD-002     | **知识点提取简化**       | 学情分析不准确   | 24h      | ⚠️ 待开发 |
+| TD-003     | **知识图谱数据为空**     | 无法推荐学习路径 | 16h      | ⚠️ 待开发 |
+| ~~TD-004~~ | ~~学习问答页面交互复杂~~ | ~~用户体验差~~   | 16h      | ✅ 已修复 |
 
-### 配置安全
+### 中优先级
 
-```bash
-.env           # 本地开发配置 (不提交到版本控制)
-.env.example   # 配置模板 (无敏感信息)
-secrets/       # 生产密钥管理 (gitignore)
-```
+- TD-005: 答案质量评估缺失 (8h)
+- TD-006: 流式响应未实现 (12h)
+- TD-007: 请求缓存未实现 (8h)
+- TD-008: 错题本功能缺失 (16h)
 
-**禁止**: 硬编码密钥、密码等敏感信息到代码中
+### 技术债务详情
+
+参见 **[PROJECT_DEVELOPMENT_STATUS.md § 7. 技术债务清单](docs/PROJECT_DEVELOPMENT_STATUS.md#7-技术债务清单)**
 
 ---
 
-## 🚨 故障排查速查
+## 🎯 下一阶段开发重点
 
-| 问题           | 解决方案                                 |
-| -------------- | ---------------------------------------- |
-| 服务启动失败   | `./scripts/diagnose.py` → 检查环境       |
-| 端口被占用     | `./scripts/stop-dev.sh --force`          |
-| 依赖问题       | `uv sync` 重新同步                       |
-| 数据库连接失败 | 检查 `.env` 中 `SQLALCHEMY_DATABASE_URI` |
-| AI 功能异常    | 验证 `.env` 中 `BAILIAN_API_KEY`         |
-| 类型检查错误   | `uv run mypy src/` 查看详细错误          |
-| 测试失败       | `uv run pytest -v --tb=short` 查看详情   |
+### 立即执行 (Week 1-2)
 
-### 调试工具
+1. **✅ 前端学习问答页面重构** (已完成 2025-10-05)
 
-```bash
-# 查看日志
-tail -f .dev-pids/backend.log
-tail -f .dev-pids/frontend.log
+   - 采用通义千问极简风格
+   - 三栏可折叠布局
+   - 移除强制创建会话流程
+   - 添加 KaTeX 数学公式渲染
 
-# 检查端口
-lsof -i :8000                    # 后端端口
-lsof -i :5173                    # 前端端口
+2. **✅ 修复登录重复问题** (已完成 2025-10-05)
 
-# 性能诊断
-./scripts/status-dev.sh --verbose
-uv run python scripts/performance_monitor.py status
-```
+   - 添加 refresh_token 保存和恢复
+   - Token 过期自动刷新
+   - 优化认证状态管理
+
+3. **🔥 实现 RAG 知识库系统** (核心价值 - 下一步)
+
+   ```python
+   # 技术选型
+   - 向量数据库: PGVector (PostgreSQL 扩展)
+   - Embedding: 通义千问 Embedding API
+   - 检索策略: 混合检索 (语义+关键词)
+   ```
+
+4. **🔥 优化知识点提取逻辑**
+   - 集成 NLP 库或调用百炼 API
+   - 建立学科知识点标准库
+   - 实现置信度评分
+
+### 近期规划 (Week 3-6)
+
+5. 初始化知识图谱数据 (导入 K12 各学科知识点)
+6. 实现流式响应 (后端 SSE + 前端打字机效果)
+7. 完善学情分析算法 (艾宾浩斯遗忘曲线)
+
+### 中长期规划
+
+8. 实现错题本功能
+9. 支持作业批量导入
+10. 开发教师管理后台
+11. 优化移动端体验
 
 ---
 
@@ -296,165 +422,156 @@ uv run python scripts/performance_monitor.py status
 
 ### 核心文档
 
-- **本文档** (`AI-CONTEXT.md`) - AI 助手快速上下文
-- `README.md` - 项目主页
-- `docs/README.md` - 📚 文档导航中心
-- `docs/architecture/overview.md` - 详细架构设计
-- `docs/guide/development.md` - 完整开发工作流
-- `docs/architecture/security.md` - 安全策略与实践
-- `docs/guide/testing.md` - 测试策略与规范
+- **[README.md](README.md)** - 项目概述和快速开始
+- **[PROJECT_DEVELOPMENT_STATUS.md](docs/PROJECT_DEVELOPMENT_STATUS.md)** - 开发状况深度分析 ⭐
+- **[FRONTEND_REFACTOR_SUMMARY.md](docs/FRONTEND_REFACTOR_SUMMARY.md)** - 前端重构总结
 
-### 开发指南文档
+### 技术文档
 
-- `docs/development/LEARNING_GUIDE.md` - 学习指南
-- `docs/development/WECHAT_MINIPROGRAM_DEVELOPMENT_GUIDE.md` - 小程序开发指南
+- **[API 文档](docs/api/)** - RESTful API 接口文档
+- **[架构设计](docs/architecture/)** - 系统架构和设计模式
+- **[开发指南](docs/guide/)** - 开发规范和最佳实践
+- **[运维文档](docs/operations/)** - 部署和监控指南
 
-### API 文档
+### 参考文档
 
-- `docs/api/overview.md` - API 总览与认证
-- `docs/api/endpoints.md` - 端点详细说明
-- `docs/api/models.md` - 数据模型
-- `docs/api/errors.md` - 错误码说明
+- **[术语表](docs/reference/glossary.md)** - 项目术语定义
+- **[学习指南](docs/reference/learning-guide.md)** - 技术学习资源
 
 ### 历史文档
 
-- `docs/history/phase1/` - Phase 1 完成总结
-- `docs/history/phase2/` - Phase 2 完成总结
-- `docs/history/phase3/` - Phase 3 完成总结
-- `docs/archived/phase4/` - Phase 4 归档文档
-
-### 运维文档
-
-- `docs/guide/deployment.md` - 部署策略
-- `docs/architecture/observability.md` - 监控体系
-- `docs/operations/database-migration.md` - 数据库迁移
+- **[技术报告](docs/reports/)** - 历史技术报告和分析
+- **[归档文档](docs/archived/)** - 已过时的历史文档
 
 ---
 
-## 🎯 AI 助手工作模式
+## 🐛 常见问题排查
 
-### 优先级原则
-
-1. **安全第一**: 不泄露敏感信息，谨慎操作生产数据
-2. **约定遵循**: 严格遵守项目编码规范和提交流程
-3. **工具优先**: 优先使用 `scripts/` 目录下的脚本工具
-4. **文档引用**: 优先参考 `docs/` 目录下的专题文档
-5. **渐进迭代**: 小步快跑，确保每一步可验证、可回滚
-
-### 工作检查清单
-
-**开始工作前**:
-
-- [ ] 阅读本文档了解项目状态
-- [ ] 运行 `./scripts/diagnose.py` 检查环境
-- [ ] 确认开发目标和影响范围
-
-**开发过程中**:
-
-- [ ] 遵循代码规范（类型注解、函数长度、命名约定）
-- [ ] 编写必要的单元测试
-- [ ] 更新相关文档（如有 API 变更）
-
-**提交前检查**:
-
-- [ ] `make pre-commit` 全部通过
-- [ ] `./scripts/diagnose.py` 无错误
-- [ ] 核心功能手动测试正常
-- [ ] Git 提交信息符合规范
-
-### 沟通模式
-
-- **简洁高效**: 直击要点，提供可执行方案
-- **解释原因**: 不仅说"怎么做"，还要说"为什么"
-- **权衡分析**: 涉及技术选择时分析利弊
-- **风险提示**: 指出潜在问题和注意事项
-
----
-
-## 💡 常见开发场景
-
-### 场景 1: 添加新 API 端点
+### 问题 1: 后端启动失败
 
 ```bash
-1. 在 src/api/v1/ 创建路由
-2. 在 src/services/ 实现业务逻辑
-3. 在 src/repositories/ 添加数据访问（如需要）
-4. 编写单元测试 tests/unit/
-5. 编写集成测试 tests/integration/
-6. 更新 docs/api/endpoints.md
-7. make pre-commit 检查
+# 检查环境配置
+uv run python scripts/diagnose.py
+
+# 查看详细错误
+uv run uvicorn src.main:app --reload --log-level debug
 ```
 
-### 场景 2: 修改数据模型
+### 问题 2: 数据库连接失败
 
 ```bash
-1. 修改 src/models/ 下的模型
-2. make db-migrate 生成迁移文件
-3. 检查 alembic/versions/ 下生成的迁移
-4. make db-upgrade 应用迁移
-5. 更新相关的 Repository 和 Service 代码
-6. 更新测试
-7. make pre-commit 检查
+# 重置数据库
+make db-reset
+
+# 检查数据库配置
+cat .env | grep SQLALCHEMY_DATABASE_URI
 ```
 
-### 场景 3: 性能优化
+### 问题 3: 前端 API 调用 401 或重复登录
 
 ```bash
-1. 访问 /api/v1/health/performance 查看当前指标
-2. 运行 scripts/performance_monitor.py status
-3. 识别瓶颈（数据库查询、AI 调用等）
-4. 实施优化（添加索引、缓存、异步等）
-5. 重新测试性能指标验证效果
-6. 更新 docs/OBSERVABILITY.md 记录优化结果
+# 检查 token 是否保存
+# 浏览器控制台执行:
+localStorage.getItem('access_token')
+localStorage.getItem('refresh_token')  # ✅ 2025-10-05 已修复
+
+# 如果 refresh_token 为空，清除缓存重新登录:
+localStorage.clear()
+sessionStorage.clear()
+```
+
+### 问题 4: AI 服务调用失败
+
+```bash
+# 检查 API Key 配置
+cat .env | grep BAILIAN_API_KEY
+
+# 查看服务日志
+tail -f logs/app.log
+```
+
+### 问题 5: 数学公式不显示
+
+```bash
+# 检查 KaTeX 依赖
+cd frontend && npm list katex marked
+
+# 重新安装依赖
+npm install
+
+# 参考文档: frontend/MATH_FORMULA_TEST.md
 ```
 
 ---
 
-## 📝 快速备忘
+## 💡 开发约定
 
-### 性能目标
+### Git 提交规范
 
-- API 响应: P95 < 200ms
-- 数据库查询: P95 < 50ms
-- AI 服务调用: P95 < 3s
+```bash
+# 格式: type(scope): description
 
-### 数据库核心模型
-
-```
-User (用户)
-├── ChatSession (对话会话)
-│   ├── Question (问题)
-│   └── Answer (回答)
-└── HomeworkSubmission (作业提交)
-    └── 关联 Question (批改结果)
+feat(api): 添加学习路径推荐接口
+fix(auth): 修复 refresh_token 未保存问题 ✅
+refactor(learning): 重构学习问答页面为通义千问风格 ✅
+docs(readme): 更新项目状态和技术栈说明
+test(homework): 添加作业批改单元测试
+chore(deps): 更新依赖版本
 ```
 
-### 环境变量关键配置
+### 代码质量标准
 
-```env
-ENVIRONMENT=development              # 环境标识
-DEBUG=true                           # 调试模式
-SQLALCHEMY_DATABASE_URI=...          # 数据库连接
-BAILIAN_API_KEY=...                  # AI 服务密钥
-BAILIAN_APPLICATION_ID=...           # AI 应用ID
-```
+- ✅ 所有代码必须通过 Black (Python) / Prettier (TypeScript) 格式化
+- ✅ 所有函数必须有类型注解
+- ✅ 核心功能必须有单元测试 (目标覆盖率 80%)
+- ✅ 复杂算法必须有时间/空间复杂度注释
+- ✅ 优先正确性和可读性，性能瓶颈出现后再优化
+
+### 前端组件规范
+
+- 使用 Vue 3 Composition API (`<script setup>`)
+- 状态管理使用 Pinia
+- 响应式数据优先使用 `ref`，对象使用 `reactive`
+- 组件文件命名: PascalCase (如 `Learning.vue`)
+- Markdown 渲染使用 marked + KaTeX (数学公式)
 
 ---
 
-## 🏷️ 项目标签
+## 🔐 安全与性能
 
-`#Python` `#FastAPI` `#Vue3` `#TypeScript` `#SQLAlchemy` `#AI教育` `#K12` `#阿里云百炼`
+### 已实现安全措施
+
+- ✅ JWT 认证机制 (access_token + refresh_token) ✨ 2025-10-05 修复
+- ✅ 多维限流 (IP/用户/AI 服务)
+- ✅ SQL 注入防护 (ORM 参数化)
+- ✅ XSS 防护 (输入验证)
+- ✅ CSRF 防护 (Token)
+- ✅ 安全响应头 (CSP、HSTS)
+
+### 性能监控指标
+
+- API 响应时间: P95 < 200ms ✅
+- 数据库查询: P95 < 50ms ✅
+- AI 服务调用: P95 < 3s ✅
 
 ---
 
-**💡 记住**:
+## 📞 支持与反馈
 
-- 这是一个教育 AI 平台，安全性和数据隐私至关重要
-- 遵循 Unix 哲学：专一、简洁、可组合
-- 代码可读性优先于聪明技巧
-- 提交前必须通过 `make pre-commit` 检查
-- 遇到问题先运行 `./scripts/diagnose.py`
+- **邮箱**: maliguo@outlook.com
+- **文档问题**: 在 GitHub Issues 中提出
+- **紧急问题**: 查看 `scripts/diagnose.py` 诊断报告
 
 ---
 
-_本文档整合自 README.md、PROJECT-CONTEXT.md、DEVELOPER-QUICK-REFERENCE.md 等多个文档，作为 AI 助手的统一上下文入口。_
+**AI 助手注意事项**:
+
+1. 所有路径操作使用绝对路径: `/Users/liguoma/my-devs/python/wuhao-tutor/...`
+2. Python 命令使用 `uv run python` 而不是直接 `python`
+3. 修改代码前检查 `docs/PROJECT_DEVELOPMENT_STATUS.md` 了解当前状态
+4. 遇到技术债务问题，参考该文档的改进建议
+5. 前端问题参考 `docs/FRONTEND_REFACTOR_SUMMARY.md`
+6. 登录/认证问题参考 `frontend/LOGIN_FIX_SUMMARY.md`
+
+**最后更新**: 2025-10-05 by AI Agent  
+**下次更新**: 完成 RAG 系统实现后 (预计 Week 3-4)
