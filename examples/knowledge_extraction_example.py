@@ -5,8 +5,9 @@
 """
 
 import asyncio
-from src.services.knowledge.extraction_service import KnowledgeExtractionService
+
 from src.services.bailian_service import get_bailian_service
+from src.services.knowledge.extraction_service import KnowledgeExtractionService
 
 
 async def example_homework_extraction():
