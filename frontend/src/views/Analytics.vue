@@ -1,344 +1,352 @@
 <template>
-  <div class="analytics-page">
-    <!-- 动态背景 -->
-    <div class="analytics-background">
-      <div class="gradient-orb orb-1"></div>
-      <div class="gradient-orb orb-2"></div>
-      <div class="gradient-orb orb-3"></div>
-    </div>
+  <ErrorBoundary
+    error-type="runtime"
+    :show-retry="true"
+    :show-reload="true"
+    custom-title="学情分析暂时无法加载"
+    custom-description="我们正在努力修复这个问题，请稍后重试或刷新页面"
+    :on-retry="handleRetryAnalytics"
+  >
+    <div class="analytics-page">
+      <!-- 动态背景 -->
+      <div class="analytics-background">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
+      </div>
 
-    <!-- 页面头部 -->
-    <div class="page-header">
-      <div class="header-content">
-        <div class="header-text">
-          <h1 class="page-title">
-            <span class="title-icon">📊</span>
-            智能学习进度
-          </h1>
-          <p class="page-subtitle">基于AI驱动的个性化学习数据洞察，让每一步学习都更精准</p>
-        </div>
-        <div class="header-controls">
-          <div class="control-group">
-            <el-select
-              v-model="selectedTimeRange"
+      <!-- 页面头部 -->
+      <div class="page-header">
+        <div class="header-content">
+          <div class="header-text">
+            <h1 class="page-title">
+              <span class="title-icon">📊</span>
+              智能学习进度
+            </h1>
+            <p class="page-subtitle">基于AI驱动的个性化学习数据洞察，让每一步学习都更精准</p>
+          </div>
+          <div class="header-controls">
+            <div class="control-group">
+              <el-select
+                v-model="selectedTimeRange"
+                size="large"
+                @change="handleTimeRangeChange"
+                class="time-selector"
+              >
+                <el-option label="最近7天" value="7d">
+                  <span class="option-content">
+                    <i class="option-icon">📅</i>
+                    最近7天
+                  </span>
+                </el-option>
+                <el-option label="最近30天" value="30d">
+                  <span class="option-content">
+                    <i class="option-icon">📈</i>
+                    最近30天
+                  </span>
+                </el-option>
+                <el-option label="最近90天" value="90d">
+                  <span class="option-content">
+                    <i class="option-icon">📊</i>
+                    最近90天
+                  </span>
+                </el-option>
+              </el-select>
+            </div>
+
+            <el-button
+              type="primary"
+              :icon="Refresh"
+              @click="refreshAllData"
+              :loading="loading"
               size="large"
-              @change="handleTimeRangeChange"
-              class="time-selector"
+              class="refresh-btn"
             >
-              <el-option label="最近7天" value="7d">
-                <span class="option-content">
-                  <i class="option-icon">📅</i>
-                  最近7天
-                </span>
-              </el-option>
-              <el-option label="最近30天" value="30d">
-                <span class="option-content">
-                  <i class="option-icon">📈</i>
-                  最近30天
-                </span>
-              </el-option>
-              <el-option label="最近90天" value="90d">
-                <span class="option-content">
-                  <i class="option-icon">📊</i>
-                  最近90天
-                </span>
-              </el-option>
-            </el-select>
-          </div>
-
-          <el-button
-            type="primary"
-            :icon="Refresh"
-            @click="refreshAllData"
-            :loading="loading"
-            size="large"
-            class="refresh-btn"
-          >
-            <span v-if="!loading">刷新数据</span>
-            <span v-else>加载中...</span>
-          </el-button>
-
-          <el-dropdown @command="handleExport" class="export-dropdown">
-            <el-button size="large" class="export-btn">
-              <el-icon><Download /></el-icon>
-              导出报告
-              <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+              <span v-if="!loading">刷新数据</span>
+              <span v-else>加载中...</span>
             </el-button>
-            <template #dropdown>
-              <el-dropdown-menu class="export-menu">
-                <el-dropdown-item command="pdf">
-                  <i class="menu-icon">📄</i>
-                  PDF完整报告
-                </el-dropdown-item>
-                <el-dropdown-item command="csv">
-                  <i class="menu-icon">📊</i>
-                  CSV数据表格
-                </el-dropdown-item>
-                <el-dropdown-item command="json">
-                  <i class="menu-icon">💾</i>
-                  JSON原始数据
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-        </div>
-      </div>
-    </div>
 
-    <!-- 错误提示 -->
-    <div v-if="error" class="error-container">
-      <el-alert
-        :title="error"
-        type="error"
-        effect="dark"
-        show-icon
-        closable
-        @close="clearError"
-        class="error-alert"
-      >
-        <template #title>
-          <span class="error-title">
-            <i class="error-icon">⚠️</i>
-            数据加载失败
-          </span>
-        </template>
-      </el-alert>
-    </div>
-
-    <!-- 加载状态 -->
-    <div v-if="loading && !hasData" class="loading-container">
-      <div class="loading-content">
-        <div class="loading-spinner">
-          <div class="spinner-ring"></div>
-          <div class="spinner-ring"></div>
-          <div class="spinner-ring"></div>
-        </div>
-        <p class="loading-text">正在分析您的学习数据...</p>
-      </div>
-    </div>
-
-    <!-- 主要内容 -->
-    <div v-else class="analytics-content">
-      <!-- 核心指标仪表盘 -->
-      <div class="metrics-dashboard">
-        <h2 class="section-title">
-          <span class="title-decorator"></span>
-          学习概览仪表盘
-          <span class="title-badge">实时更新</span>
-        </h2>
-
-        <div class="metrics-grid">
-          <div
-            v-for="(stat, index) in overviewStats"
-            :key="stat.key"
-            class="metric-card"
-            :style="{ '--delay': index * 0.1 + 's' }"
-          >
-            <div class="metric-header">
-              <div class="metric-icon" :class="stat.colorClass">
-                <el-icon :size="32">
-                  <component :is="stat.icon" />
-                </el-icon>
-              </div>
-              <div class="metric-trend" :class="stat.trendClass">
-                <el-icon :size="16">
-                  <component :is="stat.trendIcon" />
-                </el-icon>
-                <span class="trend-value">{{ Math.abs(stat.trend) }}%</span>
-              </div>
-            </div>
-
-            <div class="metric-body">
-              <div class="metric-value">{{ stat.value }}</div>
-              <div class="metric-label">{{ stat.label }}</div>
-            </div>
-
-            <div class="metric-footer">
-              <div class="progress-ring">
-                <svg class="ring-svg" width="60" height="60">
-                  <circle class="ring-bg" cx="30" cy="30" r="26" fill="none" stroke-width="4" />
-                  <circle
-                    class="ring-progress"
-                    cx="30"
-                    cy="30"
-                    r="26"
-                    fill="none"
-                    stroke-width="4"
-                    :stroke-dasharray="163.36"
-                    :stroke-dashoffset="163.36 * (1 - (stat.progress || 0.75))"
-                  />
-                </svg>
-                <div class="ring-text">{{ Math.round((stat.progress || 0.75) * 100) }}%</div>
-              </div>
-            </div>
-
-            <div class="metric-glow"></div>
+            <el-dropdown @command="handleExport" class="export-dropdown">
+              <el-button size="large" class="export-btn">
+                <el-icon><Download /></el-icon>
+                导出报告
+                <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu class="export-menu">
+                  <el-dropdown-item command="pdf">
+                    <i class="menu-icon">📄</i>
+                    PDF完整报告
+                  </el-dropdown-item>
+                  <el-dropdown-item command="csv">
+                    <i class="menu-icon">📊</i>
+                    CSV数据表格
+                  </el-dropdown-item>
+                  <el-dropdown-item command="json">
+                    <i class="menu-icon">💾</i>
+                    JSON原始数据
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </div>
         </div>
       </div>
 
-      <!-- 智能图表分析区域 -->
-      <div class="charts-analytics">
-        <h2 class="section-title">
-          <span class="title-decorator"></span>
-          学习趋势分析
-          <span class="title-badge">AI 驱动</span>
-        </h2>
+      <!-- 错误提示 -->
+      <div v-if="error" class="error-container">
+        <el-alert
+          :title="error"
+          type="error"
+          effect="dark"
+          show-icon
+          closable
+          @close="clearError"
+          class="error-alert"
+        >
+          <template #title>
+            <span class="error-title">
+              <i class="error-icon">⚠️</i>
+              数据加载失败
+            </span>
+          </template>
+        </el-alert>
+      </div>
 
-        <div class="charts-grid">
-          <div class="chart-container main-chart">
-            <div class="chart-header">
-              <div class="chart-title">
-                <span class="chart-icon">📈</span>
-                学习进度趋势
-              </div>
-              <div class="chart-controls">
-                <div class="chart-filters">
-                  <button class="filter-btn active">学习时长</button>
-                  <button class="filter-btn">正确率</button>
-                  <button class="filter-btn">完成率</button>
-                </div>
-              </div>
-            </div>
-            <div class="chart-content">
-              <LearningTrendChart :auto-refresh="true" :default-time-range="selectedTimeRange" />
-            </div>
+      <!-- 加载状态 -->
+      <div v-if="loading && !hasData" class="loading-container">
+        <div class="loading-content">
+          <div class="loading-spinner">
+            <div class="spinner-ring"></div>
+            <div class="spinner-ring"></div>
+            <div class="spinner-ring"></div>
           </div>
+          <p class="loading-text">正在分析您的学习数据...</p>
         </div>
       </div>
 
-      <!-- 知识雷达分析 -->
-      <div class="knowledge-radar-section">
-        <h2 class="section-title">
-          <span class="title-decorator"></span>
-          知识掌握雷达分析
-          <span class="title-badge">360° 全景</span>
-        </h2>
+      <!-- 主要内容 -->
+      <div v-else class="analytics-content">
+        <!-- 核心指标仪表盘 -->
+        <div class="metrics-dashboard">
+          <h2 class="section-title">
+            <span class="title-decorator"></span>
+            学习概览仪表盘
+            <span class="title-badge">实时更新</span>
+          </h2>
 
-        <div class="radar-container">
-          <div class="radar-chart">
-            <div class="radar-header">
-              <div class="radar-title">
-                <span class="radar-icon">🎯</span>
-                知识点掌握度分布
+          <div class="metrics-grid">
+            <div
+              v-for="(stat, index) in overviewStats"
+              :key="stat.key"
+              class="metric-card"
+              :style="{ '--delay': index * 0.1 + 's' }"
+            >
+              <div class="metric-header">
+                <div class="metric-icon" :class="stat.colorClass">
+                  <el-icon :size="32">
+                    <component :is="stat.icon" />
+                  </el-icon>
+                </div>
+                <div class="metric-trend" :class="stat.trendClass">
+                  <el-icon :size="16">
+                    <component :is="stat.trendIcon" />
+                  </el-icon>
+                  <span class="trend-value">{{ Math.abs(stat.trend) }}%</span>
+                </div>
               </div>
-              <div class="radar-legend">
-                <div class="legend-item excellent">
-                  <span class="legend-dot"></span>
-                  优秀掌握 (≥80%)
-                </div>
-                <div class="legend-item good">
-                  <span class="legend-dot"></span>
-                  良好掌握 (60-79%)
-                </div>
-                <div class="legend-item weak">
-                  <span class="legend-dot"></span>
-                  需要提升 (<60%)
+
+              <div class="metric-body">
+                <div class="metric-value">{{ stat.value }}</div>
+                <div class="metric-label">{{ stat.label }}</div>
+              </div>
+
+              <div class="metric-footer">
+                <div class="progress-ring">
+                  <svg class="ring-svg" width="60" height="60">
+                    <circle class="ring-bg" cx="30" cy="30" r="26" fill="none" stroke-width="4" />
+                    <circle
+                      class="ring-progress"
+                      cx="30"
+                      cy="30"
+                      r="26"
+                      fill="none"
+                      stroke-width="4"
+                      :stroke-dasharray="163.36"
+                      :stroke-dashoffset="163.36 * (1 - (stat.progress || 0.75))"
+                    />
+                  </svg>
+                  <div class="ring-text">{{ Math.round((stat.progress || 0.75) * 100) }}%</div>
                 </div>
               </div>
-            </div>
-            <div class="radar-content">
-              <KnowledgeRadarChart :show-comparison="true" />
+
+              <div class="metric-glow"></div>
             </div>
           </div>
+        </div>
 
-          <div class="knowledge-insights">
-            <div class="insights-card mastery-summary">
-              <div class="card-header">
-                <h3 class="card-title">
-                  <span class="card-icon">🏆</span>
-                  掌握度总览
-                </h3>
+        <!-- 智能图表分析区域 -->
+        <div class="charts-analytics">
+          <h2 class="section-title">
+            <span class="title-decorator"></span>
+            学习趋势分析
+            <span class="title-badge">AI 驱动</span>
+          </h2>
+
+          <div class="charts-grid">
+            <div class="chart-container main-chart">
+              <div class="chart-header">
+                <div class="chart-title">
+                  <span class="chart-icon">📈</span>
+                  学习进度趋势
+                </div>
+                <div class="chart-controls">
+                  <div class="chart-filters">
+                    <button class="filter-btn active">学习时长</button>
+                    <button class="filter-btn">正确率</button>
+                    <button class="filter-btn">完成率</button>
+                  </div>
+                </div>
               </div>
-              <div class="card-content">
-                <div class="mastery-stats">
-                  <div
-                    v-for="category in knowledgeSummary"
-                    :key="category.level"
-                    class="mastery-item"
-                    :class="category.level"
-                  >
-                    <div class="mastery-info">
-                      <div class="mastery-label" :class="category.textClass">
-                        {{ category.label }}
+              <div class="chart-content">
+                <LearningTrendChart :auto-refresh="true" :default-time-range="selectedTimeRange" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 知识雷达分析 -->
+        <div class="knowledge-radar-section">
+          <h2 class="section-title">
+            <span class="title-decorator"></span>
+            知识掌握雷达分析
+            <span class="title-badge">360° 全景</span>
+          </h2>
+
+          <div class="radar-container">
+            <div class="radar-chart">
+              <div class="radar-header">
+                <div class="radar-title">
+                  <span class="radar-icon">🎯</span>
+                  知识点掌握度分布
+                </div>
+                <div class="radar-legend">
+                  <div class="legend-item excellent">
+                    <span class="legend-dot"></span>
+                    优秀掌握 (≥80%)
+                  </div>
+                  <div class="legend-item good">
+                    <span class="legend-dot"></span>
+                    良好掌握 (60-79%)
+                  </div>
+                  <div class="legend-item weak">
+                    <span class="legend-dot"></span>
+                    需要提升 (<60%)
+                  </div>
+                </div>
+              </div>
+              <div class="radar-content">
+                <KnowledgeRadarChart :show-comparison="true" />
+              </div>
+            </div>
+
+            <div class="knowledge-insights">
+              <div class="insights-card mastery-summary">
+                <div class="card-header">
+                  <h3 class="card-title">
+                    <span class="card-icon">🏆</span>
+                    掌握度总览
+                  </h3>
+                </div>
+                <div class="card-content">
+                  <div class="mastery-stats">
+                    <div
+                      v-for="category in knowledgeSummary"
+                      :key="category.level"
+                      class="mastery-item"
+                      :class="category.level"
+                    >
+                      <div class="mastery-info">
+                        <div class="mastery-label" :class="category.textClass">
+                          {{ category.label }}
+                        </div>
+                        <div class="mastery-count">{{ category.count }}个知识点</div>
                       </div>
-                      <div class="mastery-count">{{ category.count }}个知识点</div>
+                      <div class="mastery-progress">
+                        <div class="progress-circle">
+                          <svg class="circle-svg" width="60" height="60">
+                            <circle
+                              class="circle-bg"
+                              cx="30"
+                              cy="30"
+                              r="25"
+                              fill="none"
+                              stroke-width="5"
+                            />
+                            <circle
+                              class="circle-progress"
+                              :class="category.level"
+                              cx="30"
+                              cy="30"
+                              r="25"
+                              fill="none"
+                              stroke-width="5"
+                              :stroke-dasharray="157"
+                              :stroke-dashoffset="157 * (1 - category.percentage / 100)"
+                            />
+                          </svg>
+                          <div class="circle-text">{{ category.percentage }}%</div>
+                        </div>
+                      </div>
                     </div>
-                    <div class="mastery-progress">
-                      <div class="progress-circle">
-                        <svg class="circle-svg" width="60" height="60">
-                          <circle
-                            class="circle-bg"
-                            cx="30"
-                            cy="30"
-                            r="25"
-                            fill="none"
-                            stroke-width="5"
-                          />
-                          <circle
-                            class="circle-progress"
-                            :class="category.level"
-                            cx="30"
-                            cy="30"
-                            r="25"
-                            fill="none"
-                            stroke-width="5"
-                            :stroke-dasharray="157"
-                            :stroke-dashoffset="157 * (1 - category.percentage / 100)"
-                          />
-                        </svg>
-                        <div class="circle-text">{{ category.percentage }}%</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="insights-card weak-points">
+                <div class="card-header">
+                  <h3 class="card-title">
+                    <span class="card-icon">⚠️</span>
+                    重点关注
+                  </h3>
+                  <div class="card-action">
+                    <button class="action-btn">查看全部</button>
+                  </div>
+                </div>
+                <div class="card-content">
+                  <div class="weak-points-list">
+                    <div
+                      v-for="point in weakKnowledgePoints.slice(0, 6)"
+                      :key="point.id"
+                      class="weak-point"
+                    >
+                      <div class="point-info">
+                        <div class="point-name">{{ point.name }}</div>
+                        <div class="point-subject">{{ point.subject }}</div>
+                      </div>
+                      <div class="point-score">
+                        <div class="score-value" :class="getScoreClass(point.masteryLevel)">
+                          {{ point.masteryLevel }}%
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-
-            <div class="insights-card weak-points">
-              <div class="card-header">
-                <h3 class="card-title">
-                  <span class="card-icon">⚠️</span>
-                  重点关注
-                </h3>
-                <div class="card-action">
-                  <button class="action-btn">查看全部</button>
-                </div>
-              </div>
-              <div class="card-content">
-                <div class="weak-points-list">
-                  <div
-                    v-for="point in weakKnowledgePoints.slice(0, 6)"
-                    :key="point.id"
-                    class="weak-point"
-                  >
-                    <div class="point-info">
-                      <div class="point-name">{{ point.name }}</div>
-                      <div class="point-subject">{{ point.subject }}</div>
-                    </div>
-                    <div class="point-score">
-                      <div class="score-value" :class="getScoreClass(point.masteryLevel)">
-                        {{ point.masteryLevel }}%
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
-      </div>
 
-      <!-- 学习建议和目标管理 -->
-      <!-- TODO: 待后端实现推荐 API 后启用 -->
-      <!-- <div class="recommendations-section mb-8">
+        <!-- 学习建议和目标管理 -->
+        <!-- TODO: 待后端实现推荐 API 后启用 -->
+        <!-- <div class="recommendations-section mb-8">
         <h2 class="section-title">智能学习建议</h2>
         <LearningRecommendations />
       </div> -->
 
-      <!-- 学习日历和成就系统 -->
-      <!-- TODO: 待后端实现日历和成就 API 后启用 -->
-      <!-- <div class="calendar-achievements-section mb-8">
+        <!-- 学习日历和成就系统 -->
+        <!-- TODO: 待后端实现日历和成就 API 后启用 -->
+        <!-- <div class="calendar-achievements-section mb-8">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <LearningCalendar :auto-refresh="true" />
           <div class="achievements-section">
@@ -347,25 +355,27 @@
         </div>
       </div> -->
 
-      <!-- AI 学习洞察 -->
-      <div class="insights-section">
-        <h2 class="section-title">
-          <span class="title-decorator"></span>
-          AI 智能学习洞察
-          <span class="title-badge">个性化推荐</span>
-        </h2>
+        <!-- AI 学习洞察 -->
+        <div class="insights-section">
+          <h2 class="section-title">
+            <span class="title-decorator"></span>
+            AI 智能学习洞察
+            <span class="title-badge">个性化推荐</span>
+          </h2>
 
-        <div class="insights-container">
-          <LearningInsights />
+          <div class="insights-container">
+            <LearningInsights />
+          </div>
         </div>
       </div>
     </div>
-  </div>
+  </ErrorBoundary>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useAnalyticsStore } from '../stores/analytics'
+import ErrorBoundary from '../components/common/ErrorBoundary.vue'
 import LearningTrendChart from '../components/LearningTrendChart.vue'
 import KnowledgeRadarChart from '../components/KnowledgeRadarChart.vue'
 // TODO: 待后端 API 实现后启用这些组件
@@ -511,6 +521,16 @@ const clearError = () => {
 const handleExport = (command: string) => {
   ElMessage.info(`正在导出${command.toUpperCase()}格式报告...`)
   // 这里调用导出API
+}
+
+const handleRetryAnalytics = async () => {
+  try {
+    analyticsStore.clearError()
+    await analyticsStore.initializeDashboard(selectedTimeRange.value)
+    ElMessage.success('重试成功，数据已刷新')
+  } catch (error) {
+    ElMessage.error('重试失败，请稍后再试')
+  }
 }
 
 onMounted(async () => {
