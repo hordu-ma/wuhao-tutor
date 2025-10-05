@@ -162,8 +162,6 @@ import {
   Edit,
   Download,
   Delete,
-  CircleCheck,
-  CircleClose,
   School,
 } from '@element-plus/icons-vue'
 import {

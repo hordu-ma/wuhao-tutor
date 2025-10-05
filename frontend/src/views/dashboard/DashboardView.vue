@@ -164,9 +164,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
 import { ElMessage } from 'element-plus'
 import {
   Trophy,
@@ -181,7 +180,6 @@ import {
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
-const authStore = useAuthStore()
 
 // 响应式数据
 const userStats = ref({
