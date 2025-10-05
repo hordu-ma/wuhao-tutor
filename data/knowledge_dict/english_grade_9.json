@@ -1,0 +1,38 @@
+{
+  "现在完成时": {
+    "keywords": ["have/has done", "already", "yet", "ever", "never", "just", "since", "for"],
+    "related": ["一般过去时", "现在进行时"],
+    "difficulty": 3,
+    "description": "表示过去发生的动作对现在造成的影响或从过去持续到现在的动作"
+  },
+  "被动语态": {
+    "keywords": ["be done", "by", "被动", "主动变被动"],
+    "related": ["时态", "主动语态"],
+    "difficulty": 3,
+    "description": "主语是动作的承受者"
+  },
+  "定语从句": {
+    "keywords": ["关系代词", "which", "who", "that", "whose", "关系副词", "where", "when"],
+    "related": ["复合句", "先行词"],
+    "difficulty": 4,
+    "description": "修饰名词或代词的从句"
+  },
+  "宾语从句": {
+    "keywords": ["that", "if", "whether", "what", "when", "引导词"],
+    "related": ["复合句", "陈述句语序"],
+    "difficulty": 3,
+    "description": "在句中作宾语的从句"
+  },
+  "情态动词": {
+    "keywords": ["can", "could", "may", "might", "must", "should", "need"],
+    "related": ["动词"],
+    "difficulty": 2,
+    "description": "表示说话人的语气、情感、态度"
+  },
+  "比较级和最高级": {
+    "keywords": ["more", "most", "-er", "-est", "than", "the most"],
+    "related": ["形容词", "副词"],
+    "difficulty": 2,
+    "description": "形容词和副词的比较形式"
+  }
+}
