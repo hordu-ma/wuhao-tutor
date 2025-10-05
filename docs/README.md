@@ -26,6 +26,7 @@ docs/
 - **[README.md](../README.md)** ⭐ - 项目概览和快速开始
 - **[AI-CONTEXT.md](../AI-CONTEXT.md)** ⭐ - AI 助手必读上下文
 - **[NEXT_STEPS.md](../NEXT_STEPS.md)** - 下一步开发任务
+- **[架构策略](../README.md#核心特性)** - MCP 优先 + RAG 增强两阶段演进
 
 ### 架构设计
 - [架构概览](architecture/overview.md) - 四层架构设计
