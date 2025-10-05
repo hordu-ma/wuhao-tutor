@@ -55,7 +55,7 @@
             <el-icon class="card-icon">
               <TrendCharts />
             </el-icon>
-            <span class="card-text">学情分析</span>
+            <span class="card-text">学习进度</span>
           </div>
         </div>
       </div>

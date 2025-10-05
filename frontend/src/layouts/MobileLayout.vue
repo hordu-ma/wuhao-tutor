@@ -190,7 +190,7 @@ const mainNavItems = [
   },
   {
     path: "/analytics",
-    title: "学情分析",
+    title: "学习进度",
     icon: "DataAnalysis",
   },
 ];

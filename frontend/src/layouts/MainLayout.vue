@@ -30,7 +30,7 @@
             </el-menu-item>
             <el-menu-item index="/analytics">
               <el-icon><DataAnalysis /></el-icon>
-              <span>学情分析</span>
+              <span>学习进度</span>
             </el-menu-item>
             <el-menu-item index="/profile">
               <el-icon><User /></el-icon>
