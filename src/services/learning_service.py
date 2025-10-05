@@ -254,7 +254,7 @@ class LearningService:
     async def _build_ai_context(
         self, user_id: str, session: ChatSession, use_context: bool = True
     ) -> AIContext:
-        """构建AI调用上下文"""
+        """构建AI调用上下文，集成MCP个性化学情分析"""
         context = AIContext(
             user_id=user_id,
             subject=extract_orm_str(session, "subject"),
@@ -277,7 +277,69 @@ class LearningService:
                     "learning_subjects": extract_orm_str(user, "study_subjects"),
                 }
 
-            # 获取相关作业历史
+            # 🚀 NEW: 集成 MCP 个性化学情上下文
+            try:
+                from src.services.knowledge_context_builder import (
+                    knowledge_context_builder,
+                )
+
+                # 构建用户学情上下文
+                learning_context = await knowledge_context_builder.build_context(
+                    user_id=user_id,
+                    subject=extract_orm_str(session, "subject"),
+                    session_type="learning",
+                )
+
+                # 将学情分析结果添加到AI上下文中
+                if learning_context.weak_knowledge_points:
+                    weak_points_summary = []
+                    for point in learning_context.weak_knowledge_points[
+                        :5
+                    ]:  # 取前5个最严重的
+                        weak_points_summary.append(
+                            {
+                                "knowledge": point.knowledge_name,
+                                "subject": point.subject,
+                                "error_rate": round(point.error_rate * 100, 1),
+                                "severity": round(point.severity_score * 100, 1),
+                            }
+                        )
+
+                    context.metadata = context.metadata or {}
+                    context.metadata.update(
+                        {
+                            "weak_knowledge_points": weak_points_summary,
+                            "learning_pace": learning_context.learning_preferences.learning_pace,
+                            "focus_duration": learning_context.learning_preferences.focus_duration,
+                            "current_level": learning_context.context_summary.current_level,
+                            "total_questions": learning_context.context_summary.total_questions,
+                            "learning_streak": learning_context.context_summary.learning_streak,
+                            "mcp_context_generated": True,
+                        }
+                    )
+
+                    logger.info(
+                        f"MCP上下文已构建 - 用户: {user_id}, 薄弱知识点: {len(learning_context.weak_knowledge_points)}"
+                    )
+                else:
+                    # 新用户或没有足够数据，标记为首次学习
+                    context.metadata = context.metadata or {}
+                    context.metadata.update(
+                        {
+                            "mcp_context_generated": True,
+                            "is_new_learner": True,
+                            "current_level": "beginner",
+                        }
+                    )
+                    logger.info(f"MCP上下文已构建 - 新学习者: {user_id}")
+
+            except Exception as e:
+                logger.warning(f"MCP上下文构建失败，回退到传统模式: {str(e)}")
+                # 继续使用传统上下文，不影响主流程
+                context.metadata = context.metadata or {}
+                context.metadata["mcp_context_failed"] = True
+
+            # 获取相关作业历史（保持原有逻辑）
             homework_context = await self._get_homework_context(
                 user_id, extract_orm_str(session, "subject")
             )

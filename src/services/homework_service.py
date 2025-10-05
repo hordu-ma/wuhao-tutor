@@ -753,8 +753,65 @@ class HomeworkService:
             from dataclasses import asdict
             from typing import Any, Dict, List, Union
 
-            # 构建专业的K12批改System Prompt
-            system_prompt = """你是一位经验丰富的K12教育专家,负责批改学生作业。
+            # 🚀 NEW: 集成 MCP 个性化学情上下文到作业批改
+            mcp_context_info = ""
+            try:
+                from src.services.knowledge_context_builder import (
+                    knowledge_context_builder,
+                )
+
+                # 获取学生学情上下文
+                homework_subject = getattr(
+                    submission.homework, "subject", "数学"
+                )  # 获取作业学科
+                learning_context = await knowledge_context_builder.build_context(
+                    user_id=str(submission.student_id),
+                    subject=homework_subject,
+                    session_type="homework",
+                )
+
+                if learning_context.weak_knowledge_points:
+                    # 构建薄弱知识点提示
+                    weak_points_text = []
+                    for point in learning_context.weak_knowledge_points[
+                        :3
+                    ]:  # 前3个最重要的
+                        weak_points_text.append(
+                            f"- {point.knowledge_name}: 错误率{point.error_rate*100:.1f}%"
+                        )
+
+                    mcp_context_info = f"""
+
+# 学生个性化分析
+## 薄弱知识点
+{chr(10).join(weak_points_text)}
+
+## 学习特征
+- 学习水平: {learning_context.context_summary.current_level}
+- 学习节奏: {learning_context.learning_preferences.learning_pace}
+- 总问题数: {learning_context.context_summary.total_questions}
+
+## 批改建议
+请特别关注学生在薄弱知识点方面的表现，给出针对性的改进建议。
+根据学生的学习水平调整评价语言的难度和深度。"""
+
+                    logger.info(
+                        f"MCP上下文已集成到作业批改 - 学生: {submission.student_id}, 薄弱点: {len(learning_context.weak_knowledge_points)}"
+                    )
+                else:
+                    mcp_context_info = f"""
+
+# 学生个性化分析
+该学生为新学习者或暂无历史学情数据，请给予鼓励性评价。
+学习水平: 初学者
+建议采用基础性、鼓励性的评价方式。"""
+
+            except Exception as e:
+                logger.warning(f"MCP上下文集成失败，使用默认批改模式: {str(e)}")
+                mcp_context_info = ""
+
+            # 构建专业的K12批改System Prompt（集成个性化上下文）
+            system_prompt = f"""你是一位经验丰富的K12教育专家,负责批改学生作业。{mcp_context_info}
 
 # 批改标准
 1. 答案正确性: 准确判断答案是否正确
