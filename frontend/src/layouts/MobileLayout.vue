@@ -25,11 +25,7 @@
             @click="showNotifications"
             :aria-label="`通知${unreadCount > 0 ? `(${unreadCount})` : ''}`"
           >
-            <el-badge
-              :value="unreadCount"
-              :hidden="unreadCount === 0"
-              :max="99"
-            >
+            <el-badge :value="unreadCount" :hidden="unreadCount === 0" :max="99">
               <el-icon :size="20">
                 <Bell />
               </el-icon>
@@ -47,11 +43,7 @@
     </header>
 
     <!-- 侧边栏遮罩 -->
-    <div
-      class="sidebar-overlay"
-      :class="{ show: sidebarOpen }"
-      @click="closeSidebar"
-    />
+    <div class="sidebar-overlay" :class="{ show: sidebarOpen }" @click="closeSidebar" />
 
     <!-- 侧边栏 -->
     <aside class="mobile-sidebar" :class="{ open: sidebarOpen }">
@@ -74,11 +66,7 @@
           <div class="nav-section">
             <div class="nav-section-title">主要功能</div>
             <ul class="nav-list">
-              <li
-                v-for="item in mainNavItems"
-                :key="item.path"
-                class="nav-item"
-              >
+              <li v-for="item in mainNavItems" :key="item.path" class="nav-item">
                 <router-link
                   :to="item.path"
                   class="nav-link touch-optimized"
@@ -97,20 +85,14 @@
 
         <!-- 底部操作 -->
         <div class="sidebar-footer">
-          <button
-            class="settings-button touch-optimized btn-touch"
-            @click="openSettings"
-          >
+          <button class="settings-button touch-optimized btn-touch" @click="openSettings">
             <el-icon :size="18">
               <Setting />
             </el-icon>
             <span>设置</span>
           </button>
 
-          <button
-            class="logout-button touch-optimized btn-touch"
-            @click="handleLogout"
-          >
+          <button class="logout-button touch-optimized btn-touch" @click="handleLogout">
             <el-icon :size="18">
               <SwitchButton />
             </el-icon>
@@ -152,122 +134,115 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
-import { useRouter, useRoute } from "vue-router";
-import { ElMessageBox } from "element-plus";
-import {
-  Menu,
-  Close,
-  Bell,
-  User,
-  Setting,
-  SwitchButton,
-} from "@element-plus/icons-vue";
+import { ref, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { ElMessageBox } from 'element-plus'
+import { Menu, Close, Bell, User, Setting, SwitchButton } from '@element-plus/icons-vue'
 
-const router = useRouter();
-const route = useRoute();
+const router = useRouter()
+const route = useRoute()
 
 // 响应式数据
-const sidebarOpen = ref(false);
-const unreadCount = ref(0);
+const sidebarOpen = ref(false)
+const unreadCount = ref(0)
 
 // 导航菜单配置
 const mainNavItems = [
   {
-    path: "/",
-    title: "首页",
-    icon: "House",
+    path: '/',
+    title: '首页',
+    icon: 'House',
   },
   {
-    path: "/homework",
-    title: "作业批改",
-    icon: "Document",
+    path: '/homework',
+    title: '作业批改',
+    icon: 'Document',
   },
   {
-    path: "/learning",
-    title: "学习问答",
-    icon: "ChatSquare",
+    path: '/learning',
+    title: '学习问答',
+    icon: 'ChatSquare',
   },
   {
-    path: "/analytics",
-    title: "学习进度",
-    icon: "DataAnalysis",
+    path: '/analytics',
+    title: '学习进度',
+    icon: 'DataAnalysis',
   },
-];
+]
 
 const bottomNavItems = [
   {
-    path: "/",
-    title: "首页",
-    icon: "House",
+    path: '/',
+    title: '首页',
+    icon: 'House',
   },
   {
-    path: "/homework",
-    title: "批改",
-    icon: "Document",
+    path: '/homework',
+    title: '批改',
+    icon: 'Document',
   },
   {
-    path: "/learning",
-    title: "问答",
-    icon: "ChatSquare",
+    path: '/learning',
+    title: '问答',
+    icon: 'ChatSquare',
   },
   {
-    path: "/analytics",
-    title: "分析",
-    icon: "DataAnalysis",
+    path: '/analytics',
+    title: '分析',
+    icon: 'DataAnalysis',
   },
-];
+]
 
 // 计算属性
 const currentPageTitle = computed(() => {
-  const currentPath = route.path;
-  const navItem = mainNavItems.find((item) => item.path === currentPath);
-  return navItem?.title || "五好伴学";
-});
+  const currentPath = route.path
+  const navItem = mainNavItems.find((item) => item.path === currentPath)
+  return navItem?.title || '五好伴学'
+})
 
 // 方法
 const toggleSidebar = () => {
-  sidebarOpen.value = !sidebarOpen.value;
-};
+  sidebarOpen.value = !sidebarOpen.value
+}
 
 const closeSidebar = () => {
-  sidebarOpen.value = false;
-};
+  sidebarOpen.value = false
+}
 
 const showNotifications = () => {
   // 显示通知
-  console.log("显示通知");
-};
+  console.log('显示通知')
+}
 
 const showUserMenu = () => {
   // 显示用户菜单
-  console.log("显示用户菜单");
-};
+  console.log('显示用户菜单')
+}
 
 const openSettings = () => {
-  closeSidebar();
-  router.push("/settings");
-};
+  closeSidebar()
+  router.push('/settings')
+}
 
 const handleLogout = async () => {
   try {
-    const result = await ElMessageBox.confirm("确定要退出登录吗？", "提示", {
-      confirmButtonText: "确定",
-      cancelButtonText: "取消",
-      type: "warning",
-    });
+    const result = await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
 
-    if (result === "confirm") {
-      router.push("/login");
+    if (result === 'confirm') {
+      router.push('/login')
     }
   } catch (error) {
     // 用户取消
   }
-};
+}
 </script>
 
 <style scoped lang="scss">
-@import "@/styles/responsive.scss";
+@import '@/styles/responsive.scss';
 
 .mobile-layout {
   min-height: 100vh;
@@ -465,7 +440,7 @@ const handleLogout = async () => {
                 color: #3b82f6;
 
                 &::before {
-                  content: "";
+                  content: '';
                   position: absolute;
                   left: 0;
                   top: 0;
@@ -576,7 +551,7 @@ const handleLogout = async () => {
         color: #3b82f6;
 
         &::before {
-          content: "";
+          content: '';
           position: absolute;
           top: 0;
           left: 0;
@@ -619,7 +594,7 @@ const handleLogout = async () => {
     min-width: 44px;
     padding: 12px 16px;
 
-    @include respond-below("sm") {
+    @include respond-below('sm') {
       min-height: 48px;
       padding: 14px 18px;
     }

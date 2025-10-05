@@ -1339,115 +1339,6 @@ class HomeworkService:
             logger.error(f"获取提交列表失败: {e}")
             raise DatabaseError(f"获取提交列表失败: {e}")
 
-    async def get_homework_statistics(
-        self,
-        session: AsyncSession,
-        student_id: str,
-        subject: Optional[str] = None,
-        days: int = 30,
-    ) -> Dict[str, Any]:
-        """
-        获取作业统计信息
-
-        Args:
-            session: 数据库会话
-            student_id: 学生ID
-            subject: 学科过滤
-            days: 统计天数
-
-        Returns:
-            统计信息
-        """
-        try:
-            cutoff_date = datetime.utcnow() - timedelta(days=days)
-
-            # 基础统计查询
-            query = select(
-                func.count(HomeworkSubmission.id).label("total_submissions"),
-                func.count(
-                    func.case((HomeworkSubmission.status == "reviewed", 1))
-                ).label("completed_submissions"),
-                func.avg(HomeworkSubmission.total_score).label("avg_score"),
-                func.avg(HomeworkSubmission.accuracy_rate).label("avg_accuracy"),
-            ).where(
-                and_(
-                    HomeworkSubmission.student_id == student_id,
-                    HomeworkSubmission.created_at >= cutoff_date,
-                )
-            )
-
-            if subject:
-                query = query.join(Homework).where(Homework.subject == subject)
-
-            result = await session.execute(query)
-            stats = result.first()
-
-            # 学科分布统计
-            subject_query = (
-                select(
-                    Homework.subject,
-                    func.count(HomeworkSubmission.id).label("count"),
-                    func.avg(HomeworkSubmission.total_score).label("avg_score"),
-                )
-                .select_from(HomeworkSubmission.join(Homework))
-                .where(
-                    and_(
-                        HomeworkSubmission.student_id == student_id,
-                        HomeworkSubmission.created_at >= cutoff_date,
-                    )
-                )
-                .group_by(Homework.subject)
-            )
-
-            subject_result = await session.execute(subject_query)
-            subject_stats = [
-                {
-                    "subject": row.subject,
-                    "count": row.count,
-                    "avg_score": round(row.avg_score, 2) if row.avg_score else None,
-                }
-                for row in subject_result
-            ]
-
-            # 安全处理统计结果
-            if not stats:
-                return {
-                    "period_days": days,
-                    "total_submissions": 0,
-                    "completed_submissions": 0,
-                    "completion_rate": 0.0,
-                    "avg_score": None,
-                    "avg_accuracy": None,
-                    "subject_stats": [],
-                    "recent_trends": [],
-                }
-
-            total_submissions = stats.total_submissions or 0
-            completed_submissions = stats.completed_submissions or 0
-
-            return {
-                "period_days": days,
-                "total_submissions": total_submissions,
-                "completed_submissions": completed_submissions,
-                "completion_rate": round(
-                    (
-                        (completed_submissions / total_submissions * 100)
-                        if total_submissions
-                        else 0
-                    ),
-                    2,
-                ),
-                "avg_score": round(stats.avg_score, 2) if stats.avg_score else None,
-                "avg_accuracy": (
-                    round(stats.avg_accuracy, 2) if stats.avg_accuracy else None
-                ),
-                "subject_distribution": subject_stats,
-            }
-
-        except Exception as e:
-            logger.error(f"获取统计信息失败: {e}")
-            raise DatabaseError(f"获取统计信息失败: {e}")
-
     async def health_check(self, session: AsyncSession) -> bool:
         """
         健康检查 - 检查数据库连接
@@ -1480,6 +1371,350 @@ class HomeworkService:
         except Exception as e:
             logger.error(f"AI服务状态检查失败: {e}")
             return False
+
+    # ============================================================================
+    # 统计数据查询
+    # ============================================================================
+
+    async def get_homework_statistics(
+        self,
+        session: AsyncSession,
+        student_id: uuid.UUID,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        time_granularity: str = "day",
+    ) -> Dict[str, Any]:
+        """
+        获取作业统计数据
+
+        Args:
+            session: 数据库会话
+            student_id: 学生ID
+            start_date: 开始日期
+            end_date: 结束日期
+            time_granularity: 时间粒度 (day/week/month)
+
+        Returns:
+            统计数据字典
+        """
+        try:
+            # 如果没有指定时间范围，默认获取最近30天的数据
+            if not start_date:
+                start_date = datetime.now() - timedelta(days=30)
+            if not end_date:
+                end_date = datetime.now()
+
+            # 基础统计查询
+            base_query = select(HomeworkSubmission).where(
+                and_(
+                    HomeworkSubmission.student_id == student_id,
+                    HomeworkSubmission.created_at >= start_date,
+                    HomeworkSubmission.created_at <= end_date,
+                    HomeworkSubmission.deleted_at.is_(None),
+                )
+            )
+
+            # 总数统计
+            total_result = await session.execute(
+                select(func.count(HomeworkSubmission.id)).where(
+                    and_(
+                        HomeworkSubmission.student_id == student_id,
+                        HomeworkSubmission.created_at >= start_date,
+                        HomeworkSubmission.created_at <= end_date,
+                        HomeworkSubmission.deleted_at.is_(None),
+                    )
+                )
+            )
+            total_count = total_result.scalar() or 0
+
+            # 按状态统计
+            status_stats_result = await session.execute(
+                select(HomeworkSubmission.status, func.count(HomeworkSubmission.id))
+                .where(
+                    and_(
+                        HomeworkSubmission.student_id == student_id,
+                        HomeworkSubmission.created_at >= start_date,
+                        HomeworkSubmission.created_at <= end_date,
+                        HomeworkSubmission.deleted_at.is_(None),
+                    )
+                )
+                .group_by(HomeworkSubmission.status)
+            )
+
+            status_stats = {}
+            for status, count in status_stats_result:
+                status_stats[
+                    status.value if hasattr(status, "value") else str(status)
+                ] = count
+
+            # 按学科统计 - 通过Homework表关联
+            subject_stats_result = await session.execute(
+                select(
+                    Homework.subject,
+                    func.count(HomeworkSubmission.id),
+                    func.avg(HomeworkSubmission.total_score).label("avg_score"),
+                )
+                .select_from(
+                    HomeworkSubmission.__table__.join(
+                        Homework.__table__,
+                        HomeworkSubmission.homework_id == Homework.id,
+                    )
+                )
+                .where(
+                    and_(
+                        HomeworkSubmission.student_id == student_id,
+                        HomeworkSubmission.created_at >= start_date,
+                        HomeworkSubmission.created_at <= end_date,
+                        HomeworkSubmission.deleted_at.is_(None),
+                        Homework.deleted_at.is_(None),
+                    )
+                )
+                .group_by(Homework.subject)
+            )
+
+            subject_stats = {}
+            for subject, count, avg_score in subject_stats_result:
+                subject_stats[subject or "未分类"] = {
+                    "count": count,
+                    "average_score": float(avg_score) if avg_score else 0.0,
+                }
+
+            # 按年级统计 - 通过Homework表关联
+            grade_stats_result = await session.execute(
+                select(
+                    Homework.grade,
+                    func.count(HomeworkSubmission.id),
+                    func.avg(HomeworkSubmission.total_score).label("avg_score"),
+                )
+                .select_from(
+                    HomeworkSubmission.__table__.join(
+                        Homework.__table__,
+                        HomeworkSubmission.homework_id == Homework.id,
+                    )
+                )
+                .where(
+                    and_(
+                        HomeworkSubmission.student_id == student_id,
+                        HomeworkSubmission.created_at >= start_date,
+                        HomeworkSubmission.created_at <= end_date,
+                        HomeworkSubmission.deleted_at.is_(None),
+                        Homework.deleted_at.is_(None),
+                    )
+                )
+                .group_by(Homework.grade)
+            )
+
+            grade_stats = {}
+            for grade, count, avg_score in grade_stats_result:
+                grade_stats[grade or "未分级"] = {
+                    "count": count,
+                    "average_score": float(avg_score) if avg_score else 0.0,
+                }
+
+            # 时间趋势统计
+            time_stats = await self._get_time_trend_stats(
+                session, student_id, start_date, end_date, time_granularity
+            )
+
+            # 最近表现统计
+            recent_performance = await self._get_recent_performance_stats(
+                session, student_id, start_date, end_date
+            )
+
+            return {
+                "total": total_count,
+                "completed": status_stats.get("completed", 0),
+                "processing": status_stats.get("processing", 0),
+                "pending": status_stats.get("pending", 0),
+                "failed": status_stats.get("failed", 0),
+                "by_status": status_stats,
+                "by_subject": subject_stats,
+                "by_grade": grade_stats,
+                "time_trend": time_stats,
+                "recent_performance": recent_performance,
+                "period": {
+                    "start_date": start_date.isoformat(),
+                    "end_date": end_date.isoformat(),
+                    "granularity": time_granularity,
+                },
+            }
+
+        except Exception as e:
+            logger.error(f"获取作业统计数据失败 - student_id: {student_id}, error: {e}")
+            raise DatabaseError(f"获取统计数据失败: {str(e)}")
+
+    async def _get_time_trend_stats(
+        self,
+        session: AsyncSession,
+        student_id: uuid.UUID,
+        start_date: datetime,
+        end_date: datetime,
+        granularity: str,
+    ) -> List[Dict[str, Any]]:
+        """获取时间趋势统计"""
+        try:
+            # 根据粒度选择日期格式化函数
+            if granularity == "day":
+                date_format = func.date(HomeworkSubmission.created_at)
+                date_label = "date"
+            elif granularity == "week":
+                date_format = func.date_trunc("week", HomeworkSubmission.created_at)
+                date_label = "week"
+            elif granularity == "month":
+                date_format = func.date_trunc("month", HomeworkSubmission.created_at)
+                date_label = "month"
+            else:
+                date_format = func.date(HomeworkSubmission.created_at)
+                date_label = "date"
+
+            time_stats_result = await session.execute(
+                select(
+                    date_format.label(date_label),
+                    func.count(HomeworkSubmission.id).label("count"),
+                    func.avg(HomeworkSubmission.total_score).label("avg_score"),
+                    func.avg(HomeworkSubmission.accuracy_rate).label("avg_accuracy"),
+                )
+                .where(
+                    and_(
+                        HomeworkSubmission.student_id == student_id,
+                        HomeworkSubmission.created_at >= start_date,
+                        HomeworkSubmission.created_at <= end_date,
+                        HomeworkSubmission.deleted_at.is_(None),
+                    )
+                )
+                .group_by(date_format)
+                .order_by(date_format)
+            )
+
+            time_stats = []
+            for row in time_stats_result:
+                time_stats.append(
+                    {
+                        date_label: row[0].isoformat() if row[0] else None,
+                        "count": row[1] or 0,
+                        "average_score": float(row[2]) if row[2] else 0.0,
+                        "average_accuracy": float(row[3]) if row[3] else 0.0,
+                    }
+                )
+
+            return time_stats
+
+        except Exception as e:
+            logger.error(f"获取时间趋势统计失败: {e}")
+            return []
+
+    async def _get_recent_performance_stats(
+        self,
+        session: AsyncSession,
+        student_id: uuid.UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> Dict[str, Any]:
+        """获取最近表现统计"""
+        try:
+            # 最近的提交记录
+            recent_submissions_result = await session.execute(
+                select(
+                    func.avg(HomeworkSubmission.total_score).label("avg_score"),
+                    func.avg(HomeworkSubmission.accuracy_rate).label("avg_accuracy"),
+                    func.max(HomeworkSubmission.total_score).label("max_score"),
+                    func.min(HomeworkSubmission.total_score).label("min_score"),
+                    func.count(HomeworkSubmission.id).label("count"),
+                ).where(
+                    and_(
+                        HomeworkSubmission.student_id == student_id,
+                        HomeworkSubmission.created_at >= start_date,
+                        HomeworkSubmission.created_at <= end_date,
+                        HomeworkSubmission.deleted_at.is_(None),
+                        HomeworkSubmission.status == SubmissionStatus.REVIEWED,
+                    )
+                )
+            )
+
+            result = recent_submissions_result.first()
+
+            if not result or result[0] is None:
+                return {
+                    "average_score": 0.0,
+                    "average_accuracy": 0.0,
+                    "max_score": 0.0,
+                    "min_score": 0.0,
+                    "submission_count": 0,
+                    "improvement_trend": {
+                        "first_half_avg": 0.0,
+                        "second_half_avg": 0.0,
+                        "improvement": 0.0,
+                        "trend": "stable",
+                    },
+                }
+
+            # 计算进步趋势：比较前半期和后半期的平均分
+            midpoint = start_date + (end_date - start_date) / 2
+
+            # 前半期平均分
+            first_half_result = await session.execute(
+                select(func.avg(HomeworkSubmission.total_score)).where(
+                    and_(
+                        HomeworkSubmission.student_id == student_id,
+                        HomeworkSubmission.created_at >= start_date,
+                        HomeworkSubmission.created_at < midpoint,
+                        HomeworkSubmission.deleted_at.is_(None),
+                        HomeworkSubmission.status == SubmissionStatus.REVIEWED,
+                    )
+                )
+            )
+            first_half_avg = first_half_result.scalar() or 0
+
+            # 后半期平均分
+            second_half_result = await session.execute(
+                select(func.avg(HomeworkSubmission.total_score)).where(
+                    and_(
+                        HomeworkSubmission.student_id == student_id,
+                        HomeworkSubmission.created_at >= midpoint,
+                        HomeworkSubmission.created_at <= end_date,
+                        HomeworkSubmission.deleted_at.is_(None),
+                        HomeworkSubmission.status == SubmissionStatus.REVIEWED,
+                    )
+                )
+            )
+            second_half_avg = second_half_result.scalar() or 0
+
+            # 计算进步情况
+            improvement = second_half_avg - first_half_avg if first_half_avg > 0 else 0
+
+            return {
+                "average_score": float(result[0]) if result[0] else 0.0,
+                "average_accuracy": float(result[1]) if result[1] else 0.0,
+                "max_score": float(result[2]) if result[2] else 0.0,
+                "min_score": float(result[3]) if result[3] else 0.0,
+                "submission_count": result[4] or 0,
+                "improvement_trend": {
+                    "first_half_avg": float(first_half_avg),
+                    "second_half_avg": float(second_half_avg),
+                    "improvement": float(improvement),
+                    "trend": (
+                        "improving"
+                        if improvement > 0
+                        else "declining" if improvement < 0 else "stable"
+                    ),
+                },
+            }
+
+        except Exception as e:
+            logger.error(f"获取最近表现统计失败: {e}")
+            return {
+                "average_score": 0.0,
+                "average_accuracy": 0.0,
+                "max_score": 0.0,
+                "min_score": 0.0,
+                "submission_count": 0,
+                "improvement_trend": {
+                    "first_half_avg": 0.0,
+                    "second_half_avg": 0.0,
+                    "improvement": 0.0,
+                    "trend": "stable",
+                },
+            }
 
 
 def get_homework_service() -> HomeworkService:

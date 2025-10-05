@@ -5,7 +5,15 @@ API v1 路由集合
 
 from fastapi import APIRouter
 
-from src.api.v1.endpoints import analytics, auth, file, health, homework, learning
+from src.api.v1.endpoints import (
+    analytics,
+    auth,
+    file,
+    health,
+    homework,
+    homework_compatibility,
+    learning,
+)
 
 # 创建API路由器
 api_router = APIRouter()
@@ -15,7 +23,11 @@ api_router.include_router(auth.router, prefix="/auth", tags=["认证"])
 
 api_router.include_router(learning.router, prefix="/learning", tags=["学习问答"])
 
+# 作业相关路由
 api_router.include_router(homework.router, tags=["作业批改"])
+
+# 作业兼容性路由（前端兼容性）
+api_router.include_router(homework_compatibility.router, tags=["作业批改-兼容性"])
 
 api_router.include_router(analytics.router, tags=["学情分析"])
 

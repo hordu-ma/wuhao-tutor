@@ -164,8 +164,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
-import { useRouter } from "vue-router";
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import {
   Upload,
   ChatDotSquare,
@@ -173,83 +173,83 @@ import {
   TrendCharts,
   Check,
   ArrowRight,
-} from "@element-plus/icons-vue";
+} from '@element-plus/icons-vue'
 
-const router = useRouter();
+const router = useRouter()
 
 // 功能特色数据
 const features = ref([
   {
     id: 1,
-    title: "智能作业批改",
-    description: "AI快速识别并批改各科作业，提供详细解析和建议",
-    icon: "Document",
-    path: "/homework",
-    stat: "准确率98%+",
+    title: '智能作业批改',
+    description: 'AI快速识别并批改各科作业，提供详细解析和建议',
+    icon: 'Document',
+    path: '/homework',
+    stat: '准确率98%+',
   },
   {
     id: 2,
-    title: "学习问答助手",
-    description: "24小时在线AI助手，解答学习疑问，提供个性化指导",
-    icon: "ChatRound",
-    path: "/learning",
-    stat: "响应时间<3s",
+    title: '学习问答助手',
+    description: '24小时在线AI助手，解答学习疑问，提供个性化指导',
+    icon: 'ChatRound',
+    path: '/learning',
+    stat: '响应时间<3s',
   },
   {
     id: 3,
-    title: "学情数据分析",
-    description: "科学分析学习数据，提供专业的学习报告和改进建议",
-    icon: "DataAnalysis",
-    path: "/analytics",
-    stat: "多维度分析",
+    title: '学情数据分析',
+    description: '科学分析学习数据，提供专业的学习报告和改进建议',
+    icon: 'DataAnalysis',
+    path: '/analytics',
+    stat: '多维度分析',
   },
-]);
+])
 
 // 使用步骤数据
 const steps = ref([
   {
     id: 1,
-    title: "上传作业",
-    description: "拍照或上传作业图片",
-    icon: "Upload",
+    title: '上传作业',
+    description: '拍照或上传作业图片',
+    icon: 'Upload',
   },
   {
     id: 2,
-    title: "AI智能分析",
-    description: "AI快速识别并分析作业内容",
-    icon: "TrendCharts",
+    title: 'AI智能分析',
+    description: 'AI快速识别并分析作业内容',
+    icon: 'TrendCharts',
   },
   {
     id: 3,
-    title: "获得反馈",
-    description: "收到详细的批改结果和学习建议",
-    icon: "ChatDotSquare",
+    title: '获得反馈',
+    description: '收到详细的批改结果和学习建议',
+    icon: 'ChatDotSquare',
   },
-]);
+])
 
 // 统计数据
 const stats = ref([
   {
     id: 1,
-    number: "1000万+",
-    label: "服务学生数",
+    number: '1000万+',
+    label: '服务学生数',
   },
   {
     id: 2,
-    number: "500万+",
-    label: "批改作业数",
+    number: '500万+',
+    label: '批改作业数',
   },
   {
     id: 3,
-    number: "98%",
-    label: "识别准确率",
+    number: '98%',
+    label: '识别准确率',
   },
   {
     id: 4,
-    number: "24/7",
-    label: "在线服务",
+    number: '24/7',
+    label: '在线服务',
   },
-]);
+])
 </script>
 
 <style scoped lang="scss">
@@ -269,7 +269,7 @@ const stats = ref([
   padding: 2rem;
 
   &::before {
-    content: "";
+    content: '';
     position: absolute;
     top: 0;
     left: 0;
