@@ -10,7 +10,7 @@ import time
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
-from sqlalchemy import and_, desc, func, or_, select
+from sqlalchemy import and_, desc, func, join, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -775,7 +775,7 @@ class LearningService:
         # 计算平均评分
         avg_rating_stmt = (
             select(func.avg(Answer.user_rating))
-            .select_from(Answer.join(Question, Answer.question_id == Question.id))
+            .select_from(join(Answer, Question, Answer.question_id == Question.id))
             .where(Question.user_id == user_id, Answer.user_rating.isnot(None))
         )
 
@@ -865,13 +865,13 @@ class LearningService:
         """计算正面反馈率"""
         total_stmt = (
             select(func.count(Answer.id))
-            .select_from(Answer.join(Question, Answer.question_id == Question.id))
+            .select_from(join(Answer, Question, Answer.question_id == Question.id))
             .where(Question.user_id == user_id, Answer.is_helpful.isnot(None))
         )
 
         positive_stmt = (
             select(func.count(Answer.id))
-            .select_from(Answer.join(Question, Answer.question_id == Question.id))
+            .select_from(join(Answer, Question, Answer.question_id == Question.id))
             .where(Question.user_id == user_id, Answer.is_helpful == True)
         )
 
