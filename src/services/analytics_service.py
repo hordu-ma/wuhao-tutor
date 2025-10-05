@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.core.exceptions import NotFoundError, ServiceError
-from src.models.homework import HomeworkReview, HomeworkSubmission
+from src.models.homework import Homework, HomeworkReview, HomeworkSubmission
 from src.models.learning import Answer, ChatSession, Question
 from src.models.user import User
 
@@ -362,6 +362,360 @@ class AnalyticsService:
         except Exception as e:
             logger.warning(f"获取学习趋势失败: {e}")
             return []
+
+    async def get_learning_progress(
+        self, user_id: UUID, start_date: str, end_date: str, granularity: str = "daily"
+    ) -> Dict[str, Any]:
+        """
+        获取学习进度数据
+
+        Args:
+            user_id: 用户ID
+            start_date: 开始日期 (YYYY-MM-DD)
+            end_date: 结束日期 (YYYY-MM-DD)
+            granularity: 时间粒度 (daily/weekly/monthly)
+
+        Returns:
+            学习进度数据
+        """
+        try:
+            from datetime import datetime
+
+            start_dt = datetime.fromisoformat(start_date)
+            end_dt = datetime.fromisoformat(end_date)
+
+            # 根据粒度调整查询
+            if granularity == "weekly":
+                date_format = func.date_trunc("week", HomeworkSubmission.created_at)
+            elif granularity == "monthly":
+                date_format = func.date_trunc("month", HomeworkSubmission.created_at)
+            else:  # daily
+                date_format = func.date(HomeworkSubmission.created_at)
+
+            # 查询作业进度数据
+            homework_stmt = (
+                select(
+                    date_format.label("period"),
+                    func.count(HomeworkSubmission.id).label("homework_count"),
+                    func.avg(HomeworkSubmission.total_score).label("avg_score"),
+                    func.count(func.nullif(HomeworkSubmission.status, "pending")).label(
+                        "completed_count"
+                    ),
+                )
+                .where(
+                    and_(
+                        HomeworkSubmission.student_id == str(user_id),
+                        HomeworkSubmission.created_at >= start_dt,
+                        HomeworkSubmission.created_at <= end_dt,
+                    )
+                )
+                .group_by(date_format)
+                .order_by(date_format)
+            )
+
+            homework_result = await self.db.execute(homework_stmt)
+            homework_data = homework_result.all()
+
+            # 查询问答进度数据
+            question_stmt = (
+                select(
+                    date_format.label("period"),
+                    func.count(Question.id).label("question_count"),
+                )
+                .where(
+                    and_(
+                        Question.user_id == str(user_id),
+                        Question.created_at >= start_dt,
+                        Question.created_at <= end_dt,
+                    )
+                )
+                .group_by(date_format)
+                .order_by(date_format)
+            )
+
+            question_result = await self.db.execute(question_stmt)
+            question_data = {
+                row.period: row.question_count for row in question_result.all()
+            }
+
+            # 合并数据
+            progress_data = []
+            total_homework = 0
+            total_questions = 0
+            total_score_sum = 0
+            score_count = 0
+
+            for row in homework_data:
+                period_str = (
+                    str(row.period.date())
+                    if hasattr(row.period, "date")
+                    else str(row.period)
+                )
+                question_count = question_data.get(row.period, 0)
+
+                completion_rate = (
+                    row.completed_count / row.homework_count
+                    if row.homework_count > 0
+                    else 0
+                )
+                accuracy_rate = row.avg_score / 100.0 if row.avg_score else 0
+
+                progress_data.append(
+                    {
+                        "date": period_str,
+                        "study_duration": (row.homework_count + question_count)
+                        * 15,  # 估算学习时长
+                        "completion_rate": completion_rate,
+                        "accuracy_rate": accuracy_rate,
+                        "homework_count": row.homework_count,
+                        "question_count": question_count,
+                    }
+                )
+
+                total_homework += row.homework_count
+                total_questions += question_count
+                if row.avg_score:
+                    total_score_sum += row.avg_score
+                    score_count += 1
+
+            # 计算摘要统计
+            summary = {
+                "total_homework": total_homework,
+                "total_questions": total_questions,
+                "avg_accuracy": (
+                    total_score_sum / score_count / 100.0 if score_count > 0 else 0
+                ),
+                "total_study_duration": sum(
+                    item["study_duration"] for item in progress_data
+                ),
+            }
+
+            return {
+                "period": granularity,
+                "start_date": start_date,
+                "end_date": end_date,
+                "data": progress_data,
+                "summary": summary,
+            }
+
+        except Exception as e:
+            logger.error(f"获取学习进度失败: {e}", exc_info=True)
+            raise ServiceError(f"获取学习进度失败: {str(e)}")
+
+    async def get_knowledge_points_mastery(
+        self, user_id: UUID, subject: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        获取知识点掌握情况
+
+        Args:
+            user_id: 用户ID
+            subject: 学科筛选(可选)
+
+        Returns:
+            知识点掌握数据
+        """
+        try:
+            # 基于作业批改结果分析知识点掌握情况
+            # 这里使用简化的实现，实际可以结合知识图谱
+
+            conditions = [HomeworkSubmission.student_id == str(user_id)]
+            if subject:
+                conditions.append(HomeworkSubmission.subject == subject)
+
+            # 查询作业中的知识点表现
+            stmt = (
+                select(
+                    HomeworkSubmission.subject,
+                    func.avg(HomeworkSubmission.total_score).label("avg_score"),
+                    func.count(HomeworkSubmission.id).label("attempts"),
+                    func.max(HomeworkSubmission.created_at).label("last_practice"),
+                )
+                .where(and_(*conditions))
+                .group_by(HomeworkSubmission.subject)
+            )
+
+            result = await self.db.execute(stmt)
+            rows = result.all()
+
+            knowledge_points = []
+            mastered_count = 0
+            improving_count = 0
+            weak_count = 0
+
+            for i, row in enumerate(rows):
+                mastery_level = row.avg_score / 100.0 if row.avg_score else 0
+                accuracy_rate = mastery_level
+
+                # 简化的趋势分析
+                if mastery_level >= 0.8:
+                    trend = "stable"
+                    mastered_count += 1
+                elif mastery_level >= 0.6:
+                    trend = "improving"
+                    improving_count += 1
+                else:
+                    trend = "declining"
+                    weak_count += 1
+
+                knowledge_points.append(
+                    {
+                        "id": f"kp_{i+1}",
+                        "name": f"{row.subject}核心知识点",
+                        "subject": row.subject,
+                        "mastery_level": mastery_level,
+                        "accuracy_rate": accuracy_rate,
+                        "total_attempts": row.attempts,
+                        "correct_attempts": int(row.attempts * accuracy_rate),
+                        "last_practice": row.last_practice,
+                        "trend": trend,
+                    }
+                )
+
+            return {
+                "subject": subject,
+                "total_count": len(knowledge_points),
+                "mastered_count": mastered_count,
+                "improving_count": improving_count,
+                "weak_count": weak_count,
+                "knowledge_points": knowledge_points,
+            }
+
+        except Exception as e:
+            logger.error(f"获取知识点掌握情况失败: {e}", exc_info=True)
+            raise ServiceError(f"获取知识点掌握情况失败: {str(e)}")
+
+    async def get_subject_statistics(
+        self, user_id: UUID, time_range: str = "30d"
+    ) -> Dict[str, Any]:
+        """
+        获取学科统计数据
+
+        Args:
+            user_id: 用户ID
+            time_range: 时间范围
+
+        Returns:
+            学科统计数据
+        """
+        try:
+            start_date = self._calculate_start_date(time_range)
+
+            # 查询学科统计数据
+            conditions = [HomeworkSubmission.student_id == str(user_id)]
+            if start_date:
+                conditions.append(HomeworkSubmission.created_at >= start_date)
+
+            homework_stmt = (
+                select(
+                    HomeworkSubmission.subject,
+                    func.count(HomeworkSubmission.id).label("homework_count"),
+                    func.avg(HomeworkSubmission.total_score).label("avg_score"),
+                    func.max(HomeworkSubmission.created_at).label("last_study"),
+                    func.sum(func.coalesce(HomeworkSubmission.time_spent, 30)).label(
+                        "study_duration"
+                    ),
+                )
+                .where(and_(*conditions))
+                .group_by(HomeworkSubmission.subject)
+                .order_by(desc("avg_score"))
+            )
+
+            homework_result = await self.db.execute(homework_stmt)
+            homework_data = homework_result.all()
+
+            # 查询问答统计
+            question_conditions = [Question.user_id == str(user_id)]
+            if start_date:
+                question_conditions.append(Question.created_at >= start_date)
+
+            question_stmt = (
+                select(
+                    Question.subject,
+                    func.count(Question.id).label("question_count"),
+                )
+                .where(and_(*question_conditions))
+                .group_by(Question.subject)
+            )
+
+            question_result = await self.db.execute(question_stmt)
+            question_data = {
+                row.subject: row.question_count for row in question_result.all()
+            }
+
+            # 合并并处理数据
+            subjects = []
+            total_subjects = len(homework_data)
+            best_subject = None
+            most_active_subject = None
+            max_score = 0
+            max_activity = 0
+
+            for i, row in enumerate(homework_data):
+                if not row.subject:
+                    continue
+
+                subject = row.subject
+                question_count = question_data.get(subject, 0)
+                activity_score = row.homework_count + question_count
+
+                # 计算进步率(简化实现)
+                improvement_rate = (
+                    min(row.avg_score / 60.0, 1.0) * 100 if row.avg_score else 0
+                )
+
+                subjects.append(
+                    {
+                        "subject": subject,
+                        "study_duration": row.study_duration
+                        or (row.homework_count * 30),
+                        "homework_count": row.homework_count,
+                        "question_count": question_count,
+                        "avg_score": row.avg_score or 0,
+                        "accuracy_rate": (row.avg_score or 0) / 100.0,
+                        "improvement_rate": improvement_rate,
+                        "last_study": row.last_study,
+                        "weak_knowledge_points": [],  # 可以进一步实现
+                        "rank": i + 1,
+                    }
+                )
+
+                # 跟踪最佳和最活跃学科
+                if row.avg_score and row.avg_score > max_score:
+                    max_score = row.avg_score
+                    best_subject = subject
+
+                if activity_score > max_activity:
+                    max_activity = activity_score
+                    most_active_subject = subject
+
+            # 生成学习建议
+            recommendations = []
+            if subjects:
+                weak_subjects = [s for s in subjects if s["avg_score"] < 60]
+                if weak_subjects:
+                    recommendations.append(
+                        f"建议加强 {weak_subjects[0]['subject']} 的练习"
+                    )
+
+                if best_subject:
+                    recommendations.append(f"保持 {best_subject} 的优秀表现")
+
+                if len(subjects) >= 3:
+                    recommendations.append("均衡发展各学科，避免偏科")
+
+            return {
+                "time_range": time_range,
+                "total_subjects": total_subjects,
+                "most_active_subject": most_active_subject,
+                "strongest_subject": best_subject,
+                "subjects": subjects,
+                "recommendations": recommendations,
+            }
+
+        except Exception as e:
+            logger.error(f"获取学科统计失败: {e}", exc_info=True)
+            raise ServiceError(f"获取学科统计失败: {str(e)}")
 
 
 # ========== 依赖注入 ==========
