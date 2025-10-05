@@ -6,10 +6,11 @@
 import logging
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.config import get_settings
 from src.core.database import get_db
 from src.core.exceptions import (
     AuthenticationError,
@@ -27,6 +28,7 @@ from src.schemas.auth import (
     RegisterRequest,
     ResetPasswordRequest,
     SendVerificationCodeRequest,
+    UpdateProfileRequest,
     VerifyCodeResponse,
     WechatLoginRequest,
 )
@@ -37,6 +39,7 @@ from src.services.user_service import get_user_service
 router = APIRouter()
 security = HTTPBearer()
 logger = logging.getLogger("auth.endpoints")
+settings = get_settings()
 
 
 # ========== 依赖注入 ==========
@@ -594,9 +597,7 @@ async def forgot_password(
 
 @router.put("/profile", summary="更新用户资料")
 async def update_profile(
-    display_name: Optional[str] = None,
-    avatar_url: Optional[str] = None,
-    bio: Optional[str] = None,
+    request: UpdateProfileRequest,
     current_user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
@@ -604,31 +605,166 @@ async def update_profile(
     更新用户资料
 
     **请求体:**
-    - **display_name**: 显示名称（可选）
+    - **name**: 真实姓名（可选）
+    - **nickname**: 昵称（可选）
     - **avatar_url**: 头像URL（可选）
-    - **bio**: 个人简介（可选）
+    - **school**: 学校（可选）
+    - **grade_level**: 学段（可选）
+    - **class_name**: 班级（可选）
+    - **institution**: 机构（可选）
+    - **parent_contact**: 家长联系方式（可选）
+    - **parent_name**: 家长姓名（可选）
+    - **notification_enabled**: 是否启用通知（可选）
     """
     try:
         user_service = get_user_service(db)
-        # 简化实现
-        updated_profile = {
-            "user_id": current_user_id,
-            "display_name": display_name,
-            "avatar_url": avatar_url,
-            "bio": bio,
-            "updated_at": "2024-01-15T10:30:00Z",
-        }
+
+        # 获取当前用户
+        current_user = await user_service.get_user_by_id(current_user_id)
+        if not current_user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在"
+            )
+
+        # 构建更新数据
+        update_data = {}
+        if request.name is not None:
+            update_data["name"] = request.name
+        if request.nickname is not None:
+            update_data["nickname"] = request.nickname
+        if request.avatar_url is not None:
+            update_data["avatar_url"] = request.avatar_url
+        if request.school is not None:
+            update_data["school"] = request.school
+        if request.grade_level is not None:
+            update_data["grade_level"] = request.grade_level.value
+        if request.class_name is not None:
+            update_data["class_name"] = request.class_name
+        if request.institution is not None:
+            update_data["institution"] = request.institution
+        if request.parent_contact is not None:
+            update_data["parent_contact"] = request.parent_contact
+        if request.parent_name is not None:
+            update_data["parent_name"] = request.parent_name
+        if request.notification_enabled is not None:
+            update_data["notification_enabled"] = request.notification_enabled
+
+        # 更新用户资料
+        if update_data:
+            await user_service.user_repo.update(current_user_id, update_data)
+            logger.info(
+                "用户资料更新成功",
+                extra={"user_id": current_user_id, "fields": list(update_data.keys())},
+            )
+
+        # 获取更新后的用户信息
+        updated_user = await user_service.get_user_detail(current_user_id)
 
         return {
             "success": True,
-            "data": updated_profile,
+            "data": updated_user,
             "message": "资料更新成功",
         }
+
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"更新用户资料失败: {str(e)}")
+        logger.error(f"更新用户资料失败: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="更新用户资料失败",
+        )
+
+
+@router.post("/avatar", summary="上传头像")
+async def upload_avatar(
+    file: UploadFile = File(..., description="头像文件"),
+    current_user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    上传用户头像
+
+    **文件限制:**
+    - 支持格式: JPEG, PNG, WebP, GIF
+    - 最大大小: 2MB
+    - 尺寸建议: 200x200像素及以上
+    """
+    try:
+        # 基础验证
+        if not file.filename:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="文件名不能为空"
+            )
+
+        # 检查文件类型
+        allowed_types = {
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "image/gif",
+            "image/jpg",
+        }
+        if file.content_type not in allowed_types:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"不支持的文件类型: {file.content_type}。支持的类型: {', '.join(allowed_types)}",
+            )
+
+        # 读取文件内容并检查大小
+        content = await file.read()
+        if len(content) > 2 * 1024 * 1024:  # 2MB
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="文件大小不能超过2MB"
+            )
+
+        # 生成唯一文件名
+        import os
+        import uuid
+
+        file_extension = os.path.splitext(file.filename)[1] or ".png"
+        unique_filename = (
+            f"avatar_{current_user_id}_{uuid.uuid4().hex[:8]}{file_extension}"
+        )
+
+        # 确保上传目录存在
+        upload_dir = os.path.join(settings.UPLOAD_DIR, "avatars")
+        os.makedirs(upload_dir, exist_ok=True)
+
+        # 保存文件
+        file_path = os.path.join(upload_dir, unique_filename)
+        with open(file_path, "wb") as f:
+            f.write(content)
+
+        # 生成访问 URL
+        avatar_url = f"/api/v1/files/avatars/{unique_filename}"
+
+        # 更新用户头像
+        user_service = get_user_service(db)
+        await user_service.user_repo.update(current_user_id, {"avatar_url": avatar_url})
+
+        logger.info(
+            f"头像上传成功: {unique_filename}",
+            extra={"user_id": current_user_id, "avatar_filename": unique_filename},
+        )
+
+        return {
+            "success": True,
+            "data": {
+                "avatar_url": avatar_url,
+                "filename": unique_filename,
+                "size": len(content),
+            },
+            "message": "头像上传成功",
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        error_msg = f"头像上传失败: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=error_msg
         )
 
 

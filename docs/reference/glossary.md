@@ -31,17 +31,25 @@ Last Updated: 2025-09-29
 
 ## 2. AI 相关术语
 
-| 术语 | 英文 / 缩写 | 定义 | 备注 |
-|------|-------------|------|------|
-| 智能体 | Agent | 百炼封装的模型服务实体 | 受外部平台配置 |
-| Prompt | Prompt | 发送给模型的指令/上下文串 | 内部不对外泄露系统提示 |
-| 置信度 | Confidence Score | 模型对回答可靠性打分（0~1 区间） | 非严格统计意义 |
-| Tokens | Tokens | 模型处理的单位字片段 | 用于成本计量（规划） |
-| 引用来源 | Source / Evidence | 回答引用的文档/片段指针 | 规划字段：sources[] |
-| 模型开销 | Cost / Usage | 按 tokens 或次数计的资源用量 | 后续监控展示 |
-| 限流（AI） | AI Rate Limit | 针对 AI 接口的专用调用限制 | 防止滥用与失控成本 |
-| 上下文会话 | Context Window | AI 可以一次处理的 token 范围 | 超出需截断或摘要 |
-| 降级 | Fallback / Degrade | 外部 AI 失败时采用的应急策略 | 当前以失败返回为主，规划降级 |
+|| 术语 | 英文 / 缩写 | 定义 | 备注 |
+||------|-------------|------|------|
+|| 智能体 | Agent | 百炼封装的模型服务实体 | 受外部平台配置 |
+|| Prompt | Prompt | 发送给模型的指令/上下文串 | 内部不对外泄露系统提示 |
+|| 置信度 | Confidence Score | 模型对回答可靠性打分（0~1 区间） | 非严格统计意义 |
+|| Tokens | Tokens | 模型处理的单位字片段 | 用于成本计量（规划） |
+|| 引用来源 | Source / Evidence | 回答引用的文档/片段指针 | 规划字段：sources[] |
+|| 模型开销 | Cost / Usage | 按 tokens 或次数计的资源用量 | 后续监控展示 |
+|| 限流（AI） | AI Rate Limit | 针对 AI 接口的专用调用限制 | 防止滥用与失控成本 |
+|| 上下文会话 | Context Window | AI 可以一次处理的 token 范围 | 超出需截断或摘要 |
+|| 降级 | Fallback / Degrade | 外部 AI 失败时采用的应急策略 | 当前以失败返回为主，规划降级 |
+|| MCP | Model Context Protocol | 基于精确数据库查询的上下文构建协议 | Phase 4-5 实现 |
+|| RAG | Retrieval-Augmented Generation | 检索增强生成，结合向量检索和LLM | Phase 6 计划 |
+|| 向量检索 | Vector Search | 基于语义相似度的检索技术 | 使用 PGVector 实现 |
+|| Embedding | Embedding | 文本向量化表示 | 通义千问 Embedding API |
+|| 语义检索 | Semantic Search | 理解语义的智能检索 | RAG 核心能力 |
+|| 混合检索 | Hybrid Search | MCP（精确）+ RAG（语义）融合检索 | 最终目标架构 |
+|| 时间衰减 | Time Decay | 近期数据权重更高的衰减算法 | MCP 查询策略 |
+|| 知识点掌握度 | Knowledge Mastery Score | 基于错误率和时间衰减的掌握度评估 | MCP 输出指标 |
 
 ---
 

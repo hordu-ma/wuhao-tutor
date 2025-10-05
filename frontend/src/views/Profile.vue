@@ -33,11 +33,7 @@
               <!-- 头像区域 -->
               <div class="avatar-section mb-6">
                 <div class="avatar-container">
-                  <el-avatar
-                    :size="80"
-                    :src="userInfo.avatar_url"
-                    class="user-avatar"
-                  >
+                  <el-avatar :size="80" :src="userInfo.avatar_url" class="user-avatar">
                     <el-icon :size="40"><UserFilled /></el-icon>
                   </el-avatar>
                   <el-upload
@@ -47,11 +43,7 @@
                     accept="image/*"
                     class="avatar-upload"
                   >
-                    <el-button
-                      size="small"
-                      type="text"
-                      class="change-avatar-btn"
-                    >
+                    <el-button size="small" type="text" class="change-avatar-btn">
                       <el-icon><Camera /></el-icon>
                       更换头像
                     </el-button>
@@ -93,11 +85,7 @@
                 </el-form-item>
 
                 <el-form-item label="年级" prop="grade_level">
-                  <el-select
-                    v-model="userInfo.grade_level"
-                    placeholder="请选择年级"
-                    class="w-full"
-                  >
+                  <el-select v-model="userInfo.grade_level" placeholder="请选择年级" class="w-full">
                     <el-option
                       v-for="grade in gradeOptions"
                       :key="grade.value"
@@ -108,27 +96,15 @@
                 </el-form-item>
 
                 <el-form-item label="学校" prop="school">
-                  <el-input
-                    v-model="userInfo.school"
-                    placeholder="请输入学校名称"
-                    maxlength="50"
-                  />
+                  <el-input v-model="userInfo.school" placeholder="请输入学校名称" maxlength="50" />
                 </el-form-item>
 
                 <el-form-item label="手机号" prop="phone">
-                  <el-input
-                    v-model="userInfo.phone"
-                    placeholder="请输入手机号"
-                    maxlength="11"
-                  />
+                  <el-input v-model="userInfo.phone" placeholder="请输入手机号" maxlength="11" />
                 </el-form-item>
 
                 <el-form-item label="邮箱" prop="email">
-                  <el-input
-                    v-model="userInfo.email"
-                    placeholder="请输入邮箱地址"
-                    type="email"
-                  />
+                  <el-input v-model="userInfo.email" placeholder="请输入邮箱地址" type="email" />
                 </el-form-item>
 
                 <el-form-item label="个人简介">
@@ -158,11 +134,7 @@
                 </div>
               </template>
 
-              <el-form
-                ref="preferencesForm"
-                :model="preferences"
-                label-width="120px"
-              >
+              <el-form ref="preferencesForm" :model="preferences" label-width="120px">
                 <el-form-item label="主要学科">
                   <el-select
                     v-model="preferences.primary_subjects"
@@ -216,9 +188,7 @@
                     <el-checkbox v-model="preferences.enable_homework_reminder">
                       作业截止提醒
                     </el-checkbox>
-                    <el-checkbox
-                      v-model="preferences.enable_achievement_notification"
-                    >
+                    <el-checkbox v-model="preferences.enable_achievement_notification">
                       成就解锁通知
                     </el-checkbox>
                   </div>
@@ -244,11 +214,7 @@
                 </div>
               </template>
 
-              <el-form
-                ref="aiSettingsForm"
-                :model="aiSettings"
-                label-width="120px"
-              >
+              <el-form ref="aiSettingsForm" :model="aiSettings" label-width="120px">
                 <el-form-item label="回答详细程度">
                   <el-radio-group v-model="aiSettings.response_detail_level">
                     <el-radio label="concise">简洁回答</el-radio>
@@ -274,9 +240,7 @@
                     <el-checkbox v-model="aiSettings.enable_auto_correction">
                       自动错误检测与纠正
                     </el-checkbox>
-                    <el-checkbox
-                      v-model="aiSettings.enable_smart_recommendations"
-                    >
+                    <el-checkbox v-model="aiSettings.enable_smart_recommendations">
                       智能学习建议
                     </el-checkbox>
                     <el-checkbox v-model="aiSettings.enable_progress_tracking">
@@ -286,10 +250,7 @@
                 </el-form-item>
 
                 <el-form-item label="回答语言">
-                  <el-select
-                    v-model="aiSettings.response_language"
-                    placeholder="选择AI回答语言"
-                  >
+                  <el-select v-model="aiSettings.response_language" placeholder="选择AI回答语言">
                     <el-option label="中文" value="zh" />
                     <el-option label="英文" value="en" />
                     <el-option label="中英混合" value="zh-en" />
@@ -307,33 +268,23 @@
                 </div>
               </template>
 
-              <el-form
-                ref="privacyForm"
-                :model="privacySettings"
-                label-width="120px"
-              >
+              <el-form ref="privacyForm" :model="privacySettings" label-width="120px">
                 <el-form-item label="数据使用">
                   <div class="space-y-3">
                     <el-checkbox v-model="privacySettings.allow_data_analysis">
                       允许匿名数据分析以改进服务
                     </el-checkbox>
-                    <el-checkbox
-                      v-model="privacySettings.allow_learning_analytics"
-                    >
+                    <el-checkbox v-model="privacySettings.allow_learning_analytics">
                       允许学习行为分析
                     </el-checkbox>
-                    <el-checkbox
-                      v-model="privacySettings.allow_personalization"
-                    >
+                    <el-checkbox v-model="privacySettings.allow_personalization">
                       允许个性化推荐
                     </el-checkbox>
                   </div>
                 </el-form-item>
 
                 <el-form-item label="数据保留">
-                  <el-radio-group
-                    v-model="privacySettings.data_retention_period"
-                  >
+                  <el-radio-group v-model="privacySettings.data_retention_period">
                     <el-radio label="1year">1年</el-radio>
                     <el-radio label="2years">2年</el-radio>
                     <el-radio label="5years">5年</el-radio>
@@ -347,11 +298,7 @@
                       <el-icon><Download /></el-icon>
                       导出我的数据
                     </el-button>
-                    <el-button
-                      type="danger"
-                      size="small"
-                      @click="showDeleteAccount"
-                    >
+                    <el-button type="danger" size="small" @click="showDeleteAccount">
                       <el-icon><Delete /></el-icon>
                       删除账户
                     </el-button>
@@ -371,11 +318,7 @@
 
               <div class="stats-overview">
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div
-                    v-for="stat in learningStats"
-                    :key="stat.key"
-                    class="stat-item"
-                  >
+                  <div v-for="stat in learningStats" :key="stat.key" class="stat-item">
                     <div class="stat-icon" :class="stat.colorClass">
                       <el-icon>
                         <component :is="stat.icon" />
@@ -426,11 +369,7 @@
       <template #footer>
         <div class="flex justify-end space-x-3">
           <el-button @click="showExportDialog = false">取消</el-button>
-          <el-button
-            type="primary"
-            @click="handleExportData"
-            :loading="isExporting"
-          >
+          <el-button type="primary" @click="handleExportData" :loading="isExporting">
             导出数据
           </el-button>
         </div>
@@ -445,13 +384,7 @@
       :close-on-click-modal="false"
     >
       <div class="delete-warning">
-        <el-alert
-          title="此操作不可逆"
-          type="error"
-          show-icon
-          :closable="false"
-          class="mb-4"
-        >
+        <el-alert title="此操作不可逆" type="error" show-icon :closable="false" class="mb-4">
           <template #default>
             删除账户将永久移除：
             <ul class="mt-2 ml-4 list-disc">
@@ -497,14 +430,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from "vue";
-import { useRouter } from "vue-router";
-import {
-  ElMessage,
-  ElMessageBox,
-  type FormInstance,
-  type UploadRawFile,
-} from "element-plus";
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox, type FormInstance, type UploadRawFile } from 'element-plus'
 import {
   User,
   UserFilled,
@@ -521,208 +449,217 @@ import {
   Document,
   Star,
   Flag,
-} from "@element-plus/icons-vue";
+} from '@element-plus/icons-vue'
 
 // 导入stores和API
-import { useUserStore } from "@/stores/user";
+import { useUserStore } from '@/stores/user'
+import { useAuthStore } from '@/stores/auth'
+import AuthAPI from '@/api/auth'
 
-const router = useRouter();
-const userStore = useUserStore();
+const router = useRouter()
+const userStore = useUserStore()
+const authStore = useAuthStore()
 // const learningStore = useLearningStore();
 
 // 响应式数据
-const isSaving = ref(false);
-const isExporting = ref(false);
-const isDeleting = ref(false);
-const showExportDialog = ref(false);
-const showDeleteDialog = ref(false);
+const isSaving = ref(false)
+const isExporting = ref(false)
+const isDeleting = ref(false)
+const showExportDialog = ref(false)
+const showDeleteDialog = ref(false)
 
 // 表单引用
-const userInfoForm = ref<FormInstance>();
-const preferencesForm = ref<FormInstance>();
-const aiSettingsForm = ref<FormInstance>();
-const privacyForm = ref<FormInstance>();
-const deleteForm = ref<FormInstance>();
+const userInfoForm = ref<FormInstance>()
+const preferencesForm = ref<FormInstance>()
+const aiSettingsForm = ref<FormInstance>()
+const privacyForm = ref<FormInstance>()
+const deleteForm = ref<FormInstance>()
 
 // 用户信息
 const userInfo = reactive({
-  username: "",
-  real_name: "",
-  gender: "",
-  grade_level: "",
-  school: "",
-  phone: "",
-  email: "",
-  bio: "",
-  avatar_url: "",
-});
+  username: '',
+  real_name: '',
+  gender: '',
+  grade_level: '',
+  school: '',
+  phone: '',
+  email: '',
+  bio: '',
+  avatar_url: '',
+})
 
 // 学习偏好
 const preferences = reactive({
   primary_subjects: [],
-  difficulty_preference: "medium",
+  difficulty_preference: 'medium',
   daily_study_time: 120,
   enable_daily_reminder: true,
   enable_homework_reminder: true,
   enable_achievement_notification: true,
-  reminder_time: "19:00",
-});
+  reminder_time: '19:00',
+})
 
 // AI助手设置
 const aiSettings = reactive({
-  response_detail_level: "detailed",
-  teaching_style: "encouraging",
+  response_detail_level: 'detailed',
+  teaching_style: 'encouraging',
   enable_context_memory: true,
   enable_auto_correction: true,
   enable_smart_recommendations: true,
   enable_progress_tracking: true,
-  response_language: "zh",
-});
+  response_language: 'zh',
+})
 
 // 隐私设置
 const privacySettings = reactive({
   allow_data_analysis: true,
   allow_learning_analytics: true,
   allow_personalization: true,
-  data_retention_period: "2years",
-});
+  data_retention_period: '2years',
+})
 
 // 导出选项
-const exportOptions = ref(["profile", "sessions", "homework", "analytics"]);
+const exportOptions = ref(['profile', 'sessions', 'homework', 'analytics'])
 
 // 删除确认
 const deleteConfirm = reactive({
-  confirmText: "",
-});
+  confirmText: '',
+})
 
 // 选项数据
 const gradeOptions = [
-  { label: "小学", value: "primary" },
-  { label: "初一", value: "junior_1" },
-  { label: "初二", value: "junior_2" },
-  { label: "初三", value: "junior_3" },
-  { label: "高一", value: "senior_1" },
-  { label: "高二", value: "senior_2" },
-  { label: "高三", value: "senior_3" },
-];
+  { label: '小学', value: 'primary' },
+  { label: '初一', value: 'junior_1' },
+  { label: '初二', value: 'junior_2' },
+  { label: '初三', value: 'junior_3' },
+  { label: '高一', value: 'senior_1' },
+  { label: '高二', value: 'senior_2' },
+  { label: '高三', value: 'senior_3' },
+]
 
 const subjectOptions = [
-  { label: "数学", value: "math", color: "#3b82f6" },
-  { label: "语文", value: "chinese", color: "#ef4444" },
-  { label: "英语", value: "english", color: "#10b981" },
-  { label: "物理", value: "physics", color: "#8b5cf6" },
-  { label: "化学", value: "chemistry", color: "#f59e0b" },
-  { label: "生物", value: "biology", color: "#06b6d4" },
-  { label: "历史", value: "history", color: "#84cc16" },
-  { label: "地理", value: "geography", color: "#f97316" },
-  { label: "政治", value: "politics", color: "#ec4899" },
-];
+  { label: '数学', value: 'math', color: '#3b82f6' },
+  { label: '语文', value: 'chinese', color: '#ef4444' },
+  { label: '英语', value: 'english', color: '#10b981' },
+  { label: '物理', value: 'physics', color: '#8b5cf6' },
+  { label: '化学', value: 'chemistry', color: '#f59e0b' },
+  { label: '生物', value: 'biology', color: '#06b6d4' },
+  { label: '历史', value: 'history', color: '#84cc16' },
+  { label: '地理', value: 'geography', color: '#f97316' },
+  { label: '政治', value: 'politics', color: '#ec4899' },
+]
 
 // 表单验证规则
 const userInfoRules = {
   username: [
-    { required: true, message: "请输入昵称", trigger: "blur" },
-    { min: 2, max: 20, message: "昵称长度在 2 到 20 个字符", trigger: "blur" },
+    { required: true, message: '请输入昵称', trigger: 'blur' },
+    { min: 2, max: 20, message: '昵称长度在 2 到 20 个字符', trigger: 'blur' },
   ],
   email: [
     {
-      type: "email" as const,
-      message: "请输入正确的邮箱地址",
-      trigger: "blur",
+      type: 'email' as const,
+      message: '请输入正确的邮箱地址',
+      trigger: 'blur',
     },
   ],
   phone: [
     {
       pattern: /^1[3-9]\d{9}$/,
-      message: "请输入正确的手机号",
-      trigger: "blur",
+      message: '请输入正确的手机号',
+      trigger: 'blur',
     },
   ],
-};
+}
 
 const deleteRules = {
   confirmText: [
-    { required: true, message: "请输入确认文本", trigger: "blur" },
+    { required: true, message: '请输入确认文本', trigger: 'blur' },
     {
       validator: (_rule: any, value: string, callback: Function) => {
-        if (value !== "删除我的账户") {
-          callback(new Error("确认文本不正确"));
+        if (value !== '删除我的账户') {
+          callback(new Error('确认文本不正确'))
         } else {
-          callback();
+          callback()
         }
       },
-      trigger: "blur",
+      trigger: 'blur',
     },
   ],
-};
+}
 
 // 计算属性
 const canDelete = computed(() => {
-  return deleteConfirm.confirmText === "删除我的账户";
-});
+  return deleteConfirm.confirmText === '删除我的账户'
+})
 
 const learningStats = computed(() => [
   {
-    key: "studyTime",
-    label: "总学习时长",
-    value: "125小时",
+    key: 'studyTime',
+    label: '总学习时长',
+    value: '125小时',
     icon: Clock,
-    colorClass: "text-blue-500",
+    colorClass: 'text-blue-500',
   },
   {
-    key: "homework",
-    label: "完成作业",
-    value: "45份",
+    key: 'homework',
+    label: '完成作业',
+    value: '45份',
     icon: Document,
-    colorClass: "text-green-500",
+    colorClass: 'text-green-500',
   },
   {
-    key: "achievements",
-    label: "获得成就",
-    value: "12个",
+    key: 'achievements',
+    label: '获得成就',
+    value: '12个',
     icon: Star,
-    colorClass: "text-yellow-500",
+    colorClass: 'text-yellow-500',
   },
   {
-    key: "streak",
-    label: "连续学习",
-    value: "7天",
+    key: 'streak',
+    label: '连续学习',
+    value: '7天',
     icon: Flag,
-    colorClass: "text-purple-500",
+    colorClass: 'text-purple-500',
   },
-]);
+])
 
 // 方法
 const handleAvatarUpload = async (file: UploadRawFile): Promise<boolean> => {
   // 验证文件类型和大小
-  const isImage = file.type.startsWith("image/");
-  const isLt2M = file.size / 1024 / 1024 < 2;
+  const isImage = file.type.startsWith('image/')
+  const isLt2M = file.size / 1024 / 1024 < 2
 
   if (!isImage) {
-    ElMessage.error("只能上传图片文件！");
-    return false;
+    ElMessage.error('只能上传图片文件！')
+    return false
   }
   if (!isLt2M) {
-    ElMessage.error("图片大小不能超过 2MB！");
-    return false;
+    ElMessage.error('图片大小不能超过 2MB！')
+    return false
   }
 
   try {
-    // 这里应该调用API上传头像
-    // const response = await UserAPI.uploadAvatar(file);
-    // userInfo.avatar_url = response.avatar_url;
-    ElMessage.success("头像上传成功！");
-    return true;
+    // 调用API上传头像
+    const response = await AuthAPI.uploadAvatar(file as File)
+    userInfo.avatar_url = response.avatar_url
+
+    // 更新全局用户信息
+    if (authStore.user) {
+      authStore.user.avatar = response.avatar_url
+    }
+
+    ElMessage.success('头像上传成功！')
+    return true
   } catch (error) {
-    console.error("头像上传失败:", error);
-    ElMessage.error("头像上传失败，请重试");
-    return false;
+    console.error('头像上传失败:', error)
+    ElMessage.error('头像上传失败，请重试')
+    return false
   }
-};
+}
 
 const handleSaveAll = async () => {
   try {
-    isSaving.value = true;
+    isSaving.value = true
 
     // 验证所有表单
     const forms = [
@@ -730,123 +667,145 @@ const handleSaveAll = async () => {
       preferencesForm.value,
       aiSettingsForm.value,
       privacyForm.value,
-    ];
-    const validations = await Promise.all(
-      forms.map((form) => form?.validate().catch(() => false)),
-    );
+    ]
+    const validations = await Promise.all(forms.map((form) => form?.validate().catch(() => false)))
 
     if (validations.some((valid) => !valid)) {
-      ElMessage.error("请检查表单填写是否正确");
-      return;
+      ElMessage.error('请检查表单填写是否正确')
+      return
     }
 
-    // 保存数据（这里应该调用相应的API）
-    // await UserAPI.updateProfile(userInfo);
+    // 保存用户基本信息
+    const profileUpdateData = {
+      name: userInfo.real_name,
+      nickname: userInfo.username,
+      avatar_url: userInfo.avatar_url,
+      school: userInfo.school,
+      grade_level: userInfo.grade_level,
+      // 暂时不支持的字段，后续扩展
+      // class_name: userInfo.class_name,
+      // institution: userInfo.institution,
+      // parent_contact: userInfo.parent_contact,
+      // parent_name: userInfo.parent_name,
+      notification_enabled: preferences.enable_daily_reminder,
+    }
+
+    await AuthAPI.updateProfile(profileUpdateData)
+
+    // TODO: 后续扩展其他设置的保存
     // await UserAPI.updatePreferences(preferences);
     // await UserAPI.updateAISettings(aiSettings);
     // await UserAPI.updatePrivacySettings(privacySettings);
 
-    ElMessage.success("设置保存成功！");
+    ElMessage.success('设置保存成功！')
   } catch (error) {
-    console.error("保存设置失败:", error);
-    ElMessage.error("保存失败，请重试");
+    console.error('保存设置失败:', error)
+    ElMessage.error('保存失败，请重试')
   } finally {
-    isSaving.value = false;
+    isSaving.value = false
   }
-};
+}
 
 const showDataExport = () => {
-  showExportDialog.value = true;
-};
+  showExportDialog.value = true
+}
 
 const handleExportData = async () => {
   try {
-    isExporting.value = true;
+    isExporting.value = true
 
     // 调用导出API
     // await UserAPI.exportData(exportOptions.value);
 
-    ElMessage.success("数据导出请求已提交，请稍后查收邮件");
-    showExportDialog.value = false;
+    ElMessage.success('数据导出请求已提交，请稍后查收邮件')
+    showExportDialog.value = false
   } catch (error) {
-    console.error("导出数据失败:", error);
-    ElMessage.error("导出失败，请重试");
+    console.error('导出数据失败:', error)
+    ElMessage.error('导出失败，请重试')
   } finally {
-    isExporting.value = false;
+    isExporting.value = false
   }
-};
+}
 
 const showDeleteAccount = () => {
-  showDeleteDialog.value = true;
-  deleteConfirm.confirmText = "";
-};
+  showDeleteDialog.value = true
+  deleteConfirm.confirmText = ''
+}
 
 const handleDeleteInput = () => {
   // 实时验证输入
-};
+}
 
 const handleDeleteAccount = async () => {
-  if (!canDelete.value) return;
+  if (!canDelete.value) return
 
   try {
     await ElMessageBox.confirm(
-      "最后确认：删除账户后，所有数据将无法恢复。您确定要继续吗？",
-      "最终确认",
+      '最后确认：删除账户后，所有数据将无法恢复。您确定要继续吗？',
+      '最终确认',
       {
-        type: "error",
-        confirmButtonText: "确认删除",
-        cancelButtonText: "取消",
-        confirmButtonClass: "el-button--danger",
-      },
-    );
+        type: 'error',
+        confirmButtonText: '确认删除',
+        cancelButtonText: '取消',
+        confirmButtonClass: 'el-button--danger',
+      }
+    )
 
-    isDeleting.value = true;
+    isDeleting.value = true
 
     // 调用删除API
     // await UserAPI.deleteAccount();
 
-    ElMessage.success("账户已删除");
+    ElMessage.success('账户已删除')
     // 清除本地存储并跳转到登录页
-    userStore.logout();
-    router.push("/login");
+    userStore.logout()
+    router.push('/login')
   } catch (error) {
-    if (error !== "cancel") {
-      console.error("删除账户失败:", error);
-      ElMessage.error("删除失败，请重试");
+    if (error !== 'cancel') {
+      console.error('删除账户失败:', error)
+      ElMessage.error('删除失败，请重试')
     }
   } finally {
-    isDeleting.value = false;
-    showDeleteDialog.value = false;
+    isDeleting.value = false
+    showDeleteDialog.value = false
   }
-};
+}
 
 const goToAnalytics = () => {
-  router.push("/analytics");
-};
+  router.push('/analytics')
+}
 
 // 初始化数据
 const initData = async () => {
   try {
-    // 加载用户信息
-    // const profile = await UserAPI.getProfile();
-    // Object.assign(userInfo, profile);
-    // 加载用户偏好设置
+    // 从当前登录用户获取数据
+    if (authStore.user) {
+      userInfo.username = authStore.user.nickname || ''
+      userInfo.real_name = authStore.user.name || ''
+      userInfo.avatar_url = authStore.user.avatar || ''
+      userInfo.school = authStore.user.school || ''
+      userInfo.grade_level = authStore.user.grade_level || ''
+      userInfo.phone = authStore.user.phone || ''
+      userInfo.email = '' // 暂时不支持
+      userInfo.gender = 'other' // 默认值
+      userInfo.bio = '' // 默认为空
+    }
+
+    // TODO: 后续扩展加载其他设置
     // const prefs = await UserAPI.getPreferences();
     // Object.assign(preferences, prefs);
-    // 加载AI设置
     // const aiPrefs = await UserAPI.getAISettings();
     // Object.assign(aiSettings, aiPrefs);
-    // 加载隐私设置
     // const privacy = await UserAPI.getPrivacySettings();
     // Object.assign(privacySettings, privacy);
   } catch (error) {
-    console.error("加载用户数据失败:", error);
+    console.error('加载用户数据失败:', error)
   }
-};
+}
 
 onMounted(() => {
-  initData();
-});
+  initData()
+})
 </script>
 
 <style scoped lang="scss">

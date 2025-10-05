@@ -1,7 +1,7 @@
 # 五好伴学系统架构说明 (ARCHITECTURE)
 
-Last Updated: 2025-09-29
-版本适用范围：后端 0.1.x 开发分支（未达稳定发布）
+Last Updated: 2025-10-05
+版本适用范围:后端 0.1.x 开发分支(未达稳定发布)
 
 ---
 
@@ -149,10 +149,121 @@ Last Updated: 2025-09-29
 | 调用模式   | 单一智能体封装（同步） | 增加异步批处理 / 重试策略     |
 | 超时控制   | 基础超时配置           | 自适应超时 (基于历史耗时分位) |
 | 回退策略   | 暂不启用               | 失败回退到"简化模板"          |
-| 上下文管理 | 依赖会话结构           | 引入向量检索 / 语义缓存       |
+| 上下文管理 | Phase 4-5: MCP 精确查询 | Phase 6: 引入 RAG 向量检索 |
 | 成本控制   | 未统计 tokens          | 监控 + 阈值告警               |
 
-### 8.1 百炼智能体集成详解
+### 8.1 上下文构建策略 (MCP + RAG 混合)
+
+**设计理念**：两阶段演进策略，先精确后语义，先简单后复杂。
+
+#### Phase 4-5: MCP 上下文服务 (当前阶段)
+
+**核心目标**：基于精确 SQL 查询构建学情画像，为 AI 对话提供个性化上下文。
+
+**关键能力**：
+- **薄弱知识点查询** - 基于错误率 + 时间衰减算法
+- **学习偏好分析** - 答题时间分布、学科偏好统计
+- **最近错题统计** - 近 7 天/30 天错题聚合
+- **知识点掌握度评估** - 综合正确率、答题数、时间衰减的多维评分
+- **学习路径推荐** - 基于知识图谱的前置/后续知识点推荐
+
+**数据来源**：
+```python
+# MCP 查询示例
+context = {
+    "weak_points": await repo.get_weak_knowledge_points(user_id, top_k=5),
+    "recent_errors": await repo.get_recent_errors(user_id, days=7),
+    "mastery_scores": await repo.calculate_mastery_scores(user_id),
+    "learning_preferences": await repo.analyze_learning_patterns(user_id),
+    "knowledge_graph": await repo.get_related_knowledge_nodes(weak_points)
+}
+```
+
+**优势**：
+- ✅ 精确可控，查询逻辑透明
+- ✅ 无需向量化，开发成本低
+- ✅ 数据库原生支持，性能可预测
+- ✅ 易于调试和优化
+
+**局限**：
+- ⚠️ 无法处理语义相似的问题
+- ⚠️ 需要预定义查询维度
+- ⚠️ 跨知识点的语义关联能力弱
+
+---
+
+#### Phase 6: RAG 语义检索增强 (计划中)
+
+**触发条件**：当用户历史数据达到一定规模(> 100条问答记录)，且 MCP 上下文效果出现瓶颈时启动。
+
+**技术架构**：
+```
+用户提问 → Embedding(通义千问 API) → 向量化
+                                    ↓
+    PGVector 相似度检索 ← 历史问答/错题向量库
+                                    ↓
+    Top-K 相似内容 + MCP 精确数据 → 混合上下文
+                                    ↓
+                  AI 模型生成个性化回答
+```
+
+**核心能力**：
+- **相似错题语义检索** - 找到语义相似但表述不同的历史错题
+- **历史问答语义检索** - 检索过往相似问题的高质量回答
+- **知识点语义聚类** - 自动发现隐含的知识点关联
+- **个性化学习路径** - 基于语义相似度的智能推荐
+
+**实现方案**：
+```sql
+-- PGVector 扩展安装
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- 向量表结构
+CREATE TABLE question_embeddings (
+    id SERIAL PRIMARY KEY,
+    question_id INTEGER REFERENCES questions(id),
+    embedding vector(1536),  -- 通义千问 Embedding 维度
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- 相似度检索索引
+CREATE INDEX ON question_embeddings 
+USING ivfflat (embedding vector_cosine_ops) 
+WITH (lists = 100);
+```
+
+**混合检索策略**：
+```python
+# MCP(精确) + RAG(语义) 混合权重
+context = {
+    "mcp_context": {  # 权重 0.6
+        "weak_points": [...],
+        "recent_errors": [...],
+        "mastery_scores": {...}
+    },
+    "rag_context": {  # 权重 0.4
+        "similar_questions": await vector_search(query_embedding, top_k=5),
+        "semantic_related_errors": await find_similar_errors(user_id, query_embedding),
+        "knowledge_clusters": await cluster_knowledge_points(user_id)
+    }
+}
+```
+
+**成本考量**：
+- **Embedding API 调用** - 通义千问约 ¥0.0007/千token (需评估月成本)
+- **存储成本** - 向量数据约为原始数据的 2-3 倍
+- **查询性能** - IVFFlat 索引在百万级数据下查询耗时 < 50ms
+
+**渐进式迁移**：
+1. Week 1: 安装 PGVector 扩展 + 基础表结构
+2. Week 2: 批量向量化历史数据(离线任务)
+3. Week 3: 实现混合检索 API，灰度 10% 用户
+4. Week 4: 监控效果指标(回答相关性、用户满意度)
+5. Week 5: 根据数据调优权重，全量发布
+
+---
+
+### 8.2 百炼智能体集成详解
 
 **智能体配置信息**：
 
