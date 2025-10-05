@@ -1410,7 +1410,6 @@ class HomeworkService:
                     HomeworkSubmission.student_id == student_id,
                     HomeworkSubmission.created_at >= start_date,
                     HomeworkSubmission.created_at <= end_date,
-                    HomeworkSubmission.deleted_at.is_(None),
                 )
             )
 
@@ -1421,7 +1420,6 @@ class HomeworkService:
                         HomeworkSubmission.student_id == student_id,
                         HomeworkSubmission.created_at >= start_date,
                         HomeworkSubmission.created_at <= end_date,
-                        HomeworkSubmission.deleted_at.is_(None),
                     )
                 )
             )
@@ -1435,7 +1433,6 @@ class HomeworkService:
                         HomeworkSubmission.student_id == student_id,
                         HomeworkSubmission.created_at >= start_date,
                         HomeworkSubmission.created_at <= end_date,
-                        HomeworkSubmission.deleted_at.is_(None),
                     )
                 )
                 .group_by(HomeworkSubmission.status)
@@ -1465,8 +1462,6 @@ class HomeworkService:
                         HomeworkSubmission.student_id == student_id,
                         HomeworkSubmission.created_at >= start_date,
                         HomeworkSubmission.created_at <= end_date,
-                        HomeworkSubmission.deleted_at.is_(None),
-                        Homework.deleted_at.is_(None),
                     )
                 )
                 .group_by(Homework.subject)
@@ -1482,7 +1477,7 @@ class HomeworkService:
             # 按年级统计 - 通过Homework表关联
             grade_stats_result = await session.execute(
                 select(
-                    Homework.grade,
+                    Homework.grade_level,
                     func.count(HomeworkSubmission.id),
                     func.avg(HomeworkSubmission.total_score).label("avg_score"),
                 )
@@ -1497,11 +1492,9 @@ class HomeworkService:
                         HomeworkSubmission.student_id == student_id,
                         HomeworkSubmission.created_at >= start_date,
                         HomeworkSubmission.created_at <= end_date,
-                        HomeworkSubmission.deleted_at.is_(None),
-                        Homework.deleted_at.is_(None),
                     )
                 )
-                .group_by(Homework.grade)
+                .group_by(Homework.grade_level)
             )
 
             grade_stats = {}
@@ -1601,7 +1594,6 @@ class HomeworkService:
                         HomeworkSubmission.student_id == student_id,
                         HomeworkSubmission.created_at >= start_date,
                         HomeworkSubmission.created_at <= end_date,
-                        HomeworkSubmission.deleted_at.is_(None),
                     )
                 )
                 .group_by(date_format)
@@ -1647,8 +1639,7 @@ class HomeworkService:
                         HomeworkSubmission.student_id == student_id,
                         HomeworkSubmission.created_at >= start_date,
                         HomeworkSubmission.created_at <= end_date,
-                        HomeworkSubmission.deleted_at.is_(None),
-                        HomeworkSubmission.status == SubmissionStatus.REVIEWED,
+                        HomeworkSubmission.status == SubmissionStatus.REVIEWED.value,
                     )
                 )
             )
@@ -1680,8 +1671,7 @@ class HomeworkService:
                         HomeworkSubmission.student_id == student_id,
                         HomeworkSubmission.created_at >= start_date,
                         HomeworkSubmission.created_at < midpoint,
-                        HomeworkSubmission.deleted_at.is_(None),
-                        HomeworkSubmission.status == SubmissionStatus.REVIEWED,
+                        HomeworkSubmission.status == SubmissionStatus.REVIEWED.value,
                     )
                 )
             )
@@ -1694,8 +1684,7 @@ class HomeworkService:
                         HomeworkSubmission.student_id == student_id,
                         HomeworkSubmission.created_at >= midpoint,
                         HomeworkSubmission.created_at <= end_date,
-                        HomeworkSubmission.deleted_at.is_(None),
-                        HomeworkSubmission.status == SubmissionStatus.REVIEWED,
+                        HomeworkSubmission.status == SubmissionStatus.REVIEWED.value,
                     )
                 )
             )
