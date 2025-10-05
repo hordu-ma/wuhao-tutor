@@ -3,7 +3,11 @@
 """
 
 import pytest
-from src.services.knowledge.extraction_service import KnowledgeExtractionService, KnowledgePoint
+
+from src.services.knowledge.extraction_service import (
+    KnowledgeExtractionService,
+    KnowledgePoint,
+)
 
 
 class TestKnowledgeExtractionService:
@@ -72,7 +76,10 @@ class TestKnowledgeExtractionService:
 
         # 检查匹配的关键词
         assert len(二次函数_kp.matched_keywords) > 0
-        assert any(keyword in ["抛物线", "顶点", "对称轴"] for keyword in 二次函数_kp.matched_keywords)
+        assert any(
+            keyword in ["抛物线", "顶点", "对称轴"]
+            for keyword in 二次函数_kp.matched_keywords
+        )
 
     def test_extract_from_question_sync(self, extraction_service):
         """测试同步问题提取"""
@@ -154,7 +161,9 @@ class TestKnowledgeExtractionService:
         """测试未知学科"""
         content = "这是一些内容"
 
-        knowledge_points = extraction_service._rule_based_extraction(content, "unknown_subject")
+        knowledge_points = extraction_service._rule_based_extraction(
+            content, "unknown_subject"
+        )
 
         # 未知学科应该返回空列表
         assert len(knowledge_points) == 0
@@ -174,7 +183,9 @@ class TestKnowledgeExtractionService:
         content = "求二次函数 y = x² - 4x + 3 的顶点坐标"
 
         # 不提供 bailian_service，应该只使用规则提取
-        knowledge_points = await extraction_service.extract_from_homework(content, "math")
+        knowledge_points = await extraction_service.extract_from_homework(
+            content, "math"
+        )
 
         assert len(knowledge_points) > 0
         kp_names = [kp.name for kp in knowledge_points]

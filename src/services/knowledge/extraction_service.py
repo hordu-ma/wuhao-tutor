@@ -6,9 +6,9 @@
 
 import json
 import logging
-from pathlib import Path
-from typing import List, Dict, Optional, Set, Any
 from collections import defaultdict
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Set
 
 import jieba
 import jieba.posseg as pseg
@@ -62,7 +62,9 @@ class KnowledgeExtractionService:
 
     def _load_knowledge_dict(self):
         """加载知识点词典"""
-        dict_dir = Path(__file__).parent.parent.parent.parent / "data" / "knowledge_dict"
+        dict_dir = (
+            Path(__file__).parent.parent.parent.parent / "data" / "knowledge_dict"
+        )
 
         if not dict_dir.exists():
             logger.warning(f"知识点词典目录不存在: {dict_dir}")
@@ -79,7 +81,9 @@ class KnowledgeExtractionService:
                     self.knowledge_dict[subject] = {}
 
                 self.knowledge_dict[subject].update(subject_dict)
-                logger.info(f"加载知识点词典: {dict_file.name}, 包含 {len(subject_dict)} 个知识点")
+                logger.info(
+                    f"加载知识点词典: {dict_file.name}, 包含 {len(subject_dict)} 个知识点"
+                )
 
             except Exception as e:
                 logger.error(f"加载知识点词典失败 {dict_file}: {e}")
@@ -134,7 +138,9 @@ class KnowledgeExtractionService:
         # 限制数量 (最多返回 10 个)
         return merged[:10]
 
-    def _rule_based_extraction(self, content: str, subject: str) -> List[KnowledgePoint]:
+    def _rule_based_extraction(
+        self, content: str, subject: str
+    ) -> List[KnowledgePoint]:
         """基于规则的知识点提取"""
         knowledge_points = []
 

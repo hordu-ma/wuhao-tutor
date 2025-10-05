@@ -11,13 +11,12 @@ from sqlalchemy import Column, DateTime, String
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql import func
 
-from src.core.database import Base
 from src.core.config import get_settings
-
+from src.core.database import Base
 
 # 获取配置以确定数据库类型
 settings = get_settings()
-is_sqlite = settings.SQLALCHEMY_DATABASE_URI and "sqlite" in settings.SQLALCHEMY_DATABASE_URI
+is_sqlite = settings.SQLALCHEMY_DATABASE_URI and "sqlite" in str(settings.SQLALCHEMY_DATABASE_URI)  # type: ignore
 
 
 class BaseModel(Base):
@@ -25,6 +24,7 @@ class BaseModel(Base):
     抽象基础模型类
     包含所有模型共有的字段
     """
+
     __abstract__ = True
 
     # 主键 - 兼容SQLite和PostgreSQL
@@ -36,37 +36,38 @@ class BaseModel(Base):
             default=lambda: str(uuid.uuid4()),
             unique=True,
             nullable=False,
-            comment="主键ID"
+            comment="主键ID",
         )
     else:
         # PostgreSQL使用UUID类型
         from sqlalchemy.dialects.postgresql import UUID
+
         id = Column(
             UUID(as_uuid=True),
             primary_key=True,
             default=uuid.uuid4,
             unique=True,
             nullable=False,
-            comment="主键ID"
+            comment="主键ID",
         )
 
     # 创建时间
     created_at = Column(
-        DateTime(timezone=True) if not is_sqlite else String(50),
+        DateTime(timezone=True) if not is_sqlite else String(50),  # type: ignore
         server_default=func.now() if not is_sqlite else None,
         default=lambda: datetime.utcnow().isoformat() if is_sqlite else None,
         nullable=False,
-        comment="创建时间"
+        comment="创建时间",
     )
 
     # 更新时间
     updated_at = Column(
-        DateTime(timezone=True) if not is_sqlite else String(50),
+        DateTime(timezone=True) if not is_sqlite else String(50),  # type: ignore
         server_default=func.now() if not is_sqlite else None,
         onupdate=func.now() if not is_sqlite else None,
         default=lambda: datetime.utcnow().isoformat() if is_sqlite else None,
         nullable=False,
-        comment="更新时间"
+        comment="更新时间",
     )
 
     def to_dict(self) -> Dict[str, Any]:

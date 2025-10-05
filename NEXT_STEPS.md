@@ -2,7 +2,7 @@
 
 > **更新时间**: 2025-10-05 晚  
 > **策略**: RAG 后置开发，优先交付快速价值  
-> **当前状态**: TD-002 ✅、TD-003 ✅ 完成，准备启动 TD-004
+> **当前状态**: TD-002 ✅、TD-003 ✅、TD-005 ✅ 完成，准备启动 TD-006
 
 ---
 
@@ -47,6 +47,38 @@ docs/reports/TD-002-KNOWLEDGE-EXTRACTION-PROGRESS.md ✅
 - ✅ 知识图谱导入脚本 (480+ 行)
 - ✅ SQLite UUID 类型兼容性修复
 - ✅ 数据验证和增量更新机制
+
+---
+
+### ✅ TD-005: 答案质量评估 (已完成)
+
+**完成时间**: 2025-10-05  
+**实际工时**: 4 小时
+
+#### 交付成果
+
+- ✅ `AnswerQualityScore` 模型 - 5 维度评分
+- ✅ `AnswerQualityService` - 规则/AI/混合评估
+- ✅ `AnswerQualityRepository` - 数据访问层
+- ✅ 13 个单元测试 (100% 通过率)
+- ✅ 技术文档 (2000+ 行)
+
+#### 关键文件
+
+```
+src/models/answer_quality.py                   ✅
+src/services/answer_quality_service.py         ✅
+src/repositories/answer_quality_repository.py  ✅
+tests/unit/test_answer_quality_service.py      ✅
+docs/reports/TD-005-ANSWER-QUALITY-PROGRESS.md ✅
+```
+
+#### 核心特性
+
+1. **多维度评分**: accuracy (30%), completeness (25%), relevance (20%), clarity (15%), usefulness (10%)
+2. **混合评估**: 规则引擎 (30%) + AI 模型 (70%)
+3. **人工反馈**: 支持教师手动覆盖评分
+4. **高质量检索**: 快速查询优质答案
 
 #### 关键文件
 

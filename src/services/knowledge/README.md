@@ -82,6 +82,7 @@ for kp in knowledge_points:
 初始化知识点提取服务。
 
 **参数**:
+
 - `bailian_service` (Optional[BailianService]): 百炼 AI 服务实例。如果不提供，则仅使用规则提取。
 
 ##### `extract_from_homework(content, subject, grade=None) -> List[KnowledgePoint]`
@@ -89,6 +90,7 @@ for kp in knowledge_points:
 从作业内容提取知识点（异步，支持 AI 增强）。
 
 **参数**:
+
 - `content` (str): 作业内容
 - `subject` (str): 学科（math/chinese/english）
 - `grade` (Optional[str]): 年级
@@ -100,6 +102,7 @@ for kp in knowledge_points:
 从问题内容提取知识点（同步，仅规则）。
 
 **参数**:
+
 - `content` (str): 问题内容
 - `subject` (str): 学科
 - `grade` (Optional[str]): 年级
@@ -111,6 +114,7 @@ for kp in knowledge_points:
 知识点数据模型。
 
 **属性**:
+
 - `name` (str): 知识点名称
 - `confidence` (float): 置信度 (0-1)
 - `method` (str): 提取方法 (rule/ai/hybrid)
@@ -119,6 +123,7 @@ for kp in knowledge_points:
 - `related` (List[str]): 相关知识点
 
 **方法**:
+
 - `to_dict() -> Dict`: 转换为字典
 
 ## 知识点词典
@@ -178,7 +183,7 @@ uv run python examples/knowledge_extraction_example.py
 ## 性能指标
 
 - **提取准确率**: > 80% (基于人工标注测试集)
-- **平均提取时间**: 
+- **平均提取时间**:
   - 规则匹配: < 100ms
   - AI 增强: < 500ms
 - **知识点数量**: 最多返回 10 个（按置信度降序）
@@ -221,7 +226,8 @@ uv run python examples/knowledge_extraction_example.py
 
 ### Q: 如何提高提取准确率？
 
-A: 
+A:
+
 1. 丰富知识点词典的关键词
 2. 启用 AI 提取（需要百炼服务）
 3. 提供更多上下文信息
@@ -232,7 +238,8 @@ A: 通过学科参数区分，例如"函数"在数学和语文中的含义不同
 
 ### Q: 提取速度慢怎么办？
 
-A: 
+A:
+
 1. 仅使用规则提取（不传 bailian_service）
 2. 实施缓存机制
 3. 减少 AI 调用频率
