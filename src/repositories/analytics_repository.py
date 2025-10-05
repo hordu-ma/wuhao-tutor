@@ -199,11 +199,31 @@ class AnalyticsRepository(BaseRepository):
             时间序列数据
         """
         try:
-            # 根据粒度选择日期截断函数
+            # 检测数据库类型
+            is_sqlite = "sqlite" in str(self.db.bind.engine.url)
+
+            # 根据粒度和数据库类型选择日期截断函数
             if granularity == "weekly":
-                date_trunc = func.date_trunc("week", HomeworkSubmission.created_at)
+                if is_sqlite:
+                    # SQLite: 使用strftime获取周开始日期
+                    date_trunc = func.date(
+                        HomeworkSubmission.created_at,
+                        "-"
+                        + func.strftime("%w", HomeworkSubmission.created_at)
+                        + " days",
+                    )
+                else:
+                    # PostgreSQL: 使用date_trunc
+                    date_trunc = func.date_trunc("week", HomeworkSubmission.created_at)
             elif granularity == "monthly":
-                date_trunc = func.date_trunc("month", HomeworkSubmission.created_at)
+                if is_sqlite:
+                    # SQLite: 使用strftime格式化为月份开始
+                    date_trunc = func.strftime(
+                        "%Y-%m-01", HomeworkSubmission.created_at
+                    )
+                else:
+                    # PostgreSQL: 使用date_trunc
+                    date_trunc = func.date_trunc("month", HomeworkSubmission.created_at)
             else:  # daily
                 date_trunc = func.date(HomeworkSubmission.created_at)
 
