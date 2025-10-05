@@ -434,25 +434,47 @@ const formatTime = (timestamp: string) => {
   }
 }
 
-const renderMarkdown = async (content: string) => {
+const renderMarkdown = (content: string): string => {
+  if (!content) return ''
+
   try {
-    // 增强的Markdown渲染
+    console.log('原始内容:', content)
     let html = content
 
-    // 1. 代码块（支持语法高亮）
+    // 1. 处理LaTeX数学公式（块级公式）
+    html = html.replace(/\$\$\n?([\s\S]*?)\n?\$\$/g, (_match, formula) => {
+      const cleanFormula = formula.trim()
+      console.log('发现块级数学公式:', cleanFormula)
+      return `<div class="math-block text-center my-4"><span class="math-formula bg-gray-50 border rounded-lg px-4 py-2 inline-block font-mono text-blue-800">${cleanFormula}</span></div>`
+    })
+
+    // 2. 处理LaTeX数学公式（行内公式）
+    html = html.replace(/\$([^$\n]+)\$/g, (_match, formula) => {
+      const cleanFormula = formula.trim()
+      console.log('发现行内数学公式:', cleanFormula)
+      return `<span class="math-inline bg-blue-50 border border-blue-200 rounded px-2 py-1 font-mono text-blue-800">${cleanFormula}</span>`
+    })
+
+    // 处理不带$$符号的数学公式（特殊情况处理）
+    html = html.replace(/(y\s*=\s*ax\^?2?\s*\+\s*bx\s*\+\s*c)/gi, (match) => {
+      console.log('发现未标记的数学公式:', match)
+      return `<span class="math-inline bg-blue-50 border border-blue-200 rounded px-2 py-1 font-mono text-blue-800">${match}</span>`
+    })
+
+    // 3. 代码块（支持语法高亮）
     html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, (_match, lang, code) => {
       const language = lang || 'plaintext'
       const escapedCode = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       return `<pre class="code-block bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto my-3"><code class="language-${language}">${escapedCode}</code></pre>`
     })
 
-    // 2. 行内代码
+    // 4. 行内代码
     html = html.replace(
       /`([^`]+)`/g,
       '<code class="inline-code bg-gray-100 text-red-600 px-1.5 py-0.5 rounded text-sm font-mono">$1</code>'
     )
 
-    // 3. 标题
+    // 5. 标题
     html = html.replace(
       /^### (.*?)$/gm,
       '<h3 class="text-lg font-semibold mt-4 mb-2 text-gray-800">$1</h3>'
@@ -466,7 +488,7 @@ const renderMarkdown = async (content: string) => {
       '<h1 class="text-2xl font-bold mt-6 mb-4 text-gray-900">$1</h1>'
     )
 
-    // 4. 列表
+    // 6. 列表
     html = html.replace(/^\* (.*?)$/gm, '<li class="ml-4 mb-1">$1</li>')
     html = html.replace(/^- (.*?)$/gm, '<li class="ml-4 mb-1">$1</li>')
     html = html.replace(/^(\d+)\. (.*?)$/gm, '<li class="ml-4 mb-1">$2</li>')
@@ -477,28 +499,28 @@ const renderMarkdown = async (content: string) => {
       '<ul class="list-disc list-inside my-2 space-y-1">$&</ul>'
     )
 
-    // 5. 引用块
+    // 7. 引用块
     html = html.replace(
       /^> (.*?)$/gm,
       '<blockquote class="border-l-4 border-blue-500 pl-4 py-2 my-2 bg-blue-50 italic text-gray-700">$1</blockquote>'
     )
 
-    // 6. 粗体
+    // 8. 粗体
     html = html.replace(/\*\*(.*?)\*\*/g, "<strong class='font-semibold'>$1</strong>")
 
-    // 7. 斜体
+    // 9. 斜体
     html = html.replace(/\*(.*?)\*/g, "<em class='italic'>$1</em>")
 
-    // 8. 链接
+    // 10. 链接
     html = html.replace(
       /\[([^\]]+)\]\(([^)]+)\)/g,
       '<a href="$2" class="text-blue-600 hover:text-blue-800 underline" target="_blank" rel="noopener noreferrer">$1</a>'
     )
 
-    // 9. 水平线
+    // 11. 水平线
     html = html.replace(/^---$/gm, '<hr class="my-4 border-gray-300">')
 
-    // 10. 换行
+    // 12. 换行
     html = html.replace(/\n\n/g, "</p><p class='my-2'>")
     html = html.replace(/\n/g, '<br>')
 
@@ -593,9 +615,8 @@ const startTypingEffect = () => {
       clearInterval(typeInterval)
       isTyping.value = false
       // 打字完成后渲染Markdown
-      renderMarkdown(content).then((html) => {
-        renderedContent.value = html
-      })
+      const html = renderMarkdown(content)
+      renderedContent.value = html
     }
   }, 30)
 
@@ -627,7 +648,7 @@ onMounted(async () => {
       startTypingEffect()
     } else {
       // 历史消息直接渲染
-      renderedContent.value = await renderMarkdown(props.message.content)
+      renderedContent.value = renderMarkdown(props.message.content)
     }
   }
 })
