@@ -1,15 +1,15 @@
 # 🚀 下一步开发行动计划
 
-> **更新时间**: 2025-10-05 晚  
-> **当前阶段**: 后端开发暂停，转向前端问题处理  
-> **后端进度**: 3/7 任务完成 (TD-002 ✅、TD-003 ✅、TD-005 ✅)  
-> **策略调整**: 优先解决前端体验问题，再继续后端开发
+> **更新时间**: 2025-10-05  
+> **当前阶段**: Phase 4 - 智能上下文增强  
+> **当前任务**: TD-006 MCP 上下文构建服务开发  
+> **核心策略**: MCP 优先（精确查询）→ RAG 增强（语义检索）两阶段演进
 
 ---
 
-## ✅ 已完成任务
+## ✅ Phase 4 已完成任务 (2025-10-05)
 
-### ✅ TD-002: 知识点提取优化 (已完成 - commit fded4c4)
+### ✅ TD-002: 知识点提取优化
 
 **完成时间**: 2025-10-05  
 **实际工时**: 1 天
@@ -36,7 +36,7 @@ docs/reports/TD-002-KNOWLEDGE-EXTRACTION-PROGRESS.md ✅
 
 ---
 
-### ✅ TD-003: 知识图谱数据导入 (已完成 - commit ed21977)
+### ✅ TD-003: 知识图谱数据导入
 
 **完成时间**: 2025-10-05  
 **实际工时**: 1 天
@@ -51,7 +51,7 @@ docs/reports/TD-002-KNOWLEDGE-EXTRACTION-PROGRESS.md ✅
 
 ---
 
-### ✅ TD-005: 答案质量评估 (已完成)
+### ✅ TD-005: 答案质量评估
 
 **完成时间**: 2025-10-05  
 **实际工时**: 4 小时
@@ -99,211 +99,295 @@ docs/reports/TD-003-KNOWLEDGE-GRAPH-PROGRESS.md ✅
 
 ---
 
-## 📋 立即执行 (本周 Week 1)
+## 🔥 当前任务 (Week 2, 2025-10-06~12)
 
-### 1️⃣ 答案质量评估 (TD-005) - 🔥 当前任务
+### 1️⃣ TD-006: MCP 上下文构建服务 - 🔥 最高优先级
 
-**目标**: 实现多维度答案质量评分系统  
-**预估工时**: 8 小时 (1 天)  
-**截止日期**: 2025-10-06
+**目标**: 实现基于精确数据库查询的个性化学情上下文服务  
+**预估工时**: 16 小时 (2 天)  
+**截止日期**: 2025-10-08
+
+#### 核心功能
+
+```python
+class KnowledgeContextBuilder:
+    """MCP 上下文构建服务"""
+    
+    async def build_context(
+        self, 
+        user_id: str, 
+        subject: str,
+        session_type: str  # "learning_qa" or "homework_grading"
+    ) -> Dict[str, Any]:
+        """构建个性化学情上下文"""
+        return {
+            "weak_knowledge_points": await self._query_weak_points(user_id, subject),
+            "learning_preferences": await self._query_preferences(user_id),
+            "recent_errors": await self._query_recent_errors(user_id, subject, limit=5),
+            "mastery_stats": await self._query_mastery_stats(user_id, subject),
+        }
+```
 
 #### 任务分解
 
-- [ ] **设计评分模型** (2h)
+**Day 1 (周六, 4h)**:
 
-  - 定义评分维度 (准确性、完整性、清晰度等)
-  - 设计评分算法 (规则 + AI)
-  - 设计数据模型 (`AnswerQualityScore`)
+- [ ] **设计服务接口** (2h)
+  - 定义 `KnowledgeContextBuilder` 类结构
+  - 设计数据查询逻辑（SQL 查询）
+  - 定义返回数据结构
 
-- [ ] **实现评分服务** (4h)
+- [ ] **实现薄弱知识点查询** (2h)
+  - 查询错误率最高的知识点
+  - 应用时间衰减权重（近期错误权重更高）
+  - 按错误率排序，返回 Top 5
 
-  - 开发 `AnswerQualityService`
-  - 实现规则评分逻辑
-  - 集成百炼 AI 评分
-  - 实现结果融合
+**Day 2 (周日, 6h)**:
 
-- [ ] **测试和文档** (2h)
-  - 编写单元测试
-  - 准备测试数据
+- [ ] **实现其他查询功能** (3h)
+  - 学习偏好查询（活跃学科、难度偏好）
+  - 最近错题查询（时间倒序）
+  - 知识点掌握度统计
+
+- [ ] **集成到服务层** (2h)
+  - 在 `LearningService` 中集成
+  - 在 `HomeworkService` 中集成
+  - 传递到 `BailianService` 的 AI 上下文
+
+- [ ] **测试和优化** (1h)
+  - 编写单元测试（10+ 用例）
+  - 性能测试（查询耗时 < 50ms）
+  - SQL 查询优化（索引检查）
+
+**Day 3 (周一, 6h)**:
+
+- [ ] **端到端测试** (3h)
+  - 使用真实数据测试上下文构建
+  - 验证 AI 响应质量提升
+  - 边界情况测试（新用户、无数据）
+
+- [ ] **文档和提交** (3h)
   - 编写技术文档
+  - 代码注释和 docstring
+  - Git 提交和推送
 
 #### 关键文件
 
 ```
-src/services/answer_quality_service.py        (新建)
-src/models/answer_quality.py                  (新建)
-tests/unit/test_answer_quality.py             (新建)
-docs/reports/TD-005-ANSWER-QUALITY-PROGRESS.md (新建)
+src/services/knowledge_context_builder.py      (新建)
+src/services/learning_service.py               (修改 - 集成上下文)
+src/services/homework_service.py               (修改 - 集成上下文)
+tests/unit/test_knowledge_context_builder.py   (新建)
+docs/reports/TD-006-MCP-CONTEXT-PROGRESS.md    (新建)
 ```
 
 #### 验收标准
 
-- ✅ 支持 5+ 评分维度
-- ✅ 评分时间 < 1s
-- ✅ 人工反馈机制
-- ✅ 评分历史记录
+- ✅ 支持 4+ 类型上下文数据（薄弱点、偏好、错题、掌握度）
+- ✅ 查询性能 < 50ms（P95）
+- ✅ 集成到两个服务层（Learning + Homework）
+- ✅ 单元测试覆盖率 > 80%
+- ✅ AI 响应质量提升可验证
 
 ---
 
-## 📅 本月计划 (Week 1-4)
+## 📍 Phase 4-5 计划 (Week 2-4)
 
-### Week 1 (10/06 - 10/12) - ✅ 部分完成，后端开发暂停
+### ✅ Week 1 (10/05) - 已完成
 
-- ✅ **知识点提取优化** (1 天) - 已完成 (commit fded4c4)
-- ✅ **知识图谱数据导入** (1 天) - 已完成 (commit ed21977)
-- ✅ **答案质量评估** (4h) - 已完成 (commit 0647ec2)
-- 📋 **流式响应实现** (2 天) - **暂停**，等待前端问题解决
-- 📋 **请求缓存机制** (1 天) - **待办**
+- ✅ **TD-002 知识点提取优化** - 完成
+- ✅ **TD-003 知识图谱数据导入** - 完成
+- ✅ **TD-005 答案质量评估** - 完成
+- ✅ **前端学习问答重构** - 完成
+- ✅ **登录认证修复** - 完成
 
-**进度**: 3/5 任务完成 (60%)  
-**调整**: 转向前端问题处理，后续继续后端开发
+**成果**: 5/5 任务完成 (100%)
 
-### Week 2 (10/13 - 10/19) - 🔄 待调整
+### 🔥 Week 2 (10/06 - 10/12) - 进行中
 
-**原计划**:
+**核心任务**: MCP 上下文服务开发
 
-- 请求缓存机制
-- 知识图谱扩展
-- 答疑 API 优化
+- 🔥 **TD-006 MCP 上下文构建服务** (16h, 2-3天) - 当前任务
+- 📋 **TD-007 流式响应实现** (12h) - 待开发
+- 📋 **TD-008 请求缓存机制** (8h) - 待开发
 
-**新计划**: 根据前端问题处理结果调整
+**目标**: 实现基于精确数据库查询的个性化学情上下文
 
-### Week 3-4 - 待重新规划
+### 📋 Week 3-4 (10/13 - 10/26) - Phase 5 体验优化
 
-待前端问题解决后重新评估时间线。
+- **TD-009 错题本功能** (16h)
+- **TD-010 学情分析算法优化** (16h) - 遗忘曲线、时间衰减
+- **TD-011 知识图谱数据扩展** (24h) - 扩展到更多学科
 
 ---
 
-## 🎯 当前状态 (2025-10-05 晚)
+## 🎯 当前状态 (2025-10-05)
 
-### ✅ 本阶段已完成
+### ✅ Phase 4 已完成 (5/5 任务)
 
-- [x] **TD-002 知识点提取优化** - 完成并提交 (commit fded4c4)
-  - KnowledgeExtractionService (规则+AI 混合)
+- [x] **TD-002 知识点提取优化** - ✅ 完成
+  - 规则+AI 混合提取
   - jieba 中文分词集成
-  - 3 个学科知识词典
+  - 3 个学科知识词典（22个知识点）
   - 13 个单元测试 (100%通过)
-- [x] **TD-003 知识图谱数据导入** - 完成并提交 (commit ed21977)
-  - 数据格式规范
-  - 七年级数学数据 (25 节点+18 关系)
-  - 导入脚本 (480 行)
+
+- [x] **TD-003 知识图谱数据导入** - ✅ 完成
+  - 七年级数学知识图谱（25节点+18关系）
+  - 数据格式规范和导入脚本
   - UUID 类型兼容性修复
-- [x] **TD-005 答案质量评估** - 完成并提交 (commit 0647ec2)
-  - AnswerQualityScore 模型 (5 维度评分)
-  - AnswerQualityService (规则/AI/混合评估)
-  - 人工反馈机制
+  - 数据验证机制
+
+- [x] **TD-005 答案质量评估** - ✅ 完成
+  - 5维度评分系统
+  - 规则/AI/混合评估策略
+  - 人工反馈覆盖机制
   - 13 个单元测试 (100%通过)
-  - 完整技术文档 (2000+行)
-  - 23 个类型错误修复
 
-### 📋 后端开发暂停
+- [x] **前端学习问答重构** - ✅ 完成
+  - 通义千问极简风格
+  - KaTeX 数学公式渲染
+  - 三栏可折叠布局
 
-**暂停原因**: 转向处理前端相关问题
+- [x] **登录认证修复** - ✅ 完成
+  - refresh_token 自动续期
+  - Token 过期无缝刷新
 
-**待办任务** (后续继续):
+### 🔥 当前任务 (Week 2)
 
-- TD-006: 流式响应实现 (16h)
-- TD-007: 请求缓存机制 (8h)
-- TD-008: 知识图谱扩展
-- TD-009: 答疑 API 优化
+**TD-006: MCP 上下文构建服务开发** (进行中)
 
-### 🔥 下一步：前端问题处理
+- 目标: 实现基于精确数据库查询的个性化学情画像
+- 预估工时: 16h (2-3天)
+- 截止日期: 2025-10-08
 
-等待用户提供前端问题详情...
+### 📋 待办任务
 
-## 🎯 本周具体任务 (Day by Day)
+**Week 2 剩余任务**:
+- TD-007: 流式响应实现 (12h)
+- TD-008: 请求缓存机制 (8h)
+
+**Phase 5 任务** (Week 3-4):
+- TD-009: 错题本功能 (16h)
+- TD-010: 学情分析算法优化 (16h)
+- TD-011: 知识图谱数据扩展 (24h)
+
+**Phase 6 任务** (Week 5-8):
+- TD-012: PGVector 扩展集成 (16h)
+- TD-013: Embedding 服务对接 (8h)
+- TD-014: 语义检索服务 (12h)
+- TD-015: 混合检索策略 (12h)
+
+## 🎯 本周具体任务 (Week 2, Day by Day)
 
 ### ✅ 周六 (10/05) - 已完成
 
-- [x] TD-002 知识点提取优化
-- [x] TD-003 知识图谱数据导入
+- [x] TD-002 知识点提取优化 - ✅
+- [x] TD-003 知识图谱数据导入 - ✅
+- [x] TD-005 答案质量评估 - ✅
+- [x] 文档体系重组 - ✅
 
-### 周日 (10/06)
+### 🔥 周六 (10/06) - TD-006 Day 1
 
-**TD-005 答案质量评估**
+**目标**: 设计服务接口 + 实现薄弱知识点查询
 
-**上午 (4h)**:
+**上午 (2h)**:
+- [ ] 设计 `KnowledgeContextBuilder` 类结构
+- [ ] 定义数据查询 SQL 逻辑
+- [ ] 设计返回数据格式
 
-- [ ] 设计评分维度和权重模型
-- [ ] 创建 `AnswerQualityScore` 数据模型
-- [ ] 设计 `AnswerQualityService` 接口
-- [ ] 实现规则评分逻辑
+**下午 (2h)**:
+- [ ] 实现薄弱知识点查询（错误率 + 时间衰减）
+- [ ] 编写初步单元测试
 
-**下午 (4h)**:
+### 🔥 周日 (10/07) - TD-006 Day 2
 
-- [ ] 集成百炼 AI 评分
-- [ ] 实现评分结果融合
-- [ ] 编写单元测试 (10+ 测试用例)
+**目标**: 实现其他查询 + 集成到服务层
+
+**上午 (3h)**:
+- [ ] 学习偏好查询
+- [ ] 最近错题查询
+- [ ] 知识点掌握度统计
+
+**下午 (3h)**:
+- [ ] 集成到 `LearningService`
+- [ ] 集成到 `HomeworkService`
+- [ ] 单元测试补充和性能测试
+
+### 🔥 周一 (10/08) - TD-006 Day 3
+
+**目标**: 端到端测试 + 文档提交
+
+**上午 (3h)**:
+- [ ] 使用真实数据测试
+- [ ] 验证 AI 响应质量
+- [ ] 边界情况测试
+
+**下午 (3h)**:
 - [ ] 编写技术文档
+- [ ] 代码注释和 docstring
+- [ ] Git 提交: `feat(mcp): 实现MCP上下文构建服务`
 
-### 周一 (10/07)
+### 周二-周三 (10/09-10/10) - TD-007 & TD-008
 
-**TD-006 流式响应实现**
-
-**上午**:
-
-- [ ] 设计 SSE 接口架构
-- [ ] 实现后端流式生成器
-
-**下午**:
-
+**TD-007 流式响应** (12h):
+- [ ] 后端 SSE 实现
 - [ ] 前端 EventSource 集成
-- [ ] 实现打字机效果
-- [ ] 测试流式响应
+- [ ] 打字机效果
+
+**TD-008 请求缓存** (8h):
+- [ ] Redis 缓存策略
+- [ ] 相似度匹配算法
+- [ ] 缓存失效策略
 
 ---
 
-## ✅ 今日行动清单 (2025-10-05 晚)
+## ✅ 今日行动清单 (2025-10-05)
 
 ### ✅ 已完成
 
 - [x] TD-002 知识点提取优化 - 完成并提交
 - [x] TD-003 知识图谱数据导入 - 完成并提交
-- [x] 修复 SQLite UUID 类型问题
-- [x] 测试导入脚本 (25 节点 + 18 关系)
+- [x] TD-005 答案质量评估 - 完成并提交
+- [x] 文档体系重组 - AI-CONTEXT.md, README.md, NEXT_STEPS.md 更新
 - [x] Git 提交和推送
 
-### � 下一步 (可选 - 今晚或明天)
+**成果**: Phase 4 核心任务全部完成！5/5 任务 (100%)
 
-#### TD-005 答案质量评估 (8h)
+---
 
-**Option 1: 今晚启动 (2-3h 快速原型)**
+## 🔥 明日行动清单 (2025-10-06)
 
-- [ ] 设计评分维度和算法
+### TD-006: MCP 上下文构建服务 - Day 1
 
-  - 准确性 (Accuracy): 0-1
-  - 完整性 (Completeness): 0-1
-  - 清晰度 (Clarity): 0-1
-  - 有用性 (Usefulness): 0-1
-  - 总分: 加权平均
+**目标**: 设计服务接口 + 实现薄弱知识点查询 (4h)
 
-- [ ] 创建数据模型
+**上午 (2h)**:
+- [ ] 设计 `KnowledgeContextBuilder` 类结构
+- [ ] 定义数据查询 SQL 逻辑
+- [ ] 设计返回数据格式
 
-  ```python
-  class AnswerQualityScore(BaseModel):
-      answer_id: UUID
-      accuracy: float
-      completeness: float
-      clarity: float
-      usefulness: float
-      total_score: float
-      evaluation_method: str  # "rule" | "ai" | "hybrid"
+**下午 (2h)**:
+- [ ] 实现薄弱知识点查询
+  ```sql
+  -- 查询薄弱知识点（错误率 + 时间衰减）
+  SELECT 
+      kn.id, kn.name, 
+      COUNT(*) as error_count,
+      AVG(CASE WHEN a.is_correct = False THEN 1 ELSE 0 END) as error_rate,
+      -- 时间衰减权重: 近期错误权重更高
+      SUM(
+          CASE WHEN a.is_correct = False 
+          THEN EXP(-EXTRACT(EPOCH FROM (NOW() - a.created_at)) / 2592000) -- 30天衰减
+          ELSE 0 END
+      ) as weighted_errors
+  FROM answers a
+  JOIN knowledge_nodes kn ON a.knowledge_point_id = kn.id
+  WHERE a.user_id = $1 AND a.created_at > NOW() - INTERVAL '90 days'
+  GROUP BY kn.id
+  ORDER BY weighted_errors DESC
+  LIMIT 5
   ```
-
-- [ ] 实现基础评分逻辑
-  ```python
-  class AnswerQualityService:
-      async def evaluate_answer(
-          self, question: str, answer: str
-      ) -> AnswerQualityScore:
-          # 规则评分 + AI 评分
-          pass
-  ```
-
-**Option 2: 明天正式开始 (8h 完整实现)**
-
-- 上午: 设计 + 数据模型 + 服务框架
-- 下午: 测试 + 文档 + 提交
+- [ ] 编写初步单元测试
 
 ---
 
@@ -381,16 +465,25 @@ git commit -m "docs(quality): 添加 TD-005 技术进度报告"
 
 ---
 
-## 🎉 里程碑
+## 🎯 里程碑
 
-### Week 1 完成度: 40% (2/5 任务)
+### ✅ Phase 4 已完成: 100% (5/5 任务)
 
-- ✅ TD-002: 知识点提取优化 (commit fded4c4)
-- ✅ TD-003: 知识图谱数据导入 (commit ed21977)
-- [ ] TD-005: 答案质量评估 ← **下一个**
-- [ ] TD-006: 流式响应实现
-- [ ] TD-007: 请求缓存机制
+- ✅ TD-002: 知识点提取优化
+- ✅ TD-003: 知识图谱数据导入
+- ✅ TD-005: 答案质量评估
+- ✅ 前端学习问答重构
+- ✅ 登录认证修复
 
-**🔥 继续保持节奏！下一站：答案质量评估！**
+### 🔥 Phase 4 当前任务: Week 2
 
-**目标**: Week 1 完成 5 个核心任务，快速交付价值！
+- 🔥 TD-006: MCP 上下文构建服务 ← **当前任务**
+- 📋 TD-007: 流式响应实现
+- 📋 TD-008: 请求缓存机制
+
+**🔥 目标**: 实现基于 MCP 的个性化学情上下文，为 RAG 系统打好基础！
+
+### 📋 Phase 5-6 计划
+
+- **Phase 5** (Week 3-4): 错题本 + 学情算法优化 + 知识图谱扩展
+- **Phase 6** (Week 5-8): PGVector + Embedding + 语义检索 + 混合策略
