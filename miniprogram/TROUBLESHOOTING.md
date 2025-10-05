@@ -96,7 +96,129 @@ Error: theme.json: dark.tabBar field needs to be string
 
 ---
 
-## 问题 2: 后端 API 连接失败
+## 问题 2: tabBar 图标文件缺失 ✅ 已解决
+
+### 错误信息
+
+```
+Error: app.json or theme.json["tabBar"]["list"][0]["iconPath"]: "assets/icons/home.png" not found
+Error: app.json or theme.json["tabBar"]["list"][0]["selectedIconPath"]: "assets/icons/home-active.png" not found
+...（其他图标文件）
+```
+
+### 原因分析
+
+`app.json` 中配置的 tabBar 图标文件路径不存在。微信小程序的 tabBar 必须配置图标。
+
+### 解决方案
+
+**方法 1: 自动生成占位符图标（推荐用于快速开发）**
+
+使用项目提供的 Python 脚本生成占位符图标：
+
+```bash
+cd /Users/liguoma/my-devs/python/wuhao-tutor
+uv run python miniprogram/generate-icons.py
+```
+
+脚本会自动生成 10 个图标文件（5个功能 × 2个状态）：
+
+- home.png / home-active.png - 首页
+- homework.png / homework-active.png - 作业
+- chat.png / chat-active.png - 问答
+- report.png / report-active.png - 报告
+- profile.png / profile-active.png - 我的
+
+**方法 2: 手动准备图标**
+
+1. **下载图标**（推荐来源）：
+   - 阿里巴巴图标库：https://www.iconfont.cn/
+   - Flaticon：https://www.flaticon.com/
+   - Icons8：https://icons8.com/
+
+2. **图标规格**：
+   - 尺寸：81px × 81px（或 162px × 162px 的 2倍图）
+   - 格式：PNG，支持透明背景
+   - 颜色：普通状态 #999999，选中状态 #1890ff
+
+3. **保存位置**：`miniprogram/assets/icons/`
+
+**方法 3: 使用微信官方示例图标**
+
+```bash
+# 下载微信小程序官方示例
+git clone https://github.com/wechat-miniprogram/miniprogram-demo.git
+# 复制图标文件到项目
+```
+
+### 验证修复
+
+```bash
+# 检查图标文件
+ls -lh miniprogram/assets/icons/*.png
+
+# 应该看到 10 个 PNG 文件
+```
+
+---
+
+## 问题 3: requiredPrivateInfos 配置冲突 ✅ 已解决
+
+### 错误信息
+
+```
+Error: app.json: requiredPrivateInfos 'getFuzzyLocation' is mutually exclusive with 'getLocation'.
+File: app.json
+```
+
+### 原因分析
+
+在 `requiredPrivateInfos` 数组中，同时声明了 `getLocation`（精确定位）和 `getFuzzyLocation`（模糊定位），这两个 API 是**互斥的**，不能同时使用。
+
+### API 说明
+
+| API                | 说明     | 精度              | 隐私保护 | 使用场景         |
+| ------------------ | -------- | ----------------- | -------- | ---------------- |
+| `getLocation`      | 精确定位 | 高（±10米）       | 低       | 导航、打卡、外卖 |
+| `getFuzzyLocation` | 模糊定位 | 低（约5公里范围） | 高       | 天气、推荐、统计 |
+
+### 解决方案
+
+根据应用类型选择合适的定位API：
+
+**教育类应用（推荐使用模糊定位）**：
+
+```json
+{
+  "requiredPrivateInfos": [
+    "getFuzzyLocation", // ✅ 使用模糊定位
+    "chooseLocation",
+    "chooseAddress",
+    "choosePoi"
+  ]
+}
+```
+
+**配送/打卡类应用（需要精确定位）**：
+
+```json
+{
+  "requiredPrivateInfos": [
+    "getLocation", // ✅ 使用精确定位
+    "chooseLocation",
+    "chooseAddress",
+    "choosePoi"
+  ]
+}
+```
+
+### 我们的修复
+
+五好伴学作为教育应用，不需要精确定位，已修改为使用 `getFuzzyLocation`。
+
+---
+
+## 问题 4: 后端 API 连接失败
 
 ### 错误信息
 

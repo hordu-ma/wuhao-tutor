@@ -95,18 +95,11 @@
   },
   "requiredBackgroundModes": ["audio", "backgroundFetch"],
   "requiredPrivateInfos": [
-    "getLocation",
+    "getFuzzyLocation",
     "chooseLocation",
     "chooseAddress",
-    "choosePoi",
-    "getFuzzyLocation"
+    "choosePoi"
   ],
-  "plugins": {
-    "chatbot": {
-      "version": "1.0.0",
-      "provider": "wx8a0e8b1234567890"
-    }
-  },
   "preloadRule": {
     "pages/homework/list/index": {
       "network": "all",

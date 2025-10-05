@@ -6,7 +6,7 @@
   <!-- 卡片头部 -->
   <view class="card-header">
     <view class="subject-info">
-      <view class="subject-tag {{homework.subject}}">
+      <view class="subject-tag" data-subject="{{homework.subject}}">
         {{homework.subject}}
       </view>
       <view class="difficulty-tag {{homework.difficulty}}">

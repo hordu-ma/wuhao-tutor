@@ -60,39 +60,39 @@
   color: #fff;
 }
 
-.subject-tag.语文 {
+.subject-tag[data-subject="语文"] {
   background: linear-gradient(135deg, #ff6b6b, #ee5a52);
 }
 
-.subject-tag.数学 {
+.subject-tag[data-subject="数学"] {
   background: linear-gradient(135deg, #4ecdc4, #44a08d);
 }
 
-.subject-tag.英语 {
+.subject-tag[data-subject="英语"] {
   background: linear-gradient(135deg, #45b7d1, #2196f3);
 }
 
-.subject-tag.物理 {
+.subject-tag[data-subject="物理"] {
   background: linear-gradient(135deg, #96ceb4, #85c1e9);
 }
 
-.subject-tag.化学 {
+.subject-tag[data-subject="化学"] {
   background: linear-gradient(135deg, #feca57, #ff9ff3);
 }
 
-.subject-tag.生物 {
+.subject-tag[data-subject="生物"] {
   background: linear-gradient(135deg, #6c5ce7, #a29bfe);
 }
 
-.subject-tag.历史 {
+.subject-tag[data-subject="历史"] {
   background: linear-gradient(135deg, #fd79a8, #fdcb6e);
 }
 
-.subject-tag.地理 {
+.subject-tag[data-subject="地理"] {
   background: linear-gradient(135deg, #55a3ff, #003d82);
 }
 
-.subject-tag.政治 {
+.subject-tag[data-subject="政治"] {
   background: linear-gradient(135deg, #fd79a8, #e84393);
 }
 
