@@ -4,17 +4,17 @@
 """
 
 import asyncio
-import time
-from collections import defaultdict, deque
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Callable
-from dataclasses import dataclass
 import hashlib
 import logging
+import time
+from collections import defaultdict, deque
+from dataclasses import dataclass
+from datetime import datetime, timedelta
 from enum import Enum
+from typing import Any, Callable, Dict, List, Optional
 
-from fastapi import Request, Response, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import HTTPException, Request, Response, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
@@ -26,6 +26,7 @@ settings = get_settings()
 
 class RateLimitType(Enum):
     """限流类型枚举"""
+
     PER_IP = "per_ip"
     PER_USER = "per_user"
     PER_ENDPOINT = "per_endpoint"
@@ -35,6 +36,7 @@ class RateLimitType(Enum):
 @dataclass
 class RateLimitRule:
     """限流规则"""
+
     limit: int  # 限制次数
     window: int  # 时间窗口（秒）
     rule_type: RateLimitType
@@ -113,34 +115,34 @@ class RateLimiter:
     def _setup_default_rules(self) -> None:
         """设置默认限流规则"""
         self.rules = [
-            # IP限流：每分钟100次请求
+            # IP限流：从配置读取
             RateLimitRule(
-                limit=100,
+                limit=settings.RATE_LIMIT_PER_IP,
                 window=60,
                 rule_type=RateLimitType.PER_IP,
-                message="来自您IP地址的请求过于频繁，请稍后重试"
+                message="来自您IP地址的请求过于频繁，请稍后重试",
             ),
-            # 用户限流：每分钟50次请求
+            # 用户限流：从配置读取
             RateLimitRule(
-                limit=50,
+                limit=settings.RATE_LIMIT_PER_USER,
                 window=60,
                 rule_type=RateLimitType.PER_USER,
-                message="您的请求过于频繁，请稍后重试"
+                message="您的请求过于频繁，请稍后重试",
             ),
-            # AI服务限流：每分钟20次请求
+            # AI服务限流：从配置读取
             RateLimitRule(
-                limit=20,
+                limit=settings.RATE_LIMIT_AI_SERVICE,
                 window=60,
                 rule_type=RateLimitType.AI_SERVICE,
-                message="AI服务调用过于频繁，请稍后重试"
+                message="AI服务调用过于频繁，请稍后重试",
             ),
-            # 敏感端点限流
+            # 敏感端点限流：从配置读取
             RateLimitRule(
-                limit=10,
+                limit=settings.RATE_LIMIT_LOGIN,
                 window=60,
                 rule_type=RateLimitType.PER_ENDPOINT,
                 endpoint="/api/v1/auth/login",
-                message="登录尝试过于频繁，请稍后重试"
+                message="登录尝试过于频繁，请稍后重试",
             ),
         ]
 
@@ -148,14 +150,16 @@ class RateLimiter:
         """添加限流规则"""
         self.rules.append(rule)
 
-    def _get_key(self, request: Request, rule: RateLimitRule, user_id: Optional[str] = None) -> str:
+    def _get_key(
+        self, request: Request, rule: RateLimitRule, user_id: Optional[str] = None
+    ) -> str:
         """生成限流键"""
         if rule.rule_type == RateLimitType.PER_IP:
             return f"ip:{request.client.host if request.client else 'unknown'}"
         elif rule.rule_type == RateLimitType.PER_USER and user_id:
             return f"user:{user_id}"
         elif rule.rule_type == RateLimitType.PER_ENDPOINT and rule.endpoint:
-            ip = request.client.host if request.client else 'unknown'
+            ip = request.client.host if request.client else "unknown"
             return f"endpoint:{rule.endpoint}:ip:{ip}"
         elif rule.rule_type == RateLimitType.AI_SERVICE:
             # AI服务限流可以基于用户或IP
@@ -165,7 +169,9 @@ class RateLimiter:
                 return f"ai:ip:{request.client.host if request.client else 'unknown'}"
         return "default"
 
-    def is_allowed(self, request: Request, user_id: Optional[str] = None) -> tuple[bool, Optional[RateLimitRule], Optional[dict]]:
+    def is_allowed(
+        self, request: Request, user_id: Optional[str] = None
+    ) -> tuple[bool, Optional[RateLimitRule], Optional[dict]]:
         """检查请求是否被允许"""
         for rule in self.rules:
             # 检查端点匹配
@@ -186,22 +192,24 @@ class RateLimiter:
             if not counter.is_allowed():
                 # 返回限流信息
                 rate_limit_info = {
-                    'limit': rule.limit,
-                    'remaining': counter.get_remaining_requests(),
-                    'reset': counter.get_reset_time(),
-                    'window': rule.window
+                    "limit": rule.limit,
+                    "remaining": counter.get_remaining_requests(),
+                    "reset": counter.get_reset_time(),
+                    "window": rule.window,
                 }
                 return False, rule, rate_limit_info
 
         return True, None, None
 
-    def is_ai_service_allowed(self, user_id: Optional[str] = None, ip: Optional[str] = None) -> bool:
+    def is_ai_service_allowed(
+        self, user_id: Optional[str] = None, ip: Optional[str] = None
+    ) -> bool:
         """检查AI服务调用是否被允许"""
         key = f"ai:user:{user_id}" if user_id else f"ai:ip:{ip or 'unknown'}"
 
         if key not in self.buckets:
             # 创建令牌桶：20个令牌，每3秒补充1个
-            self.buckets[key] = TokenBucket(capacity=20, refill_rate=1/3)
+            self.buckets[key] = TokenBucket(capacity=20, refill_rate=1 / 3)
 
         return self.buckets[key].consume()
 
@@ -212,8 +220,10 @@ class RateLimiter:
 
         for key, counter in self.counters.items():
             # 如果计数器长时间没有请求，清理它
-            if (not counter.requests or
-                current_time - counter.requests[-1] > counter.window_size * 2):
+            if (
+                not counter.requests
+                or current_time - counter.requests[-1] > counter.window_size * 2
+            ):
                 keys_to_remove.append(key)
 
         for key in keys_to_remove:
@@ -261,16 +271,20 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     "details": {
                         "limit": rate_limit_info["limit"],
                         "window_seconds": rate_limit_info["window"],
-                        "retry_after": rate_limit_info["reset"] - int(time.time())
-                    }
-                }
+                        "retry_after": rate_limit_info["reset"] - int(time.time()),
+                    },
+                },
             )
 
             # 添加标准限流头
             response.headers["X-RateLimit-Limit"] = str(rate_limit_info["limit"])
-            response.headers["X-RateLimit-Remaining"] = str(rate_limit_info["remaining"])
+            response.headers["X-RateLimit-Remaining"] = str(
+                rate_limit_info["remaining"]
+            )
             response.headers["X-RateLimit-Reset"] = str(rate_limit_info["reset"])
-            response.headers["Retry-After"] = str(rate_limit_info["reset"] - int(time.time()))
+            response.headers["Retry-After"] = str(
+                rate_limit_info["reset"] - int(time.time())
+            )
 
             return response
 
@@ -280,7 +294,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # 添加限流信息头（如果有的话）
         if rate_limit_info:
             response.headers["X-RateLimit-Limit"] = str(rate_limit_info["limit"])
-            response.headers["X-RateLimit-Remaining"] = str(rate_limit_info["remaining"])
+            response.headers["X-RateLimit-Remaining"] = str(
+                rate_limit_info["remaining"]
+            )
             response.headers["X-RateLimit-Reset"] = str(rate_limit_info["reset"])
 
         return response
@@ -292,7 +308,11 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     def __init__(self, app):
         super().__init__(app)
         self.is_production = not settings.DEBUG
-        self.allowed_origins = [str(origin) for origin in settings.BACKEND_CORS_ORIGINS] if settings.BACKEND_CORS_ORIGINS else []
+        self.allowed_origins = (
+            [str(origin) for origin in settings.BACKEND_CORS_ORIGINS]
+            if settings.BACKEND_CORS_ORIGINS
+            else []
+        )
 
     async def dispatch(self, request: Request, call_next) -> Response:
         """添加安全头"""
@@ -344,30 +364,32 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
         # 生产环境额外安全头
         if self.is_production:
-            security_headers.update({
-                "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
-                "Expect-CT": "max-age=86400, enforce",
-                "Feature-Policy": (
-                    "accelerometer 'none'; "
-                    "camera 'none'; "
-                    "geolocation 'none'; "
-                    "gyroscope 'none'; "
-                    "magnetometer 'none'; "
-                    "microphone 'none'; "
-                    "payment 'none'; "
-                    "usb 'none'"
-                ),
-                "Permissions-Policy": (
-                    "accelerometer=(), "
-                    "camera=(), "
-                    "geolocation=(), "
-                    "gyroscope=(), "
-                    "magnetometer=(), "
-                    "microphone=(), "
-                    "payment=(), "
-                    "usb=()"
-                )
-            })
+            security_headers.update(
+                {
+                    "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
+                    "Expect-CT": "max-age=86400, enforce",
+                    "Feature-Policy": (
+                        "accelerometer 'none'; "
+                        "camera 'none'; "
+                        "geolocation 'none'; "
+                        "gyroscope 'none'; "
+                        "magnetometer 'none'; "
+                        "microphone 'none'; "
+                        "payment 'none'; "
+                        "usb 'none'"
+                    ),
+                    "Permissions-Policy": (
+                        "accelerometer=(), "
+                        "camera=(), "
+                        "geolocation=(), "
+                        "gyroscope=(), "
+                        "magnetometer=(), "
+                        "microphone=(), "
+                        "payment=(), "
+                        "usb=()"
+                    ),
+                }
+            )
 
         # 应用安全头
         for header, value in security_headers.items():
@@ -390,7 +412,9 @@ class AIServiceLimiter:
         self.call_count = defaultdict(int)
         self.last_reset = defaultdict(float)
 
-    async def check_limit(self, user_id: Optional[str] = None, ip: Optional[str] = None) -> bool:
+    async def check_limit(
+        self, user_id: Optional[str] = None, ip: Optional[str] = None
+    ) -> bool:
         """检查AI服务调用限制"""
         if not self.rate_limiter.is_ai_service_allowed(user_id, ip):
             logger.warning(f"AI service rate limit exceeded for user:{user_id} ip:{ip}")
@@ -402,7 +426,7 @@ class AIServiceLimiter:
         key = f"user:{user_id}" if user_id else "anonymous"
         return {
             "calls_today": self.call_count.get(key, 0),
-            "last_call": self.last_reset.get(key, 0)
+            "last_call": self.last_reset.get(key, 0),
         }
 
 
@@ -437,17 +461,18 @@ async def cleanup_rate_limiters() -> None:
 # 装饰器：AI服务调用限流
 def ai_rate_limit(func: Callable) -> Callable:
     """AI服务调用限流装饰器"""
+
     async def wrapper(*args, **kwargs):
         # 获取用户信息（这里需要根据实际情况调整）
-        user_id = kwargs.get('user_id')
+        user_id = kwargs.get("user_id")
 
         if not await ai_service_limiter.check_limit(user_id=user_id):
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail={
                     "code": "AI_SERVICE_RATE_LIMITED",
-                    "message": "AI服务调用过于频繁，请稍后重试"
-                }
+                    "message": "AI服务调用过于频繁，请稍后重试",
+                },
             )
 
         return await func(*args, **kwargs)

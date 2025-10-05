@@ -9,9 +9,7 @@
           <el-icon><Edit /></el-icon>
           上传作业
         </h1>
-        <p class="page-description">
-          拍照或选择作业图片，AI将自动批改并提供学习建议
-        </p>
+        <p class="page-description">拍照或选择作业图片，AI将自动批改并提供学习建议</p>
       </div>
     </div>
 
@@ -23,22 +21,12 @@
           </div>
         </template>
 
-        <el-form
-          ref="formRef"
-          :model="form"
-          :rules="rules"
-          label-width="100px"
-          class="upload-form"
-        >
+        <el-form ref="formRef" :model="form" :rules="rules" label-width="100px" class="upload-form">
           <!-- 基本信息 -->
           <el-row :gutter="20">
             <el-col :span="12">
               <el-form-item label="学科" prop="subject">
-                <el-select
-                  v-model="form.subject"
-                  placeholder="请选择学科"
-                  style="width: 100%"
-                >
+                <el-select v-model="form.subject" placeholder="请选择学科" style="width: 100%">
                   <el-option
                     v-for="option in HOMEWORK_SUBJECT_OPTIONS"
                     :key="option.value"
@@ -50,11 +38,7 @@
             </el-col>
             <el-col :span="12">
               <el-form-item label="年级" prop="grade_level">
-                <el-select
-                  v-model="form.grade_level"
-                  placeholder="请选择年级"
-                  style="width: 100%"
-                >
+                <el-select v-model="form.grade_level" placeholder="请选择年级" style="width: 100%">
                   <el-option
                     v-for="option in GRADE_LEVEL_OPTIONS"
                     :key="option.value"
@@ -118,7 +102,7 @@
               @click="handleSubmit"
             >
               <el-icon v-if="!homeworkStore.submitLoading"><Upload /></el-icon>
-              {{ homeworkStore.submitLoading ? "上传中..." : "提交作业" }}
+              {{ homeworkStore.submitLoading ? '上传中...' : '提交作业' }}
             </el-button>
             <el-button size="large" @click="resetForm"> 重置 </el-button>
           </el-form-item>
@@ -169,12 +153,10 @@
             </div>
             <div class="recent-info">
               <div class="recent-title">
-                {{ homework.title || "未命名作业" }}
+                {{ homework.title || '未命名作业' }}
               </div>
               <div class="recent-meta">
-                <span class="subject">{{
-                  getSubjectLabel(homework.subject)
-                }}</span>
+                <span class="subject">{{ getSubjectLabel(homework.subject) }}</span>
                 <span class="time">{{ formatTime(homework.created_at) }}</span>
                 <el-tag :type="getStatusTagType(homework.status)" size="small">
                   {{ getStatusLabel(homework.status) }}
@@ -190,23 +172,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from "vue";
-import { useRouter } from "vue-router";
-import { ElMessage, ElMessageBox } from "element-plus";
-import type { FormInstance, FormRules } from "element-plus";
-import {
-  Edit,
-  Upload,
-  InfoFilled,
-  Clock,
-  Document,
-  ArrowRight,
-} from "@element-plus/icons-vue";
-import dayjs from "dayjs";
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import type { FormInstance, FormRules } from 'element-plus'
+import { Edit, Upload, InfoFilled, Clock, Document, ArrowRight } from '@element-plus/icons-vue'
+import dayjs from 'dayjs'
 
-import FileUpload from "@/components/FileUpload.vue";
-import type { FileUploadItem } from "@/components/FileUpload.vue";
-import { useHomeworkStore } from "@/stores/homework";
+import FileUpload from '@/components/FileUpload.vue'
+import type { FileUploadItem } from '@/components/FileUpload.vue'
+import { useHomeworkStore } from '@/stores/homework'
 import {
   HOMEWORK_SUBJECT_OPTIONS,
   GRADE_LEVEL_OPTIONS,
@@ -216,33 +191,33 @@ import {
   type GradeLevel,
   type HomeworkStatus,
   type SubjectOption,
-} from "@/types/homework";
+} from '@/types/homework'
 
-const router = useRouter();
-const homeworkStore = useHomeworkStore();
+const router = useRouter()
+const homeworkStore = useHomeworkStore()
 
 // 表单引用
-const formRef = ref<FormInstance>();
-const fileUploadRef = ref();
+const formRef = ref<FormInstance>()
+const fileUploadRef = ref()
 
 // 表单数据
 const form = reactive<HomeworkSubmitRequest>({
-  subject: "" as Subject,
+  subject: '' as Subject,
   grade_level: 0 as GradeLevel,
-  title: "",
-  description: "",
+  title: '',
+  description: '',
   images: [],
-});
+})
 
 // 表单验证规则
 const rules: FormRules = {
-  subject: [{ required: true, message: "请选择学科", trigger: "change" }],
-  grade_level: [{ required: true, message: "请选择年级", trigger: "change" }],
-  images: [{ required: true, message: "请上传作业图片", trigger: "change" }],
-};
+  subject: [{ required: true, message: '请选择学科', trigger: 'change' }],
+  grade_level: [{ required: true, message: '请选择年级', trigger: 'change' }],
+  images: [{ required: true, message: '请上传作业图片', trigger: 'change' }],
+}
 
 // 文件列表
-const fileList = ref<FileUploadItem[]>([]);
+const fileList = ref<FileUploadItem[]>([])
 
 // 计算属性
 const canSubmit = computed(() => {
@@ -250,134 +225,123 @@ const canSubmit = computed(() => {
     form.subject &&
     form.grade_level &&
     fileList.value.length > 0 &&
-    fileList.value.some(
-      (item) => item.status === "success" || item.status === "waiting",
-    )
-  );
-});
+    fileList.value.some((item) => item.status === 'success' || item.status === 'waiting')
+  )
+})
 
 // 最近的作业
 const recentHomework = computed(() => {
-  return homeworkStore.homeworkList.slice(0, 5);
-});
+  return homeworkStore.homeworkList?.slice(0, 5) || []
+})
 
 // 生命周期
 onMounted(() => {
   // 获取最近的作业
-  homeworkStore.getHomeworkList({ page: 1, page_size: 5 });
-});
+  homeworkStore.getHomeworkList({ page: 1, page_size: 5 })
+})
 
 // 文件上传前的处理
 const handleBeforeUpload = (file: File): boolean => {
-  const isImage = file.type.startsWith("image/");
+  const isImage = file.type.startsWith('image/')
   if (!isImage) {
-    ElMessage.error("只能上传图片文件!");
-    return false;
+    ElMessage.error('只能上传图片文件!')
+    return false
   }
 
-  const isLt10M = file.size < 10 * 1024 * 1024;
+  const isLt10M = file.size < 10 * 1024 * 1024
   if (!isLt10M) {
-    ElMessage.error("图片大小不能超过10MB!");
-    return false;
+    ElMessage.error('图片大小不能超过10MB!')
+    return false
   }
 
-  return true;
-};
+  return true
+}
 
 // 文件变化处理
 const handleFileChange = (files: FileUploadItem[]) => {
-  fileList.value = files;
-  form.images = files.map((item) => item.file);
-};
+  fileList.value = files
+  form.images = files.map((item) => item.file)
+}
 
 // 提交作业
 const handleSubmit = async () => {
-  if (!formRef.value) return;
+  if (!formRef.value) return
 
   try {
     // 验证表单
-    await formRef.value.validate();
+    await formRef.value.validate()
 
     // 确认提交
-    await ElMessageBox.confirm(
-      "确认提交作业吗？提交后将开始AI批改。",
-      "确认提交",
-      {
-        confirmButtonText: "确认",
-        cancelButtonText: "取消",
-        type: "info",
-      },
-    );
+    await ElMessageBox.confirm('确认提交作业吗？提交后将开始AI批改。', '确认提交', {
+      confirmButtonText: '确认',
+      cancelButtonText: '取消',
+      type: 'info',
+    })
 
     // 提交作业
-    const homework = await homeworkStore.submitHomework(form);
+    const homework = await homeworkStore.submitHomework(form)
 
     if (homework) {
-      ElMessage.success("作业提交成功，正在进行AI批改...");
+      ElMessage.success('作业提交成功，正在进行AI批改...')
 
       // 跳转到作业详情页面
       router.push({
-        name: "HomeworkDetail",
+        name: 'HomeworkDetail',
         params: { id: homework.id },
-      });
+      })
     }
   } catch (error) {
-    if (error !== "cancel") {
-      console.error("提交作业失败:", error);
+    if (error !== 'cancel') {
+      console.error('提交作业失败:', error)
     }
   }
-};
+}
 
 // 重置表单
 const resetForm = () => {
-  formRef.value?.resetFields();
-  fileUploadRef.value?.clearFiles();
-  fileList.value = [];
-  form.images = [];
-};
+  formRef.value?.resetFields()
+  fileUploadRef.value?.clearFiles()
+  fileList.value = []
+  form.images = []
+}
 
 // 查看作业详情
 const viewHomework = (homeworkId: string) => {
   router.push({
-    name: "HomeworkDetail",
+    name: 'HomeworkDetail',
     params: { id: homeworkId },
-  });
-};
+  })
+}
 
 // 获取学科标签
 const getSubjectLabel = (subject: Subject) => {
-  const option = HOMEWORK_SUBJECT_OPTIONS.find(
-    (opt: SubjectOption) => opt.value === subject,
-  );
-  return option?.label || subject;
-};
+  const option = HOMEWORK_SUBJECT_OPTIONS.find((opt: SubjectOption) => opt.value === subject)
+  return option?.label || subject
+}
 
 // 获取状态标签
 const getStatusLabel = (status: HomeworkStatus): string => {
-  const option = STATUS_OPTIONS.find((opt) => opt.value === status);
-  return option?.label || status;
-};
+  const option = STATUS_OPTIONS.find((opt) => opt.value === status)
+  return option?.label || status
+}
 
 // 获取状态标签类型
 const getStatusTagType = (
-  status: HomeworkStatus,
-): "success" | "primary" | "warning" | "info" | "danger" => {
-  const typeMap: Record<
-    HomeworkStatus,
-    "success" | "primary" | "warning" | "info" | "danger"
-  > = {
-    submitted: "info",
-    processing: "warning",
-    completed: "success",
-    failed: "danger",
-  };
-  return typeMap[status] || "info";
-};
+  status: HomeworkStatus
+): 'success' | 'primary' | 'warning' | 'info' | 'danger' => {
+  const typeMap: Record<HomeworkStatus, 'success' | 'primary' | 'warning' | 'info' | 'danger'> = {
+    submitted: 'info',
+    processing: 'warning',
+    completed: 'success',
+    failed: 'danger',
+  }
+  return typeMap[status] || 'info'
+}
 
 // 格式化时间
 const formatTime = (time: string): string => {
-  return dayjs(time).format("MM-DD HH:mm");
-};
+  return dayjs(time).format('MM-DD HH:mm')
+}
 </script>
 
 <style scoped lang="scss">
