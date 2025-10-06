@@ -13,6 +13,7 @@
     "van-loading": "@vant/weapp/loading/index",
     "van-empty": "@vant/weapp/empty/index",
     "van-tag": "@vant/weapp/tag/index",
-    "ec-canvas": "/components/ec-canvas/ec-canvas"
+    "ec-canvas": "/components/ec-canvas/ec-canvas",
+    "learning-diagnosis": "/components/learning-diagnosis/index"
   }
 }

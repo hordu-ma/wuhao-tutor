@@ -176,7 +176,12 @@ class Request {
     // 移除开头的斜杠
     const path = url.startsWith('/') ? url.slice(1) : url;
 
-    // 构建完整 URL
+    // 对于以 /api 开头的路径，直接拼接
+    if (path.startsWith('api/')) {
+      return `${this.baseUrl}/${path}`;
+    }
+
+    // 对于传统路径，添加 /api/v1 前缀
     return `${this.baseUrl}/api/${this.version}/${path}`;
   }
 

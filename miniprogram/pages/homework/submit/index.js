@@ -1,7 +1,7 @@
 // pages/homework/submit/index.js - 作业提交页面
 
 const { authManager } = require('../../../utils/auth.js');
-const homeworkAPI = require('../../../api/homework.js');
+const api = require('../../../api/index.js');
 const utils = require('../../../utils/utils.js');
 const imageProcessor = require('../../../utils/image-processor.js');
 
@@ -10,6 +10,10 @@ Page({
    * 页面的初始数据
    */
   data: {
+    // API状态管理
+    apiStatus: 'loading', // loading | error | empty | success
+    errorMessage: '',
+
     // 作业信息
     homework: null,
     homeworkId: '',
@@ -155,10 +159,10 @@ Page({
    */
   async loadHomeworkInfo(homeworkId) {
     try {
-      this.setData({ loading: true });
+      this.setData({ apiStatus: 'loading' });
 
       // 调用API获取作业模板详情
-      const response = await homeworkAPI.getTemplateDetail(homeworkId);
+      const response = await api.homework.getTemplateDetail(homeworkId);
 
       if (response.success && response.data) {
         const homework = {
@@ -178,22 +182,17 @@ Page({
           homework,
           minWordCount: homework.minWords,
           maxWordCount: homework.maxWords,
+          apiStatus: 'success',
         });
       } else {
         throw new Error(response.message || '加载作业信息失败');
       }
     } catch (error) {
       console.error('加载作业信息失败:', error);
-      wx.showToast({
-        title: error.message || '加载失败',
-        icon: 'error',
+      this.setData({
+        apiStatus: 'error',
+        errorMessage: error.message || '加载失败，请重试',
       });
-      // 等待提示显示后返回上一页
-      setTimeout(() => {
-        wx.navigateBack();
-      }, 1500);
-    } finally {
-      this.setData({ loading: false });
     }
   },
 
@@ -203,7 +202,7 @@ Page({
   async loadExistingSubmission(homeworkId) {
     try {
       // 获取该作业的提交记录
-      const response = await homeworkAPI.getSubmissions({
+      const response = await api.homework.getSubmissions({
         template_id: homeworkId,
         page: 1,
         size: 1,
@@ -229,6 +228,16 @@ Page({
     } catch (error) {
       console.error('加载提交记录失败:', error);
       // 不影响主流程，静默失败
+    }
+  },
+
+  /**
+   * API状态重试
+   */
+  onApiRetry() {
+    const { homeworkId } = this.data;
+    if (homeworkId) {
+      this.loadHomeworkInfo(homeworkId);
     }
   },
 
@@ -622,7 +631,7 @@ Page({
       content: textContent.trim(),
     };
 
-    return await homeworkAPI.submitHomeworkText(submitData);
+    return await api.homework.submitHomeworkText(submitData);
   },
 
   /**
@@ -641,7 +650,7 @@ Page({
     const additionalInfo = textContent.trim() || undefined;
 
     // 提交第一张图片
-    const result = await homeworkAPI.submitHomeworkImage({
+    const result = await api.homework.submitHomeworkImage({
       template_id: homework.id,
       student_name: userInfo.name || userInfo.username || '学生',
       filePath: firstImage.url,
@@ -658,7 +667,7 @@ Page({
       const filePaths = remainingImages.map(img => img.url);
 
       // 后台继续上传剩余图片（不阻塞返回）
-      homeworkAPI
+      api.homework
         .submitHomeworkImages({
           template_id: homework.id,
           student_name: userInfo.name || userInfo.username || '学生',

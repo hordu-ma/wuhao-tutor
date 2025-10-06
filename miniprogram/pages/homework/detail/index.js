@@ -1,7 +1,7 @@
 // pages/homework/detail/index.js - 作业详情页面
 
 const { authManager } = require('../../../utils/auth.js');
-const homeworkAPI = require('../../../api/homework.js');
+const api = require('../../../api/index.js');
 const utils = require('../../../utils/utils.js');
 
 Page({
@@ -127,7 +127,7 @@ Page({
       this.setData({ loading: true, error: null });
 
       // 调用API获取作业提交详情
-      const response = await homeworkAPI.getSubmissionDetail(homeworkId);
+      const response = await api.homework.getSubmissionDetail(homeworkId);
 
       if (response.success && response.data) {
         const submission = response.data;
@@ -166,7 +166,7 @@ Page({
 
     const poll = async () => {
       try {
-        const response = await homeworkAPI.getSubmissionDetail(submissionId);
+        const response = await api.homework.getSubmissionDetail(submissionId);
 
         if (response.success && response.data) {
           const submission = response.data;
