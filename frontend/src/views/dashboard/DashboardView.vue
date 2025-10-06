@@ -95,7 +95,14 @@
           <template #header>
             <div class="card-header">
               <h3>最近活动</h3>
-              <el-button text type="primary" @click="viewAllActivities">查看全部</el-button>
+              <el-button
+                type="primary"
+                size="small"
+                class="view-all-btn"
+                @click="viewAllActivities"
+              >
+                查看全部
+              </el-button>
             </div>
           </template>
           <div class="activity-list">
@@ -532,17 +539,54 @@ onMounted(async () => {
     }
 
     .el-button--text.el-button--primary {
-      color: #409eff;
-      background-color: transparent;
-      border: none;
+      color: var(--el-color-primary) !important;
+      background-color: var(--el-color-primary-light-9);
+      border: 1px solid var(--el-color-primary-light-5);
+      border-radius: 4px;
+      padding: 6px 12px;
+      font-weight: 500;
+      font-size: 14px;
+      min-height: 32px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
 
       &:hover {
-        color: #337ecc;
-        background-color: #ecf5ff;
+        color: white !important;
+        background-color: var(--el-color-primary);
+        border-color: var(--el-color-primary);
       }
 
       &:active {
-        color: #337ecc;
+        color: white !important;
+        background-color: var(--el-color-primary-dark-2);
+        border-color: var(--el-color-primary-dark-2);
+      }
+
+      &:focus {
+        color: var(--el-color-primary) !important;
+        background-color: var(--el-color-primary-light-9);
+        border-color: var(--el-color-primary);
+      }
+    }
+
+    .view-all-btn {
+      font-size: 14px !important;
+      height: 32px !important;
+      padding: 8px 16px !important;
+      border-radius: 4px !important;
+      background-color: var(--el-color-primary) !important;
+      border-color: var(--el-color-primary) !important;
+      color: white !important;
+
+      &:hover {
+        background-color: var(--el-color-primary-light-3) !important;
+        border-color: var(--el-color-primary-light-3) !important;
+      }
+
+      &:active {
+        background-color: var(--el-color-primary-dark-2) !important;
+        border-color: var(--el-color-primary-dark-2) !important;
       }
     }
   }
