@@ -51,14 +51,20 @@ const config = {
 
   // 用户认证配置
   auth: {
-    // Token 存储键名
+    // Access Token 存储键名
     tokenKey: 'auth_token',
+    // Refresh Token 存储键名
+    refreshTokenKey: 'refresh_token',
     // 用户信息存储键名
     userInfoKey: 'user_info',
     // 用户角色存储键名
     roleKey: 'user_role',
+    // 会话ID存储键名
+    sessionIdKey: 'session_id',
     // Token 过期时间检查间隔 (毫秒)
     checkInterval: 5 * 60 * 1000, // 5分钟
+    // Token 刷新提前时间 (毫秒) - 在过期前5分钟刷新
+    refreshBeforeExpire: 5 * 60 * 1000,
   },
 
   // 小程序特定配置

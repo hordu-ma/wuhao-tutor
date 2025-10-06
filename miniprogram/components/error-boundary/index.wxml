@@ -1,0 +1,30 @@
+<view class="error-boundary">
+  
+  <!-- 内联错误显示 -->
+  <view wx:if="{{ hasError && errorDisplay === 'inline' }}" class="error-inline">
+    <view class="error-content">
+      <view class="error-icon">⚠️</view>
+      <view class="error-message">{{ errorInfo.message }}</view>
+      <view wx:if="{{ showDetails }}" class="error-details">
+        错误码: {{ errorInfo.code || 'N/A' }}
+      </view>
+      <view class="error-actions">
+        <van-button size="small" type="primary" bind:click="triggerRetry">
+          重试
+        </van-button>
+        <van-button size="small" plain bind:click="resetError">
+          忽略
+        </van-button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 正常内容 -->
+  <view wx:else class="error-boundary-content">
+    <slot></slot>
+  </view>
+
+  <!-- Toast组件 -->
+  <van-toast id="van-toast" />
+
+</view>

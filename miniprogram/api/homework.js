@@ -16,7 +16,7 @@ const homeworkAPI = {
    * @returns {Promise<{success: boolean, data: Array, message: string}>}
    */
   getTemplates(params = {}) {
-    return request.get('homework/templates', params, {
+    return request.get('api/v1/homework/templates', params, {
       showLoading: false,
     });
   },
@@ -27,7 +27,7 @@ const homeworkAPI = {
    * @returns {Promise<{success: boolean, data: Object, message: string}>}
    */
   getTemplateDetail(templateId) {
-    return request.get(`homework/templates/${templateId}`, {}, {
+    return request.get(`api/v1/homework/templates/${templateId}`, {}, {
       showLoading: true,
       loadingText: '加载中...',
     });
@@ -43,7 +43,7 @@ const homeworkAPI = {
    * @returns {Promise<{success: boolean, data: Object, message: string}>}
    */
   createTemplate(data) {
-    return request.post('homework/templates', data, {
+    return request.post('api/v1/homework/templates', data, {
       showLoading: true,
       loadingText: '创建中...',
       showError: true,
@@ -60,7 +60,7 @@ const homeworkAPI = {
    * @returns {Promise<{success: boolean, data: Object, message: string}>}
    */
   submitHomeworkText(data) {
-    return request.post('homework/submit', data, {
+    return request.post('api/v1/homework/submissions', data, {
       showLoading: true,
       loadingText: '提交中...',
       showError: true,
@@ -88,7 +88,7 @@ const homeworkAPI = {
     }
 
     return request.upload(
-      'homework/submit',
+      'api/v1/homework/submissions',
       filePath,
       'homework_file',
       formData,
@@ -161,7 +161,7 @@ const homeworkAPI = {
    * @returns {Promise<{success: boolean, data: Array, message: string}>}
    */
   getSubmissions(params = {}) {
-    return request.get('homework/submissions', params, {
+    return request.get('api/v1/homework/submissions', params, {
       showLoading: false,
     });
   },
@@ -172,7 +172,7 @@ const homeworkAPI = {
    * @returns {Promise<{success: boolean, data: Object, message: string}>}
    */
   getSubmissionDetail(submissionId) {
-    return request.get(`homework/submissions/${submissionId}`, {}, {
+    return request.get(`api/v1/homework/submissions/${submissionId}`, {}, {
       showLoading: true,
       loadingText: '加载中...',
     });
@@ -184,7 +184,7 @@ const homeworkAPI = {
    * @returns {Promise<{success: boolean, data: Object, message: string}>}
    */
   getCorrectionResult(submissionId) {
-    return request.get(`homework/submissions/${submissionId}/correction`, {}, {
+    return request.get(`api/v1/homework/submissions/${submissionId}/correction`, {}, {
       showLoading: true,
       loadingText: '获取批改结果...',
       showError: true,
@@ -257,9 +257,48 @@ const homeworkAPI = {
    * @returns {Promise<{success: boolean, message: string}>}
    */
   deleteSubmission(submissionId) {
-    return request.delete(`homework/submissions/${submissionId}`, {}, {
+    return request.delete(`api/v1/homework/submissions/${submissionId}`, {}, {
       showLoading: true,
       loadingText: '删除中...',
+      showError: true,
+    });
+  },
+
+  // ========== 兼容性方法 ==========
+  // 为了保持与旧版本小程序的兼容性，提供一些别名方法
+
+  /**
+   * 获取作业列表（兼容性方法）
+   * @param {Object} params - 查询参数
+   * @returns {Promise<{success: boolean, data: Array, message: string}>}
+   */
+  getHomeworkList(params = {}) {
+    return request.get('api/v1/homework/list', params, {
+      showLoading: false,
+    });
+  },
+
+  /**
+   * 获取作业详情（兼容性方法）
+   * @param {string} homeworkId - 作业ID
+   * @returns {Promise<{success: boolean, data: Object, message: string}>}
+   */
+  getHomeworkDetail(homeworkId) {
+    return request.get(`api/v1/homework/${homeworkId}`, {}, {
+      showLoading: true,
+      loadingText: '加载中...',
+    });
+  },
+
+  /**
+   * 开始批改作业（兼容性方法）
+   * @param {string} homeworkId - 作业ID
+   * @returns {Promise<{success: boolean, data: Object, message: string}>}
+   */
+  correctHomework(homeworkId) {
+    return request.post(`api/v1/homework/${homeworkId}/correct`, {}, {
+      showLoading: true,
+      loadingText: '批改中...',
       showError: true,
     });
   },

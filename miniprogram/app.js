@@ -3,6 +3,8 @@
 const { authManager } = require('./utils/auth.js');
 const { networkMonitor } = require('./utils/network-monitor.js');
 const { tabBarManager } = require('./utils/tabbar-manager.js');
+const { errorHandler, feedbackManager, offlineManager } = require('./utils/user-experience.js');
+const { preloadManager, memoryManager, networkOptimizer } = require('./utils/performance.js');
 
 App({
   globalData: {
@@ -11,11 +13,20 @@ App({
     role: undefined,
     systemInfo: undefined,
     isInitialized: false,
-    networkStatus: 'unknown'
+    networkStatus: 'unknown',
+    // 性能监控数据
+    performanceData: {
+      appLaunchTime: Date.now(),
+      pageLoadTimes: {},
+      apiResponseTimes: {},
+      errorCount: 0
+    }
   },
 
   onLaunch(options) {
     console.log('五好伴学小程序启动', options);
+    // 记录启动时间
+    this.globalData.performanceData.appLaunchTime = Date.now();
     this.initApp();
   },
 
@@ -33,8 +44,13 @@ App({
 
   onError(error) {
     console.error('小程序错误:', error);
-    // TODO: 错误上报
-    this.reportError(error);
+    // 使用错误处理器处理全局错误
+    errorHandler.handleError(error, {
+      type: 'app',
+      context: 'global'
+    });
+    // 错误计数
+    this.globalData.performanceData.errorCount++;
   },
 
   /**
@@ -67,6 +83,7 @@ App({
       
     } catch (error) {
       console.error('应用初始化失败:', error);
+      errorHandler.handleError(error, { type: 'app', context: 'init' });
       // 初始化失败不应该阻止应用启动
       this.globalData.isInitialized = true;
     }
@@ -75,6 +92,129 @@ App({
   /**
    * 获取系统信息
    */
+  getSystemInfo() {
+    return new Promise((resolve, reject) => {
+      wx.getSystemInfo({
+        success: (res) => {
+          this.globalData.systemInfo = res;
+          console.log('系统信息:', res);
+          resolve(res);
+        },
+        fail: (err) => {
+          console.error('获取系统信息失败:', err);
+          reject(err);
+        },
+      });
+    });
+  },
+
+  /**
+   * 初始化性能和用户体验模块
+   */
+  initPerformanceModules() {
+    try {
+      // 初始化页面监听器
+      this.initPageMonitor();
+      
+      // 初始化网络优化器
+      this.initNetworkOptimizer();
+      
+      console.log('性能和用户体验模块初始化完成');
+    } catch (error) {
+      console.error('性能模块初始化失败:', error);
+    }
+  },
+
+  /**
+   * 初始化页面监听器
+   */
+  initPageMonitor() {
+    // 监听页面加载时间
+    const originalPage = Page;
+    const app = this;
+    
+    Page = function(options) {
+      const originalOnLoad = options.onLoad;
+      const originalOnHide = options.onHide;
+      const originalOnUnload = options.onUnload;
+      
+      // 包装onLoad
+      options.onLoad = function(query) {
+        const startTime = Date.now();
+        const route = this.route || this.__route__;
+        
+        // 记录页面进入
+        memoryManager.onPageEnter(route, query);
+        
+        if (originalOnLoad) {
+          const result = originalOnLoad.call(this, query);
+          
+          // 记录加载时间
+          const loadTime = Date.now() - startTime;
+          app.globalData.performanceData.pageLoadTimes[route] = loadTime;
+          console.log(`页面加载时间: ${route} - ${loadTime}ms`);
+          
+          return result;
+        }
+      };
+      
+      // 包装onHide/onUnload
+      const handlePageLeave = function() {
+        const route = this.route || this.__route__;
+        memoryManager.onPageLeave(route);
+      };
+      
+      options.onHide = function() {
+        handlePageLeave.call(this);
+        if (originalOnHide) {
+          return originalOnHide.call(this);
+        }
+      };
+      
+      options.onUnload = function() {
+        handlePageLeave.call(this);
+        if (originalOnUnload) {
+          return originalOnUnload.call(this);
+        }
+      };
+      
+      return originalPage(options);
+    };
+  },
+
+  /**
+   * 初始化网络优化器
+   */
+  initNetworkOptimizer() {
+    // 简化版本，只做响应时间监控
+    const app = this;
+    const originalRequest = wx.request;
+    
+    wx.request = function(options) {
+      const startTime = Date.now();
+      const originalSuccess = options.success;
+      const originalFail = options.fail;
+      
+      options.success = function(res) {
+        const responseTime = Date.now() - startTime;
+        app.globalData.performanceData.apiResponseTimes[options.url] = responseTime;
+        console.log(`API响应时间: ${options.url} - ${responseTime}ms`);
+        
+        if (originalSuccess) {
+          originalSuccess(res);
+        }
+      };
+      
+      options.fail = function(err) {
+        console.error(`API请求失败: ${options.url}`, err);
+        if (originalFail) {
+          originalFail(err);
+        }
+      };
+      
+      return originalRequest(options);
+    };
+  },
   getSystemInfo() {
     return new Promise((resolve, reject) => {
       wx.getSystemInfo({

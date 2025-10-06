@@ -20,7 +20,7 @@ const learningAPI = {
    * @returns {Promise<Object>} 会话信息
    */
   createSession(params = {}, config = {}) {
-    return request.post('learning/sessions', params, {
+    return request.post('api/v1/learning/sessions', params, {
       showLoading: false,
       ...config,
     });
@@ -47,7 +47,7 @@ const learningAPI = {
     if (status) queryParams.status = status;
     if (subject) queryParams.subject = subject;
 
-    return request.get('learning/sessions', queryParams, {
+    return request.get('api/v1/learning/sessions', queryParams, {
       showLoading: false,
       ...config,
     });
@@ -61,7 +61,7 @@ const learningAPI = {
    */
   getSessionDetail(sessionId, config = {}) {
     return request.get(
-      `learning/sessions/${sessionId}`,
+      `api/v1/learning/sessions/${sessionId}`,
       {},
       {
         showLoading: false,
@@ -80,7 +80,7 @@ const learningAPI = {
    * @returns {Promise<Object>} 更新后的会话信息
    */
   updateSession(sessionId, params, config = {}) {
-    return request.put(`learning/sessions/${sessionId}`, params, {
+    return request.put(`api/v1/learning/sessions/${sessionId}`, params, {
       showLoading: false,
       ...config,
     });
@@ -94,7 +94,7 @@ const learningAPI = {
    */
   deleteSession(sessionId, config = {}) {
     return request.delete(
-      `learning/sessions/${sessionId}`,
+      `api/v1/learning/sessions/${sessionId}`,
       {},
       {
         showLoading: true,
@@ -124,7 +124,7 @@ const learningAPI = {
       });
     }
 
-    return request.post('learning/ask', params, {
+    return request.post('api/v1/learning/ask', params, {
       timeout: 30000, // 30秒超时
       showLoading: true,
       loadingText: 'AI 思考中...',
@@ -154,7 +154,7 @@ const learningAPI = {
     if (session_id) queryParams.session_id = session_id;
     if (subject) queryParams.subject = subject;
 
-    return request.get('learning/questions', queryParams, {
+    return request.get('api/v1/learning/questions', queryParams, {
       showLoading: false,
       ...config,
     });
@@ -168,7 +168,7 @@ const learningAPI = {
    */
   getQuestionDetail(questionId, config = {}) {
     return request.get(
-      `learning/questions/${questionId}`,
+      `api/v1/learning/questions/${questionId}`,
       {},
       {
         showLoading: false,
@@ -199,7 +199,7 @@ const learningAPI = {
     const queryParams = { q, limit };
     if (subject) queryParams.subject = subject;
 
-    return request.get('learning/questions/search', queryParams, {
+    return request.get('api/v1/learning/questions/search', queryParams, {
       showLoading: false,
       ...config,
     });
@@ -215,7 +215,7 @@ const learningAPI = {
    * @returns {Promise<Object>} 评价结果
    */
   rateAnswer(questionId, params, config = {}) {
-    return request.post(`learning/questions/${questionId}/rate`, params, {
+    return request.post(`api/v1/learning/questions/${questionId}/rate`, params, {
       showLoading: false,
       ...config,
     });
@@ -229,7 +229,7 @@ const learningAPI = {
    */
   favoriteQuestion(questionId, config = {}) {
     return request.post(
-      `learning/questions/${questionId}/favorite`,
+      `api/v1/learning/questions/${questionId}/favorite`,
       {},
       {
         showLoading: false,
@@ -247,7 +247,7 @@ const learningAPI = {
    */
   unfavoriteQuestion(questionId, config = {}) {
     return request.delete(
-      `learning/questions/${questionId}/favorite`,
+      `api/v1/learning/questions/${questionId}/favorite`,
       {},
       {
         showLoading: false,
@@ -299,7 +299,7 @@ const learningAPI = {
    */
   uploadQuestionImage(filePath, config = {}) {
     return request.upload(
-      'files/upload',
+      'api/v1/files/upload',
       filePath,
       'file',
       { category: 'question' },
@@ -380,7 +380,7 @@ const learningAPI = {
     if (subject) queryParams.subject = subject;
     if (grade) queryParams.grade = grade;
 
-    return request.get('learning/recommendations', queryParams, {
+    return request.get('api/v1/learning/recommendations', queryParams, {
       showLoading: false,
       ...config,
     });
@@ -417,7 +417,7 @@ const learningAPI = {
     const { limit = 5 } = params;
 
     return request.get(
-      `learning/questions/${questionId}/similar`,
+      `api/v1/learning/questions/${questionId}/similar`,
       { limit },
       {
         showLoading: false,
