@@ -178,13 +178,16 @@ import {
   DocumentChecked,
   DataAnalysis,
 } from '@element-plus/icons-vue'
+import { userAPI, type UserActivity, type UserStats } from '@/api/user'
 
 const router = useRouter()
 
 // 响应式数据
-const userStats = ref({
+const userStats = ref<UserStats>({
   totalPoints: 1250,
   studyDays: 45,
+  questions: 3,
+  pendingHomework: 2,
 })
 
 const todayStats = ref({
@@ -195,29 +198,7 @@ const todayStats = ref({
 const weekProgress = ref(75)
 const userLevel = ref('中级')
 
-const recentActivities = ref([
-  {
-    id: 1,
-    type: 'question',
-    title: '提问：三角函数的应用',
-    time: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2小时前
-    status: '已解答',
-  },
-  {
-    id: 2,
-    type: 'homework',
-    title: '数学作业：二次函数练习',
-    time: new Date(Date.now() - 5 * 60 * 60 * 1000), // 5小时前
-    status: '已批改',
-  },
-  {
-    id: 3,
-    type: 'study',
-    title: '完成英语单词学习',
-    time: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1天前
-    status: '已完成',
-  },
-])
+const recentActivities = ref<UserActivity[]>([])
 
 const quickActions = ref([
   {
@@ -292,9 +273,10 @@ const getStatusType = (status: string): 'success' | 'warning' | 'danger' | 'info
   return statusMap[status] || 'info'
 }
 
-const formatTime = (time: Date) => {
+const formatTime = (time: string | Date) => {
   const now = new Date()
-  const diff = now.getTime() - time.getTime()
+  const timeObj = typeof time === 'string' ? new Date(time) : time
+  const diff = now.getTime() - timeObj.getTime()
 
   const minutes = Math.floor(diff / (1000 * 60))
   const hours = Math.floor(diff / (1000 * 60 * 60))
@@ -341,12 +323,34 @@ const updateGoalStatus = (goal: any) => {
   }
 }
 
+// 数据获取函数
+const fetchUserStats = async () => {
+  try {
+    const stats = await userAPI.getStats()
+    userStats.value = stats
+    todayStats.value = {
+      questions: stats.questions,
+      pendingHomework: stats.pendingHomework,
+    }
+  } catch (error) {
+    console.error('获取用户统计失败:', error)
+    ElMessage.error('获取用户统计失败')
+  }
+}
+
+const fetchRecentActivities = async () => {
+  try {
+    const activities = await userAPI.getActivities(10)
+    recentActivities.value = activities
+  } catch (error) {
+    console.error('获取最近活动失败:', error)
+    ElMessage.error('获取最近活动失败')
+  }
+}
+
 // 组件挂载时获取数据
 onMounted(async () => {
-  // 这里可以调用API获取用户统计数据
-  // await fetchUserStats()
-  // await fetchRecentActivities()
-  // await fetchTodayGoals()
+  await Promise.all([fetchUserStats(), fetchRecentActivities()])
 })
 </script>
 
@@ -525,6 +529,21 @@ onMounted(async () => {
       font-size: 16px;
       font-weight: 600;
       color: var(--el-text-color-primary);
+    }
+
+    .el-button--text.el-button--primary {
+      color: #409eff;
+      background-color: transparent;
+      border: none;
+
+      &:hover {
+        color: #337ecc;
+        background-color: #ecf5ff;
+      }
+
+      &:active {
+        color: #337ecc;
+      }
     }
   }
 }

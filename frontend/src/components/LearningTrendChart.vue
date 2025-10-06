@@ -15,7 +15,13 @@
           <el-option label="最近30天" value="30d" />
           <el-option label="最近90天" value="90d" />
         </el-select>
-        <el-button size="small" :icon="Refresh" @click="refreshData" :loading="loading" circle />
+        <el-button
+          size="small"
+          :icon="Refresh"
+          @click="() => refreshData()"
+          :loading="loading"
+          circle
+        />
       </div>
     </div>
 
@@ -363,13 +369,15 @@ const handleResize = () => {
   chartInstance?.resize()
 }
 
-const refreshData = async () => {
+const refreshData = async (showMessage = true) => {
   loading.value = true
   try {
     // 模拟数据加载
     await new Promise((resolve) => setTimeout(resolve, 500))
     updateChart()
-    ElMessage.success('数据已刷新')
+    if (showMessage) {
+      ElMessage.success('数据已刷新')
+    }
   } catch (error) {
     ElMessage.error('刷新失败')
   } finally {
@@ -403,7 +411,7 @@ onMounted(() => {
   initChart()
 
   if (props.autoRefresh) {
-    setInterval(refreshData, 60000) // 每分钟刷新
+    setInterval(() => refreshData(false), 60000) // 每分钟刷新，但不显示消息
   }
 })
 

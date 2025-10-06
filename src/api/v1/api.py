@@ -13,6 +13,7 @@ from src.api.v1.endpoints import (
     homework,
     homework_compatibility,
     learning,
+    user,
 )
 
 # 创建API路由器
@@ -20,6 +21,8 @@ api_router = APIRouter()
 
 # 注册各模块路由
 api_router.include_router(auth.router, prefix="/auth", tags=["认证"])
+
+api_router.include_router(user.router, prefix="/user", tags=["用户管理"])
 
 api_router.include_router(learning.router, prefix="/learning", tags=["学习问答"])
 
