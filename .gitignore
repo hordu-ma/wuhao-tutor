@@ -60,6 +60,8 @@ deploy-package/
 # Deployment docs with sensitive info
 docs/deployment/DEPLOYMENT_INFO_FORM.md
 docs/deployment/*_GUIDE.md
+docs/deployment/*_SETUP.md
+docs/deployment/*_HELP.md
 docs/deployment/TEST_ACCOUNTS.md
 
 # Nginx backups
