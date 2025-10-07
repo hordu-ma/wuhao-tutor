@@ -40,10 +40,10 @@ node_modules/
 *.sqlite3
 
 # Environment variables
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env
+.env.*
+!.env.example
+!.env.production.example
 
 # Coverage reports
 coverage/
@@ -53,3 +53,14 @@ coverage/
 # Temporary files
 tmp/
 temp/
+archive/
+deploy-prod.tar.gz
+deploy-package/
+
+# Deployment docs with sensitive info
+docs/deployment/DEPLOYMENT_INFO_FORM.md
+docs/deployment/*_GUIDE.md
+docs/deployment/TEST_ACCOUNTS.md
+
+# Nginx backups
+nginx/*.bak
