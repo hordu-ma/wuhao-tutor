@@ -31,8 +31,18 @@
     <view class="empty-tip">完成作业或提问后，这里将展示您的学习报告</view>
   </view>
 
-  <!-- 报告内容 -->
-  <view wx:else class="report-content">
+  <!-- 学情诊断报告组件 -->
+  <learning-diagnosis 
+    wx:if="{{!loading && hasData && reportData}}"
+    report-data="{{reportData}}"
+    show-actions="{{true}}"
+    bind:exportReport="onExportReport"
+    bind:shareReport="onShareReport"
+    bind:refreshData="onRefreshData"
+  />
+
+  <!-- 报告内容 (保留原有内容作为备用) -->
+  <view wx:else-if="{{!loading && hasData}}" class="report-content">
     <!-- 学习概览 -->
     <view class="section overview-section">
       <view class="section-header">
@@ -209,7 +219,7 @@
     </view>
 
     <!-- 最后更新时间 -->
-    <view class="report-footer">
+    <view class="report-footer" wx:if="{{!loading && hasData}}">
       <text class="update-time">更新于 {{formattedUpdateTime}}</text>
     </view>
   </view>

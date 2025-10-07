@@ -1,0 +1,24 @@
+<view class="network-status {{ position === 'inline' ? 'inline' : 'fixed-' + position }}">
+  
+  <!-- 网络状态通知 -->
+  <van-notice-bar 
+    wx:if="{{ showNotice }}"
+    text="{{ noticeText }}"
+    mode="{{ closable ? 'closeable' : '' }}"
+    color="{{ noticeType === 'error' ? '#f5222d' : (noticeType === 'warning' ? '#faad14' : '#1890ff') }}"
+    background="{{ noticeType === 'error' ? '#fff2f0' : (noticeType === 'warning' ? '#fffbe6' : '#e6f7ff') }}"
+    bind:close="onClose"
+    bind:click="onNoticeClick"
+  />
+
+  <!-- 内联网络状态显示 -->
+  <view wx:if="{{ position === 'inline' }}" class="network-inline">
+    <view class="network-info">
+      <text class="network-icon">{{ getNetworkIcon(networkType, isConnected) }}</text>
+      <text class="network-text">{{ getNetworkTypeDesc(networkType) }}</text>
+      <text wx:if="{{ !isConnected }}" class="network-status offline">离线</text>
+      <text wx:else class="network-status online">在线</text>
+    </view>
+  </view>
+
+</view>

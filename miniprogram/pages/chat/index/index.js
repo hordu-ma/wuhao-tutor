@@ -4,11 +4,25 @@ const { routeGuard } = require('../../../utils/route-guard.js');
 const { authManager } = require('../../../utils/auth.js');
 const { permissionManager } = require('../../../utils/permission-manager.js');
 const { roleManager } = require('../../../utils/role-manager.js');
+const { mcpService } = require('../../../utils/mcp-service.js');
 const api = require('../../../api/index.js');
 const utils = require('../../../utils/utils.js');
 
 Page({
   data: {
+    // API状态管理
+    apiStatus: 'success', // loading | error | empty | success
+    errorMessage: '',
+
+    // MCP上下文增强
+    mcpEnabled: true,
+    personalizedContext: {
+      learningStyle: '', // 学习风格
+      weaknessPoints: [], // 薄弱知识点
+      recentErrors: [], // 最近错题
+      preferences: {}, // 学习偏好
+    },
+
     // 用户信息
     userInfo: null,
     userRole: '',
@@ -108,6 +122,7 @@ Page({
       await this.initUserInfo();
       await this.initPermissions();
       await this.initSession();
+      await this.initMCPContext();
       await this.initChat();
       this.initNetworkMonitor();
       await this.loadRecommendedQuestions();
@@ -233,6 +248,36 @@ Page({
         canView: true,
         canModerate: false
       });
+    }
+  },
+
+  /**
+   * 初始化MCP个性化上下文
+   */
+  async initMCPContext() {
+    try {
+      if (!this.data.mcpEnabled) return;
+
+      const { userInfo } = this.data;
+      if (!userInfo || !userInfo.id) return;
+
+      // 获取个性化学习上下文
+      const context = await mcpService.getPersonalizedContext(userInfo.id);
+      
+      this.setData({
+        personalizedContext: {
+          learningStyle: context.learningStyle,
+          weaknessPoints: context.weaknessPoints,
+          recentErrors: context.recentErrors,
+          preferences: context.preferences,
+        }
+      });
+
+      console.log('MCP上下文初始化成功:', context);
+    } catch (error) {
+      console.error('MCP上下文初始化失败:', error);
+      // MCP失败不影响正常功能
+      this.setData({ mcpEnabled: false });
     }
   },
 
@@ -522,7 +567,7 @@ Page({
       this.scrollToBottom();
 
       // 发送到服务器
-      const response = await api.chat.sendMessage({
+      const response = await this.sendMessageWithMCP({
         session_id: this.data.sessionId,
         content: inputText,
         type: 'text',
@@ -592,6 +637,62 @@ Page({
 
     } finally {
       this.setData({ sending: false });
+    }
+  },
+
+  /**
+   * 带MCP增强的发送消息
+   */
+  async sendMessageWithMCP(messageData) {
+    try {
+      let enhancedMessage = { ...messageData };
+
+      // 如果MCP启用，添加个性化上下文
+      if (this.data.mcpEnabled && this.data.personalizedContext) {
+        const { userInfo, personalizedContext } = this.data;
+        
+        // 分析问题类型
+        const questionType = await mcpService.analyzeQuestionType(messageData.content);
+        
+        // 构建个性化上下文
+        const contextPrompt = mcpService.buildContextPrompt(
+          personalizedContext, 
+          messageData.content
+        );
+        
+        // 增强消息内容
+        if (contextPrompt) {
+          enhancedMessage.enhanced_prompt = contextPrompt;
+          enhancedMessage.question_type = questionType;
+          enhancedMessage.user_context = {
+            learning_style: personalizedContext.learningStyle,
+            weakness_points: personalizedContext.weaknessPoints.slice(0, 3),
+            recent_subjects: personalizedContext.preferences.preferred_subjects || [],
+          };
+        }
+        
+        console.log('MCP增强上下文:', enhancedMessage.user_context);
+      }
+
+      // 调用API
+      const response = await api.learning.askQuestion(enhancedMessage);
+      
+      // 记录学习行为
+      if (response.success && this.data.mcpEnabled) {
+        setTimeout(() => {
+          mcpService.updateLearningBehavior(
+            response.data.ai_message_id,
+            enhancedMessage.question_type || 'general',
+            true // 默认有帮助，后续可根据用户评价更新
+          );
+        }, 1000);
+      }
+      
+      return response;
+    } catch (error) {
+      console.error('MCP增强发送失败:', error);
+      // 回退到普通发送
+      return await api.learning.askQuestion(messageData);
     }
   },
 

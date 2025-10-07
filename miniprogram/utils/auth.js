@@ -30,17 +30,24 @@ function getSecuritySystem() {
 class AuthManager {
   constructor() {
     this.tokenKey = config.auth.tokenKey;
+    this.refreshTokenKey = config.auth.refreshTokenKey || 'refreshToken';
     this.userInfoKey = config.auth.userInfoKey;
     this.roleKey = config.auth.roleKey;
+    this.sessionIdKey = config.auth.sessionIdKey || 'sessionId';
     this.checkInterval = config.auth.checkInterval;
 
     // 当前用户信息缓存
     this.currentUser = null;
     this.currentToken = null;
+    this.currentRefreshToken = null;
     this.currentRole = null;
+    this.currentSessionId = null;
 
     // Token检查定时器
     this.checkTimer = null;
+    // 自动刷新状态
+    this.isRefreshing = false;
+    this.refreshPromise = null;
 
     // 初始化
     this.init();
@@ -69,18 +76,34 @@ class AuthManager {
   async restoreUserSession() {
     try {
       const token = await storage.get(this.tokenKey);
+      const refreshToken = await storage.get(this.refreshTokenKey);
       const userInfo = await storage.get(this.userInfoKey);
       const role = await storage.get(this.roleKey);
+      const sessionId = await storage.get(this.sessionIdKey);
 
       if (token && userInfo) {
         this.currentToken = token;
+        this.currentRefreshToken = refreshToken;
         this.currentUser = userInfo;
         this.currentRole = role || 'student';
+        this.currentSessionId = sessionId;
 
         console.log('用户会话恢复成功', {
           userId: userInfo.id,
-          role: this.currentRole
+          role: this.currentRole,
+          hasRefreshToken: !!refreshToken
         });
+
+        // 检查Token是否需要刷新
+        const isValid = await this.isTokenValid();
+        if (!isValid && refreshToken) {
+          console.log('Access token过期，尝试自动刷新');
+          try {
+            await this.refreshToken();
+          } catch (error) {
+            console.warn('自动刷新Token失败，需要重新登录', error);
+          }
+        }
 
         return true;
       }
@@ -121,34 +144,49 @@ class AuthManager {
       if (response.success) {
         const { token, userInfo, role, refreshToken } = response.data;
 
-        // 5. 执行安全登录流程
-        const securitySystem = getSecuritySystem();
-        const secureLoginResult = await securitySystem.performSecureLogin({
-          token,
-          userInfo,
-          role,
-          refreshToken,
-          deviceInfo: loginData.deviceInfo,
-          loginMethod: 'wechat'
-        });
+        // 4. 调用后端登录接口
+        const response = await this.callLoginAPI(loginData);
 
-        if (!secureLoginResult.success) {
-          throw new Error(secureLoginResult.message || '安全验证失败');
+        if (response.success) {
+          const { access_token, refresh_token, user, session_id } = response.data;
+          const userInfo = user;
+          const role = user.role || 'student';
+
+          // 5. 执行安全登录流程
+          const securitySystem = getSecuritySystem();
+          const secureLoginResult = await securitySystem.performSecureLogin({
+            token: access_token,
+            userInfo,
+            role,
+            refreshToken: refresh_token,
+            sessionId: session_id,
+            deviceInfo: loginData.deviceInfo,
+            loginMethod: 'wechat'
+          });
+
+          if (!secureLoginResult.success) {
+            throw new Error(secureLoginResult.message || '安全验证失败');
+          }
+
+          // 6. 保存登录信息
+          await this.saveUserSession(access_token, refresh_token, userInfo, role, session_id);
+
+          console.log('微信登录成功', { userId: userInfo.id, role });
+
+          return {
+            success: true,
+            data: { 
+              access_token, 
+              refresh_token, 
+              user: userInfo, 
+              role, 
+              session_id 
+            },
+            securityInfo: secureLoginResult.securityInfo
+          };
+        } else {
+          throw new Error(response.error?.message || '登录失败');
         }
-
-        // 6. 保存登录信息
-        await this.saveUserSession(token, userInfo, role);
-
-        console.log('微信登录成功', { userId: userInfo.id, role });
-
-        return {
-          success: true,
-          data: { token, userInfo, role },
-          securityInfo: secureLoginResult.securityInfo
-        };
-      } else {
-        throw new Error(response.error?.message || '登录失败');
-      }
     } catch (error) {
       console.error('微信登录失败', error);
 
@@ -210,18 +248,14 @@ class AuthManager {
   async callLoginAPI(loginData) {
     try {
       const response = await getApiClient().request({
-        url: '/auth/wechat-login',
+        url: '/api/v1/auth/wechat-login',
         method: 'POST',
         data: loginData,
         skipAuth: true, // 登录请求不需要认证头
         timeout: config.api.timeout || 10000
       });
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        return response.data;
-      } else {
-        throw new Error(`HTTP ${response.statusCode}: ${response.data?.message || '请求失败'}`);
-      }
+      return response;
     } catch (error) {
       console.error('调用登录API失败:', error);
       throw new Error('调用登录API失败: ' + error.message);
@@ -231,19 +265,31 @@ class AuthManager {
   /**
    * 保存用户会话信息
    */
-  async saveUserSession(token, userInfo, role = 'student') {
+  async saveUserSession(accessToken, refreshToken, userInfo, role = 'student', sessionId) {
     try {
       // 保存到内存
-      this.currentToken = token;
+      this.currentToken = accessToken;
+      this.currentRefreshToken = refreshToken;
       this.currentUser = userInfo;
       this.currentRole = role;
+      this.currentSessionId = sessionId;
 
       // 保存到本地存储
-      await Promise.all([
-        storage.set(this.tokenKey, token),
+      const savePromises = [
+        storage.set(this.tokenKey, accessToken),
         storage.set(this.userInfoKey, userInfo),
         storage.set(this.roleKey, role)
-      ]);
+      ];
+
+      if (refreshToken) {
+        savePromises.push(storage.set(this.refreshTokenKey, refreshToken));
+      }
+      
+      if (sessionId) {
+        savePromises.push(storage.set(this.sessionIdKey, sessionId));
+      }
+
+      await Promise.all(savePromises);
 
       console.log('用户会话保存成功');
     } catch (error) {
@@ -266,6 +312,42 @@ class AuthManager {
       return token;
     } catch (error) {
       console.error('获取Token失败', error);
+      return null;
+    }
+  }
+
+  /**
+   * 获得刷新Token
+   */
+  async getRefreshToken() {
+    if (this.currentRefreshToken) {
+      return this.currentRefreshToken;
+    }
+
+    try {
+      const refreshToken = await storage.get(this.refreshTokenKey);
+      this.currentRefreshToken = refreshToken;
+      return refreshToken;
+    } catch (error) {
+      console.error('获取刷新Token失败', error);
+      return null;
+    }
+  }
+
+  /**
+   * 获得会话ID
+   */
+  async getSessionId() {
+    if (this.currentSessionId) {
+      return this.currentSessionId;
+    }
+
+    try {
+      const sessionId = await storage.get(this.sessionIdKey);
+      this.currentSessionId = sessionId;
+      return sessionId;
+    } catch (error) {
+      console.error('获取会话ID失败', error);
       return null;
     }
   }
@@ -437,32 +519,59 @@ class AuthManager {
    * 刷新Token
    */
   async refreshToken() {
-    try {
-      const currentToken = await this.getToken();
+    // 防止并发刷新
+    if (this.isRefreshing) {
+      return this.refreshPromise;
+    }
 
-      if (!currentToken) {
-        throw new Error('没有有效的Token');
+    this.isRefreshing = true;
+    this.refreshPromise = this._performRefreshToken();
+
+    try {
+      const result = await this.refreshPromise;
+      return result;
+    } finally {
+      this.isRefreshing = false;
+      this.refreshPromise = null;
+    }
+  }
+
+  /**
+   * 执行刷新Token操作
+   */
+  async _performRefreshToken() {
+    try {
+      const currentRefreshToken = await this.getRefreshToken();
+
+      if (!currentRefreshToken) {
+        throw new Error('没有有效的刷新Token');
       }
 
       const response = await getApiClient().request({
-        url: '/auth/refresh-token',
+        url: '/api/v1/auth/refresh-token',
         method: 'POST',
-        header: {
-          'Authorization': `Bearer ${currentToken}`
+        data: {
+          refresh_token: currentRefreshToken
         },
+        skipAuth: true, // 刷新请求不需要access token
         timeout: config.api.timeout || 10000
       });
 
-      if (response.statusCode >= 200 && response.statusCode < 300 && response.data.success) {
-        const { token, userInfo } = response.data.data;
+      if (response.success) {
+        const { access_token, refresh_token, user, session_id } = response.data;
 
         // 更新Token和用户信息
-        await this.saveUserSession(token, userInfo, this.currentRole);
+        await this.saveUserSession(access_token, refresh_token, user, user.role, session_id);
 
         console.log('Token刷新成功');
-        return { token, userInfo };
+        return { 
+          access_token, 
+          refresh_token, 
+          user, 
+          session_id 
+        };
       } else {
-        throw new Error(response.data?.error?.message || 'Token刷新失败');
+        throw new Error(response.error?.message || 'Token刷新失败');
       }
     } catch (error) {
       console.error('刷新Token失败', error);
@@ -507,15 +616,27 @@ class AuthManager {
     try {
       // 清理内存
       this.currentToken = null;
+      this.currentRefreshToken = null;
       this.currentUser = null;
       this.currentRole = null;
+      this.currentSessionId = null;
 
       // 清理本地存储
-      await Promise.all([
+      const removePromises = [
         storage.remove(this.tokenKey),
         storage.remove(this.userInfoKey),
         storage.remove(this.roleKey)
-      ]);
+      ];
+
+      // 清理可选的存储项
+      try {
+        await storage.remove(this.refreshTokenKey);
+        await storage.remove(this.sessionIdKey);
+      } catch (error) {
+        // 忽略清理可选项的错误
+      }
+
+      await Promise.all(removePromises);
 
       // 停止Token检查
       this.stopTokenCheck();
