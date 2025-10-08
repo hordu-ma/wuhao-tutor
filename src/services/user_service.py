@@ -601,7 +601,7 @@ class UserService:
             "device_id": device_id,
             "access_token_jti": access_token_jti,
             "refresh_token_jti": refresh_token_jti,
-            "expires_at": expires_at.isoformat(),
+            "expires_at": expires_at,
             "ip_address": ip_address,
             "user_agent": user_agent,
             "is_revoked": False,

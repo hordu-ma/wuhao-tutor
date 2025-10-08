@@ -1,10 +1,24 @@
 # Python-generated files
 __pycache__/
 *.py[oc]
+*.pyd
+.Python
 build/
 dist/
 wheels/
 *.egg-info
+
+# Python tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.ipynb_checkpoints/
+.dmypy.json
+dmypy.json
+.tox/
+.nox/
+htmlcov/
 
 # Virtual environments
 .venv
@@ -18,9 +32,17 @@ frontend.log
 # IDE and editor files
 .vscode/
 .idea/
+.cursor/
+.windsurf/
 *.swp
 *.swo
 *~
+
+# AI/Development tools
+.qoder/
+.serena/
+.playwright-mcp/
+AI-CONTEXT.md
 
 # OS generated files
 .DS_Store
@@ -48,14 +70,27 @@ node_modules/
 # Coverage reports
 coverage/
 .coverage
+.coverage.*
 .nyc_output
+htmlcov/
+
+# Task scheduling (if used)
+celerybeat-schedule
+celerybeat.pid
 
 # Temporary files
 tmp/
 temp/
 archive/
 deploy-prod.tar.gz
+deploy-package.tar.gz
 deploy-package/
+*.bak
+*.orig
+
+# Uploads and backups
+uploads/
+backups/
 
 # Deployment docs with sensitive info
 docs/deployment/DEPLOYMENT_INFO_FORM.md

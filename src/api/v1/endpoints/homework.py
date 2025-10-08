@@ -376,6 +376,24 @@ async def get_submissions(
         )
 
     except Exception as e:
+        # 处理数据库表不存在的情况
+        error_msg = str(e).lower()
+        if "does not exist" in error_msg or "undefinedtable" in error_msg:
+            logger.warning(f"作业表不存在，返回空列表: {e}")
+            # 返回空列表
+            response_data = {
+                "items": [],
+                "pagination": {
+                    "total": 0,
+                    "page": page,
+                    "size": size,
+                    "pages": 0,
+                },
+            }
+            return DataResponse[Dict[str, Any]](
+                success=True, data=response_data, message="暂无作业数据"
+            )
+
         logger.error(f"获取作业提交列表失败: {e}")
         raise HTTPException(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -982,6 +1000,29 @@ async def get_homework_stats(
         # 重新抛出HTTP异常
         raise
     except Exception as e:
+        # 处理数据库表不存在的情况
+        error_msg = str(e).lower()
+        if "does not exist" in error_msg or "undefinedtable" in error_msg:
+            logger.warning(f"作业统计表不存在，返回默认数据: {e}")
+            # 返回默认统计数据
+            default_stats = {
+                "total": 0,
+                "completed": 0,
+                "processing": 0,
+                "failed": 0,
+                "by_subject": [],
+                "by_grade": [],
+                "time_trend": [],
+                "recent_performance": {
+                    "avg_score": 0,
+                    "completion_rate": 0,
+                    "improvement_trend": "stable",
+                },
+            }
+            return DataResponse[Dict[str, Any]](
+                success=True, data=default_stats, message="暂无统计数据"
+            )
+
         logger.error(f"获取作业统计失败 - user_id: {current_user_id}, error: {e}")
         raise HTTPException(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,

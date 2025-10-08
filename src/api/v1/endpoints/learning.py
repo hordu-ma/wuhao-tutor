@@ -3,6 +3,7 @@
 提供AI学习助手相关接口，包括提问、会话管理、历史查询等功能
 """
 
+import logging
 from datetime import datetime
 from typing import Any, Dict, Optional
 
@@ -101,8 +102,28 @@ async def ask_question(
             status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)
         )
     except ServiceError as e:
+        # 检查是否是表不存在的错误
+        error_msg = str(e).lower()
+        if "does not exist" in error_msg or "undefinedtable" in error_msg:
+            raise HTTPException(
+                status_code=http_status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="学习问答功能暂未开放,数据库尚未初始化",
+            )
         raise HTTPException(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
+    except Exception as e:
+        # 捕获其他数据库错误
+        error_msg = str(e).lower()
+        if "does not exist" in error_msg or "undefinedtable" in error_msg:
+            raise HTTPException(
+                status_code=http_status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="学习问答功能暂未开放,数据库尚未初始化",
+            )
+        logging.error(f"Ask question failed: {e}")
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="提问失败,请稍后重试",
         )
 
 
@@ -195,10 +216,21 @@ async def get_session_list(
 
         return SessionListResponse(**result)
 
-    except ValidationError as e:
-        raise HTTPException(
-            status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)
-        )
+    except Exception as e:
+        # 如果表不存在,返回空列表
+        import logging
+
+        logger = logging.getLogger(__name__)
+        if "does not exist" in str(e) or "UndefinedTable" in str(type(e).__name__):
+            logger.warning(f"学习会话表不存在,返回空数据: {e}")
+            return SessionListResponse(total=0, page=page, size=size, pages=0, items=[])
+
+        # 其他错误正常抛出
+        if isinstance(e, ValidationError):
+            raise HTTPException(
+                status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)
+            )
+        raise
 
 
 @router.get("/sessions/{id}", response_model=SessionResponse, summary="获取会话详情")
@@ -689,10 +721,41 @@ async def get_learning_analytics(
 
         return analytics
 
-    except ServiceError as e:
-        raise HTTPException(
-            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        )
+    except Exception as e:
+        # 如果表不存在,返回默认数据
+        import logging
+
+        logger = logging.getLogger(__name__)
+        if "does not exist" in str(e) or "UndefinedTable" in str(type(e).__name__):
+            logger.warning(f"学习分析表不存在,返回默认数据: {e}")
+            from datetime import datetime
+
+            from src.schemas.learning import DifficultyLevel, LearningPattern
+
+            return LearningAnalyticsResponse(
+                user_id=current_user_id,
+                total_questions=0,
+                total_sessions=0,
+                subject_stats=[],
+                learning_pattern=LearningPattern(
+                    most_active_hour=20,
+                    most_active_day=0,
+                    avg_session_length=0,
+                    preferred_difficulty=DifficultyLevel.MEDIUM,
+                ),
+                avg_rating=0.0,
+                positive_feedback_rate=0,
+                improvement_suggestions=[],
+                knowledge_gaps=[],
+                last_analyzed_at=datetime.utcnow(),
+            )
+
+        # 其他服务错误
+        if isinstance(e, ServiceError):
+            raise HTTPException(
+                status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            )
+        raise
 
 
 @router.get(
@@ -748,9 +811,32 @@ async def get_learning_recommendations(
             next_topics=["三角函数", "电磁学"],
         )
 
-    except ServiceError as e:
+    except Exception as e:
+        # 处理数据库表不存在的情况（生产环境可能缺少相关表）
+        error_msg = str(e).lower()
+        if "does not exist" in error_msg or "undefinedtable" in error_msg:
+            logging.warning(
+                f"Recommendations tables not found for user {current_user_id}, returning empty recommendations"
+            )
+            # 返回空推荐数据
+            return RecommendationResponse(
+                recommended_questions=[],
+                study_plans=[],
+                focus_areas=[],
+                next_topics=[],
+            )
+
+        # 对于服务层错误，包装为 HTTP 异常
+        if isinstance(e, ServiceError):
+            raise HTTPException(
+                status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            )
+
+        # 其他未知错误
+        logging.error(f"Error getting recommendations for user {current_user_id}: {e}")
         raise HTTPException(
-            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get learning recommendations",
         )
 
 

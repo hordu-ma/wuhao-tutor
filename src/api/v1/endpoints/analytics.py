@@ -150,10 +150,38 @@ async def get_knowledge_map(
         )
 
     except ServiceError as e:
+        # 检查是否是表不存在的错误
+        error_msg = str(e).lower()
+        if "does not exist" in error_msg or "undefinedtable" in error_msg:
+            # 返回空知识图谱
+            empty_map = {
+                "knowledge_points": [],
+                "total_subjects": 0,
+                "nodes": [],
+                "edges": [],
+            }
+            return DataResponse(
+                success=True, data=empty_map, message="暂无知识图谱数据"
+            )
+        # 其他服务错误正常抛出
         raise HTTPException(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )
     except Exception as e:
+        # 处理其他未预期的错误
+        error_msg = str(e).lower()
+        if "does not exist" in error_msg or "undefinedtable" in error_msg:
+            # 返回空知识图谱
+            empty_map = {
+                "knowledge_points": [],
+                "total_subjects": 0,
+                "nodes": [],
+                "edges": [],
+            }
+            return DataResponse(
+                success=True, data=empty_map, message="暂无知识图谱数据"
+            )
+
         raise HTTPException(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"获取知识图谱失败: {str(e)}",

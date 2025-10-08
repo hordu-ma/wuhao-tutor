@@ -214,7 +214,12 @@ class AuthService:
 
             # 构建响应
             # 构建用户响应数据
-            user_response = UserResponse.model_validate(user)
+            # 手动转换UUID为字符串以避免Pydantic验证问题
+            user_dict = {
+                **{k: v for k, v in user.__dict__.items() if not k.startswith("_")},
+                "id": str(user.id),  # 确保ID是字符串
+            }
+            user_response = UserResponse.model_validate(user_dict)
 
             response = LoginResponse(
                 access_token=access_token,
@@ -328,7 +333,12 @@ class AuthService:
             )
 
             # 构建响应
-            user_response = UserResponse.model_validate(user)
+            # 手动转换UUID为字符串
+            user_dict = {
+                **{k: v for k, v in user.__dict__.items() if not k.startswith("_")},
+                "id": str(user.id),
+            }
+            user_response = UserResponse.model_validate(user_dict)
 
             response = LoginResponse(
                 access_token=access_token,

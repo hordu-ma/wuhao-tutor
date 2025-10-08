@@ -7,6 +7,10 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Test scripts (temporary debugging files)
+test-*.js
+test-*.ts
+
 # Runtime data
 pids
 *.pid

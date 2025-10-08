@@ -199,6 +199,14 @@ class QuestionResponse(QuestionBase):
     created_at: datetime
     updated_at: datetime
 
+    @field_validator("id", "session_id", "user_id", mode="before")
+    @classmethod
+    def convert_uuid_to_str(cls, v):
+        """将UUID对象转换为字符串"""
+        if v is None:
+            return None
+        return str(v)
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -215,6 +223,14 @@ class AnswerResponse(AnswerBase):
     is_helpful: Optional[bool] = None
     created_at: datetime
     updated_at: datetime
+
+    @field_validator("id", "question_id", mode="before")
+    @classmethod
+    def convert_uuid_to_str(cls, v):
+        """将UUID对象转换为字符串"""
+        if v is None:
+            return None
+        return str(v)
 
     @field_validator("related_topics", mode="before")
     @classmethod
@@ -260,6 +276,14 @@ class SessionResponse(SessionBase):
     last_active_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
+
+    @field_validator("id", "user_id", mode="before")
+    @classmethod
+    def convert_uuid_to_str(cls, v):
+        """将UUID对象转换为字符串"""
+        if v is None:
+            return None
+        return str(v)
 
     model_config = ConfigDict(from_attributes=True)
 

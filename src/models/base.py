@@ -55,7 +55,9 @@ class BaseModel(Base):
     created_at = Column(
         DateTime(timezone=True) if not is_sqlite else String(50),  # type: ignore
         server_default=func.now() if not is_sqlite else None,
-        default=lambda: datetime.utcnow().isoformat() if is_sqlite else None,
+        default=lambda: (
+            datetime.utcnow() if not is_sqlite else datetime.utcnow().isoformat()
+        ),
         nullable=False,
         comment="创建时间",
     )
@@ -65,7 +67,9 @@ class BaseModel(Base):
         DateTime(timezone=True) if not is_sqlite else String(50),  # type: ignore
         server_default=func.now() if not is_sqlite else None,
         onupdate=func.now() if not is_sqlite else None,
-        default=lambda: datetime.utcnow().isoformat() if is_sqlite else None,
+        default=lambda: (
+            datetime.utcnow() if not is_sqlite else datetime.utcnow().isoformat()
+        ),
         nullable=False,
         comment="更新时间",
     )

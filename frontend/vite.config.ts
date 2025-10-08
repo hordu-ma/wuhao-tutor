@@ -37,8 +37,9 @@ export default defineConfig(({ mode }) => {
         deep: true,
         include: [/\.vue$/, /\.vue\?vue/],
       }),
-      // PWA 插件配置
+      // PWA 插件配置 (生产环境禁用)
       VitePWA({
+        disable: isProduction, // 生产环境禁用 Service Worker
         registerType: 'autoUpdate',
         workbox: {
           cleanupOutdatedCaches: true,
@@ -106,9 +107,7 @@ export default defineConfig(({ mode }) => {
           navigateFallback: '/index.html',
           navigateFallbackDenylist: [/^\/_/, /\/[^/?]+\.[^/]+$/],
         },
-        includeAssets: [
-          'favicon.svg',
-        ],
+        includeAssets: ['favicon.svg'],
         manifest: false, // 使用独立的 manifest.json 文件
       }),
     ],
@@ -154,16 +153,18 @@ export default defineConfig(({ mode }) => {
       cssCodeSplit: true,
       chunkSizeWarningLimit: 1000,
       // Terser 压缩选项
-      terserOptions: isProduction ? {
-        compress: {
-          drop_console: true,
-          drop_debugger: true,
-          pure_funcs: ['console.log'],
-        },
-        mangle: {
-          safari10: true,
-        },
-      } : undefined,
+      terserOptions: isProduction
+        ? {
+            compress: {
+              drop_console: true,
+              drop_debugger: true,
+              pure_funcs: ['console.log'],
+            },
+            mangle: {
+              safari10: true,
+            },
+          }
+        : undefined,
       rollupOptions: {
         input: {
           main: resolve(__dirname, 'index.html'),
@@ -186,7 +187,10 @@ export default defineConfig(({ mode }) => {
           // 文件命名优化
           chunkFileNames: (chunkInfo) => {
             const facadeModuleId = chunkInfo.facadeModuleId
-              ? chunkInfo.facadeModuleId.split('/').pop()?.replace(/\.\w+$/, '') ?? 'chunk'
+              ? (chunkInfo.facadeModuleId
+                  .split('/')
+                  .pop()
+                  ?.replace(/\.\w+$/, '') ?? 'chunk')
               : 'chunk'
             return `assets/${facadeModuleId}-[hash].js`
           },
@@ -255,26 +259,16 @@ export default defineConfig(({ mode }) => {
             AtRule: {
               charset: (atRule) => {
                 if (atRule.name === 'charset') {
-                  atRule.remove();
+                  atRule.remove()
                 }
-              }
-            }
-          }
+              },
+            },
+          },
         ],
       },
     },
     // 环境变量配置
     envPrefix: ['VITE_', 'VUE_APP_'],
-    // 实验性功能
-    experimental: {
-      renderBuiltUrl(filename, { hostType }) {
-        if (hostType === 'js') {
-          return { relative: true, runtime: `__vite__mapUrl("${filename}")` }
-        } else {
-          return `/${filename}`
-        }
-      },
-    },
     // 日志级别
     logLevel: isProduction ? 'warn' : 'info',
   }

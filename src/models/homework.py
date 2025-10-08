@@ -116,7 +116,7 @@ class Homework(BaseModel):
 
     # 创建者信息
     creator_id = Column(
-        String(36),
+        PG_UUID(as_uuid=True),
         ForeignKey("users.id"),
         nullable=True,
         index=True,
@@ -160,7 +160,7 @@ class HomeworkSubmission(BaseModel):
 
     # 关联信息
     homework_id = Column(
-        String(36),
+        PG_UUID(as_uuid=True),
         ForeignKey("homework.id"),
         nullable=False,
         index=True,
@@ -168,7 +168,11 @@ class HomeworkSubmission(BaseModel):
     )
 
     student_id = Column(
-        String(36), ForeignKey("users.id"), nullable=False, index=True, comment="学生ID"
+        PG_UUID(as_uuid=True),
+        ForeignKey("users.id"),
+        nullable=False,
+        index=True,
+        comment="学生ID",
     )
 
     student_name = Column(String(50), nullable=False, comment="学生姓名")
@@ -265,7 +269,7 @@ class HomeworkImage(BaseModel):
 
     # 关联信息
     submission_id = Column(
-        String(36),
+        PG_UUID(as_uuid=True),
         ForeignKey("homework_submissions.id"),
         nullable=False,
         index=True,
@@ -350,7 +354,7 @@ class HomeworkReview(BaseModel):
 
     # 关联信息
     submission_id = Column(
-        String(36),
+        PG_UUID(as_uuid=True),
         ForeignKey("homework_submissions.id"),
         nullable=False,
         index=True,
@@ -366,7 +370,10 @@ class HomeworkReview(BaseModel):
     )
 
     reviewer_id = Column(
-        String(36), ForeignKey("users.id"), nullable=True, comment="人工批改者ID"
+        PG_UUID(as_uuid=True),
+        ForeignKey("users.id"),
+        nullable=True,
+        comment="人工批改者ID",
     )
 
     reviewer_name = Column(String(50), nullable=True, comment="批改者姓名")

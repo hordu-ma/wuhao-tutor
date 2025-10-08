@@ -53,28 +53,32 @@ async def get_user_activities(
         activities = []
 
         # 获取最近的作业提交记录
-        homework_result = await db.execute(
-            select(HomeworkSubmission)
-            .where(HomeworkSubmission.student_id == user_uuid)
-            .order_by(desc(HomeworkSubmission.created_at))
-            .limit(limit // 2)
-        )
-        homework_submissions = homework_result.scalars().all()
-
-        for submission in homework_submissions:
-            activities.append(
-                {
-                    "id": f"homework_{submission.id}",
-                    "type": "homework",
-                    "title": f"作业提交：{submission.submission_title or '未命名作业'}",
-                    "time": (
-                        submission.created_at.isoformat()
-                        if submission.created_at is not None
-                        else datetime.now().isoformat()
-                    ),
-                    "status": get_submission_status_text(str(submission.status)),
-                }
+        try:
+            homework_result = await db.execute(
+                select(HomeworkSubmission)
+                .where(HomeworkSubmission.student_id == user_uuid)
+                .order_by(desc(HomeworkSubmission.created_at))
+                .limit(limit // 2)
             )
+            homework_submissions = homework_result.scalars().all()
+
+            for submission in homework_submissions:
+                activities.append(
+                    {
+                        "id": f"homework_{submission.id}",
+                        "type": "homework",
+                        "title": f"作业提交：{submission.submission_title or '未命名作业'}",
+                        "time": (
+                            submission.created_at.isoformat()
+                            if submission.created_at is not None
+                            else datetime.now().isoformat()
+                        ),
+                        "status": get_submission_status_text(str(submission.status)),
+                    }
+                )
+        except Exception as e:
+            # 如果作业表不存在，记录警告并继续
+            logger.warning(f"作业提交表不存在或查询失败: {e}")
 
         # 获取最近的学习会话记录（暂时禁用，因为模型不存在）
         # try:
@@ -181,25 +185,37 @@ async def get_user_stats(
         # 查询用户作业统计
         today = datetime.now().date()
 
-        # 总作业数
-        total_homework_result = await db.execute(
-            select(HomeworkSubmission).where(HomeworkSubmission.student_id == user_uuid)
-        )
-        total_homework = len(total_homework_result.scalars().all())
+        # 尝试查询作业数据,如果表不存在则使用默认值
+        total_homework = 0
+        pending_homework = 0
 
-        # 待批改作业数
-        pending_homework_result = await db.execute(
-            select(HomeworkSubmission).where(
-                and_(
-                    HomeworkSubmission.student_id == user_uuid,
-                    or_(
-                        HomeworkSubmission.status == "uploaded",
-                        HomeworkSubmission.status == "processing",
-                    ),
+        try:
+            # 总作业数
+            total_homework_result = await db.execute(
+                select(HomeworkSubmission).where(
+                    HomeworkSubmission.student_id == user_uuid
                 )
             )
-        )
-        pending_homework = len(pending_homework_result.scalars().all())
+            total_homework = len(total_homework_result.scalars().all())
+
+            # 待批改作业数
+            pending_homework_result = await db.execute(
+                select(HomeworkSubmission).where(
+                    and_(
+                        HomeworkSubmission.student_id == user_uuid,
+                        or_(
+                            HomeworkSubmission.status == "uploaded",
+                            HomeworkSubmission.status == "processing",
+                        ),
+                    )
+                )
+            )
+            pending_homework = len(pending_homework_result.scalars().all())
+        except Exception as e:
+            # 如果作业表不存在，记录警告并使用默认值
+            logger.warning(f"作业表不存在或查询失败，使用默认值: {e}")
+            total_homework = 0
+            pending_homework = 0
 
         # 生成基本统计数据
         stats = {

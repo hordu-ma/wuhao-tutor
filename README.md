@@ -144,12 +144,16 @@ AI 服务:
 开发工具:
   Python: uv (快速包管理)
   Node.js: npm
-  容器: Docker + Docker Compose
+
+部署:
+  生产环境: Python + systemd + Nginx
+  开发环境: 本地 Python 进程
 
 运维:
-  反向代理: Nginx
+  进程管理: systemd (wuhao-tutor.service)
+  反向代理: Nginx (HTTPS/SSL)
   监控: Prometheus (配置已就绪)
-  日志: 结构化日志 (JSON)
+  日志: journald + 结构化日志 (JSON)
 ```
 
 ### 四层架构设计
@@ -190,7 +194,6 @@ uv (Python 包管理器)
 # 可选
 PostgreSQL 14+ (生产环境)
 Redis 6+ (缓存和限流)
-Docker + Docker Compose
 ```
 
 ### 安装步骤
@@ -278,10 +281,6 @@ make lint          # 代码质量检查 (black + flake8 + mypy)
 make db-reset      # 重置数据库 + 示例数据
 make db-backup     # 备份数据库
 make db-migrate    # 运行数据库迁移
-
-# Docker
-make docker-dev    # Docker 开发环境
-make docker-prod   # Docker 生产环境
 
 # 清理
 make clean         # 清理临时文件
@@ -582,6 +581,89 @@ tail -f logs/app.log
 
 ---
 
+## 🚀 生产部署
+
+### 部署架构
+
+本项目采用 **Python + systemd** 部署方案（已废弃 Docker 方案）：
+
+```
+阿里云 ECS (121.199.173.244)
+├── Nginx (HTTPS反向代理)
+│   ├── 端口: 80, 443
+│   └── SSL: 自签名证书
+├── systemd (进程管理)
+│   └── wuhao-tutor.service
+│       ├── 4 个 uvicorn worker 进程
+│       └── 端口: 8000
+└── PostgreSQL RDS
+    └── 21 张数据表
+```
+
+### 部署流程
+
+完整的部署流程参见 **[生产部署标准流程](PRODUCTION_DEPLOYMENT_GUIDE.md)**，包括：
+
+1. **部署前检查** - 代码验证、构建前端、测试运行
+2. **服务器备份** - 代码 + 数据库自动备份
+3. **代码同步** - rsync 增量同步
+4. **数据库迁移** - Alembic 自动迁移
+5. **服务重启** - systemd 平滑重启
+6. **健康检查** - API 端点验证
+7. **回滚机制** - 一键回滚到上一版本
+
+### 快速部署命令
+
+```bash
+# 一键部署到生产环境
+./scripts/deploy_to_production.sh
+
+# 查看服务状态
+ssh root@121.199.173.244 'systemctl status wuhao-tutor'
+
+# 查看服务日志
+ssh root@121.199.173.244 'journalctl -u wuhao-tutor -f'
+
+# 健康检查
+curl -k https://121.199.173.244/api/health
+```
+
+### 关键配置文件
+
+- `src/core/config.py` - 环境配置
+- `.env` - 生产环境变量（需手动配置）
+- `nginx/nginx.conf` - Nginx 配置
+- `scripts/deploy/*.sh` - 部署脚本集合
+
+### 数据库迁移注意事项 ⚠️
+
+在 PostgreSQL 环境下，**必须严格匹配 UUID 类型**：
+
+```python
+# ❌ 错误 - 类型不匹配导致外键约束失败
+user_id = Column(String(36), ForeignKey('users.id'))
+
+# ✅ 正确
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+user_id = Column(PG_UUID(as_uuid=True), ForeignKey('users.id'))
+```
+
+已修复的关键文件：
+
+- `src/models/base.py` - 时间戳默认值
+- `src/models/user.py`, `learning.py`, `homework.py` - 11 个外键类型修复
+- `src/schemas/*.py` - UUID 序列化验证器
+
+### 生产环境清理
+
+参见以下文档进行环境优化：
+
+- **[生产环境清理计划](PRODUCTION_CLEANUP_PLAN.md)** - 464MB 清理机会
+- **[本地代码验证](LOCAL_CODE_VERIFICATION_PLAN.md)** - 防止错误部署
+- **[本地环境清理](LOCAL_CLEANUP_PLAN.md)** - 50MB 本地清理
+
+---
+
 ## 🌟 致谢
 
 感谢以下开源项目：
@@ -595,10 +677,10 @@ tail -f logs/app.log
 
 ---
 
-**最后更新**: 2025-10-06  
+**最后更新**: 2025-10-08 (生产部署完成)  
 **项目版本**: 0.4.x  
 **整体状况**: A- (优秀)  
 **核心策略**: MCP 优先（精确查询）→ RAG 增强（语义检索）
 
-**🔥 当前焦点**: TD-009 错题本功能开发  
-**重大成果**: Phase 4 核心任务全面完成，系统稳定性显著提升
+**🔥 当前焦点**: 生产环境稳定运行 + TD-009 错题本功能开发  
+**重大成果**: Phase 4 完成 + 生产部署上线，系统全面就绪

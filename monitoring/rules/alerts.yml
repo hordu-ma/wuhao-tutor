@@ -1,0 +1,92 @@
+groups:
+  - name: wuhao-tutor-alerts
+    rules:
+      # 应用健康检查
+      - alert: ApplicationDown
+        expr: up{job="wuhao-tutor-app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: '五好伴学应用服务不可用'
+          description: '应用服务已经宕机超过1分钟'
+
+      # 高响应时间
+      - alert: HighResponseTime
+        expr: http_request_duration_seconds{quantile="0.95"} > 2
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: '应用响应时间过高'
+          description: '95%分位数响应时间超过2秒'
+
+      # 高错误率
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: '应用错误率过高'
+          description: '5xx错误率超过10%'
+
+      # 数据库连接问题
+      - alert: DatabaseConnectionFailed
+        expr: up{job="postgres"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: '数据库连接失败'
+          description: 'PostgreSQL数据库不可用'
+
+      # Redis连接问题
+      - alert: RedisConnectionFailed
+        expr: up{job="redis"} == 0
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Redis连接失败'
+          description: 'Redis缓存服务不可用'
+
+      # 高内存使用率
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes > 0.85
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: '系统内存使用率过高'
+          description: '内存使用率超过85%'
+
+      # 高CPU使用率
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: '系统CPU使用率过高'
+          description: 'CPU使用率超过80%'
+
+      # 磁盘空间不足
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 10
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: '磁盘空间不足'
+          description: '根分区可用空间少于10%'
+
+      # AI服务调用失败率高
+      - alert: AIServiceHighFailureRate
+        expr: rate(bailian_requests_total{status="error"}[5m]) / rate(bailian_requests_total[5m]) > 0.2
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'AI服务失败率过高'
+          description: '百炼AI服务失败率超过20%'

@@ -65,8 +65,8 @@ class Settings(BaseSettings):
     LOG_FORMAT: str = "json"  # json 或 console
 
     # 阿里云百炼智能体配置
-    BAILIAN_APPLICATION_ID: str = "db9f923dc3ae48dd9127929efa5eb108"
-    BAILIAN_API_KEY: str = "sk-7f591a92e1cd4f4d9ed2f94761f0c1db"
+    BAILIAN_APPLICATION_ID: str = ""
+    BAILIAN_API_KEY: str = ""
     BAILIAN_BASE_URL: str = "https://dashscope.aliyuncs.com/api/v1"
     BAILIAN_TIMEOUT: int = 30
     BAILIAN_MAX_RETRIES: int = 3

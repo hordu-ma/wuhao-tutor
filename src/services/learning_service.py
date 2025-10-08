@@ -477,7 +477,18 @@ class LearningService:
 
             if context.metadata.get("weak_knowledge_points"):
                 weak_points = context.metadata["weak_knowledge_points"][:3]  # 取前3个
-                prompt_parts.append(f"学生薄弱知识点：{', '.join(weak_points)}")
+                # weak_points 是 WeakKnowledgePoint 对象或字典列表,需要提取 knowledge_name
+                if weak_points:
+                    point_names = []
+                    for point in weak_points:
+                        if isinstance(point, dict):
+                            point_names.append(point.get("knowledge_name", str(point)))
+                        elif hasattr(point, "knowledge_name"):
+                            point_names.append(point.knowledge_name)
+                        else:
+                            point_names.append(str(point))
+                    if point_names:
+                        prompt_parts.append(f"学生薄弱知识点：{', '.join(point_names)}")
 
         prompt_parts.append("\n请基于以上信息，为学生提供个性化的学习指导。")
 
