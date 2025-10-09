@@ -1,23 +1,28 @@
 """
 测试数据工厂
 提供测试数据的快速生成工具
+使用 factory-boy 模式提供一致的测试数据生成
 """
 
 import uuid
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 from unittest.mock import MagicMock
 
-from src.models.user import User, UserRole, GradeLevel
+import factory
+from factory.declarations import LazyAttribute, Sequence, SubFactory
+from factory.faker import Faker
+
 from src.models.homework import (
+    DifficultyLevel,
     Homework,
     HomeworkSubmission,
-    SubjectType,
     HomeworkType,
-    DifficultyLevel,
+    SubjectType,
     SubmissionStatus,
 )
-from src.models.learning import ChatSession, Question, Answer
+from src.models.learning import Answer, ChatSession, Question
+from src.models.user import GradeLevel, User, UserRole
 
 
 class UserFactory:
@@ -31,7 +36,7 @@ class UserFactory:
         password_hash: str = "hashed_password",
         role: UserRole = UserRole.STUDENT,
         grade_level: Optional[GradeLevel] = GradeLevel.SENIOR_1,
-        **kwargs
+        **kwargs,
     ) -> User:
         """创建测试用户"""
         user = User(
@@ -40,18 +45,20 @@ class UserFactory:
             name=name,
             password_hash=password_hash,
             role=role.value if isinstance(role, UserRole) else role,
-            grade_level=grade_level.value if isinstance(grade_level, GradeLevel) else grade_level,
+            grade_level=(
+                grade_level.value
+                if isinstance(grade_level, GradeLevel)
+                else grade_level
+            ),
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
-            **kwargs
+            **kwargs,
         )
         return user
 
     @staticmethod
     def create_mock_user(
-        user_id: str = "test_user_123",
-        username: str = "testuser",
-        **kwargs
+        user_id: str = "test_user_123", username: str = "testuser", **kwargs
     ) -> MagicMock:
         """创建Mock用户对象"""
         mock_user = MagicMock(spec=User)
@@ -76,7 +83,7 @@ class HomeworkFactory:
         teacher_id: Optional[str] = None,
         homework_type: str = HomeworkType.DAILY.value,
         difficulty: str = DifficultyLevel.MEDIUM.value,
-        **kwargs
+        **kwargs,
     ) -> Homework:
         """创建测试作业"""
         homework = Homework(
@@ -90,7 +97,11 @@ class HomeworkFactory:
             total_score=kwargs.get("total_score", 100.0),
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
-            **{k: v for k, v in kwargs.items() if k not in ["description", "total_score"]}
+            **{
+                k: v
+                for k, v in kwargs.items()
+                if k not in ["description", "total_score"]
+            },
         )
         return homework
 
@@ -100,7 +111,7 @@ class HomeworkFactory:
         homework_id: Optional[str] = None,
         student_id: Optional[str] = None,
         status: str = SubmissionStatus.UPLOADED.value,
-        **kwargs
+        **kwargs,
     ) -> HomeworkSubmission:
         """创建测试作业提交"""
         submission = HomeworkSubmission(
@@ -113,7 +124,11 @@ class HomeworkFactory:
             total_score=kwargs.get("total_score"),
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
-            **{k: v for k, v in kwargs.items() if k not in ["submission_title", "submission_content", "total_score"]}
+            **{
+                k: v
+                for k, v in kwargs.items()
+                if k not in ["submission_title", "submission_content", "total_score"]
+            },
         )
         return submission
 
@@ -126,7 +141,7 @@ class LearningFactory:
         session_id: Optional[str] = None,
         user_id: Optional[str] = None,
         title: str = "测试会话",
-        **kwargs
+        **kwargs,
     ) -> ChatSession:
         """创建测试聊天会话"""
         session = ChatSession(
@@ -135,7 +150,7 @@ class LearningFactory:
             title=title,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
-            **kwargs
+            **kwargs,
         )
         return session
 
@@ -145,7 +160,7 @@ class LearningFactory:
         session_id: Optional[str] = None,
         user_id: Optional[str] = None,
         content: str = "测试问题",
-        **kwargs
+        **kwargs,
     ) -> Question:
         """创建测试问题"""
         question = Question(
@@ -154,7 +169,7 @@ class LearningFactory:
             user_id=user_id or str(uuid.uuid4()),
             content=content,
             created_at=datetime.utcnow(),
-            **kwargs
+            **kwargs,
         )
         return question
 
@@ -163,7 +178,7 @@ class LearningFactory:
         answer_id: Optional[str] = None,
         question_id: Optional[str] = None,
         content: str = "测试答案",
-        **kwargs
+        **kwargs,
     ) -> Answer:
         """创建测试答案"""
         answer = Answer(
@@ -171,7 +186,7 @@ class LearningFactory:
             question_id=question_id or str(uuid.uuid4()),
             content=content,
             created_at=datetime.utcnow(),
-            **kwargs
+            **kwargs,
         )
         return answer
 
@@ -184,7 +199,7 @@ class RequestFactory:
         phone: str = "13800138001",
         password: str = "TestPass123!",
         name: str = "测试用户",
-        **kwargs
+        **kwargs,
     ) -> Dict[str, Any]:
         """创建注册请求数据"""
         return {
@@ -193,50 +208,46 @@ class RequestFactory:
             "name": name,
             "email": kwargs.get("email", "test@example.com"),
             "grade_level": kwargs.get("grade_level", "senior_1"),
-            **{k: v for k, v in kwargs.items() if k not in ["email", "grade_level"]}
+            **{k: v for k, v in kwargs.items() if k not in ["email", "grade_level"]},
         }
 
     @staticmethod
     def create_login_request(
-        phone: str = "13800138000",
-        password: str = "TestPass123!",
-        **kwargs
+        phone: str = "13800138000", password: str = "TestPass123!", **kwargs
     ) -> Dict[str, Any]:
         """创建登录请求数据"""
-        return {
-            "phone": phone,
-            "password": password,
-            **kwargs
-        }
+        return {"phone": phone, "password": password, **kwargs}
 
     @staticmethod
     def create_homework_submission_request(
         homework_id: Optional[str] = None,
         submission_title: str = "测试提交",
         submission_content: str = "这是提交内容",
-        **kwargs
+        **kwargs,
     ) -> Dict[str, Any]:
         """创建作业提交请求数据"""
         return {
             "homework_id": homework_id or str(uuid.uuid4()),
             "submission_title": submission_title,
             "submission_content": submission_content,
-            **kwargs
+            **kwargs,
         }
 
     @staticmethod
     def create_wechat_login_request(
-        code: str = "test_wechat_code",
-        **kwargs
+        code: str = "test_wechat_code", **kwargs
     ) -> Dict[str, Any]:
         """创建微信登录请求数据"""
         return {
             "code": code,
-            "user_info": kwargs.get("user_info", {
-                "nickName": "微信测试用户",
-                "avatarUrl": "https://example.com/avatar.png"
-            }),
-            **{k: v for k, v in kwargs.items() if k != "user_info"}
+            "user_info": kwargs.get(
+                "user_info",
+                {
+                    "nickName": "微信测试用户",
+                    "avatarUrl": "https://example.com/avatar.png",
+                },
+            ),
+            **{k: v for k, v in kwargs.items() if k != "user_info"},
         }
 
 
@@ -245,9 +256,7 @@ class MockDataFactory:
 
     @staticmethod
     def create_bailian_response(
-        content: str = "这是AI的回答",
-        finish_reason: str = "stop",
-        **kwargs
+        content: str = "这是AI的回答", finish_reason: str = "stop", **kwargs
     ) -> Dict[str, Any]:
         """创建百炼AI响应数据"""
         return {
@@ -265,9 +274,7 @@ class MockDataFactory:
 
     @staticmethod
     def create_wechat_session_response(
-        openid: str = "test_openid_123",
-        session_key: str = "test_session_key",
-        **kwargs
+        openid: str = "test_openid_123", session_key: str = "test_session_key", **kwargs
     ) -> Dict[str, Any]:
         """创建微信会话响应数据"""
         return {

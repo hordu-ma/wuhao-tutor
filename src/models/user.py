@@ -19,6 +19,14 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import relationship
 
+from src.core.config import get_settings
+
+# 检查是否使用SQLite
+settings = get_settings()
+is_sqlite = settings.SQLALCHEMY_DATABASE_URI and "sqlite" in str(
+    settings.SQLALCHEMY_DATABASE_URI
+)
+
 from .base import BaseModel
 
 
@@ -158,9 +166,13 @@ class UserSession(BaseModel):
 
     __tablename__ = "user_sessions"
 
-    user_id = Column(
-        PG_UUID(as_uuid=True), nullable=False, index=True, comment="用户ID"
-    )
+    # user_id字段 - 兼容SQLite和PostgreSQL
+    if is_sqlite:
+        user_id = Column(String(36), nullable=False, index=True, comment="用户ID")
+    else:
+        user_id = Column(
+            PG_UUID(as_uuid=True), nullable=False, index=True, comment="用户ID"
+        )
 
     device_id = Column(String(128), nullable=True, comment="设备ID")
 

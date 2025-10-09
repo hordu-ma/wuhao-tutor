@@ -104,7 +104,7 @@ class UserService:
                 extra={
                     "user_id": extract_orm_uuid_str(user, "id"),
                     "phone": request.phone,
-                    "name": request.name,
+                    "user_name": request.name,  # 改为 user_name 避免冲突
                 },
             )
 
