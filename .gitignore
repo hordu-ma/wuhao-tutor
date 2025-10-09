@@ -67,6 +67,9 @@ node_modules/
 !.env.example
 !.env.production.example
 
+# Secrets directory (API keys, passwords, tokens)
+secrets/
+
 # Coverage reports
 coverage/
 .coverage
