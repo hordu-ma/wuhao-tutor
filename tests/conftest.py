@@ -144,10 +144,38 @@ def test_client() -> Generator[TestClient, None, None]:
 
 
 @pytest_asyncio.fixture
-async def db_session() -> AsyncGenerator[AsyncSession, None]:
+async def client(test_db_setup) -> AsyncGenerator:
+    """创建异步测试客户端（用于 httpx AsyncClient）"""
+    from httpx import ASGITransport, AsyncClient
+
+    # 重写所有依赖项
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+    app.dependency_overrides[get_current_user_id] = mock_get_current_user_id
+
+    # 使用 testserver 作为 host，它在 TrustedHostMiddleware 的允许列表中
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://testserver"
+    ) as ac:
+        yield ac
+
+    app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def db_session(test_db_setup) -> AsyncGenerator[AsyncSession, None]:
     """创建测试数据库会话"""
     async with TestingSessionLocal() as session:
         yield session
+
+
+@pytest_asyncio.fixture
+async def db(test_db_setup) -> AsyncGenerator[AsyncSession, None]:
+    """创建测试数据库会话（别名）- 每个测试后清理数据"""
+    async with TestingSessionLocal() as session:
+        yield session
+        # 每个测试后回滚事务，确保数据隔离
+        await session.rollback()
 
 
 @pytest.fixture
@@ -171,3 +199,44 @@ def test_homework_data():
         "description": "这是一个测试作业",
         "template_id": 1,
     }
+
+
+@pytest_asyncio.fixture
+async def test_user(db: AsyncSession, test_db_setup) -> AsyncGenerator[User, None]:
+    """创建测试用户（密码: TestPass123!）"""
+    import hashlib
+    import secrets
+
+    from src.models.user import User, UserRole
+
+    # 使用与UserService相同的密码hash方式
+    password = "TestPass123!"
+    salt = secrets.token_hex(16)
+    password_hash_bytes = hashlib.pbkdf2_hmac(
+        "sha256", password.encode("utf-8"), salt.encode("utf-8"), 100000
+    )
+    password_hash = f"{salt}:{password_hash_bytes.hex()}"
+
+    user_data = {
+        "phone": "13800138000",
+        "password_hash": password_hash,
+        "name": "测试用户",
+        "nickname": "测试昵称",
+        "role": UserRole.STUDENT.value,
+        "grade_level": "senior_1",
+        "is_active": True,
+        "is_verified": True,
+        "login_count": 0,
+    }
+
+    from src.repositories.base_repository import BaseRepository
+
+    user_repo = BaseRepository(User, db)
+    user = await user_repo.create(user_data)
+    await db.commit()
+    await db.refresh(user)
+
+    yield user
+
+    # 清理
+    # Note: 由于test_db_setup会清理整个session，这里不需要手动删除
