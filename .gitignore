@@ -104,3 +104,6 @@ docs/deployment/TEST_ACCOUNTS.md
 
 # Nginx backups
 nginx/*.bak
+
+# Git backup directory
+.git.backup/
