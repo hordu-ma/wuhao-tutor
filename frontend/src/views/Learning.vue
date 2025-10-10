@@ -8,6 +8,11 @@
           <el-button circle :icon="Menu" @click="toggleSidebar" class="sidebar-toggle" />
           <h1 class="page-title">AI学习助手</h1>
         </div>
+        <div class="toolbar-center">
+          <el-button type="primary" :icon="Plus" @click="createNewSession" class="new-chat-button">
+            新建对话
+          </el-button>
+        </div>
         <div class="toolbar-right">
           <el-button
             circle
@@ -185,12 +190,40 @@
       <div v-show="showSidebar" class="sessions-sidebar">
         <div class="sidebar-header">
           <h3>会话历史</h3>
-          <el-button circle :icon="Close" size="small" @click="toggleSidebar" />
+          <div class="header-actions">
+            <el-button
+              circle
+              :icon="Plus"
+              size="small"
+              type="primary"
+              @click="createNewSession"
+              title="创建新会话"
+            />
+            <el-button circle :icon="Close" size="small" @click="toggleSidebar" />
+          </div>
         </div>
         <div class="sidebar-content">
+          <!-- 搜索框 -->
+          <div class="search-box">
+            <el-input
+              v-model="sessionSearchQuery"
+              placeholder="搜索会话..."
+              :prefix-icon="Search"
+              size="small"
+              clearable
+            />
+          </div>
+
+          <!-- 会话列表 -->
           <div class="session-list">
+            <div v-if="filteredSessions.length === 0" class="empty-sessions">
+              <p>暂无会话记录</p>
+              <el-button type="primary" :icon="Plus" @click="createNewSession" size="small">
+                创建第一个会话
+              </el-button>
+            </div>
             <div
-              v-for="session in learningStore.activeSessions"
+              v-for="session in filteredSessions"
               :key="session.id"
               class="session-item"
               :class="{ active: session.id === currentSessionId }"
@@ -201,6 +234,24 @@
                 <div class="session-meta">
                   {{ session.question_count }} 个问题 · {{ formatDate(session.updated_at) }}
                 </div>
+              </div>
+              <div class="session-actions" @click.stop>
+                <el-dropdown trigger="click">
+                  <el-button circle size="small" :icon="MoreFilled" />
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item @click="renameSession(session)">
+                        <el-icon><Edit /></el-icon> 重命名
+                      </el-dropdown-item>
+                      <el-dropdown-item @click="archiveSession(session.id)">
+                        <el-icon><FolderOpened /></el-icon> 归档
+                      </el-dropdown-item>
+                      <el-dropdown-item @click="deleteSessionConfirm(session.id)" divided>
+                        <el-icon><Delete /></el-icon> 删除
+                      </el-dropdown-item>
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
               </div>
             </div>
           </div>
@@ -237,7 +288,7 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   ChatDotRound,
   User,
@@ -248,6 +299,12 @@ import {
   Refresh,
   Menu,
   DataAnalysis,
+  Plus,
+  Search,
+  MoreFilled,
+  Edit,
+  FolderOpened,
+  Delete,
 } from '@element-plus/icons-vue'
 import { marked } from 'marked'
 import katex from 'katex'
@@ -266,6 +323,7 @@ const uploadedImages = ref<{ file: File; preview: string }[]>([])
 const showSidebar = ref(false)
 const showAnalytics = ref(false)
 const messageContainerRef = ref<HTMLElement>()
+const sessionSearchQuery = ref('')
 
 // 推荐问题
 const suggestedQuestions = [
@@ -282,6 +340,17 @@ const analytics = computed(() => learningStore.analytics)
 
 const canSend = computed(() => {
   return learningStore.canSendMessage && !learningStore.chatState.isLoading
+})
+
+// 过滤后的会话列表
+const filteredSessions = computed(() => {
+  const sessions = learningStore.activeSessions
+  if (!sessionSearchQuery.value) {
+    return sessions
+  }
+  return sessions.filter((session: any) =>
+    session.title.toLowerCase().includes(sessionSearchQuery.value.toLowerCase())
+  )
 })
 
 // ========== 方法 ==========
@@ -431,6 +500,44 @@ const switchToSession = async (sessionId: string) => {
     scrollToBottom()
   } catch (error) {
     console.error('切换会话失败:', error)
+  }
+}
+
+const createNewSession = async () => {
+  try {
+    await learningStore.createNewSession()
+  } catch (error) {
+    console.error('创建新会话失败:', error)
+  }
+}
+
+const renameSession = async (_session: any) => {
+  // TODO: 实现重命名功能
+  ElMessage.info('重命名功能开发中...')
+}
+
+const archiveSession = async (sessionId: string) => {
+  try {
+    await learningStore.archiveSession(sessionId)
+    ElMessage.success('会话已归档')
+  } catch (error) {
+    console.error('归档会话失败:', error)
+  }
+}
+
+const deleteSessionConfirm = async (sessionId: string) => {
+  try {
+    await ElMessageBox.confirm('确定要删除这个会话吗？', '确认删除', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+    await learningStore.deleteSession(sessionId)
+    ElMessage.success('会话已删除')
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除会话失败:', error)
+    }
   }
 }
 
@@ -592,10 +699,22 @@ defineOptions({
   flex-shrink: 0;
 
   .toolbar-left,
+  .toolbar-center,
   .toolbar-right {
     display: flex;
     align-items: center;
     gap: $spacing-base;
+  }
+
+  .toolbar-center {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .new-chat-button {
+    padding: $spacing-sm $spacing-lg;
+    border-radius: $border-radius-circle;
+    font-weight: $font-weight-medium;
   }
 
   .page-title {
@@ -983,6 +1102,12 @@ defineOptions({
       font-weight: $font-weight-semibold;
       margin: 0;
     }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: $spacing-sm;
+    }
   }
 
   .sidebar-content {
@@ -1000,14 +1125,26 @@ defineOptions({
   border-radius: $border-radius-base;
   cursor: pointer;
   transition: $transition-all;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
 
   &:hover {
     background: var(--color-bg-secondary);
+
+    .session-actions {
+      opacity: 1;
+    }
   }
 
   &.active {
     background: rgba($color-primary, 0.1);
     border-left: 3px solid $color-primary;
+  }
+
+  .session-info {
+    flex: 1;
+    min-width: 0;
   }
 
   .session-title {
@@ -1021,6 +1158,29 @@ defineOptions({
     font-size: $font-size-extra-small;
     color: var(--color-text-secondary);
     margin-top: $spacing-xs;
+  }
+
+  .session-actions {
+    opacity: 0;
+    transition: opacity $transition-duration-fast;
+    margin-left: $spacing-sm;
+  }
+}
+
+// 搜索框样式
+.search-box {
+  padding: $spacing-md;
+  border-bottom: 1px solid var(--color-border);
+}
+
+// 空状态样式
+.empty-sessions {
+  text-align: center;
+  padding: $spacing-2xl;
+  color: var(--color-text-secondary);
+
+  p {
+    margin-bottom: $spacing-lg;
   }
 }
 
