@@ -225,13 +225,18 @@ class BailianService:
             BailianServiceError: 各种API调用错误
         """
         model = payload.get("model", "")
-        
+
         # VL模型使用OpenAI兼容模式
         if self._is_vl_model(model):
-            logger.info(f"使用VL模型OpenAI兼容模式: {model}")
-            return await self._call_vl_model_api(payload)
-        
-        # 普通模型使用原生API
+            logger.info(
+                f"使用VL模型OpenAI兼容模式调用: {model}",
+                extra={
+                    "model": model,
+                    "api_mode": "openai_compatible",
+                    "message_count": len(payload.get("input", {}).get("messages", [])),
+                },
+            )
+            return await self._call_vl_model_api(payload)  # 普通模型使用原生API
         url = f"{self.base_url}/services/aigc/text-generation/generation"
 
         try:
@@ -348,6 +353,21 @@ class BailianService:
             if image_url and image_url.strip():
                 content.append({"type": "image_url", "image_url": {"url": image_url}})
 
+                # 🔍 调试日志：记录每个图片URL
+                logger.info(
+                    f"添加图片到多模态内容: {image_url[:100]}...",
+                    extra={"image_url": image_url, "url_length": len(image_url)},
+                )
+
+        logger.info(
+            f"构建多模态内容完成: text_parts={1 if text_content else 0}, image_parts={len(image_urls)}",
+            extra={
+                "content_parts": len(content),
+                "has_text": bool(text_content),
+                "image_count": len(image_urls),
+            },
+        )
+
         return content
 
     def _has_images_in_messages(self, messages: List[Dict[str, Any]]) -> bool:
@@ -389,6 +409,19 @@ class BailianService:
         # 检查是否包含图片，如果有则使用视觉模型
         has_images = self._has_images_in_messages(messages)
         model = "qwen-vl-max" if has_images else "qwen-turbo"
+
+        # 🔍 调试日志：记录模型选择和图片检测
+        if has_images:
+            logger.info(
+                f"检测到图片消息，使用VL模型: {model}",
+                extra={
+                    "model": model,
+                    "has_images": has_images,
+                    "message_count": len(messages),
+                },
+            )
+        else:
+            logger.debug(f"纯文本消息，使用标准模型: {model}")
 
         payload = {
             "model": model,
@@ -490,18 +523,18 @@ class BailianService:
     async def _call_vl_model_api(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
         调用VL模型专用API（OpenAI兼容模式）
-        
+
         VL模型使用不同的端点和请求格式
         """
         # VL模型使用OpenAI兼容模式端点
         url = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
-        
+
         # 转换为OpenAI兼容格式
         openai_payload = self._convert_to_openai_format(payload)
-        
+
         try:
             response = await self.client.post(url, json=openai_payload)
-            
+
             # 处理HTTP错误
             if response.status_code == 401:
                 raise BailianAuthError("API密钥无效或过期")
@@ -513,16 +546,16 @@ class BailianService:
                 raise BailianServiceError(
                     f"VL模型HTTP错误 {response.status_code}: {error_text}"
                 )
-            
+
             # 解析JSON响应
             try:
                 response_data = response.json()
             except json.JSONDecodeError:
                 raise BailianServiceError(f"VL模型无效的JSON响应: {response.text}")
-            
+
             # 转换回标准格式
             return self._convert_from_openai_format(response_data)
-            
+
         except httpx.TimeoutException:
             raise BailianTimeoutError(f"VL模型API调用超时（{self.timeout}秒）")
         except httpx.RequestError as e:
@@ -535,7 +568,7 @@ class BailianService:
         model = payload.get("model", "qwen-vl-max")
         messages = payload.get("input", {}).get("messages", [])
         parameters = payload.get("parameters", {})
-        
+
         openai_payload = {
             "model": model,
             "messages": messages,
@@ -543,31 +576,30 @@ class BailianService:
             "temperature": parameters.get("temperature", 0.7),
             "top_p": parameters.get("top_p", 0.8),
         }
-        
+
         logger.debug(f"转换为OpenAI格式: {openai_payload}")
         return openai_payload
 
-    def _convert_from_openai_format(self, response_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _convert_from_openai_format(
+        self, response_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         将OpenAI格式响应转换为原生API格式
         """
         choices = response_data.get("choices", [])
         if not choices:
             raise BailianServiceError("VL模型响应中没有choices")
-        
+
         message = choices[0].get("message", {})
         content = message.get("content", "")
-        
+
         # 构建标准响应格式
         standard_response = {
-            "output": {
-                "text": content,
-                "choices": [{"message": {"content": content}}]
-            },
+            "output": {"text": content, "choices": [{"message": {"content": content}}]},
             "usage": response_data.get("usage", {}),
             "request_id": response_data.get("id", ""),
         }
-        
+
         return standard_response
 
     def _is_vl_model(self, model: str) -> bool:

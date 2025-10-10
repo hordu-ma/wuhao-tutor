@@ -50,35 +50,66 @@ class AIImageAccessService:
             logger.warning("OSS配置不完整，AI图片访问服务将使用降级方案")
             self.bucket = None
             self.is_oss_available = False
+
     def _get_public_endpoint(self) -> str:
         """
         获取公网端点，确保AI服务可以访问
-        
+
         生产环境使用内网端点提升上传速度，但AI访问需要公网端点
+
+        Returns:
+            str: 公网端点地址（不包含 https://）
         """
         # 如果当前端点是内网端点，转换为公网端点
         if "internal" in self.endpoint:
             public_endpoint = self.endpoint.replace("-internal", "")
-            logger.debug(f"转换内网端点到公网: {self.endpoint} -> {public_endpoint}")
+            logger.info(
+                f"转换内网端点到公网: {self.endpoint} -> {public_endpoint}",
+                extra={
+                    "internal_endpoint": self.endpoint,
+                    "public_endpoint": public_endpoint,
+                },
+            )
             return public_endpoint
+
+        logger.debug(f"使用原始端点（已是公网）: {self.endpoint}")
         return self.endpoint
 
     def _generate_ai_accessible_url(self, object_name: str) -> str:
         """
         生成AI服务可访问的公网URL
-        
+
         Args:
             object_name: OSS对象名
-            
+
         Returns:
             str: 公网可访问的URL
         """
         public_endpoint = self._get_public_endpoint()
         public_url = f"https://{self.bucket_name}.{public_endpoint}/{object_name}"
-        
-        logger.debug(f"生成AI可访问URL: {public_url}")
-        return public_url
 
+        # 🔍 调试日志：详细记录URL生成过程
+        logger.info(
+            f"生成AI可访问URL: bucket={self.bucket_name}, endpoint={public_endpoint}",
+            extra={
+                "object_name": object_name,
+                "public_url": public_url,
+                "endpoint_type": (
+                    "public" if "internal" not in self.endpoint else "internal"
+                ),
+            },
+        )
+
+        # 验证URL格式
+        if not public_url.startswith("https://"):
+            logger.error(f"生成的URL不是HTTPS格式: {public_url}")
+            raise AIServiceError("生成的图片URL格式错误")
+
+        if "internal" in public_url:
+            logger.warning(f"警告：生成的URL可能包含内网端点: {public_url}")
+
+        logger.debug(f"生成AI可访问URL成功: {public_url}")
+        return public_url
 
     def _generate_ai_object_name(self, user_id: str, original_filename: str) -> str:
         """
@@ -146,7 +177,14 @@ class AIImageAccessService:
                     public_url = self._generate_ai_accessible_url(object_name)
 
                     logger.info(
-                        f"AI图片上传成功: user={user_id}, object={object_name}, size={len(content)}"
+                        f"AI图片上传成功: object={object_name}, url={public_url[:80]}...",
+                        extra={
+                            "user_id": user_id,
+                            "object_name": object_name,
+                            "file_size": len(content),
+                            "public_url": public_url,
+                            "storage_type": "oss_public",
+                        },
                     )
 
                     return {
