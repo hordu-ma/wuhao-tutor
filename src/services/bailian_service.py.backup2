@@ -224,14 +224,6 @@ class BailianService:
         Raises:
             BailianServiceError: 各种API调用错误
         """
-        model = payload.get("model", "")
-        
-        # VL模型使用OpenAI兼容模式
-        if self._is_vl_model(model):
-            logger.info(f"使用VL模型OpenAI兼容模式: {model}")
-            return await self._call_vl_model_api(payload)
-        
-        # 普通模型使用原生API
         url = f"{self.base_url}/services/aigc/text-generation/generation"
 
         try:
@@ -486,96 +478,6 @@ class BailianService:
             )
 
         logger.info("百炼API请求", extra=log_data)
-
-    async def _call_vl_model_api(self, payload: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        调用VL模型专用API（OpenAI兼容模式）
-        
-        VL模型使用不同的端点和请求格式
-        """
-        # VL模型使用OpenAI兼容模式端点
-        url = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
-        
-        # 转换为OpenAI兼容格式
-        openai_payload = self._convert_to_openai_format(payload)
-        
-        try:
-            response = await self.client.post(url, json=openai_payload)
-            
-            # 处理HTTP错误
-            if response.status_code == 401:
-                raise BailianAuthError("API密钥无效或过期")
-            elif response.status_code == 429:
-                retry_after = response.headers.get("Retry-After", 60)
-                raise BailianRateLimitError(f"API调用频率过高，请{retry_after}秒后重试")
-            elif response.status_code >= 400:
-                error_text = response.text
-                raise BailianServiceError(
-                    f"VL模型HTTP错误 {response.status_code}: {error_text}"
-                )
-            
-            # 解析JSON响应
-            try:
-                response_data = response.json()
-            except json.JSONDecodeError:
-                raise BailianServiceError(f"VL模型无效的JSON响应: {response.text}")
-            
-            # 转换回标准格式
-            return self._convert_from_openai_format(response_data)
-            
-        except httpx.TimeoutException:
-            raise BailianTimeoutError(f"VL模型API调用超时（{self.timeout}秒）")
-        except httpx.RequestError as e:
-            raise BailianServiceError(f"VL模型网络请求错误: {str(e)}") from e
-
-    def _convert_to_openai_format(self, payload: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        将原生API格式转换为OpenAI兼容格式
-        """
-        model = payload.get("model", "qwen-vl-max")
-        messages = payload.get("input", {}).get("messages", [])
-        parameters = payload.get("parameters", {})
-        
-        openai_payload = {
-            "model": model,
-            "messages": messages,
-            "max_tokens": parameters.get("max_tokens", 1500),
-            "temperature": parameters.get("temperature", 0.7),
-            "top_p": parameters.get("top_p", 0.8),
-        }
-        
-        logger.debug(f"转换为OpenAI格式: {openai_payload}")
-        return openai_payload
-
-    def _convert_from_openai_format(self, response_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        将OpenAI格式响应转换为原生API格式
-        """
-        choices = response_data.get("choices", [])
-        if not choices:
-            raise BailianServiceError("VL模型响应中没有choices")
-        
-        message = choices[0].get("message", {})
-        content = message.get("content", "")
-        
-        # 构建标准响应格式
-        standard_response = {
-            "output": {
-                "text": content,
-                "choices": [{"message": {"content": content}}]
-            },
-            "usage": response_data.get("usage", {}),
-            "request_id": response_data.get("id", ""),
-        }
-        
-        return standard_response
-
-    def _is_vl_model(self, model: str) -> bool:
-        """
-        判断是否为VL模型
-        """
-        vl_models = ["qwen-vl-max", "qwen-vl-plus", "qwen-vl-max-latest"]
-        return model in vl_models
 
     def _log_response(
         self, response: ChatCompletionResponse, context: Optional[AIContext]
