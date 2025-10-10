@@ -39,9 +39,7 @@
         <el-form-item>
           <div class="login-options">
             <el-checkbox v-model="loginForm.remember_me"> 记住我 </el-checkbox>
-            <el-link type="primary" @click="router.push('/forgot-password')">
-              忘记密码？
-            </el-link>
+            <el-link type="primary" @click="router.push('/forgot-password')"> 忘记密码？ </el-link>
           </div>
         </el-form-item>
 
@@ -52,18 +50,13 @@
             :loading="loginLoading"
             @click="handleLogin"
           >
-            {{ loginLoading ? "登录中..." : "登录" }}
+            {{ loginLoading ? '登录中...' : '登录' }}
           </el-button>
         </el-form-item>
 
         <!-- 开发模式快速登录 -->
         <el-form-item v-if="isDev">
-          <el-button
-            type="warning"
-            class="dev-login-button"
-            plain
-            @click="handleDevLogin"
-          >
+          <el-button type="warning" class="dev-login-button" plain @click="handleDevLogin">
             🚀 开发模式快速登录
           </el-button>
         </el-form-item>
@@ -71,9 +64,7 @@
         <el-form-item>
           <div class="register-link">
             还没有账号？
-            <el-link type="primary" @click="router.push('/register')">
-              立即注册
-            </el-link>
+            <el-link type="primary" @click="router.push('/register')"> 立即注册 </el-link>
           </div>
         </el-form-item>
       </el-form>
@@ -82,153 +73,154 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from "vue";
-import { useRouter } from "vue-router";
-import { useAuthStore } from "@/stores/auth";
-import { ElMessage, ElNotification } from "element-plus";
-import type { FormInstance, FormRules } from "element-plus";
-import type { UserRole } from "@/types";
+import { ref, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { ElMessage, ElNotification } from 'element-plus'
+import type { FormInstance, FormRules } from 'element-plus'
+import type { UserRole } from '@/types'
 
-const router = useRouter();
-const authStore = useAuthStore();
+const router = useRouter()
+const authStore = useAuthStore()
 
 // 表单引用
-const loginFormRef = ref<FormInstance>();
+const loginFormRef = ref<FormInstance>()
 
 // 登录表单数据
 const loginForm = reactive({
-  phone: "",
-  password: "",
+  phone: '',
+  password: '',
   remember_me: false,
-});
+})
 
 // 登录加载状态
-const loginLoading = ref(false);
+const loginLoading = ref(false)
 
 // 开发模式标识
-const isDev = import.meta.env.DEV;
+const isDev = import.meta.env.DEV
 
 // 表单验证规则
 const loginRules: FormRules = {
   phone: [
-    { required: true, message: "请输入手机号", trigger: "blur" },
+    { required: true, message: '请输入手机号', trigger: 'blur' },
     {
       pattern: /^1[3-9]\d{9}$/,
-      message: "请输入正确的手机号格式",
-      trigger: "blur",
+      message: '请输入正确的手机号格式',
+      trigger: 'blur',
     },
   ],
   password: [
-    { required: true, message: "请输入密码", trigger: "blur" },
-    { min: 6, max: 128, message: "密码长度为6-128个字符", trigger: "blur" },
+    { required: true, message: '请输入密码', trigger: 'blur' },
+    { min: 6, max: 128, message: '密码长度为6-128个字符', trigger: 'blur' },
   ],
-};
+}
 
 // 处理登录
 const handleLogin = async () => {
-  if (!loginFormRef.value) return;
+  if (!loginFormRef.value) return
 
   try {
     // 表单验证
-    const valid = await loginFormRef.value.validate();
-    if (!valid) return;
+    const valid = await loginFormRef.value.validate()
+    if (!valid) return
 
-    loginLoading.value = true;
+    loginLoading.value = true
 
     // 调用登录接口
-    const success = await authStore.login(loginForm);
+    const success = await authStore.login(loginForm)
 
     if (success) {
       ElNotification({
-        title: "登录成功",
+        title: '登录成功',
         message: `欢迎回来，${authStore.userNickname}！`,
-        type: "success",
+        type: 'success',
         duration: 3000,
-      });
+      })
 
       // 跳转到目标页面或仪表板
-      const redirect = router.currentRoute.value.query.redirect as string;
-      await router.push(redirect || "/dashboard");
+      const redirect = router.currentRoute.value.query.redirect as string
+      await router.push(redirect || '/dashboard')
     } else {
-      ElMessage.error("登录失败，请检查手机号和密码");
+      ElMessage.error('登录失败，请检查手机号和密码')
     }
   } catch (error) {
-    console.error("Login error:", error);
-    ElMessage.error("登录过程中发生错误，请稍后重试");
+    console.error('Login error:', error)
+    ElMessage.error('登录过程中发生错误，请稍后重试')
   } finally {
-    loginLoading.value = false;
+    loginLoading.value = false
   }
-};
+}
 
 // 处理开发模式登录
 const handleDevLogin = async () => {
   try {
-    loginLoading.value = true;
+    loginLoading.value = true
 
     // 模拟登录成功
     const mockUser = {
-      id: "dev-user-001",
-      phone: "13800138000",
-      name: "开发测试用户",
-      nickname: "Dev测试",
-      role: "student" as UserRole,
+      id: 'dev-user-001',
+      phone: '13800138000',
+      name: '开发测试用户',
+      nickname: 'Dev测试',
+      role: 'student' as UserRole,
       is_active: true,
       is_verified: true,
-      school: "测试学校",
-      grade_level: "junior_2",
-      class_name: "初二(1)班",
+      school: '测试学校',
+      grade_level: 'junior_2',
+      class_name: '初二(1)班',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-    };
+    }
 
     const mockLoginResponse = {
-      access_token: "dev-token-" + Date.now(),
-      token_type: "bearer",
+      access_token: 'dev-token-' + Date.now(),
+      refresh_token: 'dev-refresh-token-' + Date.now(),
+      token_type: 'bearer',
       expires_in: 86400,
       user: mockUser,
-    };
+    }
 
     // 直接设置认证状态
-    authStore.setAuth(mockLoginResponse, loginForm.remember_me);
+    authStore.setAuth(mockLoginResponse, loginForm.remember_me)
 
     ElNotification({
-      title: "开发模式登录成功",
+      title: '开发模式登录成功',
       message: `欢迎回来，${mockUser.nickname}！`,
-      type: "success",
+      type: 'success',
       duration: 3000,
-    });
+    })
 
     // 跳转到仪表板
-    const redirect = router.currentRoute.value.query.redirect as string;
-    await router.push(redirect || "/dashboard");
+    const redirect = router.currentRoute.value.query.redirect as string
+    await router.push(redirect || '/dashboard')
   } catch (error) {
-    console.error("Dev login error:", error);
-    ElMessage.error("开发模式登录失败");
+    console.error('Dev login error:', error)
+    ElMessage.error('开发模式登录失败')
   } finally {
-    loginLoading.value = false;
+    loginLoading.value = false
   }
-};
+}
 
 // 组件挂载时检查登录状态
 onMounted(() => {
   // 如果已经登录，直接跳转到仪表板
   if (authStore.isAuthenticated) {
-    router.push("/dashboard");
-    return;
+    router.push('/dashboard')
+    return
   }
 
   // 尝试从URL参数获取错误信息
-  const error = router.currentRoute.value.query.error as string;
+  const error = router.currentRoute.value.query.error as string
   if (error) {
-    ElMessage.error(decodeURIComponent(error));
+    ElMessage.error(decodeURIComponent(error))
   }
 
   // 开发环境下预填充测试账号
   if (import.meta.env.DEV) {
-    loginForm.phone = "13800138000";
-    loginForm.password = "123456";
+    loginForm.phone = '13800138000'
+    loginForm.password = '123456'
   }
-});
+})
 </script>
 
 <style lang="scss" scoped>
@@ -242,28 +234,16 @@ onMounted(() => {
   position: relative;
 
   &::before {
-    content: "";
+    content: '';
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
     background-image:
-      radial-gradient(
-        circle at 20% 50%,
-        rgba(120, 119, 198, 0.3) 0%,
-        transparent 50%
-      ),
-      radial-gradient(
-        circle at 80% 20%,
-        rgba(255, 119, 198, 0.3) 0%,
-        transparent 50%
-      ),
-      radial-gradient(
-        circle at 40% 80%,
-        rgba(120, 219, 255, 0.3) 0%,
-        transparent 50%
-      );
+      radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+      radial-gradient(circle at 40% 80%, rgba(120, 219, 255, 0.3) 0%, transparent 50%);
     pointer-events: none;
   }
 }

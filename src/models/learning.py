@@ -10,7 +10,21 @@ from sqlalchemy import Boolean, Column, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import relationship
 
+from src.core.config import get_settings
+
 from .base import BaseModel
+
+# 获取配置以确定数据库类型
+settings = get_settings()
+is_sqlite = settings.SQLALCHEMY_DATABASE_URI and "sqlite" in str(settings.SQLALCHEMY_DATABASE_URI)  # type: ignore
+
+# 根据数据库类型选择合适的UUID字段类型
+if is_sqlite:
+    # SQLite使用字符串类型
+    UUID_TYPE = String(36)
+else:
+    # PostgreSQL使用UUID类型
+    UUID_TYPE = PG_UUID(as_uuid=True)
 
 
 class QuestionType(enum.Enum):
@@ -40,14 +54,23 @@ class ChatSession(BaseModel):
 
     __tablename__ = "chat_sessions"
 
-    # 用户信息
-    user_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("users.id"),
-        nullable=False,
-        index=True,
-        comment="用户ID",
-    )
+    # 用户信息 - 兼容SQLite和PostgreSQL
+    if is_sqlite:
+        user_id = Column(
+            String(36),
+            ForeignKey("users.id"),
+            nullable=False,
+            index=True,
+            comment="用户ID",
+        )
+    else:
+        user_id = Column(
+            PG_UUID(as_uuid=True),
+            ForeignKey("users.id"),
+            nullable=False,
+            index=True,
+            comment="用户ID",
+        )
 
     # 会话基础信息
     title = Column(String(200), nullable=False, comment="会话标题")
@@ -95,22 +118,37 @@ class Question(BaseModel):
 
     __tablename__ = "questions"
 
-    # 会话信息
-    session_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("chat_sessions.id"),
-        nullable=False,
-        index=True,
-        comment="会话ID",
-    )
-
-    user_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("users.id"),
-        nullable=False,
-        index=True,
-        comment="用户ID",
-    )
+    # 会话信息 - 兼容SQLite和PostgreSQL
+    if is_sqlite:
+        session_id = Column(
+            String(36),
+            ForeignKey("chat_sessions.id"),
+            nullable=False,
+            index=True,
+            comment="会话ID",
+        )
+        user_id = Column(
+            String(36),
+            ForeignKey("users.id"),
+            nullable=False,
+            index=True,
+            comment="用户ID",
+        )
+    else:
+        session_id = Column(
+            PG_UUID(as_uuid=True),
+            ForeignKey("chat_sessions.id"),
+            nullable=False,
+            index=True,
+            comment="会话ID",
+        )
+        user_id = Column(
+            PG_UUID(as_uuid=True),
+            ForeignKey("users.id"),
+            nullable=False,
+            index=True,
+            comment="用户ID",
+        )
 
     # 问题内容
     content = Column(Text, nullable=False, comment="问题内容")
@@ -162,15 +200,25 @@ class Answer(BaseModel):
 
     __tablename__ = "answers"
 
-    # 问题关联
-    question_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("questions.id"),
-        nullable=False,
-        unique=True,
-        index=True,
-        comment="问题ID",
-    )
+    # 问题关联 - 兼容SQLite和PostgreSQL
+    if is_sqlite:
+        question_id = Column(
+            String(36),
+            ForeignKey("questions.id"),
+            nullable=False,
+            unique=True,
+            index=True,
+            comment="问题ID",
+        )
+    else:
+        question_id = Column(
+            PG_UUID(as_uuid=True),
+            ForeignKey("questions.id"),
+            nullable=False,
+            unique=True,
+            index=True,
+            comment="问题ID",
+        )
 
     # 答案内容
     content = Column(Text, nullable=False, comment="答案内容")
@@ -212,15 +260,25 @@ class LearningAnalytics(BaseModel):
 
     __tablename__ = "learning_analytics"
 
-    # 用户信息
-    user_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("users.id"),
-        nullable=False,
-        unique=True,
-        index=True,
-        comment="用户ID",
-    )
+    # 用户信息 - 兼容SQLite和PostgreSQL
+    if is_sqlite:
+        user_id = Column(
+            String(36),
+            ForeignKey("users.id"),
+            nullable=False,
+            unique=True,
+            index=True,
+            comment="用户ID",
+        )
+    else:
+        user_id = Column(
+            PG_UUID(as_uuid=True),
+            ForeignKey("users.id"),
+            nullable=False,
+            unique=True,
+            index=True,
+            comment="用户ID",
+        )
 
     # 统计数据
     total_questions = Column(Integer, default=0, nullable=False, comment="总提问数")

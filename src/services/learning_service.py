@@ -124,9 +124,14 @@ class LearningService:
             message_dicts = []
             for msg in messages:
                 if hasattr(msg, "role") and hasattr(msg, "content"):
-                    message_dicts.append(
-                        {"role": msg.role.value, "content": msg.content}
-                    )
+                    msg_dict: Dict[str, Any] = {
+                        "role": msg.role.value,
+                        "content": msg.content,
+                    }
+                    # 如果有图片URLs，添加到字典中
+                    if hasattr(msg, "image_urls") and msg.image_urls:
+                        msg_dict["image_urls"] = msg.image_urls
+                    message_dicts.append(msg_dict)
                 else:
                     message_dicts.append(msg)
 
@@ -435,11 +440,24 @@ class LearningService:
         # 3. 当前问题
         user_message = request.content
 
-        # 如果有图片，添加图片描述
-        if request.image_urls:
-            user_message += f"\n\n[用户上传了{len(request.image_urls)}张图片]"
+        # 构建用户消息，支持图片
+        if request.image_urls and len(request.image_urls) > 0:
+            # 有图片时，创建包含图片的多模态消息
+            user_chat_message = ChatMessage(
+                role=MessageRole.USER,
+                content=user_message,
+                image_urls=request.image_urls,
+            )
 
-        messages.append(ChatMessage(role=MessageRole.USER, content=user_message))
+            # 添加图片提示到文本内容
+            user_message += f"\n\n[用户上传了{len(request.image_urls)}张图片，请分析图片内容并回答问题]"
+            user_chat_message.content = user_message
+
+        else:
+            # 纯文本消息
+            user_chat_message = ChatMessage(role=MessageRole.USER, content=user_message)
+
+        messages.append(user_chat_message)
 
         return messages
 

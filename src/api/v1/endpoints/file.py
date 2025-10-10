@@ -3,6 +3,7 @@
 提供文件上传、下载、管理等功能的基础框架
 """
 
+import logging
 import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -17,9 +18,12 @@ from src.api.v1.endpoints.auth import get_current_user_id
 from src.core.config import get_settings
 from src.core.database import get_db
 from src.schemas.common import DataResponse, SuccessResponse
+from src.services.ai_image_service import get_ai_image_service
+from src.services.file_service import FileService
 
 settings = get_settings()
 router = APIRouter(prefix="/files", tags=["文件管理"])
+logger = logging.getLogger(__name__)
 
 # 支持的文件类型配置
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
@@ -243,6 +247,51 @@ async def upload_file(
     return DataResponse[Dict[str, Any]](
         success=True, data=uploaded_file, message="文件上传成功"
     )
+
+
+# ========== 学习问答图片上传 ==========
+
+
+@router.post(
+    "/upload-image-for-learning",
+    summary="上传学习问答图片",
+    description="专门用于学习问答的图片上传，返回可访问的图片URL",
+    response_model=DataResponse[Dict[str, Any]],
+)
+async def upload_image_for_learning(
+    file: UploadFile = File(..., description="要上传的图片文件"),
+    current_user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    上传学习问答图片
+
+    **支持的图片类型:**
+    - JPEG, PNG, WebP, GIF
+
+    **文件限制:**
+    - 最大文件大小: 10MB
+    - 只支持图片格式
+
+    **返回数据:**
+    - 图片ID、访问URL、预览URL等
+    """
+    try:
+        # 使用文件服务处理上传
+        file_service = FileService()
+        uploaded_image = await file_service.upload_learning_image(file, current_user_id)
+
+        return DataResponse[Dict[str, Any]](
+            success=True, data=uploaded_image, message="学习图片上传成功"
+        )
+
+    except ValueError as e:
+        raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"文件上传失败: {str(e)}",
+        )
 
 
 # ========== 文件查询 ==========
@@ -536,4 +585,58 @@ async def get_file_stats(
         raise HTTPException(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"获取统计信息失败: {str(e)}",
+        )
+
+
+@router.post(
+    "/upload-for-ai",
+    summary="上传图片供AI分析",
+    description="专门为AI服务上传图片，生成公开可访问的URL",
+    response_model=DataResponse[Dict[str, Any]],
+)
+async def upload_image_for_ai(
+    file: UploadFile = File(..., description="要上传的图片文件"),
+    current_user_id: str = Depends(get_current_user_id),
+    ai_image_service=Depends(get_ai_image_service),
+):
+    """
+    上传图片供AI分析
+
+    **专用功能:**
+    - 上传图片到OSS并设置公开访问权限
+    - 生成AI服务可直接访问的公开URL
+    - 支持阿里云百炼等AI服务的图片识别需求
+
+    **支持的图片类型:**
+    - JPEG, PNG, WebP, GIF
+
+    **文件限制:**
+    - 最大文件大小: 10MB
+
+    **返回数据:**
+    - ai_accessible_url: AI服务可直接访问的公开URL
+    - 文件信息和上传状态
+    """
+    try:
+        # 验证是否为图片文件
+        if not file.content_type or file.content_type not in ALLOWED_IMAGE_TYPES:
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail=f"只支持图片文件。支持的类型: {', '.join(ALLOWED_IMAGE_TYPES)}",
+            )
+
+        # 上传并获取AI可访问的URL
+        result = await ai_image_service.upload_for_ai_analysis(current_user_id, file)
+
+        return DataResponse[Dict[str, Any]](
+            success=True, data=result, message="图片上传成功，AI可直接访问"
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"AI图片上传失败: user={current_user_id}, error={e}")
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"图片上传失败: {str(e)}",
         )

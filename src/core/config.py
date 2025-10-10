@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     HOST: str = "127.0.0.1"
     PORT: int = 8000
     DEBUG: bool = False
+    BASE_URL: str = "http://localhost:8000"  # 基础URL，用于生成完整的文件访问链接
 
     # 安全配置
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8天

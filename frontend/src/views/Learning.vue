@@ -255,6 +255,7 @@ import 'katex/dist/katex.min.css'
 import { useLearningStore } from '@/stores/learning'
 import type { AskQuestionRequest } from '@/types/learning'
 import { QuestionType } from '@/types/learning'
+import FileAPI from '@/api/file'
 
 // ========== Store ==========
 const learningStore = useLearningStore()
@@ -340,26 +341,53 @@ const removeImage = (index: number) => {
 const handleSend = async () => {
   if (!inputText.value.trim()) return
 
-  const request: AskQuestionRequest = {
-    content: inputText.value.trim(),
-    question_type: QuestionType.GENERAL_INQUIRY,
-    use_context: true,
-    include_history: true,
-    max_history: 10,
-  }
-
-  // 清空输入
-  const questionText = inputText.value
-  inputText.value = ''
-  uploadedImages.value = []
+  // 保存输入内容和图片，用于错误恢复
+  const questionText = inputText.value.trim()
+  const imagesToUpload = [...uploadedImages.value]
 
   try {
+    // 1. 首先上传图片（如果有的话）
+    let imageUrls: string[] = []
+    if (imagesToUpload.length > 0) {
+      ElMessage.info(`正在上传${imagesToUpload.length}张图片...`)
+
+      try {
+        const uploadResults = await FileAPI.uploadLearningImages(
+          imagesToUpload.map((img) => img.file)
+        )
+        imageUrls = uploadResults.map((result) => result.image_url)
+        ElMessage.success(`图片上传成功！`)
+      } catch (uploadError) {
+        console.error('图片上传失败:', uploadError)
+        ElMessage.error('图片上传失败，请重试')
+        return
+      }
+    }
+
+    // 2. 构建问答请求
+    const request: AskQuestionRequest = {
+      content: questionText,
+      question_type: QuestionType.GENERAL_INQUIRY,
+      image_urls: imageUrls.length > 0 ? imageUrls : undefined,
+      use_context: true,
+      include_history: true,
+      max_history: 10,
+    }
+
+    // 3. 清空输入（在发送前清空，避免重复发送）
+    inputText.value = ''
+    uploadedImages.value = []
+
+    // 4. 发送问答请求
     await learningStore.askQuestion(request)
     await nextTick()
     scrollToBottom()
   } catch (error) {
     console.error('发送失败:', error)
-    inputText.value = questionText // 恢复输入
+    // 恢复输入内容
+    inputText.value = questionText
+    uploadedImages.value = imagesToUpload
+    ElMessage.error('发送失败，请重试')
   }
 }
 

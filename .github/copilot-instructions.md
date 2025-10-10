@@ -119,7 +119,7 @@ raise HomeworkNotFoundError(f"Homework {homework_id} not found")
 - **Don't** modify `src/core/` without understanding middleware stack
 - **Always** test AI service calls with mock data first
 - **Remember** to update Alembic migrations for model changes
-- **Use** `scripts/diagnose.py` when debugging environment issues
+- **Important** ALWAYS use `./scripts/start-dev.sh` start the server
 
 ## Integration Points
 
