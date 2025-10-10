@@ -453,6 +453,16 @@ class LearningService:
             user_message += f"\n\n[用户上传了{len(request.image_urls)}张图片，请分析图片内容并回答问题]"
             user_chat_message.content = user_message
 
+            # 🔍 调试日志：记录图片URL
+            logger.info(
+                f"构建多模态消息: session_id={session_id}, image_count={len(request.image_urls)}",
+                extra={
+                    "session_id": session_id,
+                    "image_urls": request.image_urls,
+                    "message_preview": user_message[:100],
+                },
+            )
+
         else:
             # 纯文本消息
             user_chat_message = ChatMessage(role=MessageRole.USER, content=user_message)
