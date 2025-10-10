@@ -352,10 +352,10 @@ const handleSend = async () => {
       ElMessage.info(`正在上传${imagesToUpload.length}张图片...`)
 
       try {
-        const uploadResults = await FileAPI.uploadLearningImages(
-          imagesToUpload.map((img) => img.file)
-        )
-        imageUrls = uploadResults.map((result) => result.image_url)
+        // 使用新的AI图片上传端点
+        const uploadPromises = imagesToUpload.map((img) => FileAPI.uploadImageForAI(img.file))
+        const uploadResults = await Promise.all(uploadPromises)
+        imageUrls = uploadResults.map((result) => result.ai_accessible_url)
         ElMessage.success(`图片上传成功！`)
       } catch (uploadError) {
         console.error('图片上传失败:', uploadError)
