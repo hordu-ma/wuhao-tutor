@@ -50,35 +50,6 @@ class AIImageAccessService:
             logger.warning("OSS配置不完整，AI图片访问服务将使用降级方案")
             self.bucket = None
             self.is_oss_available = False
-    def _get_public_endpoint(self) -> str:
-        """
-        获取公网端点，确保AI服务可以访问
-        
-        生产环境使用内网端点提升上传速度，但AI访问需要公网端点
-        """
-        # 如果当前端点是内网端点，转换为公网端点
-        if "internal" in self.endpoint:
-            public_endpoint = self.endpoint.replace("-internal", "")
-            logger.debug(f"转换内网端点到公网: {self.endpoint} -> {public_endpoint}")
-            return public_endpoint
-        return self.endpoint
-
-    def _generate_ai_accessible_url(self, object_name: str) -> str:
-        """
-        生成AI服务可访问的公网URL
-        
-        Args:
-            object_name: OSS对象名
-            
-        Returns:
-            str: 公网可访问的URL
-        """
-        public_endpoint = self._get_public_endpoint()
-        public_url = f"https://{self.bucket_name}.{public_endpoint}/{object_name}"
-        
-        logger.debug(f"生成AI可访问URL: {public_url}")
-        return public_url
-
 
     def _generate_ai_object_name(self, user_id: str, original_filename: str) -> str:
         """
@@ -142,8 +113,10 @@ class AIImageAccessService:
                 )
 
                 if result.status == 200:
-                    # 生成AI服务可访问的公网URL
-                    public_url = self._generate_ai_accessible_url(object_name)
+                    # 生成公开访问URL
+                    public_url = (
+                        f"https://{self.bucket_name}.{self.endpoint}/{object_name}"
+                    )
 
                     logger.info(
                         f"AI图片上传成功: user={user_id}, object={object_name}, size={len(content)}"

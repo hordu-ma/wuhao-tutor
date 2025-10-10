@@ -138,6 +138,9 @@ class Settings(BaseSettings):
     CACHE_DEFAULT_TTL: int = 300  # 默认缓存TTL（秒）
     CACHE_MAX_SIZE: int = 10000  # 最大缓存大小
 
+    # 加密配置
+    ENCRYPTION_KEY: Optional[str] = None  # 对称加密密钥
+
     class Config:
         env_file = ".env"
         case_sensitive = True

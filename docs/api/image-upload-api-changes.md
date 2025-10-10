@@ -1,25 +1,27 @@
-# 图片上传API变更说明
+# 图片上传 API 变更说明
 
 ## 📋 变更概览
 
 **变更日期**: 2025-10-10  
 **影响版本**: v0.1.0+  
-**变更类型**: API端点优化
+**变更类型**: API 端点优化
 
-## 🔄 API端点变更
+## 🔄 API 端点变更
 
 ### 新增端点 (推荐使用)
 
 #### `POST /api/v1/files/upload-for-ai`
 
-**用途**: 专为AI分析优化的图片上传端点  
-**优势**: 
-- 🚀 **性能优化**: 直接生成AI可访问的公开URL
-- ☁️ **云存储集成**: 自动上传到阿里云OSS
-- 🔗 **URL优化**: 提供ai_accessible_url，无需额外URL转换
+**用途**: 专为 AI 分析优化的图片上传端点  
+**优势**:
+
+- 🚀 **性能优化**: 直接生成 AI 可访问的公开 URL
+- ☁️ **云存储集成**: 自动上传到阿里云 OSS
+- 🔗 **URL 优化**: 提供 ai_accessible_url，无需额外 URL 转换
 - ⚡ **响应更快**: 减少中间步骤，提升上传效率
 
 **请求格式:**
+
 ```bash
 POST /api/v1/files/upload-for-ai
 Content-Type: multipart/form-data
@@ -29,11 +31,12 @@ file: <image_file>
 ```
 
 **响应格式:**
+
 ```json
 {
   "data": {
     "ai_accessible_url": "https://wuhao-tutor-prod.oss-cn-hangzhou.aliyuncs.com/ai_uploads/20251010/uuid-filename.jpg",
-    "object_name": "ai_uploads/20251010/uuid-filename.jpg", 
+    "object_name": "ai_uploads/20251010/uuid-filename.jpg",
     "file_size": 1024576,
     "content_type": "image/jpeg",
     "upload_time": "2025-10-10T03:30:15.123456",
@@ -49,15 +52,16 @@ file: <image_file>
 
 **状态**: 🔶 **已废弃但仍可用**  
 **建议**: 迁移到 `/upload-for-ai` 端点  
-**移除计划**: v0.2.0版本
+**移除计划**: v0.2.0 版本
 
 **响应格式:**
+
 ```json
 {
   "data": {
     "id": "uuid",
     "image_url": "https://domain.com/preview/image.jpg",
-    "preview_url": "https://domain.com/preview/image.jpg",
+    "preview_url": "https://domain.com/preview/image.jpg"
     // ... 其他字段
   }
 }
@@ -67,24 +71,22 @@ file: <image_file>
 
 ### Learning.vue 修改
 
-**修改内容**: 图片上传API调用更新  
+**修改内容**: 图片上传 API 调用更新  
 **文件路径**: `frontend/src/views/Learning.vue`
 
 **变更前:**
+
 ```typescript
 // 旧的调用方式
-const uploadResults = await FileAPI.uploadLearningImages(
-  imagesToUpload.map((img) => img.file)
-)
+const uploadResults = await FileAPI.uploadLearningImages(imagesToUpload.map((img) => img.file))
 imageUrls = uploadResults.map((result) => result.image_url)
 ```
 
 **变更后:**
-```typescript  
+
+```typescript
 // 新的调用方式
-const uploadPromises = imagesToUpload.map((img) => 
-  FileAPI.uploadImageForAI(img.file)
-)
+const uploadPromises = imagesToUpload.map((img) => FileAPI.uploadImageForAI(img.file))
 const uploadResults = await Promise.all(uploadPromises)
 imageUrls = uploadResults.map((result) => result.ai_accessible_url)
 ```
@@ -122,23 +124,21 @@ static async uploadImageForAI(file: File): Promise<AIImageUploadResponse> {
 
 ### 客户端迁移步骤
 
-1. **更新API调用**
+1. **更新 API 调用**
+
    ```typescript
    // 替换旧方法
-   - FileAPI.uploadLearningImage(file)
-   - FileAPI.uploadLearningImages(files)
-   
-   // 使用新方法  
-   + FileAPI.uploadImageForAI(file)
+   ;-FileAPI.uploadLearningImage(file) -
+     FileAPI.uploadLearningImages(files) +
+     // 使用新方法
+     FileAPI.uploadImageForAI(file)
    ```
 
 2. **更新响应处理**
+
    ```typescript
    // 更新字段访问
-   - result.image_url
-   - result.preview_url
-   
-   + result.ai_accessible_url
+   ;-result.image_url - result.preview_url + result.ai_accessible_url
    ```
 
 3. **错误处理适配**
@@ -153,6 +153,7 @@ static async uploadImageForAI(file: File): Promise<AIImageUploadResponse> {
 ### 服务端集成
 
 **后端服务集成新端点:**
+
 ```python
 # FastAPI路由示例
 from src.api.v1.endpoints.file import router as file_router
@@ -160,7 +161,8 @@ from src.api.v1.endpoints.file import router as file_router
 app.include_router(file_router, prefix="/api/v1/files", tags=["files"])
 ```
 
-**AI服务调用:**
+**AI 服务调用:**
+
 ```python
 # 使用新的图片URL调用AI服务
 ai_response = await bailian_service.analyze_image_with_text(
@@ -179,28 +181,28 @@ ai_response = await bailian_service.analyze_image_with_text(
 
 ### 版本支持计划
 
-| 版本 | /upload-image-for-learning | /upload-for-ai | 状态 |
-|------|----------------------------|----------------|------|
-| v0.1.x | ✅ 支持 | ✅ 支持 | 当前版本 |
-| v0.2.x | ⚠️ 废弃警告 | ✅ 推荐 | 计划中 |  
-| v0.3.x | ❌ 移除 | ✅ 唯一选择 | 规划中 |
+| 版本   | /upload-image-for-learning | /upload-for-ai | 状态     |
+| ------ | -------------------------- | -------------- | -------- |
+| v0.1.x | ✅ 支持                    | ✅ 支持        | 当前版本 |
+| v0.2.x | ⚠️ 废弃警告                | ✅ 推荐        | 计划中   |
+| v0.3.x | ❌ 移除                    | ✅ 唯一选择    | 规划中   |
 
 ## 🚀 性能提升
 
 ### 上传性能对比
 
-| 指标 | 旧端点 | 新端点 | 提升幅度 |
-|------|--------|--------|----------|
-| **响应时间** | ~800ms | ~400ms | 50% ⬆️ |
-| **存储效率** | 本地+OSS | 直接OSS | 简化流程 |
-| **AI访问** | 需URL转换 | 直接访问 | 减少延迟 |
-| **带宽使用** | 双重传输 | 单次传输 | 节省50% |
+| 指标         | 旧端点      | 新端点   | 提升幅度 |
+| ------------ | ----------- | -------- | -------- |
+| **响应时间** | ~800ms      | ~400ms   | 50% ⬆️   |
+| **存储效率** | 本地+OSS    | 直接 OSS | 简化流程 |
+| **AI 访问**  | 需 URL 转换 | 直接访问 | 减少延迟 |
+| **带宽使用** | 双重传输    | 单次传输 | 节省 50% |
 
 ### 错误率降低
 
-- **网络错误**: 减少中间环节，降低30%网络异常
-- **存储冲突**: OSS直传避免本地存储限制
-- **URL失效**: 使用永久性OSS URL，避免临时链接问题
+- **网络错误**: 减少中间环节，降低 30%网络异常
+- **存储冲突**: OSS 直传避免本地存储限制
+- **URL 失效**: 使用永久性 OSS URL，避免临时链接问题
 
 ## 🔍 监控和日志
 
@@ -218,7 +220,7 @@ upload_for_ai_errors = Counter('upload_for_ai_errors_total', 'AI图片上传错�
 ```json
 {
   "timestamp": "2025-10-10T03:30:15.123456Z",
-  "endpoint": "/api/v1/files/upload-for-ai", 
+  "endpoint": "/api/v1/files/upload-for-ai",
   "user_id": "uuid",
   "file_size": 1024576,
   "content_type": "image/jpeg",
@@ -237,17 +239,17 @@ upload_for_ai_errors = Counter('upload_for_ai_errors_total', 'AI图片上传错�
 A: 不影响。新端点是增量更新，旧端点继续正常工作。
 
 **Q: 什么时候必须迁移到新端点？**  
-A: v0.2.x版本前可选择迁移，v0.3.x版本将强制使用新端点。
+A: v0.2.x 版本前可选择迁移，v0.3.x 版本将强制使用新端点。
 
 **Q: 新端点的文件大小限制？**  
-A: 与旧端点一致，最大10MB，支持 jpg/jpeg/png/webp 格式。
+A: 与旧端点一致，最大 10MB，支持 jpg/jpeg/png/webp 格式。
 
-**Q: OSS存储费用是否增加？**  
+**Q: OSS 存储费用是否增加？**  
 A: 不会。新端点优化了存储策略，实际上会降低存储成本。
 
 ### 技术联系
 
-- **API文档**: `https://121.199.173.244/docs`
+- **API 文档**: `https://121.199.173.244/docs`
 - **健康检查**: `https://121.199.173.244/api/v1/files/health`
 - **问题反馈**: 开发团队技术支持
 
