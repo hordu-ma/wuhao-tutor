@@ -131,9 +131,28 @@ class LearningService:
                     # 如果有图片URLs，添加到字典中
                     if hasattr(msg, "image_urls") and msg.image_urls:
                         msg_dict["image_urls"] = msg.image_urls
+                        logger.info(
+                            f"🖼️ 消息包含图片: role={msg.role.value}, image_count={len(msg.image_urls)}",
+                            extra={"image_urls": msg.image_urls},
+                        )
                     message_dicts.append(msg_dict)
                 else:
                     message_dicts.append(msg)
+
+            # 🔍 最终调试：打印完整的message_dicts
+            logger.info(
+                f"📤 准备调用AI: message_count={len(message_dicts)}",
+                extra={
+                    "messages_summary": [
+                        {
+                            "role": m.get("role"),
+                            "has_images": bool(m.get("image_urls")),
+                            "image_count": len(m.get("image_urls", [])),
+                        }
+                        for m in message_dicts
+                    ]
+                },
+            )
 
             ai_response = await self.bailian_service.chat_completion(
                 messages=message_dicts,
