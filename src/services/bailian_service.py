@@ -12,21 +12,20 @@ import asyncio
 import json
 import logging
 import time
-from typing import Any, Dict, List, Optional, Union
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from enum import Enum
+from typing import Any, Dict, List, Optional, Union
 
 import httpx
 from pydantic import BaseModel, Field
 
 from src.core.config import get_settings
 from src.core.exceptions import (
-    BailianServiceError,
-    BailianRateLimitError,
     BailianAuthError,
+    BailianRateLimitError,
+    BailianServiceError,
     BailianTimeoutError,
 )
-
 
 logger = logging.getLogger("bailian_service")
 settings = get_settings()
@@ -34,6 +33,7 @@ settings = get_settings()
 
 class MessageRole(str, Enum):
     """消息角色枚举"""
+
     USER = "user"
     ASSISTANT = "assistant"
     SYSTEM = "system"
@@ -42,13 +42,16 @@ class MessageRole(str, Enum):
 @dataclass
 class ChatMessage:
     """聊天消息"""
+
     role: MessageRole
     content: str
+    image_urls: Optional[List[str]] = None
 
 
 @dataclass
 class AIContext:
     """AI调用上下文"""
+
     user_id: Optional[str] = None
     subject: Optional[str] = None
     grade_level: Optional[int] = None
@@ -59,6 +62,7 @@ class AIContext:
 @dataclass
 class ChatCompletionResponse:
     """聊天补全响应"""
+
     content: str
     tokens_used: int
     processing_time: float
@@ -85,17 +89,17 @@ class BailianService:
             headers={
                 "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json",
-                "User-Agent": "wuhao-tutor/0.1.0"
-            }
+                "User-Agent": "wuhao-tutor/0.1.0",
+            },
         )
 
         logger.info(f"百炼服务初始化成功: {self.application_id[:8]}...")
 
     async def chat_completion(
         self,
-        messages: List[Union[Dict[str, str], ChatMessage]],
+        messages: List[Union[Dict[str, Any], ChatMessage]],
         context: Optional[AIContext] = None,
-        **kwargs
+        **kwargs,
     ) -> ChatCompletionResponse:
         """
         聊天补全接口
@@ -118,11 +122,7 @@ class BailianService:
             formatted_messages = self._format_messages(messages)
 
             # 构建请求载荷
-            payload = self._build_request_payload(
-                formatted_messages,
-                context,
-                **kwargs
-            )
+            payload = self._build_request_payload(formatted_messages, context, **kwargs)
 
             # 记录请求日志
             self._log_request(payload, context)
@@ -147,7 +147,7 @@ class BailianService:
                 model="",
                 request_id="",
                 success=False,
-                error_message=str(e)
+                error_message=str(e),
             )
 
             logger.error(f"百炼API调用失败: {e}")
@@ -156,7 +156,9 @@ class BailianService:
 
             raise BailianServiceError(f"聊天补全调用失败: {str(e)}") from e
 
-    async def _call_bailian_api_with_retry(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+    async def _call_bailian_api_with_retry(
+        self, payload: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         带重试机制的API调用
 
@@ -172,7 +174,7 @@ class BailianService:
             try:
                 if attempt > 0:
                     # 指数退避
-                    wait_time = min(2 ** attempt, 30)
+                    wait_time = min(2**attempt, 30)
                     logger.info(f"百炼API重试第{attempt}次，等待{wait_time}秒...")
                     await asyncio.sleep(wait_time)
 
@@ -181,13 +183,17 @@ class BailianService:
             except BailianRateLimitError as e:
                 last_exception = e
                 if attempt == self.max_retries:
-                    raise BailianServiceError(f"API调用失败，已重试{self.max_retries}次: {str(e)}") from e
+                    raise BailianServiceError(
+                        f"API调用失败，已重试{self.max_retries}次: {str(e)}"
+                    ) from e
                 logger.warning(f"遇到限流，准备重试: {e}")
 
             except BailianTimeoutError as e:
                 last_exception = e
                 if attempt == self.max_retries:
-                    raise BailianServiceError(f"API调用失败，已重试{self.max_retries}次: {str(e)}") from e
+                    raise BailianServiceError(
+                        f"API调用失败，已重试{self.max_retries}次: {str(e)}"
+                    ) from e
                 logger.warning(f"请求超时，准备重试: {e}")
 
             except (BailianAuthError, BailianServiceError) as e:
@@ -201,7 +207,9 @@ class BailianService:
                 logger.warning(f"未知错误，准备重试: {e}")
 
         # 所有重试都失败
-        raise BailianServiceError(f"API调用失败，已重试{self.max_retries}次") from last_exception
+        raise BailianServiceError(
+            f"API调用失败，已重试{self.max_retries}次"
+        ) from last_exception
 
     async def _call_bailian_api(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -253,68 +261,137 @@ class BailianService:
             raise BailianServiceError(f"网络请求错误: {str(e)}") from e
 
     def _format_messages(
-        self,
-        messages: List[Union[Dict[str, str], ChatMessage]]
-    ) -> List[Dict[str, str]]:
+        self, messages: List[Union[Dict[str, Any], ChatMessage]]
+    ) -> List[Dict[str, Any]]:
         """
-        标准化消息格式
+        标准化消息格式，支持多模态内容
 
         Args:
             messages: 原始消息列表
 
         Returns:
-            List[Dict]: 标准化的消息列表
+            List[Dict]: 标准化的消息列表，支持文本和图片
         """
         formatted = []
 
         for msg in messages:
             if isinstance(msg, ChatMessage):
-                formatted.append({
-                    "role": msg.role.value,
-                    "content": msg.content
-                })
+                # 处理 ChatMessage 对象
+                formatted_msg: Dict[str, Any] = {"role": msg.role.value}
+
+                # 如果有图片URLs，转换为多模态格式
+                if hasattr(msg, "image_urls") and msg.image_urls:
+                    formatted_msg["content"] = self._build_multimodal_content(
+                        msg.content, msg.image_urls
+                    )
+                else:
+                    # 纯文本内容
+                    formatted_msg["content"] = msg.content
+
+                formatted.append(formatted_msg)
+
             elif isinstance(msg, dict):
                 # 验证必要字段
-                if "role" not in msg or "content" not in msg:
-                    raise ValueError("消息必须包含'role'和'content'字段")
-                formatted.append({
-                    "role": msg["role"],
-                    "content": str(msg["content"])
-                })
+                if "role" not in msg:
+                    raise ValueError("消息必须包含'role'字段")
+
+                formatted_msg: Dict[str, Any] = {"role": msg["role"]}
+
+                # 处理内容字段，支持多模态
+                if "content" in msg and "image_urls" in msg and msg["image_urls"]:
+                    # 构建多模态内容
+                    formatted_msg["content"] = self._build_multimodal_content(
+                        str(msg["content"]), msg["image_urls"]
+                    )
+                elif "content" in msg:
+                    # 纯文本内容
+                    formatted_msg["content"] = str(msg["content"])
+                else:
+                    raise ValueError("消息必须包含'content'字段")
+
+                formatted.append(formatted_msg)
+
             else:
                 raise ValueError(f"不支持的消息类型: {type(msg)}")
 
         return formatted
 
-    def _build_request_payload(
-        self,
-        messages: List[Dict[str, str]],
-        context: Optional[AIContext] = None,
-        **kwargs
-    ) -> Dict[str, Any]:
+    def _build_multimodal_content(
+        self, text_content: str, image_urls: List[str]
+    ) -> List[Dict[str, Any]]:
         """
-        构建API请求载荷
+        构建多模态内容格式
 
         Args:
-            messages: 格式化的消息列表
+            text_content: 文本内容
+            image_urls: 图片URL列表
+
+        Returns:
+            List[Dict]: 多模态内容数组
+        """
+        content = []
+
+        # 添加文本部分
+        if text_content and text_content.strip():
+            content.append({"type": "text", "text": text_content})
+
+        # 添加图片部分
+        for image_url in image_urls:
+            if image_url and image_url.strip():
+                content.append({"type": "image_url", "image_url": {"url": image_url}})
+
+        return content
+
+    def _has_images_in_messages(self, messages: List[Dict[str, Any]]) -> bool:
+        """
+        检查消息列表中是否包含图片
+
+        Args:
+            messages: 消息列表
+
+        Returns:
+            bool: 是否包含图片
+        """
+        for message in messages:
+            content = message.get("content")
+            if isinstance(content, list):
+                # 多模态内容，检查是否有图片类型
+                for item in content:
+                    if isinstance(item, dict) and item.get("type") == "image_url":
+                        return True
+        return False
+
+    def _build_request_payload(
+        self,
+        messages: List[Dict[str, Any]],
+        context: Optional[AIContext] = None,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """
+        构建API请求载荷，支持多模态消息
+
+        Args:
+            messages: 格式化的消息列表（可能包含图片）
             context: 调用上下文
             **kwargs: 其他参数
 
         Returns:
             Dict: 请求载荷
         """
+        # 检查是否包含图片，如果有则使用视觉模型
+        has_images = self._has_images_in_messages(messages)
+        model = "qwen-vl-max" if has_images else "qwen-turbo"
+
         payload = {
-            "model": "qwen-turbo",  # 默认模型
-            "input": {
-                "messages": messages
-            },
+            "model": model,
+            "input": {"messages": messages},
             "parameters": {
                 "result_format": "message",
                 "max_tokens": kwargs.get("max_tokens", 1500),
                 "temperature": kwargs.get("temperature", 0.7),
                 "top_p": kwargs.get("top_p", 0.8),
                 "top_k": kwargs.get("top_k", 100),
-            }
+            },
         }
 
         # 添加应用ID
@@ -333,9 +410,7 @@ class BailianService:
         return payload
 
     def _parse_response(
-        self,
-        response_data: Dict[str, Any],
-        start_time: float
+        self, response_data: Dict[str, Any], start_time: float
     ) -> ChatCompletionResponse:
         """
         解析API响应
@@ -377,10 +452,12 @@ class BailianService:
             processing_time=processing_time,
             model=model,
             request_id=request_id,
-            success=True
+            success=True,
         )
 
-    def _log_request(self, payload: Dict[str, Any], context: Optional[AIContext]) -> None:
+    def _log_request(
+        self, payload: Dict[str, Any], context: Optional[AIContext]
+    ) -> None:
         """记录请求日志"""
         log_data = {
             "action": "bailian_request",
@@ -391,19 +468,19 @@ class BailianService:
         }
 
         if context:
-            log_data.update({
-                "user_id": context.user_id,
-                "subject": context.subject,
-                "grade_level": context.grade_level,
-                "session_id": context.session_id,
-            })
+            log_data.update(
+                {
+                    "user_id": context.user_id,
+                    "subject": context.subject,
+                    "grade_level": context.grade_level,
+                    "session_id": context.session_id,
+                }
+            )
 
         logger.info("百炼API请求", extra=log_data)
 
     def _log_response(
-        self,
-        response: ChatCompletionResponse,
-        context: Optional[AIContext]
+        self, response: ChatCompletionResponse, context: Optional[AIContext]
     ) -> None:
         """记录响应日志"""
         log_data = {
@@ -417,10 +494,12 @@ class BailianService:
         }
 
         if context:
-            log_data.update({
-                "user_id": context.user_id,
-                "session_id": context.session_id,
-            })
+            log_data.update(
+                {
+                    "user_id": context.user_id,
+                    "session_id": context.session_id,
+                }
+            )
 
         if response.success:
             logger.info("百炼API响应成功", extra=log_data)
