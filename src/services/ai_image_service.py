@@ -161,12 +161,13 @@ class AIImageAccessService:
             )
 
             if self.is_oss_available and self.bucket:
-                # 上传到OSS并设置公开读取权限
+                # 上传到OSS（依赖Bucket级别的公共读权限）
+                # 注意：如果OSS不允许对象级ACL，移除 x-oss-object-acl
                 result = self.bucket.put_object(
                     object_name,
                     content,
                     headers={
-                        "x-oss-object-acl": "public-read",  # 设置公开读取
+                        # "x-oss-object-acl": "public-read",  # 暂时注释，使用Bucket级别权限
                         "Content-Type": file.content_type or "image/jpeg",
                         "Cache-Control": "max-age=86400",  # 缓存24小时
                     },
