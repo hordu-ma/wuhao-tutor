@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>图片上传测试</title>
+    <style>
+      body {
+        font-family: Arial;
+        padding: 20px;
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      .section {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
+      }
+      button {
+        padding: 10px 20px;
+        margin: 5px;
+        cursor: pointer;
+      }
+      pre {
+        background: #f5f5f5;
+        padding: 10px;
+        overflow-x: auto;
+      }
+      .success {
+        color: green;
+      }
+      .error {
+        color: red;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🧪 图片上传和AI识别测试</h1>
+
+    <div class="section">
+      <h2>1. 登录Token</h2>
+      <input
+        type="text"
+        id="token"
+        placeholder="粘贴你的Bearer Token"
+        style="width: 100%; padding: 8px"
+      />
+      <p>
+        <small
+          >从浏览器localStorage中获取：打开Console，输入
+          <code>localStorage.getItem('token')</code></small
+        >
+      </p>
+    </div>
+
+    <div class="section">
+      <h2>2. 选择图片</h2>
+      <input type="file" id="imageFile" accept="image/*" />
+    </div>
+
+    <div class="section">
+      <h2>3. 测试流程</h2>
+      <button onclick="testUpload()">📤 测试上传图片</button>
+      <button onclick="testAskWithImage()">💬 测试完整流程（上传+提问）</button>
+    </div>
+
+    <div class="section">
+      <h2>📋 日志</h2>
+      <div id="log"></div>
+    </div>
+
+    <script>
+      const API_BASE = 'https://121.199.173.244/api/v1'
+
+      function log(message, type = 'info') {
+        const logDiv = document.getElementById('log')
+        const timestamp = new Date().toLocaleTimeString()
+        const className = type === 'error' ? 'error' : type === 'success' ? 'success' : ''
+        logDiv.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`
+        console.log(message)
+      }
+
+      async function testUpload() {
+        const token = document.getElementById('token').value.trim()
+        const fileInput = document.getElementById('imageFile')
+
+        if (!token) {
+          log('❌ 请先输入Token', 'error')
+          return
+        }
+
+        if (!fileInput.files[0]) {
+          log('❌ 请先选择图片', 'error')
+          return
+        }
+
+        log('📤 开始上传图片...')
+
+        const formData = new FormData()
+        formData.append('file', fileInput.files[0])
+
+        try {
+          const response = await fetch(`${API_BASE}/files/upload-for-ai`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            body: formData,
+          })
+
+          log(`   状态码: ${response.status}`)
+
+          if (response.ok) {
+            const data = await response.json()
+            log(`✅ 上传成功！`, 'success')
+            log(`   图片URL: ${data.ai_accessible_url}`)
+            log(`<pre>${JSON.stringify(data, null, 2)}</pre>`)
+
+            // 保存URL供后续使用
+            window.uploadedImageUrl = data.ai_accessible_url
+          } else {
+            const error = await response.text()
+            log(`❌ 上传失败: ${error}`, 'error')
+          }
+        } catch (error) {
+          log(`❌ 请求异常: ${error.message}`, 'error')
+        }
+      }
+
+      async function testAskWithImage() {
+        const token = document.getElementById('token').value.trim()
+
+        if (!token) {
+          log('❌ 请先输入Token', 'error')
+          return
+        }
+
+        if (!window.uploadedImageUrl) {
+          log('⚠️ 请先上传图片', 'error')
+          return
+        }
+
+        log('💬 发送问题给AI...')
+
+        const payload = {
+          content: '解答图片中的物理题',
+          question_type: 'problem_solving',
+          image_urls: [window.uploadedImageUrl],
+          use_context: false,
+          include_history: false,
+          max_history: 0,
+        }
+
+        log(`<pre>请求payload: ${JSON.stringify(payload, null, 2)}</pre>`)
+
+        try {
+          const response = await fetch(`${API_BASE}/learning/ask`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+          })
+
+          log(`   状态码: ${response.status}`)
+
+          if (response.ok) {
+            const data = await response.json()
+            log(`✅ AI响应成功！`, 'success')
+
+            // 检查AI是否提到无法查看图片
+            if (data.answer.includes('无法') && data.answer.includes('图片')) {
+              log(`⚠️ AI说无法查看图片：`, 'error')
+            } else {
+              log(`✅ AI成功分析了图片！`, 'success')
+            }
+
+            log(`<pre>AI回答:\n${data.answer}</pre>`)
+          } else {
+            const error = await response.text()
+            log(`❌ 提问失败: ${error}`, 'error')
+          }
+        } catch (error) {
+          log(`❌ 请求异常: ${error.message}`, 'error')
+        }
+      }
+    </script>
+  </body>
+</html>
