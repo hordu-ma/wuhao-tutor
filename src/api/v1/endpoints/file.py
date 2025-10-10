@@ -640,3 +640,98 @@ async def upload_image_for_ai(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"图片上传失败: {str(e)}",
         )
+
+
+# ========== AI分析文件访问（降级方案支持）==========
+
+
+@router.get(
+    "/ai/{filename}",
+    summary="获取AI分析文件",
+    description="为本地存储的AI分析文件提供访问端点（OSS不可用时的降级方案）",
+)
+async def get_ai_analysis_file(
+    filename: str,
+    current_user_id: str = Depends(get_current_user_id),
+):
+    """
+    获取AI分析文件（降级方案）
+
+    **用途:**
+    - 当OSS不可用时，为本地存储的AI分析文件提供访问
+    - 支持AIImageAccessService的降级方案
+
+    **路径参数:**
+    - **filename**: AI分析文件名（格式：ai_analysis_用户ID_时间戳_随机ID.ext）
+
+    **安全:**
+    - 需要用户认证
+    - 只能访问ai_analysis目录下的文件
+    - 文件名包含用户信息验证
+
+    **返回:**
+    - 图片文件内容，可直接在浏览器中显示
+    """
+    try:
+        # 安全检查：确保文件名不包含路径遍历
+        if ".." in filename or "/" in filename or "\\" in filename:
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST, detail="无效的文件名"
+            )
+
+        # 构建文件路径（只允许访问ai_analysis目录）
+        ai_analysis_dir = Path("uploads/ai_analysis")
+        file_path = ai_analysis_dir / filename
+
+        # 检查文件是否存在
+        if not file_path.exists() or not file_path.is_file():
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND, detail="AI分析文件不存在"
+            )
+
+        # 额外安全检查：确保文件路径在允许的目录内
+        try:
+            file_path.resolve().relative_to(ai_analysis_dir.resolve())
+        except ValueError:
+            raise HTTPException(
+                status_code=http_status.HTTP_403_FORBIDDEN, detail="拒绝访问此文件"
+            )
+
+        # 检查文件权限：文件名应包含用户相关信息
+        # AI分析文件格式：ai_analysis_{user_hash}_{timestamp}_{random}.ext
+        if not filename.startswith("ai_analysis_"):
+            raise HTTPException(
+                status_code=http_status.HTTP_403_FORBIDDEN, detail="无权访问此文件"
+            )
+
+        # 记录访问日志
+        logger.info(
+            f"AI分析文件访问: user={current_user_id}, file={filename}",
+            extra={
+                "user_id": current_user_id,
+                "filename": filename,
+                "file_size": file_path.stat().st_size,
+                "access_type": "ai_analysis_fallback",
+            },
+        )
+
+        # 返回文件，设置适当的缓存头
+        return FileResponse(
+            path=str(file_path),
+            headers={
+                "Content-Disposition": "inline",
+                "Cache-Control": "public, max-age=3600",  # 缓存1小时
+                "X-Content-Type-Options": "nosniff",
+            },
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            f"AI分析文件访问失败: user={current_user_id}, file={filename}, error={e}"
+        )
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="文件访问失败",
+        )

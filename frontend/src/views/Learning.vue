@@ -309,28 +309,50 @@ const handleKeyDown = (event: Event) => {
 }
 
 const handleImageUpload = (file: File) => {
+  console.log('🖼️ [DEBUG] handleImageUpload 被调用:', {
+    fileName: file.name,
+    fileType: file.type,
+    fileSize: file.size,
+    currentImageCount: uploadedImages.value.length,
+  })
+
   if (!file.type.startsWith('image/')) {
+    console.error('❌ [DEBUG] 文件类型错误:', file.type)
     ElMessage.error('只能上传图片文件')
     return false
   }
   if (file.size > 10 * 1024 * 1024) {
+    console.error('❌ [DEBUG] 文件过大:', file.size)
     ElMessage.error('图片大小不能超过10MB')
     return false
   }
   if (uploadedImages.value.length >= 5) {
+    console.error('❌ [DEBUG] 图片数量已达上限')
     ElMessage.error('最多只能上传5张图片')
     return false
   }
 
+  console.log('✅ [DEBUG] 开始读取图片文件...')
   const reader = new FileReader()
   reader.onload = (e) => {
+    const preview = e.target?.result as string
+    console.log('✅ [DEBUG] 图片读取成功，添加到预览列表:', {
+      previewLength: preview.length,
+      currentCount: uploadedImages.value.length,
+    })
     uploadedImages.value.push({
       file,
-      preview: e.target?.result as string,
+      preview,
     })
+    console.log('✅ [DEBUG] 图片已添加，当前总数:', uploadedImages.value.length)
+  }
+  reader.onerror = (error) => {
+    console.error('❌ [DEBUG] 图片读取失败:', error)
+    ElMessage.error('图片读取失败')
   }
   reader.readAsDataURL(file)
 
+  console.log('🔄 [DEBUG] FileReader.readAsDataURL 已调用，等待异步读取完成...')
   return false // 阻止自动上传
 }
 
@@ -345,23 +367,33 @@ const handleSend = async () => {
   const questionText = inputText.value.trim()
   const imagesToUpload = [...uploadedImages.value]
 
+  console.log('🚀 [DEBUG] 开始发送问题:', {
+    questionText,
+    imageCount: imagesToUpload.length,
+    images: imagesToUpload.map((img) => img.preview.substring(0, 50) + '...'),
+  })
+
   try {
     // 1. 首先上传图片（如果有的话）
     let imageUrls: string[] = []
     if (imagesToUpload.length > 0) {
       ElMessage.info(`正在上传${imagesToUpload.length}张图片...`)
+      console.log('📤 [DEBUG] 开始上传图片...', imagesToUpload.length)
 
       try {
         // 使用新的AI图片上传端点
         const uploadPromises = imagesToUpload.map((img) => FileAPI.uploadImageForAI(img.file))
         const uploadResults = await Promise.all(uploadPromises)
         imageUrls = uploadResults.map((result) => result.ai_accessible_url)
+        console.log('✅ [DEBUG] 图片上传成功:', imageUrls)
         ElMessage.success(`图片上传成功！`)
       } catch (uploadError) {
-        console.error('图片上传失败:', uploadError)
+        console.error('❌ [DEBUG] 图片上传失败:', uploadError)
         ElMessage.error('图片上传失败，请重试')
         return
       }
+    } else {
+      console.log('ℹ️ [DEBUG] 无图片上传')
     }
 
     // 2. 构建问答请求
@@ -373,6 +405,7 @@ const handleSend = async () => {
       include_history: true,
       max_history: 10,
     }
+    console.log('📝 [DEBUG] 构建请求:', request)
 
     // 3. 清空输入（在发送前清空，避免重复发送）
     inputText.value = ''

@@ -256,6 +256,19 @@ class AIImageAccessService:
 
         # 构建本地URL（注意：这个URL需要额外处理才能被AI访问）
         base_url = getattr(settings, "BASE_URL", "http://localhost:8000")
+
+        # 生产环境自动检测并修复BASE_URL
+        if base_url == "http://localhost:8000" and settings.ENVIRONMENT == "production":
+            # 生产环境但BASE_URL仍为localhost，自动使用生产地址
+            base_url = "https://121.199.173.244"
+            logger.warning(
+                f"生产环境检测到localhost BASE_URL，自动修正为: {base_url}",
+                extra={
+                    "original_base_url": settings.BASE_URL,
+                    "corrected_base_url": base_url,
+                },
+            )
+
         local_url = f"{base_url}/api/v1/files/ai/{object_name.replace('/', '_')}"
 
         logger.warning(f"使用本地存储，AI可能无法直接访问: {local_url}")
