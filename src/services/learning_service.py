@@ -132,26 +132,30 @@ class LearningService:
                     if hasattr(msg, "image_urls") and msg.image_urls:
                         msg_dict["image_urls"] = msg.image_urls
                         logger.info(
-                            f"🖼️ 消息包含图片: role={msg.role.value}, image_count={len(msg.image_urls)}",
-                            extra={"image_urls": msg.image_urls},
+                            f"🖼️ 消息包含图片: role={msg.role.value}, "
+                            f"image_count={len(msg.image_urls)}, "
+                            f"urls={msg.image_urls}"
                         )
                     message_dicts.append(msg_dict)
                 else:
                     message_dicts.append(msg)
 
             # 🔍 最终调试：打印完整的message_dicts
+            messages_summary = [
+                {
+                    "role": m.get("role"),
+                    "has_images": bool(m.get("image_urls")),
+                    "image_count": len(m.get("image_urls", [])),
+                }
+                for m in message_dicts
+            ]
             logger.info(
-                f"📤 准备调用AI: message_count={len(message_dicts)}",
-                extra={
-                    "messages_summary": [
-                        {
-                            "role": m.get("role"),
-                            "has_images": bool(m.get("image_urls")),
-                            "image_count": len(m.get("image_urls", [])),
-                        }
-                        for m in message_dicts
-                    ]
-                },
+                f"📤 准备调用AI: message_count={len(message_dicts)}, "
+                f"messages_with_images={sum(1 for m in messages_summary if m['has_images'])}, "
+                f"total_images={sum(m['image_count'] for m in messages_summary)}"
+            )
+            logger.info(
+                f"📋 消息详情: {json.dumps(messages_summary, ensure_ascii=False)}"
             )
 
             ai_response = await self.bailian_service.chat_completion(
