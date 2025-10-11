@@ -290,6 +290,7 @@ async def submit_homework(
             db.add(homework_image)
 
         await db.commit()
+        await db.refresh(submission)  # ✅ 修复: 刷新submission对象，确保关联关系正确
 
         # 异步触发OCR处理（如果需要）
         # asyncio.create_task(homework_service.process_submission_ocr(submission.id))
