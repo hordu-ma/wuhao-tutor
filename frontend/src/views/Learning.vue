@@ -402,7 +402,19 @@ const removeImage = (index: number) => {
 }
 
 const handleSend = async () => {
-  if (!inputText.value.trim()) return
+  console.log('🔥 [DEBUG] handleSend 被调用')
+  console.log('📊 [DEBUG] 当前状态:', {
+    inputText: inputText.value,
+    uploadedImagesCount: uploadedImages.value.length,
+    canSend: canSend.value,
+    isLoading: learningStore.chatState.isLoading,
+    isSubmitting: learningStore.isSubmittingQuestion,
+  })
+
+  if (!inputText.value.trim()) {
+    console.warn('⚠️ [DEBUG] 输入为空，中止发送')
+    return
+  }
 
   // 保存输入内容和图片，用于错误恢复
   const questionText = inputText.value.trim()
@@ -411,25 +423,50 @@ const handleSend = async () => {
   console.log('🚀 [DEBUG] 开始发送问题:', {
     questionText,
     imageCount: imagesToUpload.length,
-    images: imagesToUpload.map((img) => img.preview.substring(0, 50) + '...'),
+    images: imagesToUpload.map((img) => ({
+      fileName: img.file.name,
+      fileSize: img.file.size,
+      fileType: img.file.type,
+      previewLength: img.preview.length,
+    })),
   })
 
   try {
     // 1. 首先上传图片（如果有的话）
     let imageUrls: string[] = []
     if (imagesToUpload.length > 0) {
+      console.log('📤 [DEBUG] 准备上传图片，数量:', imagesToUpload.length)
+      console.log('📤 [DEBUG] 图片详情:', imagesToUpload.map((img, idx) => ({
+        index: idx,
+        file: {
+          name: img.file.name,
+          size: img.file.size,
+          type: img.file.type,
+          lastModified: img.file.lastModified,
+        },
+      })))
+
       ElMessage.info(`正在上传${imagesToUpload.length}张图片...`)
-      console.log('📤 [DEBUG] 开始上传图片...', imagesToUpload.length)
 
       try {
+        console.log('📤 [DEBUG] 调用 FileAPI.uploadImageForAI...')
         // 使用新的AI图片上传端点
-        const uploadPromises = imagesToUpload.map((img) => FileAPI.uploadImageForAI(img.file))
+        const uploadPromises = imagesToUpload.map((img, idx) => {
+          console.log(`📤 [DEBUG] 创建上传 Promise ${idx + 1}/${imagesToUpload.length}`)
+          return FileAPI.uploadImageForAI(img.file)
+        })
+        console.log('📤 [DEBUG] 等待所有上传完成，Promise 数量:', uploadPromises.length)
         const uploadResults = await Promise.all(uploadPromises)
+        console.log('✅ [DEBUG] 所有图片上传完成，结果:', uploadResults)
         imageUrls = uploadResults.map((result) => result.ai_accessible_url)
-        console.log('✅ [DEBUG] 图片上传成功:', imageUrls)
+        console.log('✅ [DEBUG] 提取的图片 URL:', imageUrls)
         ElMessage.success(`图片上传成功！`)
-      } catch (uploadError) {
-        console.error('❌ [DEBUG] 图片上传失败:', uploadError)
+      } catch (uploadError: any) {
+        console.error('❌ [DEBUG] 图片上传失败')
+        console.error('❌ [DEBUG] 错误详情:', uploadError)
+        console.error('❌ [DEBUG] 错误信息:', uploadError?.message)
+        console.error('❌ [DEBUG] 错误响应:', uploadError?.response)
+        console.error('❌ [DEBUG] 完整错误栈:', uploadError?.stack)
         ElMessage.error('图片上传失败，请重试')
         return
       }
