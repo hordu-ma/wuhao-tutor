@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.v1.endpoints.auth import get_current_user_id
 from src.core.database import get_db
+from src.core.exceptions import ValidationError
 from src.core.logging import get_logger
 from src.schemas.common import DataResponse, SuccessResponse
 from src.schemas.homework import HomeworkCreate, HomeworkSubmissionCreate
@@ -273,8 +274,10 @@ async def submit_homework(
 
         # Step 3: 保存图片URL并触发OCR+AI批改
         # 由于图片已上传，我们直接创建 HomeworkImage 记录
-        logger.info(f"开始保存图片: submission_id={submission.id}, urls_count={len(urls_list)}, urls={urls_list}")
-        
+        logger.info(
+            f"开始保存图片: submission_id={submission.id}, urls_count={len(urls_list)}, urls={urls_list}"
+        )
+
         from src.models.homework import HomeworkImage
 
         for i, url in enumerate(urls_list):
@@ -294,18 +297,21 @@ async def submit_homework(
 
         await db.commit()
         logger.info(f"图片保存完成: {len(urls_list)}张")
-        
+
         # ✅ 修复: 使用 selectinload 预加载关联数据，避免懒加载触发异步错误
-        from sqlalchemy.orm import selectinload
         from sqlalchemy import select
+        from sqlalchemy.orm import selectinload
+
         from src.models.homework import HomeworkSubmission
-        
-        stmt = select(HomeworkSubmission).where(HomeworkSubmission.id == submission.id).options(
-            selectinload(HomeworkSubmission.images)
+
+        stmt = (
+            select(HomeworkSubmission)
+            .where(HomeworkSubmission.id == submission.id)
+            .options(selectinload(HomeworkSubmission.images))
         )
         result = await db.execute(stmt)
         submission = result.scalar_one()
-        
+
         logger.info(f"刷新submission完成, images count={len(submission.images)}")
 
         # 异步触发OCR处理（如果需要）
@@ -1219,3 +1225,129 @@ async def retry_homework_correction(
     return DataResponse[Dict[str, Any]](
         success=True, data=retry_task, message="重试批改任务已启动"
     )
+
+
+# ==========================================================================
+# 作业删除功能
+# ==========================================================================
+
+
+@router.delete(
+    "/{id}",
+    summary="删除作业",
+    description="删除指定的作业提交",
+    response_model=SuccessResponse,
+)
+async def delete_homework(
+    id: UUID,
+    current_user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+    homework_service: HomeworkService = Depends(get_homework_service),
+):
+    """
+    删除作业提交
+
+    **路径参数:**
+    - **id**: 作业提交ID
+
+    **注意:**
+    - 此操作不可逆
+    - 只能删除自己的作业
+    - 相关的图片文件也会被删除
+    """
+    try:
+        # 转换用户ID为UUID
+        user_uuid = uuid_lib.UUID(current_user_id)
+
+        # 调用服务层删除作业
+        success = await homework_service.delete_submission(
+            session=db, submission_id=id, user_id=user_uuid
+        )
+
+        if success:
+            return SuccessResponse(success=True, message="作业删除成功")
+        else:
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail="作业不存在或已被删除",
+            )
+
+    except ValidationError as e:
+        raise HTTPException(status_code=http_status.HTTP_403_FORBIDDEN, detail=str(e))
+    except Exception as e:
+        logger.error(f"删除作业失败: {e}")
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"删除作业失败: {str(e)}",
+        )
+
+
+@router.post(
+    "/batch-delete",
+    summary="批量删除作业",
+    description="批量删除多个作业提交",
+    response_model=DataResponse[Dict[str, Any]],
+)
+async def batch_delete_homework(
+    request_data: Dict[str, List[str]],
+    current_user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+    homework_service: HomeworkService = Depends(get_homework_service),
+):
+    """
+    批量删除作业提交
+
+    **请求体:**
+    ```json
+    {
+        "homework_ids": ["uuid1", "uuid2", "uuid3"]
+    }
+    ```
+
+    **注意:**
+    - 此操作不可逆
+    - 只能删除自己的作业
+    - 返回成功数量和失败列表
+    """
+    try:
+        homework_ids = request_data.get("homework_ids", [])
+        if not homework_ids:
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail="请提供要删除的作业ID列表",
+            )
+
+        # 转换为UUID
+        try:
+            user_uuid = uuid_lib.UUID(current_user_id)
+            submission_uuids = [uuid_lib.UUID(hid) for hid in homework_ids]
+        except ValueError as e:
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail=f"无效的UUID格式: {str(e)}",
+            )
+
+        # 调用服务层批量删除
+        success_count, failed_ids = await homework_service.batch_delete_submissions(
+            session=db, submission_ids=submission_uuids, user_id=user_uuid
+        )
+
+        result = {
+            "total_requested": len(homework_ids),
+            "success_count": success_count,
+            "failed_count": len(failed_ids),
+            "failed_ids": failed_ids,
+        }
+
+        message = f"批量删除完成: 成功{success_count}个、失败{len(failed_ids)}个"
+
+        return DataResponse[Dict[str, Any]](success=True, data=result, message=message)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"批量删除作业失败: {e}")
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"批量删除作业失败: {str(e)}",
+        )
