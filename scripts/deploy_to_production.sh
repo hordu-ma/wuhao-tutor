@@ -89,22 +89,23 @@ print('✅ 数据库连接正常')
 "
 
 echo "🎨 部署前端..."
-# 确保前端目录存在并有正确权限
-if [ ! -d "/var/www/wuhao-tutor" ]; then
-    mkdir -p /var/www/wuhao-tutor
+# 确保前端目录存在
+if [ ! -d "/var/www/html" ]; then
+    mkdir -p /var/www/html
 fi
 
-# 备份旧版本
-if [ -d "/var/www/wuhao-tutor/index.html" ]; then
-    mv /var/www/wuhao-tutor /var/www/wuhao-tutor_backup_$(date +%Y%m%d_%H%M%S)
+# 备份旧版本（只备份 index.html 作为标记）
+if [ -f "/var/www/html/index.html" ]; then
+    cp /var/www/html/index.html /var/www/html/index.html.backup_$(date +%Y%m%d_%H%M%S)
 fi
 
-# 复制新版本
-cp -r $REMOTE_DIR/frontend/dist/* /var/www/wuhao-tutor/
+# 清空旧文件并复制新版本
+rm -rf /var/www/html/*
+cp -r $REMOTE_DIR/frontend/dist/* /var/www/html/
 
 # 设置权限
-chown -R www-data:www-data /var/www/wuhao-tutor
-chmod -R 755 /var/www/wuhao-tutor
+chown -R www-data:www-data /var/www/html
+chmod -R 755 /var/www/html
 
 echo "🔄 重启服务..."
 systemctl restart wuhao-tutor
