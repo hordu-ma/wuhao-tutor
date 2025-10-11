@@ -295,8 +295,18 @@ async def submit_homework(
         await db.commit()
         logger.info(f"图片保存完成: {len(urls_list)}张")
         
-        await db.refresh(submission)  # ✅ 修复: 刷新submission对象，确保关联关系正确
-        logger.info(f"刷新submission完成, images count={len(getattr(submission, 'images', []))}")
+        # ✅ 修复: 使用 selectinload 预加载关联数据，避免懒加载触发异步错误
+        from sqlalchemy.orm import selectinload
+        from sqlalchemy import select
+        from src.models.homework import HomeworkSubmission
+        
+        stmt = select(HomeworkSubmission).where(HomeworkSubmission.id == submission.id).options(
+            selectinload(HomeworkSubmission.images)
+        )
+        result = await db.execute(stmt)
+        submission = result.scalar_one()
+        
+        logger.info(f"刷新submission完成, images count={len(submission.images)}")
 
         # 异步触发OCR处理（如果需要）
         # asyncio.create_task(homework_service.process_submission_ocr(submission.id))
