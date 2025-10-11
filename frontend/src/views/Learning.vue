@@ -641,7 +641,7 @@ defineOptions({
 </script>
 
 <style scoped lang="scss">
-@use '@/styles/variables.scss' as *;
+// 注意：variables 和 mixins 已通过 vite.config.ts 全局注入，无需再导入
 
 .modern-learning-page {
   width: 100%;
