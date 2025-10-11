@@ -231,17 +231,21 @@ async def submit_homework(
                 detail="年级必须在1-12之间",
             )
 
-        # Step 1: 创建作业模板（临时简化，实际应该引用已有模板）
+            # Step 1: 创建作业模板(临时简化,实际应该引用已有模板)
         from src.schemas.homework import HomeworkCreate
+
+        # 难度级别映射: 字符串 -> 整数 (数据库中difficulty_level是INTEGER类型)
+        # 1=easy, 2=medium, 3=hard
+        difficulty_map = {"easy": 1, "medium": 2, "hard": 3}
 
         # 为这次提交创建一个临时作业模板
         homework_data = HomeworkCreate(
             title=title or f"{subject} - 年级{grade_level}作业",
             description=description or "",
             subject=subject,
-            homework_type="daily",  # 修复：使用有效的枚举值
-            difficulty_level="medium",
-            grade_level=str(grade_level),  # 修复：转换为字符串
+            homework_type="daily",  # 修复:使用有效的枚举值
+            difficulty_level=difficulty_map.get("medium", 2),  # 修复:使用整数
+            grade_level=str(grade_level),  # 修复:转换为字符串
         )
 
         homework = await homework_service.create_homework(
