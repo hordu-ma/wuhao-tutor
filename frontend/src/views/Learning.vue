@@ -522,9 +522,32 @@ const createNewSession = async () => {
   }
 }
 
-const renameSession = async (_session: any) => {
-  // TODO: 实现重命名功能
-  ElMessage.info('重命名功能开发中...')
+const renameSession = async (session: any) => {
+  try {
+    const { value: newTitle } = await ElMessageBox.prompt('请输入新的会话标题：', '重命名会话', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      inputValue: session.title || '',
+      inputPlaceholder: '请输入会话标题',
+      inputValidator: (value: string) => {
+        if (!value || value.trim().length === 0) {
+          return '标题不能为空'
+        }
+        if (value.length > 100) {
+          return '标题长度不能超过100个字符'
+        }
+        return true
+      },
+    })
+
+    if (newTitle && newTitle.trim() !== session.title) {
+      await learningStore.renameSession(session.id, newTitle.trim())
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('重命名会话失败:', error)
+    }
+  }
 }
 
 const archiveSession = async (sessionId: string) => {

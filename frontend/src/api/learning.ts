@@ -63,6 +63,15 @@ export class LearningAPI {
   }
 
   /**
+   * 重命名会话
+   */
+  static async renameSession(sessionId: string, newTitle: string): Promise<ChatSession> {
+    return http.patch<ChatSession>(`${API_PREFIX}/sessions/${sessionId}`, {
+      title: newTitle,
+    })
+  }
+
+  /**
    * 删除会话
    */
   static async deleteSession(sessionId: string): Promise<void> {

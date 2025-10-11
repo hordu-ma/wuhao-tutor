@@ -102,6 +102,20 @@ export class HomeworkAPI {
   }
 
   /**
+   * 重命名作业
+   */
+  async renameHomework(homeworkId: string, newTitle: string): Promise<void> {
+    await http.put(
+      `${this.baseURL}/submissions/${homeworkId}`,
+      { submission_title: newTitle },
+      {
+        showLoading: true,
+        loadingText: '正在重命名作业...',
+      }
+    )
+  }
+
+  /**
    * 批量删除作业
    */
   async batchDeleteHomework(homeworkIds: string[]): Promise<void> {

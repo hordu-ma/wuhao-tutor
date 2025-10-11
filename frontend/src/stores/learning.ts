@@ -452,6 +452,33 @@ export const useLearningStore = defineStore('learning', () => {
   }
 
   /**
+   * 重命名会话
+   */
+  async function renameSession(sessionId: string, newTitle: string) {
+    try {
+      const updatedSession = await LearningAPI.renameSession(sessionId, newTitle)
+
+      // 更新当前会话
+      if (chatState.currentSession?.id === sessionId) {
+        chatState.currentSession = updatedSession
+      }
+
+      // 更新会话列表
+      const index = chatState.sessions.findIndex((s) => s.id === sessionId)
+      if (index !== -1) {
+        chatState.sessions[index] = updatedSession
+      }
+
+      ElMessage.success('会话重命名成功')
+      return updatedSession
+    } catch (error) {
+      console.error('重命名会话失败:', error)
+      ElMessage.error('重命名会话失败')
+      throw error
+    }
+  }
+
+  /**
    * 删除会话
    */
   async function deleteSession(sessionId: string) {
@@ -624,6 +651,7 @@ export const useLearningStore = defineStore('learning', () => {
     askQuestion,
     submitFeedback,
     updateSession,
+    renameSession,
     deleteSession,
     archiveSession,
     activateSession,
