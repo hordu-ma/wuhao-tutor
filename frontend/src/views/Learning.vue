@@ -1071,7 +1071,7 @@ defineOptions({
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  transition: all $transition-duration-normal;
+  transition: all $transition-duration-base;
 
   .sidebar-header {
     height: 64px;
@@ -1199,8 +1199,8 @@ defineOptions({
 .slide-left-enter-active,
 .slide-left-leave-active {
   transition:
-    transform $transition-duration-normal $transition-timing-function-ease-out,
-    opacity $transition-duration-normal;
+    transform $transition-duration-base $transition-timing-function-ease-out,
+    opacity $transition-duration-base;
 }
 
 .slide-left-enter-from,
