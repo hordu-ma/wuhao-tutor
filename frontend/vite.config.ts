@@ -245,6 +245,7 @@ export default defineConfig(({ mode }) => {
       devSourcemap: !isProduction,
       preprocessorOptions: {
         scss: {
+          // 全局注入 variables 和 mixins
           additionalData: `
             @use "@/styles/variables" as *;
             @use "@/styles/mixins" as *;
