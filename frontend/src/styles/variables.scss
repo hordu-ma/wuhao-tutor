@@ -1,5 +1,9 @@
 /* SCSS 变量定义文件 */
 
+// ============= Sass 模块导入 =============
+@use 'sass:math';
+@use 'sass:color';
+
 // ============= 颜色系统 =============
 
 // 主题色
@@ -338,16 +342,16 @@ $pattern-grid: linear-gradient(#e4e7ed 1px, transparent 1px), linear-gradient(90
 
   &::-webkit-scrollbar-track {
     background: $track-color;
-    border-radius: #{$width / 2};
+    border-radius: #{math.div($width, 2)};
   }
 
   &::-webkit-scrollbar-thumb {
     background: $thumb-color;
-    border-radius: #{$width / 2};
+    border-radius: #{math.div($width, 2)};
     transition: background-color $transition-duration-fast;
 
     &:hover {
-      background: darken($thumb-color, 20%);
+      background: color.scale($thumb-color, $lightness: -20%);
     }
   }
 
