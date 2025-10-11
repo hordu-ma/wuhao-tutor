@@ -298,7 +298,7 @@ class HomeworkService:
                 submission_title=submission_data.submission_title,
                 submission_note=submission_data.submission_note,
                 completion_time=submission_data.completion_time,
-                status=SubmissionStatus.UPLOADED,
+                status=SubmissionStatus.UPLOADED.value,  # ✅ 修复: 使用 .value 获取字符串
                 submitted_at=datetime.now(),
             )
 
@@ -698,7 +698,9 @@ class HomeworkService:
             stmt = (
                 update(HomeworkSubmission)
                 .where(HomeworkSubmission.id == submission_id)
-                .values(status=SubmissionStatus.PROCESSING)
+                .values(
+                    status=SubmissionStatus.PROCESSING.value
+                )  # ✅ 修复: 使用 .value 获取字符串
             )
             await session.execute(stmt)
             await session.commit()
@@ -737,7 +739,7 @@ class HomeworkService:
             review = HomeworkReview(
                 submission_id=submission_id,
                 review_type="ai_auto",
-                status=ReviewStatus.IN_PROGRESS,
+                status=ReviewStatus.IN_PROGRESS.value,  # ✅ 修复: 使用 .value 获取字符串
                 started_at=datetime.now(),
                 max_score=max_score,
             )
@@ -984,7 +986,7 @@ class HomeworkService:
                 update(HomeworkReview)
                 .where(HomeworkReview.id == review_id)
                 .values(
-                    status=ReviewStatus.COMPLETED,
+                    status=ReviewStatus.COMPLETED.value,  # ✅ 修复: 使用 .value 获取字符串
                     completed_at=completed_at,
                     processing_duration=processing_duration,
                     total_score=total_score,
@@ -1010,7 +1012,7 @@ class HomeworkService:
                 update(HomeworkSubmission)
                 .where(HomeworkSubmission.id == review_id)
                 .values(
-                    status=SubmissionStatus.REVIEWED,
+                    status=SubmissionStatus.REVIEWED.value,  # ✅ 修复: 使用 .value 获取字符串
                     total_score=total_score,
                     accuracy_rate=accuracy_rate,
                     ai_review_data=ai_result,
@@ -1097,7 +1099,7 @@ class HomeworkService:
                 update(HomeworkReview)
                 .where(HomeworkReview.id == review_id)
                 .values(
-                    status=ReviewStatus.FAILED,
+                    status=ReviewStatus.FAILED.value,  # ✅ 修复: 使用 .value 获取字符串
                     completed_at=datetime.now(),
                     error_message=error_message,
                 )
