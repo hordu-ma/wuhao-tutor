@@ -5,19 +5,19 @@
       <!-- 顶部工具栏 -->
       <div class="top-toolbar">
         <div class="toolbar-left">
-          <el-button 
-            circle 
-            :icon="showSidebar ? Close : Menu" 
-            @click="toggleSidebar" 
-            class="sidebar-toggle" 
+          <el-button
+            circle
+            :icon="showSidebar ? Close : Menu"
+            @click="toggleSidebar"
+            class="sidebar-toggle"
           />
           <h1 class="page-title">AI学习助手</h1>
         </div>
         <div class="toolbar-right">
-          <el-button 
-            type="primary" 
-            :icon="Plus" 
-            @click="createNewSession" 
+          <el-button
+            type="primary"
+            :icon="Plus"
+            @click="createNewSession"
             class="new-chat-button"
             size="large"
           >
@@ -261,7 +261,6 @@
         </div>
       </div>
     </transition>
-
   </div>
 </template>
 
@@ -298,7 +297,7 @@ const learningStore = useLearningStore()
 // ========== 响应式状态 ==========
 const inputText = ref('')
 const uploadedImages = ref<{ file: File; preview: string }[]>([])
-const showSidebar = ref(true) // 默认展开会话历史
+const showSidebar = ref(false) // 默认不展开会话历史，用户可点击按钮打开
 const messageContainerRef = ref<HTMLElement>()
 const sessionSearchQuery = ref('')
 
@@ -436,15 +435,18 @@ const handleSend = async () => {
     let imageUrls: string[] = []
     if (imagesToUpload.length > 0) {
       console.log('📤 [DEBUG] 准备上传图片，数量:', imagesToUpload.length)
-      console.log('📤 [DEBUG] 图片详情:', imagesToUpload.map((img, idx) => ({
-        index: idx,
-        file: {
-          name: img.file.name,
-          size: img.file.size,
-          type: img.file.type,
-          lastModified: img.file.lastModified,
-        },
-      })))
+      console.log(
+        '📤 [DEBUG] 图片详情:',
+        imagesToUpload.map((img, idx) => ({
+          index: idx,
+          file: {
+            name: img.file.name,
+            size: img.file.size,
+            type: img.file.type,
+            lastModified: img.file.lastModified,
+          },
+        }))
+      )
 
       ElMessage.info(`正在上传${imagesToUpload.length}张图片...`)
 
@@ -1029,9 +1031,22 @@ defineOptions({
 // 输入容器
 .input-container {
   flex-shrink: 0;
-  background: var(--color-bg-primary);
-  border-top: 1px solid var(--color-border);
+  background: #ebeef5; // 加深背景色，更明显的区分
+  border-top: 2px solid #d8dce5; // 加深边框颜色
   padding: $spacing-md $spacing-xl;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08); // 增强阴影深度
+  position: relative;
+
+  // 顶部渐变遮罩，增强层次感
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(0, 0, 0, 0.1) 50%, transparent);
+  }
 
   .input-wrapper {
     max-width: 900px;
@@ -1065,9 +1080,22 @@ defineOptions({
   }
 
   .input-box {
-    background: var(--color-bg-secondary);
+    background: #ffffff; // 纯白背景，与外层对比
     border-radius: $border-radius-lg;
     padding: $spacing-base;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); // 添加轻微阴影，增加浮起感
+    border: 1px solid #e4e7ed; // 添加边框
+    transition: all 0.3s ease; // 平滑过渡效果
+
+    &:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12); // hover时阴影加深
+      border-color: #d0d4d9;
+    }
+
+    &:focus-within {
+      box-shadow: 0 4px 16px rgba(64, 158, 255, 0.15); // 聚焦时蓝色阴影
+      border-color: var(--el-color-primary);
+    }
 
     .main-input {
       :deep(.el-textarea__inner) {
@@ -1230,7 +1258,6 @@ defineOptions({
     margin-bottom: $spacing-lg;
   }
 }
-
 
 // 过渡动画
 .slide-left-enter-active,
