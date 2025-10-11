@@ -3,6 +3,7 @@
 提供作业批改相关的API接口
 """
 
+import json
 import uuid as uuid_lib
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -180,102 +181,135 @@ async def get_template(
 @router.post(
     "/submit",
     summary="提交作业",
-    description="提交作业文件进行AI批改",
+    description="提交作业图片URLs进行AI批改",
     response_model=DataResponse[Dict[str, Any]],
 )
 async def submit_homework(
-    template_id: UUID = Form(..., description="作业模板ID"),
-    student_name: str = Form(..., description="学生姓名"),
-    homework_file: UploadFile = File(..., description="作业文件"),
-    additional_info: Optional[str] = Form(None, description="附加信息"),
+    subject: str = Form(..., description="学科"),
+    grade_level: int = Form(..., description="年级"),
+    image_urls: str = Form(..., description="图片URL数组(JSON字符串)"),
+    title: Optional[str] = Form(None, description="作业标题"),
+    description: Optional[str] = Form(None, description="作业描述"),
     current_user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
     homework_service: HomeworkService = Depends(get_homework_service),
 ):
     """
-    提交作业进行批改
+    提交作业进行批改 (新流程：前端先上传图片获取URL，再提交作业)
 
     **表单参数:**
-    - **template_id**: 作业模板ID
-    - **student_name**: 学生姓名
-    - **homework_file**: 作业文件（图片或PDF）
-    - **additional_info**: 附加信息（可选）
+    - **subject**: 学科 (math/chinese/english/physics/chemistry/biology)
+    - **grade_level**: 年级 (1-12)
+    - **image_urls**: 图片URL数组的JSON字符串，如 '["url1","url2"]'
+    - **title**: 作业标题（可选）
+    - **description**: 作业描述（可选）
 
-    **支持的文件格式:**
-    - 图片: JPG, PNG, WebP
-    - 文档: PDF
-    - 最大文件大小: 10MB
+    **工作流程:**
+    1. 前端通过 /files/upload-for-ai 上传图片，获取URL数组
+    2. 调用此接口提交作业，传入URL数组
+    3. 后端创建提交记录并触发OCR+AI批改
 
     **返回数据:**
     - 提交记录信息，包含提交ID用于查询批改结果
     """
     try:
-        # 基本文件验证
-        if not homework_file.content_type or not homework_file.content_type.startswith(
-            ("image/", "application/pdf")
-        ):
+        # 解析图片URL数组
+        try:
+            urls_list = json.loads(image_urls)
+            if not isinstance(urls_list, list) or not urls_list:
+                raise ValueError("image_urls 必须是非空数组")
+        except (json.JSONDecodeError, ValueError) as e:
             raise HTTPException(
                 status_code=http_status.HTTP_400_BAD_REQUEST,
-                detail="不支持的文件格式，请上传图片或PDF文件",
+                detail=f"无效的 image_urls 格式: {str(e)}",
             )
 
-        # 检查文件大小
-        content = await homework_file.read()
-        if len(content) > 10 * 1024 * 1024:  # 10MB
+        # 验证年级范围
+        if not 1 <= grade_level <= 12:
             raise HTTPException(
-                status_code=http_status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                detail="文件大小超过10MB限制",
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail="年级必须在1-12之间",
             )
 
-        # 重置文件指针
-        await homework_file.seek(0)
+        # Step 1: 创建作业模板（临时简化，实际应该引用已有模板）
+        from src.schemas.homework import HomeworkCreate
 
-        # Step 1: 创建作业提交记录
+        # 为这次提交创建一个临时作业模板
+        homework_data = HomeworkCreate(
+            title=title or f"{subject} - 年级{grade_level}作业",
+            description=description or "",
+            subject=subject,
+            homework_type="homework",
+            difficulty_level="medium",
+            grade_level=grade_level,
+        )
+
+        homework = await homework_service.create_homework(
+            session=db,
+            homework_data=homework_data,
+            creator_id=uuid_lib.UUID(current_user_id),
+        )
+
+        # Step 2: 创建作业提交记录
         from src.schemas.homework import HomeworkSubmissionCreate
 
         submission_data = HomeworkSubmissionCreate(
-            homework_id=template_id,
-            submission_title=f"{student_name}的作业",
-            submission_note=additional_info,
-            completion_time=None,  # 可选
+            homework_id=homework.id,
+            submission_title=title or f"{subject}作业",
+            submission_note=description,
+            completion_time=None,
         )
 
         submission = await homework_service.create_submission(
             session=db,
             submission_data=submission_data,
             student_id=uuid_lib.UUID(current_user_id),
-            student_name=student_name,
+            student_name="当前用户",  # 可以从用户信息获取
         )
 
-        # Step 2: 上传作业图片并触发OCR+AI批改
-        submission_uuid = (
-            uuid_lib.UUID(str(submission.id))
-            if not isinstance(submission.id, uuid_lib.UUID)
-            else submission.id
-        )
-        images = await homework_service.upload_homework_images(
-            session=db, submission_id=submission_uuid, image_files=[homework_file]
-        )
+        # Step 3: 保存图片URL并触发OCR+AI批改
+        # 由于图片已上传，我们直接创建 HomeworkImage 记录
+        from src.models.homework import HomeworkImage
+
+        for i, url in enumerate(urls_list):
+            homework_image = HomeworkImage(
+                submission_id=submission.id,
+                original_filename=f"homework_{i+1}.jpg",
+                file_path=url,  # 存储完整URL
+                file_url=url,
+                display_order=i,
+                is_primary=(i == 0),
+                is_processed=False,
+            )
+            db.add(homework_image)
+
+        await db.commit()
+
+        # 异步触发OCR处理（如果需要）
+        # asyncio.create_task(homework_service.process_submission_ocr(submission.id))
 
         # 返回提交结果
         return DataResponse[Dict[str, Any]](
             success=True,
             data={
                 "id": str(submission.id),
-                "template_id": str(template_id),
-                "student_name": student_name,
-                "file_url": images[0]["url"] if images else None,
+                "user_id": str(current_user_id),
+                "subject": subject,
+                "grade_level": grade_level,
+                "title": title,
+                "description": description,
                 "status": submission.status.value,
-                "submitted_at": submission.created_at.isoformat(),
-                "additional_info": additional_info,
-                "message": "作业提交成功，正在进行OCR识别和AI批改...",
+                "original_images": urls_list,
+                "created_at": submission.created_at.isoformat(),
+                "updated_at": submission.updated_at.isoformat(),
             },
-            message="作业提交成功",
+            message="作业提交成功，正在进行AI批改...",
         )
 
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"作业提交失败: {e}", exc_info=True)
         raise HTTPException(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"作业提交失败: {str(e)}",

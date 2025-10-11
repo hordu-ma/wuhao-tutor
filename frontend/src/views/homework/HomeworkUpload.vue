@@ -79,15 +79,16 @@
           </el-row>
 
           <!-- 文件上传 -->
-          <el-form-item label="作业图片" prop="images">
+          <el-form-item label="作业图片" prop="image_urls">
             <FileUpload
               ref="fileUploadRef"
               accept="image/*"
               :multiple="true"
               :max-count="9"
               :max-size="10 * 1024 * 1024"
-              :auto-upload="false"
+              :auto-upload="true"
               :before-upload="handleBeforeUpload"
+              :on-upload="handleUpload"
               @change="handleFileChange"
             />
           </el-form-item>
@@ -182,6 +183,7 @@ import dayjs from 'dayjs'
 import FileUpload from '@/components/FileUpload.vue'
 import type { FileUploadItem } from '@/components/FileUpload.vue'
 import { useHomeworkStore } from '@/stores/homework'
+import { homeworkAPI } from '@/api/homework'
 import {
   HOMEWORK_SUBJECT_OPTIONS,
   GRADE_LEVEL_OPTIONS,
@@ -206,26 +208,26 @@ const form = reactive<HomeworkSubmitRequest>({
   grade_level: 0 as GradeLevel,
   title: '',
   description: '',
-  images: [],
+  image_urls: [], // 修改：存储上传后的URL数组
 })
 
 // 表单验证规则
 const rules: FormRules = {
   subject: [{ required: true, message: '请选择学科', trigger: 'change' }],
   grade_level: [{ required: true, message: '请选择年级', trigger: 'change' }],
-  images: [{ required: true, message: '请上传作业图片', trigger: 'change' }],
+  image_urls: [{ required: true, message: '请上传作业图片', trigger: 'change' }],
 }
 
 // 文件列表
 const fileList = ref<FileUploadItem[]>([])
 
+// 上传的图片URL列表
+const uploadedUrls = ref<string[]>([])
+
 // 计算属性
 const canSubmit = computed(() => {
   return (
-    form.subject &&
-    form.grade_level &&
-    fileList.value.length > 0 &&
-    fileList.value.some((item) => item.status === 'success' || item.status === 'waiting')
+    form.subject && form.grade_level && uploadedUrls.value.length > 0 // 使用已上传的URL判断
   )
 })
 
@@ -257,10 +259,34 @@ const handleBeforeUpload = (file: File): boolean => {
   return true
 }
 
+// 文件上传处理函数（传递给FileUpload组件）
+const handleUpload = async (files: File[]): Promise<string[]> => {
+  try {
+    ElMessage.info(`正在上传 ${files.length} 张图片...`)
+
+    // 调用作业图片上传API
+    const urls = await homeworkAPI.uploadHomeworkImages(files)
+
+    // 保存上传后的URL
+    uploadedUrls.value = urls
+    form.image_urls = urls
+
+    ElMessage.success(`成功上传 ${urls.length} 张图片`)
+    return urls
+  } catch (error) {
+    console.error('上传图片失败:', error)
+    ElMessage.error('上传图片失败，请重试')
+    throw error
+  }
+}
+
 // 文件变化处理
 const handleFileChange = (files: FileUploadItem[]) => {
   fileList.value = files
-  form.images = files.map((item) => item.file)
+  // 如果有文件被移除，需要更新URL列表
+  const successFiles = files.filter((item) => item.status === 'success' && item.url)
+  uploadedUrls.value = successFiles.map((item) => item.url!)
+  form.image_urls = uploadedUrls.value
 }
 
 // 提交作业
@@ -302,7 +328,8 @@ const resetForm = () => {
   formRef.value?.resetFields()
   fileUploadRef.value?.clearFiles()
   fileList.value = []
-  form.images = []
+  uploadedUrls.value = []
+  form.image_urls = []
 }
 
 // 查看作业详情
