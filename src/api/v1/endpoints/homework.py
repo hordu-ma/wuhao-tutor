@@ -602,6 +602,169 @@ async def get_submission(
 
 
 @router.get(
+    "/{submission_id}",
+    summary="获取作业提交详情（兼容路由）",
+    description="获取特定作业提交的详细信息和批改结果（前端兼容路由）",
+    response_model=DataResponse[Dict[str, Any]],
+)
+async def get_submission_compat(
+    submission_id: UUID,
+    current_user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+    homework_service: HomeworkService = Depends(get_homework_service),
+):
+    """
+    获取作业提交详情（前端兼容路由）
+
+    注意：这是为了兼容前端错误的URL模式（/homework/:id 而非 /homework/submissions/:id）
+    建议前端修改为使用 /homework/submissions/:id
+
+    **路径参数:**
+    - **submission_id**: 提交记录UUID
+
+    **返回数据:**
+    - 完整的提交信息，包括：
+      - 基本信息（学生姓名、提交时间等）
+      - 作业模板信息
+      - 上传的图片列表
+      - 批改状态和进度
+      - AI批改结果（如果已完成）
+      - OCR识别结果
+
+    **权限:**
+    - 用户只能查看自己提交的作业
+    """
+    try:
+        # 获取作业提交详情
+        submission = await homework_service.get_submission_with_details(
+            session=db, submission_id=submission_id
+        )
+
+        if not submission:
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND, detail="作业提交不存在"
+            )
+
+        # 权限验证：确保用户只能查看自己的提交
+        if str(submission.student_id) != current_user_id:
+            raise HTTPException(
+                status_code=http_status.HTTP_403_FORBIDDEN, detail="无权访问该作业提交"
+            )
+
+        # 安全格式化日期时间的辅助函数
+        def safe_isoformat(dt):
+            return dt.isoformat() if dt is not None else None
+
+        # 构建详细的响应数据
+        submission_data = {
+            "id": str(submission.id),
+            "homework_id": (
+                str(getattr(submission, "homework_id", None))
+                if getattr(submission, "homework_id", None)
+                else None
+            ),
+            "student_id": str(getattr(submission, "student_id", "")),
+            "student_name": getattr(submission, "student_name", ""),
+            "submission_title": getattr(submission, "submission_title", ""),
+            "submission_note": getattr(submission, "submission_note", ""),
+            "status": getattr(submission, "status", ""),
+            "submitted_at": safe_isoformat(getattr(submission, "submitted_at", None)),
+            "total_score": getattr(submission, "total_score", None),
+            "accuracy_rate": getattr(submission, "accuracy_rate", None),
+            "completion_time": getattr(submission, "completion_time", None),
+            "ai_review_data": getattr(submission, "ai_review_data", None),
+            "weak_knowledge_points": getattr(submission, "weak_knowledge_points", None),
+            "improvement_suggestions": getattr(
+                submission, "improvement_suggestions", None
+            ),
+            "device_info": getattr(submission, "device_info", None),
+            "ip_address": getattr(submission, "ip_address", None),
+            "created_at": safe_isoformat(getattr(submission, "created_at", None)),
+            "updated_at": safe_isoformat(getattr(submission, "updated_at", None)),
+        }
+
+        # 添加作业模板信息
+        if hasattr(submission, "homework") and submission.homework:
+            homework = submission.homework
+            submission_data["homework"] = {
+                "id": str(homework.id),
+                "title": homework.title,
+                "description": homework.description,
+                "subject": homework.subject,
+                "homework_type": homework.homework_type,
+                "difficulty_level": homework.difficulty_level,
+                "grade_level": homework.grade_level,
+                "chapter": homework.chapter,
+                "knowledge_points": homework.knowledge_points,
+                "estimated_duration": homework.estimated_duration,
+            }
+
+        # 添加图片信息
+        if hasattr(submission, "images") and submission.images:
+            images_data = []
+            for image in submission.images:
+                image_data = {
+                    "id": str(image.id),
+                    "file_path": image.file_path,
+                    "file_name": image.file_name,
+                    "file_size": image.file_size,
+                    "mime_type": image.mime_type,
+                    "page_number": image.page_number,
+                    "ocr_result": image.ocr_result,
+                    "ocr_confidence": image.ocr_confidence,
+                    "created_at": safe_isoformat(getattr(image, "created_at", None)),
+                }
+                images_data.append(image_data)
+            submission_data["images"] = images_data
+        else:
+            submission_data["images"] = []
+
+        # 添加批改结果信息
+        if hasattr(submission, "reviews") and submission.reviews:
+            reviews_data = []
+            for review in submission.reviews:
+                review_data = {
+                    "id": str(review.id),
+                    "review_type": review.review_type,
+                    "status": review.status,
+                    "total_score": review.total_score,
+                    "max_score": review.max_score,
+                    "accuracy_rate": review.accuracy_rate,
+                    "overall_comment": review.overall_comment,
+                    "strengths": review.strengths,
+                    "weaknesses": review.weaknesses,
+                    "suggestions": review.suggestions,
+                    "knowledge_point_analysis": review.knowledge_point_analysis,
+                    "question_reviews": review.question_reviews,
+                    "started_at": safe_isoformat(getattr(review, "started_at", None)),
+                    "completed_at": safe_isoformat(
+                        getattr(review, "completed_at", None)
+                    ),
+                    "processing_duration": review.processing_duration,
+                    "ai_model_version": review.ai_model_version,
+                    "ai_confidence_score": review.ai_confidence_score,
+                }
+                reviews_data.append(review_data)
+            submission_data["reviews"] = reviews_data
+        else:
+            submission_data["reviews"] = []
+
+        return DataResponse[Dict[str, Any]](
+            success=True, data=submission_data, message="获取提交详情成功"
+        )
+
+    except HTTPException:
+        # 重新抛出HTTP异常
+        raise
+    except Exception as e:
+        logger.error(f"获取作业提交详情失败（兼容路由）: {e}")
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取提交详情失败: {str(e)}",
+        )
+
+
+@router.get(
     "/submissions/{submission_id}/correction",
     summary="获取批改结果",
     description="获取作业的详细批改结果",
