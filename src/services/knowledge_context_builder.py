@@ -579,16 +579,160 @@ class KnowledgeContextBuilder:
     async def _get_recent_errors(
         self, session: AsyncSession, user_id: str, subject: Optional[str] = None
     ) -> List[Dict[str, Any]]:
-        """获取最近错题"""
-        # TODO: 查询最近的错题记录
-        return []
+        """
+        获取最近错题（从错题本系统获取）
+        
+        Args:
+            session: 数据库会话
+            user_id: 用户ID
+            subject: 学科筛选
+            
+        Returns:
+            最近错题列表
+        """
+        try:
+            # 导入错题模型（避免循环导入）
+            from src.models.error_book import ErrorQuestion
+            
+            # 构建查询条件
+            conditions = [ErrorQuestion.user_id == user_id]
+            
+            if subject:
+                conditions.append(ErrorQuestion.subject == subject)
+            
+            # 查询最近30天的错题，按错误频率排序
+            since_date = datetime.utcnow() - timedelta(days=30)
+            conditions.append(ErrorQuestion.created_at >= since_date.isoformat())
+            
+            stmt = (
+                select(ErrorQuestion)
+                .where(and_(*conditions))
+                .order_by(ErrorQuestion.review_count.desc(), ErrorQuestion.created_at.desc())
+                .limit(10)
+            )
+            
+            result = await session.execute(stmt)
+            error_questions = result.scalars().all()
+            
+            recent_errors = []
+            for eq in error_questions:
+                # 计算时间距离
+                created_at = eq.created_at
+                if isinstance(created_at, str):
+                    created_at = datetime.fromisoformat(created_at)
+                    
+                days_since_error = (datetime.utcnow() - created_at).days
+                
+                recent_errors.append({
+                    "question_id": str(eq.id),
+                    "subject": eq.subject,
+                    "error_type": eq.error_type,
+                    "knowledge_points": eq.knowledge_points or [],
+                    "error_count": eq.review_count,
+                    "mastery_status": eq.mastery_status,
+                    "days_since_error": days_since_error,
+                    "question_preview": eq.question_content[:100] + "..." if len(eq.question_content) > 100 else eq.question_content,
+                    "difficulty_level": eq.difficulty_level
+                })
+            
+            logger.info(f"为用户{user_id}获取到{len(recent_errors)}个最近错题")
+            return recent_errors
+            
+        except Exception as e:
+            logger.error(f"获取最近错题失败: {e}")
+            return []
 
     async def _calculate_knowledge_mastery(
         self, session: AsyncSession, user_id: str, subject: Optional[str] = None
     ) -> Dict[str, float]:
-        """计算知识点掌握度"""
-        # TODO: 分析各知识点的掌握程度
-        return {}
+        """
+        计算知识点掌握度（结合错题本数据）
+        
+        Args:
+            session: 数据库会话
+            user_id: 用户ID
+            subject: 学科筛选
+            
+        Returns:
+            知识点掌握度字典 {knowledge_point: mastery_score}
+        """
+        try:
+            from src.models.error_book import ErrorQuestion, MasteryStatus
+            
+            mastery_scores = {}
+            
+            # 构建查询条件
+            conditions = [ErrorQuestion.user_id == user_id]
+            if subject:
+                conditions.append(ErrorQuestion.subject == subject)
+            
+            # 查询所有错题记录
+            stmt = select(ErrorQuestion).where(and_(*conditions))
+            result = await session.execute(stmt)
+            error_questions = result.scalars().all()
+            
+            # 按知识点统计
+            knowledge_stats = {}
+            
+            for eq in error_questions:
+                knowledge_points = eq.knowledge_points or []
+                
+                for kp in knowledge_points:
+                    if kp not in knowledge_stats:
+                        knowledge_stats[kp] = {
+                            "total_count": 0,
+                            "mastered_count": 0,
+                            "reviewing_count": 0,
+                            "learning_count": 0,
+                            "total_reviews": 0,
+                            "correct_reviews": 0
+                        }
+                    
+                    stats = knowledge_stats[kp]
+                    stats["total_count"] += 1
+                    stats["total_reviews"] += eq.review_count
+                    stats["correct_reviews"] += eq.correct_count
+                    
+                    # 按掌握状态统计
+                    if eq.mastery_status == MasteryStatus.MASTERED:
+                        stats["mastered_count"] += 1
+                    elif eq.mastery_status == MasteryStatus.REVIEWING:
+                        stats["reviewing_count"] += 1
+                    else:
+                        stats["learning_count"] += 1
+            
+            # 计算掌握度分数
+            for kp, stats in knowledge_stats.items():
+                # 基础掌握度：已掌握特例的比例
+                base_mastery = stats["mastered_count"] / stats["total_count"]
+                
+                # 复习表现调整：正确率
+                review_performance = 0.0
+                if stats["total_reviews"] > 0:
+                    review_performance = stats["correct_reviews"] / stats["total_reviews"]
+                
+                # 状态分布调整
+                status_bonus = (
+                    stats["mastered_count"] * 1.0 +
+                    stats["reviewing_count"] * 0.6 +
+                    stats["learning_count"] * 0.2
+                ) / stats["total_count"]
+                
+                # 综合掌握度计算
+                final_mastery = (
+                    base_mastery * 0.4 +
+                    review_performance * 0.4 +
+                    status_bonus * 0.2
+                )
+                
+                mastery_scores[kp] = min(max(final_mastery, 0.0), 1.0)
+            
+            logger.info(f"为用户{user_id}计算得到{len(mastery_scores)}个知识点掌握度")
+            return mastery_scores
+            
+        except Exception as e:
+            logger.error(f"计算知识点掌握度失败: {e}")
+            return {}
 
     async def _analyze_study_patterns(
         self, session: AsyncSession, user_id: str, subject: Optional[str] = None
