@@ -543,11 +543,11 @@ async def get_submission(
                 image_data = {
                     "id": str(image.id),
                     "file_path": image.file_path,
-                    "file_name": image.file_name,
+                    "file_name": image.original_filename,  # ✅ 修复: 使用正确的字段名
                     "file_size": image.file_size,
                     "mime_type": image.mime_type,
-                    "page_number": image.page_number,
-                    "ocr_result": image.ocr_result,
+                    "display_order": image.display_order,  # ✅ 修复: 使用 display_order 而非 page_number
+                    "ocr_text": image.ocr_text,  # ✅ 修复: 使用 ocr_text 而非 ocr_result
                     "ocr_confidence": image.ocr_confidence,
                     "created_at": safe_isoformat(getattr(image, "created_at", None)),
                 }
