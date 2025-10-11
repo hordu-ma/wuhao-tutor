@@ -2,6 +2,8 @@
  * SCSS Mixins
  * 通用的样式混入工具
  */
+@use 'sass:math';
+@use 'sass:color';
 
 // ===========================
 // 1. 响应式断点混入
@@ -280,17 +282,27 @@ $breakpoints: (
 
   &::-webkit-scrollbar-track {
     background: $track-color;
-    border-radius: $width / 2;
+    border-radius: #{math.div($width, 2)};
   }
 
   &::-webkit-scrollbar-thumb {
     background: $thumb-color;
-    border-radius: $width / 2;
+    border-radius: #{math.div($width, 2)};
+    transition: background-color 0.2s ease;
 
     &:hover {
-      background: darken($thumb-color, 10%);
+      background: color.scale($thumb-color, $lightness: -10%);
     }
   }
+  
+  // Firefox
+  scrollbar-width: thin;
+  scrollbar-color: $thumb-color $track-color;
+}
+
+// scrollbar-style 是 custom-scrollbar 的别名，保持向后兼容
+@mixin scrollbar-style($width: 6px, $track-color: #f1f1f1, $thumb-color: #c1c1c1) {
+  @include custom-scrollbar($thumb-color, $track-color, $width);
 }
 
 // 选择器重置
