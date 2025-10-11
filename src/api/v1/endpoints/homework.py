@@ -273,6 +273,8 @@ async def submit_homework(
 
         # Step 3: 保存图片URL并触发OCR+AI批改
         # 由于图片已上传，我们直接创建 HomeworkImage 记录
+        logger.info(f"开始保存图片: submission_id={submission.id}, urls_count={len(urls_list)}, urls={urls_list}")
+        
         from src.models.homework import HomeworkImage
 
         for i, url in enumerate(urls_list):
@@ -288,9 +290,13 @@ async def submit_homework(
                 is_processed=False,
             )
             db.add(homework_image)
+            logger.info(f"添加图片 {i+1}/{len(urls_list)}: {url[:50]}...")
 
         await db.commit()
+        logger.info(f"图片保存完成: {len(urls_list)}张")
+        
         await db.refresh(submission)  # ✅ 修复: 刷新submission对象，确保关联关系正确
+        logger.info(f"刷新submission完成, images count={len(getattr(submission, 'images', []))}")
 
         # 异步触发OCR处理（如果需要）
         # asyncio.create_task(homework_service.process_submission_ocr(submission.id))
