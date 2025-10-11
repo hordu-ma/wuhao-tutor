@@ -712,6 +712,149 @@ class HomeworkService:
             logger.error(f"触发AI批改失败: {e}")
 
     # ============================================================================
+    # 作业删除功能
+    # ============================================================================
+
+    async def delete_submission(
+        self, session: AsyncSession, submission_id: uuid.UUID, user_id: uuid.UUID
+    ) -> bool:
+        """
+        删除作业提交
+
+        Args:
+            session: 数据库会话
+            submission_id: 提交ID
+            user_id: 用户ID（用于权限验证）
+
+        Returns:
+            是否删除成功
+        """
+        try:
+            # 查找提交记录
+            submission = await self.get_submission(session, submission_id)
+            if not submission:
+                logger.warning(f"作业提交不存在: {submission_id}")
+                return False
+
+            # 权限验证：只能删除自己的作业
+            if str(submission.student_id) != str(user_id):
+                logger.warning(
+                    f"无权限删除作业: 用户{user_id}尝试删除用户{submission.student_id}的作业{submission_id}"
+                )
+                raise ValidationError("无权限删除该作业")
+
+            # 删除相关的图片文件和数据库记录
+            await self._delete_submission_files(session, submission_id)
+
+            # 删除相关的批改记录（如果有）
+            delete_reviews_stmt = delete(HomeworkReview).where(
+                HomeworkReview.submission_id == submission_id
+            )
+            review_result = await session.execute(delete_reviews_stmt)
+            deleted_reviews = review_result.rowcount
+            if deleted_reviews > 0:
+                logger.info(f"删除批改记录: {deleted_reviews}条")
+
+            # 最后删除作业提交记录
+            stmt = delete(HomeworkSubmission).where(
+                HomeworkSubmission.id == submission_id
+            )
+            result = await session.execute(stmt)
+
+            # 提交事务
+            await session.commit()
+
+            deleted = result.rowcount > 0
+            if deleted:
+                # 清理相关缓存
+                await cache_manager.clear_namespace("homework")
+                await cache_manager.clear_namespace("submission")
+
+                logger.info(f"作业提交删除成功: {submission_id}")
+            else:
+                logger.warning(f"作业提交删除失败: {submission_id}")
+
+            return deleted
+
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"删除作业提交失败: {e}")
+            if isinstance(e, ValidationError):
+                raise
+            raise DatabaseError(f"删除作业提交失败: {e}")
+
+    async def batch_delete_submissions(
+        self, session: AsyncSession, submission_ids: List[uuid.UUID], user_id: uuid.UUID
+    ) -> Tuple[int, List[str]]:
+        """
+        批量删除作业提交
+
+        Args:
+            session: 数据库会话
+            submission_ids: 提交ID列表
+            user_id: 用户ID（用于权限验证）
+
+        Returns:
+            (删除成功数量, 失败的ID列表)
+        """
+        success_count = 0
+        failed_ids = []
+
+        for submission_id in submission_ids:
+            try:
+                success = await self.delete_submission(session, submission_id, user_id)
+                if success:
+                    success_count += 1
+                else:
+                    failed_ids.append(str(submission_id))
+            except Exception as e:
+                logger.error(f"批量删除作业失败: {submission_id}, 错误: {e}")
+                failed_ids.append(str(submission_id))
+
+        logger.info(f"批量删除作业完成: 成功{success_count}个, 失败{len(failed_ids)}个")
+        return success_count, failed_ids
+
+    async def _delete_submission_files(
+        self, session: AsyncSession, submission_id: uuid.UUID
+    ):
+        """
+        删除作业提交相关的文件和数据库记录
+
+        Args:
+            session: 数据库会话
+            submission_id: 提交ID
+        """
+        try:
+            # 获取所有相关图片
+            stmt = select(HomeworkImage).where(
+                HomeworkImage.submission_id == submission_id
+            )
+            result = await session.execute(stmt)
+            images = result.scalars().all()
+
+            # 删除物理文件
+            for image in images:
+                file_path = getattr(image, "file_path", None)
+                if file_path and os.path.exists(file_path):
+                    try:
+                        os.remove(file_path)
+                        logger.debug(f"删除文件成功: {file_path}")
+                    except Exception as e:
+                        logger.warning(f"删除文件失败: {file_path}, 错误: {e}")
+
+            # 删除数据库中的图片记录（必须在删除submission之前）
+            if images:
+                delete_images_stmt = delete(HomeworkImage).where(
+                    HomeworkImage.submission_id == submission_id
+                )
+                await session.execute(delete_images_stmt)
+                logger.info(f"删除图片记录成功: {len(images)}张")
+
+        except Exception as e:
+            logger.error(f"删除作业文件失败: {e}")
+            # 文件删除失败不应该阻止数据库记录删除
+
+    # ============================================================================
     # AI批改功能
     # ============================================================================
 

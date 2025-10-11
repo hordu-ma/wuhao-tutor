@@ -6,8 +6,8 @@ alwaysApply: true
 
 ## 📋 快速上下文 (每次对话必读)
 
-**环境**: macOS M4 | zsh | `~/my-devs/{python,typescript,swift,rust}/`  
-**技术栈优先级**: Python > TypeScript/Vue3 > Swift > Rust  
+**环境**: macOS M4 | zsh | `~/my-devs/{python,javascript,swift}/`  
+**技术栈优先级**: Python > TypeScript/Vue3 > Swift 
 **响应语言**: 中文 | **解释风格**: 怎么做 + 为什么 + 权衡
 
 ### 开始前确认清单
@@ -23,6 +23,7 @@ alwaysApply: true
 2. **零硬编码凭证**: 所有敏感信息使用环境变量/Keychain
 3. **函数单一职责**: ≤ 60 行，复杂逻辑拆分子函数
 4. **提供上下文**: 不仅说"怎么做"，更要解释"为什么"和"权衡"
+5. **脚本优先**：启动服务器优先寻找scripts中的脚本
 
 ---
 
@@ -45,11 +46,6 @@ alwaysApply: true
 - **架构**: MVVM | **UI**: SwiftUI | **并发**: async/await 优先
 - **命名**: SwiftLint 默认规则 | **内存**: 闭包使用 `[weak self]`
 - **依赖**: CocoaPods/SPM | **测试**: XCTest
-
-### Rust (辅助)
-- **工具**: Cargo + rustfmt + clippy
-- **错误处理**: `Result<T, E>` 优先，避免 `unwrap()` 
-- **所有权**: 明确生命周期注解 | **测试**: 内置测试框架
 
 ---
 
