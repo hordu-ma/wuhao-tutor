@@ -35,6 +35,12 @@ from .homework import (
     SubmissionStatus, ReviewStatus
 )
 
+# 错题本相关模型
+from .error_book import (
+    ErrorQuestion, ReviewRecord, ErrorClassification,
+    ErrorType, MasteryStatus, SourceType, ReviewResult
+)
+
 # 导出所有模型类
 __all__ = [
     # 基础模型
@@ -82,4 +88,13 @@ __all__ = [
     "HomeworkDifficultyLevel",
     "SubmissionStatus",
     "ReviewStatus",
+
+    # 错题本模型
+    "ErrorQuestion",
+    "ReviewRecord",
+    "ErrorClassification",
+    "ErrorType",
+    "MasteryStatus",
+    "SourceType",
+    "ReviewResult",
 ]

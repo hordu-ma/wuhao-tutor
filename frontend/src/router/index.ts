@@ -195,6 +195,25 @@ const routes: RouteRecordRaw[] = [
     ],
   },
 
+  // 错题本
+  {
+    path: '/error-book',
+    children: [
+      {
+        path: '',
+        name: 'ErrorBook',
+        component: () => import(/* webpackChunkName: "error-book" */ '@/views/ErrorBook.vue'),
+        meta: {
+          title: '错题本',
+          requiresAuth: true,
+          icon: 'Collection',
+          keepAlive: true,
+          layout: 'main',
+        },
+      },
+    ],
+  },
+
   // 学习进度（重定向到学习进度分析页面）
   {
     path: '/progress',

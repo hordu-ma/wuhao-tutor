@@ -345,6 +345,29 @@ class LearningService:
                             "mcp_context_generated": True,
                         }
                     )
+                    
+                    # 新增：添加错题本相关信息
+                    if learning_context.recent_errors:
+                        error_analysis = {
+                            "recent_error_count": len(learning_context.recent_errors),
+                            "main_error_types": list(set(error["error_type"] for error in learning_context.recent_errors)),
+                            "error_subjects": list(set(error["subject"] for error in learning_context.recent_errors)),
+                            "needs_review_count": sum(1 for error in learning_context.recent_errors 
+                                                    if error["mastery_status"] != "mastered")
+                        }
+                        context.metadata["error_analysis"] = error_analysis
+                    
+                    # 添加知识点掌握度信息
+                    if learning_context.knowledge_mastery:
+                        # 找出掌握度最低的前3个知识点
+                        sorted_mastery = sorted(learning_context.knowledge_mastery.items(), 
+                                               key=lambda x: x[1])
+                        weakest_points = [{
+                            "knowledge_point": kp,
+                            "mastery_rate": round(score * 100, 1)
+                        } for kp, score in sorted_mastery[:3]]
+                        
+                        context.metadata["weakest_knowledge_points"] = weakest_points
 
                     logger.info(
                         f"MCP上下文已构建 - 用户: {user_id}, 薄弱知识点: {len(learning_context.weak_knowledge_points)}"
@@ -1044,6 +1067,107 @@ class LearningService:
 
         # 简化逻辑：如果某个话题问得比较多，可能是薄弱环节
         return topics[:5]
+
+    async def add_question_to_error_book(
+        self, user_id: str, question_id: str, error_type: str = "理解错误"
+    ) -> bool:
+        """
+        将问答添加到错题本
+        
+        Args:
+            user_id: 用户ID
+            question_id: 问题ID
+            error_type: 错误类型
+            
+        Returns:
+            是否成功
+        """
+        try:
+            # 获取问题详情
+            question = await self.question_repo.get_by_id(question_id)
+            if not question or extract_orm_str(question, "user_id") != user_id:
+                logger.warning(f"问题不存在或无权限: {question_id}")
+                return False
+
+            # 导入错题本服务（避免循环导入）
+            from src.services.error_book_service import ErrorBookService
+            from src.schemas.error_book import ErrorQuestionCreate
+            
+            error_service = ErrorBookService(self.db, self.bailian_service)
+            
+            # 获取问题内容和相关答案
+            question_content = extract_orm_str(question, "content")
+            subject = extract_orm_str(question, "subject") or "通用"
+            
+            # 获取最新答案作为学生答案（这里假设学生认为自己理解有误）
+            answer_stmt = (
+                select(Answer)
+                .where(Answer.question_id == question_id)
+                .order_by(desc(Answer.created_at))
+                .limit(1)
+            )
+            answer_result = await self.db.execute(answer_stmt)
+            latest_answer = answer_result.scalar_one_or_none()
+            
+            student_answer = ""
+            correct_answer = ""
+            if latest_answer:
+                # 将AI的答案作为正确答案，学生的理解作为错误答案
+                correct_answer = extract_orm_str(latest_answer, "content")
+                student_answer = "初始理解有误"  # 占位符
+
+            # 创建错题数据
+            error_data = ErrorQuestionCreate(
+                subject=subject,
+                question_content=question_content,
+                student_answer=student_answer,
+                correct_answer=correct_answer,
+                error_type=error_type,
+                knowledge_points=self._extract_knowledge_points(question_content),
+                difficulty_level=2,  # 默认中等难度
+                source_type="manual",
+                source_id=question_id
+            )
+            
+            # 创建错题记录
+            await error_service.create_error_question(user_id, error_data)
+            
+            logger.info(f"将问题{question_id}添加到错题本成功")
+            return True
+
+        except Exception as e:
+            logger.error(f"添加到错题本失败: {e}")
+            await self.db.rollback()
+            return False
+
+    def _extract_knowledge_points(self, content: str) -> List[str]:
+        """
+        从问题内容中提取知识点（简化实现）
+        
+        Args:
+            content: 问题内容
+            
+        Returns:
+            知识点列表
+        """
+        # 这里可以实现更复杂的知识点提取逻辑
+        # 目前使用简单的关键词匹配
+        knowledge_keywords = {
+            "函数": ["函数"],
+            "方程": ["方程", "一元一次", "二次"],
+            "几何": ["三角形", "圆", "矩形", "正方形"],
+            "代数": ["代数", "分解因式"],
+            "概率": ["概率", "统计"],
+        }
+        
+        points = []
+        content_lower = content.lower()
+        
+        for point, keywords in knowledge_keywords.items():
+            if any(keyword in content_lower for keyword in keywords):
+                points.append(point)
+                
+        return points if points else ["通用知识点"]
 
 
 # 依赖注入函数

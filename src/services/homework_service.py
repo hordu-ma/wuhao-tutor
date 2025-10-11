@@ -1246,6 +1246,12 @@ class HomeworkService:
             await session.execute(submission_stmt)
             await session.commit()
 
+            # 新增: 错题收集功能
+            try:
+                await self._collect_errors_from_ai_result(session, review_id, ai_result)
+            except Exception as e:
+                logger.warning(f"错题收集失败，但不影响批改结果: {e}")
+
             logger.info(
                 f"AI批改结果处理完成: 分数={total_score}, 质量分={quality_score:.2f}"
             )
@@ -1950,6 +1956,71 @@ class HomeworkService:
                     "trend": "stable",
                 },
             }
+
+    async def _collect_errors_from_ai_result(
+        self, session: AsyncSession, review_id: uuid.UUID, ai_result: Dict[str, Any]
+    ):
+        """
+        从AI批改结果收集错题
+        
+        Args:
+            session: 数据库会话
+            review_id: 批改ID（这里实际是submission_id）
+            ai_result: AI批改结果
+        """
+        try:
+            # 获取提交信息
+            submission = await self.get_submission_with_details(session, review_id)
+            if not submission:
+                logger.warning(f"未找到提交记录: {review_id}")
+                return
+
+            # 导入错题本服务（避免循环导入）
+            from src.services.error_book_service import ErrorBookService
+            from src.services.bailian_service import get_bailian_service
+            
+            error_service = ErrorBookService(session, get_bailian_service())
+            
+            # 解析问题批改结果
+            question_reviews = ai_result.get("question_reviews", [])
+            
+            if not question_reviews:
+                logger.info("AI批改结果中没有问题明细，跳过错题收集")
+                return
+
+            # 收集错题数据
+            questions_data = []
+            for i, question_review in enumerate(question_reviews):
+                score = question_review.get("score", 100)
+                
+                # 只收集得分低于70分的题目作为错题
+                if score < 70:
+                    questions_data.append({
+                        "question": question_review.get("question_text", f"第{i+1}题"),
+                        "student_answer": question_review.get("student_answer", ""),
+                        "correct_answer": question_review.get("correct_answer", ""),
+                        "score": score,
+                        "subject": getattr(submission, "subject", "通用"),
+                        "knowledge_points": question_review.get("knowledge_points", []),
+                        "error_analysis": question_review.get("error_analysis", "")
+                    })
+            
+            if questions_data:
+                # 调用错题收集方法
+                created_ids = await error_service.collect_error_from_homework(
+                    user_id=str(submission.student_id),
+                    homework_submission_id=str(submission.id),
+                    questions_data=questions_data
+                )
+                
+                logger.info(f"从作业{submission.id}收集错题{len(created_ids)}道")
+            else:
+                logger.info("作业批改结果中没有需要收集的错题")
+                
+        except Exception as e:
+            logger.error(f"错题收集过程中发生异常: {e}")
+            # 不抛出异常，避免影响主流程
+            pass
 
 
 def get_homework_service() -> HomeworkService:

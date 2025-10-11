@@ -919,3 +919,61 @@ async def get_weekly_stats(
             status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"日期格式错误: {str(e)}",
         )
+
+
+# ========== 错题本集成功能 ==========
+
+
+@router.post("/questions/{question_id}/add-to-error-book", response_model=SuccessResponse, summary="添加到错题本")
+async def add_question_to_error_book(
+    question_id: str,
+    error_type: str = Query("理解错误", description="错误类型"),
+    current_user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    将问答添加到错题本
+    
+    功能说明：
+    - 将学习问答中的问题添加到错题本
+    - 支持自定义错误类型
+    - 自动提取知识点和相关信息
+    - 生成复习计划
+    
+    Args:
+        question_id: 问题ID
+        error_type: 错误类型（理解错误/方法错误/计算错误/表达错误）
+    """
+    try:
+        learning_service = get_learning_service(db)
+        
+        success = await learning_service.add_question_to_error_book(
+            user_id=current_user_id,
+            question_id=question_id,
+            error_type=error_type
+        )
+        
+        if success:
+            return SuccessResponse(message="已成功添加到错题本")
+        else:
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail="添加到错题本失败，请检查问题是否存在"
+            )
+            
+    except NotFoundError:
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            detail="问题不存在或无权限访问"
+        )
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(e)
+        )
+    except Exception as e:
+        logging.error(f"添加到错题本失败: {e}")
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="添加到错题本失败，请稍后重试"
+        )
