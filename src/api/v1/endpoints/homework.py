@@ -304,7 +304,7 @@ async def submit_homework(
                 "grade_level": grade_level,
                 "title": title,
                 "description": description,
-                "status": submission.status.value,
+                "status": submission.status,  # ✅ 修复: 从数据库读取的status已经是字符串，无需.value
                 "original_images": urls_list,
                 "created_at": submission.created_at.isoformat(),
                 "updated_at": submission.updated_at.isoformat(),
