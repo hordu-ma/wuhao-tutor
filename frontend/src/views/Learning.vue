@@ -5,21 +5,24 @@
       <!-- 顶部工具栏 -->
       <div class="top-toolbar">
         <div class="toolbar-left">
-          <el-button circle :icon="Menu" @click="toggleSidebar" class="sidebar-toggle" />
+          <el-button 
+            circle 
+            :icon="showSidebar ? Close : Menu" 
+            @click="toggleSidebar" 
+            class="sidebar-toggle" 
+          />
           <h1 class="page-title">AI学习助手</h1>
         </div>
-        <div class="toolbar-center">
-          <el-button type="primary" :icon="Plus" @click="createNewSession" class="new-chat-button">
+        <div class="toolbar-right">
+          <el-button 
+            type="primary" 
+            :icon="Plus" 
+            @click="createNewSession" 
+            class="new-chat-button"
+            size="large"
+          >
             新建对话
           </el-button>
-        </div>
-        <div class="toolbar-right">
-          <el-button
-            circle
-            :icon="DataAnalysis"
-            @click="toggleAnalytics"
-            class="analytics-toggle"
-          />
         </div>
       </div>
 
@@ -259,30 +262,6 @@
       </div>
     </transition>
 
-    <!-- 学习分析侧边栏 (可折叠) -->
-    <transition name="slide-right">
-      <div v-show="showAnalytics" class="analytics-sidebar">
-        <div class="sidebar-header">
-          <h3>学习分析</h3>
-          <el-button circle :icon="Close" size="small" @click="toggleAnalytics" />
-        </div>
-        <div class="sidebar-content">
-          <div class="analytics-card">
-            <div class="card-title">学习概览</div>
-            <div class="stats-row">
-              <div class="stat-item">
-                <div class="stat-value">{{ analytics?.total_questions || 0 }}</div>
-                <div class="stat-label">总问题数</div>
-              </div>
-              <div class="stat-item">
-                <div class="stat-value">{{ analytics?.total_sessions || 0 }}</div>
-                <div class="stat-label">会话数</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </transition>
   </div>
 </template>
 
@@ -298,7 +277,6 @@ import {
   CopyDocument,
   Refresh,
   Menu,
-  DataAnalysis,
   Plus,
   Search,
   MoreFilled,
@@ -320,8 +298,7 @@ const learningStore = useLearningStore()
 // ========== 响应式状态 ==========
 const inputText = ref('')
 const uploadedImages = ref<{ file: File; preview: string }[]>([])
-const showSidebar = ref(false)
-const showAnalytics = ref(false)
+const showSidebar = ref(true) // 默认展开会话历史
 const messageContainerRef = ref<HTMLElement>()
 const sessionSearchQuery = ref('')
 
@@ -336,7 +313,6 @@ const suggestedQuestions = [
 // ========== 计算属性 ==========
 const messages = computed(() => learningStore.currentMessages)
 const currentSessionId = computed(() => learningStore.chatState.currentSession?.id)
-const analytics = computed(() => learningStore.analytics)
 
 const canSend = computed(() => {
   return learningStore.canSendMessage && !learningStore.chatState.isLoading
@@ -356,10 +332,6 @@ const filteredSessions = computed(() => {
 // ========== 方法 ==========
 const toggleSidebar = () => {
   showSidebar.value = !showSidebar.value
-}
-
-const toggleAnalytics = () => {
-  showAnalytics.value = !showAnalytics.value
 }
 
 const handleQuickQuestion = async (question: string) => {
@@ -699,22 +671,28 @@ defineOptions({
   flex-shrink: 0;
 
   .toolbar-left,
-  .toolbar-center,
   .toolbar-right {
     display: flex;
     align-items: center;
     gap: $spacing-base;
   }
 
-  .toolbar-center {
+  .toolbar-left {
     flex: 1;
-    justify-content: center;
   }
 
   .new-chat-button {
-    padding: $spacing-sm $spacing-lg;
-    border-radius: $border-radius-circle;
-    font-weight: $font-weight-medium;
+    padding: $spacing-md $spacing-2xl;
+    border-radius: $border-radius-lg;
+    font-weight: $font-weight-semibold;
+    font-size: $font-size-base;
+    box-shadow: $box-shadow-sm;
+    transition: all $transition-duration-fast;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: $box-shadow-md;
+    }
   }
 
   .page-title {
@@ -722,6 +700,12 @@ defineOptions({
     font-weight: $font-weight-semibold;
     color: var(--color-text-primary);
     margin: 0;
+  }
+
+  .sidebar-toggle {
+    &:hover {
+      background: var(--color-bg-secondary);
+    }
   }
 }
 
@@ -1080,14 +1064,14 @@ defineOptions({
 }
 
 // 侧边栏
-.sessions-sidebar,
-.analytics-sidebar {
-  width: 320px;
+.sessions-sidebar {
+  width: 340px;
   background: var(--color-bg-primary);
   border-left: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  transition: all $transition-duration-normal;
 
   .sidebar-header {
     height: 64px;
@@ -1096,11 +1080,13 @@ defineOptions({
     align-items: center;
     justify-content: space-between;
     border-bottom: 1px solid var(--color-border);
+    background: linear-gradient(to bottom, var(--color-bg-primary), var(--color-bg-secondary));
 
     h3 {
       font-size: $font-size-large;
-      font-weight: $font-weight-semibold;
+      font-weight: $font-weight-bold;
       margin: 0;
+      color: var(--color-text-primary);
     }
 
     .header-actions {
@@ -1113,24 +1099,28 @@ defineOptions({
   .sidebar-content {
     flex: 1;
     overflow-y: auto;
-    padding: $spacing-md;
+    padding: $spacing-base;
 
-    @include scrollbar-style(4px, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.1));
+    @include scrollbar-style(6px, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.15));
   }
 }
 
 .session-item {
-  padding: $spacing-md;
-  margin-bottom: $spacing-sm;
-  border-radius: $border-radius-base;
+  padding: $spacing-md $spacing-base;
+  margin-bottom: $spacing-xs;
+  border-radius: $border-radius-lg;
   cursor: pointer;
-  transition: $transition-all;
+  transition: all $transition-duration-fast;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  border: 1px solid transparent;
 
   &:hover {
     background: var(--color-bg-secondary);
+    border-color: var(--color-border);
+    transform: translateX(-2px);
+    box-shadow: $box-shadow-sm;
 
     .session-actions {
       opacity: 1;
@@ -1138,8 +1128,14 @@ defineOptions({
   }
 
   &.active {
-    background: rgba($color-primary, 0.1);
+    background: linear-gradient(to right, rgba($color-primary, 0.08), transparent);
     border-left: 3px solid $color-primary;
+    box-shadow: $box-shadow-sm;
+
+    .session-title {
+      color: $color-primary;
+      font-weight: $font-weight-semibold;
+    }
   }
 
   .session-info {
@@ -1148,16 +1144,19 @@ defineOptions({
   }
 
   .session-title {
-    font-size: $font-size-small;
+    font-size: $font-size-base;
     font-weight: $font-weight-medium;
     color: var(--color-text-primary);
+    margin-bottom: $spacing-xs;
     @include text-ellipsis;
   }
 
   .session-meta {
     font-size: $font-size-extra-small;
     color: var(--color-text-secondary);
-    margin-top: $spacing-xs;
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
   }
 
   .session-actions {
@@ -1169,8 +1168,19 @@ defineOptions({
 
 // 搜索框样式
 .search-box {
-  padding: $spacing-md;
-  border-bottom: 1px solid var(--color-border);
+  padding: $spacing-md $spacing-base;
+  margin-bottom: $spacing-sm;
+
+  :deep(.el-input__wrapper) {
+    border-radius: $border-radius-lg;
+    box-shadow: $box-shadow-sm;
+    transition: all $transition-duration-fast;
+
+    &:hover,
+    &.is-focus {
+      box-shadow: $box-shadow-md;
+    }
+  }
 }
 
 // 空状态样式
@@ -1184,50 +1194,13 @@ defineOptions({
   }
 }
 
-// 分析卡片
-.analytics-card {
-  background: var(--color-bg-secondary);
-  border-radius: $border-radius-lg;
-  padding: $spacing-lg;
-  margin-bottom: $spacing-md;
-
-  .card-title {
-    font-size: $font-size-base;
-    font-weight: $font-weight-semibold;
-    margin-bottom: $spacing-md;
-  }
-
-  .stats-row {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: $spacing-md;
-
-    .stat-item {
-      text-align: center;
-
-      .stat-value {
-        font-size: $font-size-extra-large;
-        font-weight: $font-weight-bold;
-        color: $color-primary;
-      }
-
-      .stat-label {
-        font-size: $font-size-extra-small;
-        color: var(--color-text-secondary);
-        margin-top: $spacing-xs;
-      }
-    }
-  }
-}
 
 // 过渡动画
 .slide-left-enter-active,
-.slide-left-leave-active,
-.slide-right-enter-active,
-.slide-right-leave-active {
+.slide-left-leave-active {
   transition:
-    transform $transition-duration-slow $transition-timing-function-ease-out,
-    opacity $transition-duration-slow;
+    transform $transition-duration-normal $transition-timing-function-ease-out,
+    opacity $transition-duration-normal;
 }
 
 .slide-left-enter-from,
@@ -1236,30 +1209,36 @@ defineOptions({
   opacity: 0;
 }
 
-.slide-right-enter-from,
-.slide-right-leave-to {
-  transform: translateX(100%);
-  opacity: 0;
+// 响应式设计
+@media (max-width: 1024px) {
+  .sessions-sidebar {
+    width: 280px;
+  }
 }
 
-// 响应式设计
 @media (max-width: 768px) {
   .modern-learning-page {
-    .sessions-sidebar,
-    .analytics-sidebar {
+    .sessions-sidebar {
       position: fixed;
       top: 0;
       bottom: 0;
+      left: 0;
       z-index: $z-index-fixed;
       box-shadow: $box-shadow-xl;
+      width: 320px;
+    }
+  }
+
+  .top-toolbar {
+    padding: 0 $spacing-md;
+
+    .page-title {
+      font-size: $font-size-base;
     }
 
-    .sessions-sidebar {
-      left: 0;
-    }
-
-    .analytics-sidebar {
-      right: 0;
+    .new-chat-button {
+      padding: $spacing-sm $spacing-lg;
+      font-size: $font-size-small;
     }
   }
 
