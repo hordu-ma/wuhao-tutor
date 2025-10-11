@@ -99,7 +99,7 @@ class Homework(BaseModel):
     )
 
     difficulty_level = Column(
-        String(10), default="medium", nullable=False, comment="难度级别"
+        Integer, default=2, nullable=False, comment="难度级别: 1=easy, 2=medium, 3=hard"
     )
 
     # 学段和范围
