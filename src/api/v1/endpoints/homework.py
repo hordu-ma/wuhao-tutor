@@ -239,9 +239,9 @@ async def submit_homework(
             title=title or f"{subject} - 年级{grade_level}作业",
             description=description or "",
             subject=subject,
-            homework_type="homework",
+            homework_type="daily",  # 修复：使用有效的枚举值
             difficulty_level="medium",
-            grade_level=grade_level,
+            grade_level=str(grade_level),  # 修复：转换为字符串
         )
 
         homework = await homework_service.create_homework(
