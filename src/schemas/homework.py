@@ -3,16 +3,16 @@
 定义API请求和响应的数据结构
 """
 
-from typing import List, Optional, Dict, Any
 from datetime import datetime
 from enum import Enum
+from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field, validator
-from pydantic import UUID4
+from pydantic import UUID4, BaseModel, Field, validator
 
 
 class SubjectType(str, Enum):
     """学科类型枚举"""
+
     CHINESE = "chinese"
     MATH = "math"
     ENGLISH = "english"
@@ -27,6 +27,7 @@ class SubjectType(str, Enum):
 
 class HomeworkType(str, Enum):
     """作业类型枚举"""
+
     DAILY = "daily"
     EXAM = "exam"
     EXERCISE = "exercise"
@@ -36,6 +37,7 @@ class HomeworkType(str, Enum):
 
 class DifficultyLevel(str, Enum):
     """难度级别枚举"""
+
     EASY = "easy"
     MEDIUM = "medium"
     HARD = "hard"
@@ -43,6 +45,7 @@ class DifficultyLevel(str, Enum):
 
 class SubmissionStatus(str, Enum):
     """提交状态枚举"""
+
     UPLOADED = "uploaded"
     PROCESSING = "processing"
     REVIEWED = "reviewed"
@@ -52,6 +55,7 @@ class SubmissionStatus(str, Enum):
 
 class ReviewStatus(str, Enum):
     """批改状态枚举"""
+
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
@@ -62,37 +66,51 @@ class ReviewStatus(str, Enum):
 # 作业模板相关Schema
 # ============================================================================
 
+
 class HomeworkCreate(BaseModel):
     """创建作业模板请求"""
+
     title: str = Field(..., min_length=1, max_length=200, description="作业标题")
     description: Optional[str] = Field(None, max_length=2000, description="作业描述")
     subject: SubjectType = Field(..., description="学科")
     homework_type: HomeworkType = Field(HomeworkType.DAILY, description="作业类型")
-    difficulty_level: DifficultyLevel = Field(DifficultyLevel.MEDIUM, description="难度级别")
+    difficulty_level: Union[DifficultyLevel, int] = Field(
+        2, description="难度级别 (字符串枚举或整数: 1=easy, 2=medium, 3=hard)"
+    )
     grade_level: str = Field(..., min_length=1, max_length=20, description="适用学段")
     chapter: Optional[str] = Field(None, max_length=100, description="章节")
     knowledge_points: Optional[List[str]] = Field(None, description="知识点列表")
-    estimated_duration: Optional[int] = Field(None, ge=1, le=300, description="预计完成时间（分钟）")
+    estimated_duration: Optional[int] = Field(
+        None, ge=1, le=300, description="预计完成时间（分钟）"
+    )
     deadline: Optional[datetime] = Field(None, description="截止时间")
 
 
 class HomeworkUpdate(BaseModel):
     """更新作业模板请求"""
-    title: Optional[str] = Field(None, min_length=1, max_length=200, description="作业标题")
+
+    title: Optional[str] = Field(
+        None, min_length=1, max_length=200, description="作业标题"
+    )
     description: Optional[str] = Field(None, max_length=2000, description="作业描述")
     subject: Optional[SubjectType] = Field(None, description="学科")
     homework_type: Optional[HomeworkType] = Field(None, description="作业类型")
     difficulty_level: Optional[DifficultyLevel] = Field(None, description="难度级别")
-    grade_level: Optional[str] = Field(None, min_length=1, max_length=20, description="适用学段")
+    grade_level: Optional[str] = Field(
+        None, min_length=1, max_length=20, description="适用学段"
+    )
     chapter: Optional[str] = Field(None, max_length=100, description="章节")
     knowledge_points: Optional[List[str]] = Field(None, description="知识点列表")
-    estimated_duration: Optional[int] = Field(None, ge=1, le=300, description="预计完成时间（分钟）")
+    estimated_duration: Optional[int] = Field(
+        None, ge=1, le=300, description="预计完成时间（分钟）"
+    )
     deadline: Optional[datetime] = Field(None, description="截止时间")
     is_active: Optional[bool] = Field(None, description="是否激活")
 
 
 class HomeworkResponse(BaseModel):
     """作业模板响应"""
+
     id: UUID4 = Field(..., description="作业ID")
     title: str = Field(..., description="作业标题")
     description: Optional[str] = Field(None, description="作业描述")
@@ -121,14 +139,17 @@ class HomeworkResponse(BaseModel):
 # 作业图片相关Schema
 # ============================================================================
 
+
 class HomeworkImageUpload(BaseModel):
     """作业图片上传请求"""
+
     display_order: int = Field(0, ge=0, description="显示顺序")
     is_primary: bool = Field(False, description="是否为主图")
 
 
 class HomeworkImageResponse(BaseModel):
     """作业图片响应"""
+
     id: UUID4 = Field(..., description="图片ID")
     submission_id: UUID4 = Field(..., description="提交ID")
     original_filename: str = Field(..., description="原始文件名")
@@ -154,23 +175,35 @@ class HomeworkImageResponse(BaseModel):
 # 作业提交相关Schema
 # ============================================================================
 
+
 class HomeworkSubmissionCreate(BaseModel):
     """创建作业提交请求"""
+
     homework_id: UUID4 = Field(..., description="作业ID")
-    submission_title: Optional[str] = Field(None, max_length=200, description="提交标题")
-    submission_note: Optional[str] = Field(None, max_length=1000, description="提交备注")
+    submission_title: Optional[str] = Field(
+        None, max_length=200, description="提交标题"
+    )
+    submission_note: Optional[str] = Field(
+        None, max_length=1000, description="提交备注"
+    )
     completion_time: Optional[int] = Field(None, ge=1, description="完成时间（分钟）")
 
 
 class HomeworkSubmissionUpdate(BaseModel):
     """更新作业提交请求"""
-    submission_title: Optional[str] = Field(None, max_length=200, description="提交标题")
-    submission_note: Optional[str] = Field(None, max_length=1000, description="提交备注")
+
+    submission_title: Optional[str] = Field(
+        None, max_length=200, description="提交标题"
+    )
+    submission_note: Optional[str] = Field(
+        None, max_length=1000, description="提交备注"
+    )
     completion_time: Optional[int] = Field(None, ge=1, description="完成时间（分钟）")
 
 
 class KnowledgePointAnalysis(BaseModel):
     """知识点分析"""
+
     knowledge_point: str = Field(..., description="知识点名称")
     mastery_level: float = Field(..., ge=0, le=1, description="掌握程度(0-1)")
     correct_count: int = Field(..., ge=0, description="正确题目数")
@@ -180,6 +213,7 @@ class KnowledgePointAnalysis(BaseModel):
 
 class ImprovementSuggestion(BaseModel):
     """改进建议"""
+
     category: str = Field(..., description="建议类别")
     title: str = Field(..., description="建议标题")
     description: str = Field(..., description="建议描述")
@@ -188,6 +222,7 @@ class ImprovementSuggestion(BaseModel):
 
 class HomeworkSubmissionResponse(BaseModel):
     """作业提交响应"""
+
     id: UUID4 = Field(..., description="提交ID")
     homework_id: UUID4 = Field(..., description="作业ID")
     student_id: UUID4 = Field(..., description="学生ID")
@@ -199,8 +234,12 @@ class HomeworkSubmissionResponse(BaseModel):
     total_score: Optional[float] = Field(None, description="总分")
     accuracy_rate: Optional[float] = Field(None, description="正确率")
     completion_time: Optional[int] = Field(None, description="完成时间（分钟）")
-    weak_knowledge_points: Optional[List[KnowledgePointAnalysis]] = Field(None, description="薄弱知识点")
-    improvement_suggestions: Optional[List[ImprovementSuggestion]] = Field(None, description="改进建议")
+    weak_knowledge_points: Optional[List[KnowledgePointAnalysis]] = Field(
+        None, description="薄弱知识点"
+    )
+    improvement_suggestions: Optional[List[ImprovementSuggestion]] = Field(
+        None, description="改进建议"
+    )
     created_at: datetime = Field(..., description="创建时间")
     updated_at: datetime = Field(..., description="更新时间")
 
@@ -210,6 +249,7 @@ class HomeworkSubmissionResponse(BaseModel):
 
 class HomeworkSubmissionDetail(HomeworkSubmissionResponse):
     """作业提交详情响应（包含图片和批改结果）"""
+
     homework: HomeworkResponse = Field(..., description="作业信息")
     images: List[HomeworkImageResponse] = Field(..., description="作业图片")
     reviews: List["HomeworkReviewResponse"] = Field(..., description="批改结果")
@@ -219,8 +259,10 @@ class HomeworkSubmissionDetail(HomeworkSubmissionResponse):
 # 作业批改相关Schema
 # ============================================================================
 
+
 class QuestionReview(BaseModel):
     """题目批改结果"""
+
     question_number: int = Field(..., ge=1, description="题目编号")
     question_text: Optional[str] = Field(None, description="题目内容")
     student_answer: Optional[str] = Field(None, description="学生答案")
@@ -235,6 +277,7 @@ class QuestionReview(BaseModel):
 
 class HomeworkReviewCreate(BaseModel):
     """创建批改请求"""
+
     submission_id: UUID4 = Field(..., description="提交ID")
     review_type: str = Field("ai_auto", description="批改类型")
     max_score: float = Field(100.0, gt=0, description="满分")
@@ -242,6 +285,7 @@ class HomeworkReviewCreate(BaseModel):
 
 class HomeworkReviewResponse(BaseModel):
     """作业批改响应"""
+
     id: UUID4 = Field(..., description="批改ID")
     submission_id: UUID4 = Field(..., description="提交ID")
     review_type: str = Field(..., description="批改类型")
@@ -257,9 +301,15 @@ class HomeworkReviewResponse(BaseModel):
     overall_comment: Optional[str] = Field(None, description="总体评价")
     strengths: Optional[List[str]] = Field(None, description="优点列表")
     weaknesses: Optional[List[str]] = Field(None, description="不足列表")
-    suggestions: Optional[List[ImprovementSuggestion]] = Field(None, description="改进建议")
-    knowledge_point_analysis: Optional[List[KnowledgePointAnalysis]] = Field(None, description="知识点分析")
-    question_reviews: Optional[List[QuestionReview]] = Field(None, description="题目级别评价")
+    suggestions: Optional[List[ImprovementSuggestion]] = Field(
+        None, description="改进建议"
+    )
+    knowledge_point_analysis: Optional[List[KnowledgePointAnalysis]] = Field(
+        None, description="知识点分析"
+    )
+    question_reviews: Optional[List[QuestionReview]] = Field(
+        None, description="题目级别评价"
+    )
     ai_model_version: Optional[str] = Field(None, description="AI模型版本")
     ai_confidence_score: Optional[float] = Field(None, description="AI置信度分数")
     quality_score: Optional[float] = Field(None, description="批改质量分数")
@@ -276,19 +326,26 @@ class HomeworkReviewResponse(BaseModel):
 # 查询和分页相关Schema
 # ============================================================================
 
+
 class HomeworkQuery(BaseModel):
     """作业查询参数"""
+
     subject: Optional[SubjectType] = Field(None, description="学科筛选")
     homework_type: Optional[HomeworkType] = Field(None, description="作业类型筛选")
-    difficulty_level: Optional[DifficultyLevel] = Field(None, description="难度级别筛选")
+    difficulty_level: Optional[DifficultyLevel] = Field(
+        None, description="难度级别筛选"
+    )
     grade_level: Optional[str] = Field(None, description="学段筛选")
     creator_id: Optional[UUID4] = Field(None, description="创建者ID筛选")
     is_active: Optional[bool] = Field(None, description="是否激活筛选")
-    keyword: Optional[str] = Field(None, min_length=1, max_length=100, description="关键词搜索")
+    keyword: Optional[str] = Field(
+        None, min_length=1, max_length=100, description="关键词搜索"
+    )
 
 
 class SubmissionQuery(BaseModel):
     """提交查询参数"""
+
     homework_id: Optional[UUID4] = Field(None, description="作业ID筛选")
     student_id: Optional[UUID4] = Field(None, description="学生ID筛选")
     status: Optional[SubmissionStatus] = Field(None, description="状态筛选")
@@ -298,15 +355,16 @@ class SubmissionQuery(BaseModel):
     min_score: Optional[float] = Field(None, ge=0, le=100, description="最低分数")
     max_score: Optional[float] = Field(None, ge=0, le=100, description="最高分数")
 
-    @validator('end_date')
+    @validator("end_date")
     def validate_date_range(cls, v, values):
-        if v and values.get('start_date') and v < values['start_date']:
-            raise ValueError('结束日期不能早于开始日期')
+        if v and values.get("start_date") and v < values["start_date"]:
+            raise ValueError("结束日期不能早于开始日期")
         return v
 
 
 class PaginationParams(BaseModel):
     """分页参数"""
+
     page: int = Field(1, ge=1, description="页码")
     size: int = Field(20, ge=1, le=100, description="每页数量")
     sort_by: Optional[str] = Field("created_at", description="排序字段")
@@ -315,6 +373,7 @@ class PaginationParams(BaseModel):
 
 class PaginatedResponse(BaseModel):
     """分页响应"""
+
     items: List[Any] = Field(..., description="数据列表")
     total: int = Field(..., ge=0, description="总数量")
     page: int = Field(..., ge=1, description="当前页码")
@@ -328,8 +387,10 @@ class PaginatedResponse(BaseModel):
 # 统计和分析相关Schema
 # ============================================================================
 
+
 class ScoreDistribution(BaseModel):
     """分数分布"""
+
     score_range: str = Field(..., description="分数区间")
     count: int = Field(..., ge=0, description="数量")
     percentage: float = Field(..., ge=0, le=100, description="百分比")
@@ -337,6 +398,7 @@ class ScoreDistribution(BaseModel):
 
 class SubjectPerformance(BaseModel):
     """学科表现统计"""
+
     subject: SubjectType = Field(..., description="学科")
     total_submissions: int = Field(..., ge=0, description="总提交数")
     avg_score: float = Field(..., ge=0, le=100, description="平均分")
@@ -346,6 +408,7 @@ class SubjectPerformance(BaseModel):
 
 class HomeworkStatistics(BaseModel):
     """作业统计信息"""
+
     total_homeworks: int = Field(..., ge=0, description="总作业数")
     active_homeworks: int = Field(..., ge=0, description="激活的作业数")
     total_submissions: int = Field(..., ge=0, description="总提交数")
@@ -359,13 +422,18 @@ class HomeworkStatistics(BaseModel):
 # 批量操作相关Schema
 # ============================================================================
 
+
 class BatchHomeworkCreate(BaseModel):
     """批量创建作业请求"""
-    homeworks: List[HomeworkCreate] = Field(..., min_length=1, max_length=10, description="作业列表")
+
+    homeworks: List[HomeworkCreate] = Field(
+        ..., min_length=1, max_length=10, description="作业列表"
+    )
 
 
 class BatchOperationResponse(BaseModel):
     """批量操作响应"""
+
     success_count: int = Field(..., ge=0, description="成功数量")
     failed_count: int = Field(..., ge=0, description="失败数量")
     total_count: int = Field(..., ge=0, description="总数量")
@@ -395,9 +463,11 @@ HomeworkCorrectionResponse = HomeworkReviewResponse
 # 查询相关别名
 HomeworkListQuery = HomeworkQuery
 
+
 # 模板列表响应
 class HomeworkTemplateListResponse(BaseModel):
     """作业模板列表响应"""
+
     success: bool = Field(True, description="是否成功")
     data: List[HomeworkTemplateResponse] = Field(..., description="模板列表")
     message: str = Field(..., description="响应消息")
