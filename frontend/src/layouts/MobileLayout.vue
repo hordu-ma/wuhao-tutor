@@ -242,7 +242,7 @@ const handleLogout = async () => {
 </script>
 
 <style scoped lang="scss">
-@import '@/styles/responsive.scss';
+@use '@/styles/responsive.scss';
 
 .mobile-layout {
   min-height: 100vh;

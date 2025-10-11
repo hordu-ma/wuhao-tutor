@@ -641,7 +641,7 @@ defineOptions({
 </script>
 
 <style scoped lang="scss">
-@import '@/styles/variables.scss';
+@use '@/styles/variables.scss' as *;
 
 .modern-learning-page {
   width: 100%;
