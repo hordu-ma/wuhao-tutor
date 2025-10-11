@@ -18,7 +18,13 @@ from src.core.database import get_db
 from src.core.exceptions import ValidationError
 from src.core.logging import get_logger
 from src.schemas.common import DataResponse, SuccessResponse
-from src.schemas.homework import HomeworkCreate, HomeworkSubmissionCreate
+from src.schemas.homework import (
+    HomeworkCreate,
+    HomeworkSubmissionCreate,
+    HomeworkSubmissionUpdate,
+    HomeworkType,
+    SubjectType,
+)
 from src.services.homework_service import HomeworkService
 
 logger = get_logger(__name__)
@@ -243,10 +249,14 @@ async def submit_homework(
         homework_data = HomeworkCreate(
             title=title or f"{subject} - 年级{grade_level}作业",
             description=description or "",
-            subject=subject,
-            homework_type="daily",  # 修复:使用有效的枚举值
-            difficulty_level=difficulty_map.get("medium", 2),  # 修复:使用整数
-            grade_level=str(grade_level),  # 修复:转换为字符串
+            subject=SubjectType(subject),  # 修复: 转换为枚举类型
+            homework_type=HomeworkType.DAILY,  # 修复: 使用枚举
+            difficulty_level=difficulty_map.get("medium", 2),
+            grade_level=str(grade_level),
+            chapter=None,
+            knowledge_points=None,
+            estimated_duration=None,
+            deadline=None,
         )
 
         homework = await homework_service.create_homework(
@@ -259,7 +269,7 @@ async def submit_homework(
         from src.schemas.homework import HomeworkSubmissionCreate
 
         submission_data = HomeworkSubmissionCreate(
-            homework_id=homework.id,
+            homework_id=getattr(homework, "id"),
             submission_title=title or f"{subject}作业",
             submission_note=description,
             completion_time=None,
@@ -330,7 +340,11 @@ async def submit_homework(
                 "status": submission.status,  # ✅ 修复: 从数据库读取的status已经是字符串，无需.value
                 "original_images": urls_list,
                 "created_at": submission.created_at.isoformat(),
-                "updated_at": submission.updated_at.isoformat(),
+                "updated_at": (
+                    updated_at.isoformat()
+                    if (updated_at := getattr(submission, "updated_at", None))
+                    else None
+                ),
             },
             message="作业提交成功，正在进行AI批改...",
         )
@@ -1225,6 +1239,85 @@ async def retry_homework_correction(
     return DataResponse[Dict[str, Any]](
         success=True, data=retry_task, message="重试批改任务已启动"
     )
+
+
+# ==========================================================================
+# 作业更新功能
+# ==========================================================================
+
+
+@router.put(
+    "/submissions/{submission_id}",
+    summary="更新作业提交",
+    description="更新作业提交的标题、备注等信息",
+    response_model=DataResponse[Dict[str, Any]],
+)
+async def update_submission(
+    submission_id: UUID,
+    update_data: HomeworkSubmissionUpdate,
+    current_user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+    homework_service: HomeworkService = Depends(get_homework_service),
+):
+    """
+    更新作业提交信息
+
+    **路径参数:**
+    - **submission_id**: 作业提交ID
+
+    **请求体:**
+    ```json
+    {
+        "submission_title": "新的作业标题",
+        "submission_note": "新的备注信息",
+        "completion_time": 30
+    }
+    ```
+
+    **注意:**
+    - 只能更新自己的作业
+    - 所有字段都是可选的，只更新提供的字段
+    """
+    try:
+        # 转换用户ID为UUID
+        user_uuid = uuid_lib.UUID(current_user_id)
+
+        # 调用服务层更新作业
+        updated_submission = await homework_service.update_submission(
+            session=db,
+            submission_id=submission_id,
+            user_id=user_uuid,
+            update_data=update_data,
+        )
+
+        if not updated_submission:
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail="作业提交不存在或已被删除",
+            )
+
+        # 返回更新后的作业信息
+        updated_at_value = getattr(updated_submission, "updated_at", None)
+        response_data = {
+            "id": str(updated_submission.id),
+            "submission_title": getattr(updated_submission, "submission_title", None),
+            "submission_note": getattr(updated_submission, "submission_note", None),
+            "completion_time": getattr(updated_submission, "completion_time", None),
+            "updated_at": updated_at_value.isoformat() if updated_at_value else None,
+        }
+
+        return DataResponse[Dict[str, Any]](
+            success=True, data=response_data, message="作业信息更新成功"
+        )
+
+    except ValidationError as e:
+        raise HTTPException(status_code=http_status.HTTP_403_FORBIDDEN, detail=str(e))
+    except Exception as e:
+        logger.error(f"更新作业提交失败: {e}")
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"更新作业失败: {str(e)}",
+        )
 
 
 # ==========================================================================

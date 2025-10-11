@@ -133,6 +133,10 @@
                 <el-icon><Edit /></el-icon>
                 编辑信息
               </el-dropdown-item>
+              <el-dropdown-item command="rename">
+                <el-icon><EditPen /></el-icon>
+                重命名
+              </el-dropdown-item>
               <el-dropdown-item command="download">
                 <el-icon><Download /></el-icon>
                 下载图片
@@ -160,6 +164,7 @@ import {
   MoreFilled,
   View,
   Edit,
+  EditPen,
   Download,
   Delete,
   School,
@@ -195,6 +200,7 @@ const emit = defineEmits<{
   (e: 'click'): void
   (e: 'view-detail', id: string): void
   (e: 'edit', homework: HomeworkRecord): void
+  (e: 'rename', homework: HomeworkRecord): void
   (e: 'delete', id: string): void
   (e: 'download', id: string): void
   (e: 'preview-image', url: string, index: number): void
@@ -271,6 +277,9 @@ const handleCommand = (command: string) => {
       break
     case 'edit':
       emit('edit', props.homework)
+      break
+    case 'rename':
+      emit('rename', props.homework)
       break
     case 'download':
       emit('download', props.homework.id)

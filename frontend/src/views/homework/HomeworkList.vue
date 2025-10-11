@@ -182,6 +182,7 @@
               @click="viewHomework(homework.id)"
               @view-detail="viewHomework"
               @edit="editHomework"
+              @rename="handleRenameHomework"
               @delete="deleteHomework"
               @start-correction="startCorrection"
               @retry-correction="retryCorrection"
@@ -423,6 +424,37 @@ const editHomework = (homework: HomeworkRecord) => {
   editForm.title = homework.title || ''
   editForm.description = homework.description || ''
   editDialogVisible.value = true
+}
+
+// 重命名作业
+const handleRenameHomework = async (homework: HomeworkRecord) => {
+  try {
+    const { value: newTitle } = await ElMessageBox.prompt('请输入新的作业标题：', '重命名作业', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      inputValue: homework.title || '',
+      inputPlaceholder: '请输入作业标题',
+      inputValidator: (value: string) => {
+        if (!value || value.trim().length === 0) {
+          return '标题不能为空'
+        }
+        if (value.length > 200) {
+          return '标题长度不能超过200个字符'
+        }
+        return true
+      },
+    })
+
+    if (newTitle && newTitle.trim() !== homework.title) {
+      await homeworkStore.renameHomework(homework.id, newTitle.trim())
+      ElMessage.success('重命名成功')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('重命名失败:', error)
+      ElMessage.error('重命名失败')
+    }
+  }
 }
 
 // 关闭编辑对话框
