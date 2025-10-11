@@ -40,7 +40,7 @@ class FileAPI {
     const formData = new FormData()
     formData.append('file', file)
 
-    const response = await http.upload<{ data: ImageUploadResponse }>(
+    const response = await http.upload<ImageUploadResponse>(
       `${this.API_PREFIX}/upload-image-for-learning`,
       formData,
       {
@@ -50,7 +50,8 @@ class FileAPI {
       }
     )
 
-    return response.data
+    // http.upload 已经解析过 data 字段，直接返回
+    return response
   }
 
   /**
@@ -62,7 +63,7 @@ class FileAPI {
     const formData = new FormData()
     formData.append('file', file)
 
-    const response = await http.upload<{ data: AIImageUploadResponse }>(
+    const response = await http.upload<AIImageUploadResponse>(
       `${this.API_PREFIX}/upload-for-ai`,
       formData,
       {
@@ -72,7 +73,8 @@ class FileAPI {
       }
     )
 
-    return response.data
+    // http.upload 已经解析过 data 字段，直接返回
+    return response
   }
 
   /**
