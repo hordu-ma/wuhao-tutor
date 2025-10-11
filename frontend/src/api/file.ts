@@ -29,7 +29,7 @@ export interface AIImageUploadResponse {
 }
 
 class FileAPI {
-  private static readonly API_PREFIX = '/api/v1/files'
+  private static readonly API_PREFIX = '/files'
 
   /**
    * 上传学习问答图片
