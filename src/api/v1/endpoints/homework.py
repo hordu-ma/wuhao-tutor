@@ -281,6 +281,8 @@ async def submit_homework(
                 original_filename=f"homework_{i+1}.jpg",
                 file_path=url,  # 存储完整URL
                 file_url=url,
+                file_size=0,  # ✅ 修复: 添加必填字段 (URL模式下无法获取实际大小，设为0)
+                mime_type="image/jpeg",  # ✅ 修复: 添加必填字段 (默认jpeg类型)
                 display_order=i,
                 is_primary=(i == 0),
                 is_processed=False,
