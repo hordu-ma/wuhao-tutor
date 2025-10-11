@@ -207,6 +207,36 @@ class QuestionResponse(QuestionBase):
             return None
         return str(v)
 
+    @field_validator("image_urls", mode="before")
+    @classmethod
+    def parse_image_urls(cls, v):
+        """解析image_urls字段，将JSON字符串转换为列表"""
+        if v is None:
+            return []
+        if isinstance(v, str):
+            try:
+                return json.loads(v) if v else []
+            except (json.JSONDecodeError, ValueError):
+                return []
+        if isinstance(v, list):
+            return v
+        return []
+
+    @field_validator("context_data", mode="before")
+    @classmethod
+    def parse_context_data(cls, v):
+        """解析context_data字段，将JSON字符串转换为字典"""
+        if v is None:
+            return {}
+        if isinstance(v, str):
+            try:
+                return json.loads(v) if v else {}
+            except (json.JSONDecodeError, ValueError):
+                return {}
+        if isinstance(v, dict):
+            return v
+        return {}
+
     model_config = ConfigDict(from_attributes=True)
 
 
