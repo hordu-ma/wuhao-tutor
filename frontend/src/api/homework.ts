@@ -3,6 +3,7 @@
  */
 
 import http from './http'
+import FileAPI from './file'
 import type {
   HomeworkSubmitRequest,
   HomeworkRecord,
@@ -19,7 +20,19 @@ export class HomeworkAPI {
   private readonly baseURL = '/homework'
 
   /**
-   * 上传作业
+   * 上传作业图片（批量）
+   * @param files 图片文件数组
+   * @returns 图片URL数组
+   */
+  async uploadHomeworkImages(files: File[]): Promise<string[]> {
+    // 复用学习问答的图片上传接口
+    const uploadResults = await FileAPI.uploadLearningImages(files)
+    // 提取图片URL
+    return uploadResults.map((result) => result.image_url)
+  }
+
+  /**
+   * 提交作业（新流程：先上传图片获取URL，再提交）
    */
   async submitHomework(data: HomeworkSubmitRequest): Promise<HomeworkRecord> {
     const formData = new FormData()
@@ -30,17 +43,15 @@ export class HomeworkAPI {
     if (data.title) formData.append('title', data.title)
     if (data.description) formData.append('description', data.description)
 
-    // 添加图片文件
-    data.images.forEach((file) => {
-      formData.append('images', file)
-    })
+    // 添加图片URL数组（JSON字符串格式）
+    formData.append('image_urls', JSON.stringify(data.image_urls))
 
     const response = await http.post<HomeworkRecord>(`${this.baseURL}/submit`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
       showLoading: true,
-      loadingText: '正在上传作业...',
+      loadingText: '正在提交作业...',
     })
 
     return response
