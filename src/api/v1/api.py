@@ -13,6 +13,7 @@ from src.api.v1.endpoints import (
     homework,
     homework_compatibility,
     learning,
+    mistakes,
     user,
 )
 
@@ -34,8 +35,9 @@ api_router.include_router(homework_compatibility.router, tags=["作业批改-兼
 
 api_router.include_router(analytics.router, tags=["学情分析"])
 
+# 错题手册路由
+api_router.include_router(mistakes.router, prefix="/mistakes", tags=["错题手册"])
+
 api_router.include_router(file.router, tags=["文件管理"])
 
 api_router.include_router(health.router, tags=["健康检查"])
-#     tags=["学情分析"]
-# )

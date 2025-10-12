@@ -108,7 +108,23 @@ async def register(
     - **verification_code**: 短信验证码
     - **name**: 真实姓名
     - **role**: 用户角色 (student/teacher/parent)
+
+    **注意**: 生产环境不允许自主注册，需要助教老师开通账户
     """
+    # 生产环境限制：禁止自主注册
+    if settings.ENVIRONMENT == "production":
+        logger.warning(
+            "生产环境注册尝试被阻止",
+            extra={
+                "phone": request.phone,
+                "ip_address": client_request.client.host if client_request.client else None,
+            },
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="生产环境不支持自主注册，请联系助教老师开通账户",
+        )
+
     try:
         user_service = get_user_service(db)
         auth_service = get_auth_service(user_service)
