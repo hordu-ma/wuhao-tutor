@@ -128,6 +128,19 @@
         </div>
       </div>
 
+      <!-- 回到顶部按钮 -->
+      <transition name="fade">
+        <el-button
+          v-show="showScrollToTop"
+          circle
+          size="large"
+          class="scroll-to-top-button"
+          @click="scrollToTop"
+        >
+          <el-icon :size="20"><Top /></el-icon>
+        </el-button>
+      </transition>
+
       <!-- 输入区域 -->
       <div class="input-container">
         <div class="input-wrapper">
@@ -282,6 +295,7 @@ import {
   Edit,
   FolderOpened,
   Delete,
+  Top,
 } from '@element-plus/icons-vue'
 import { marked } from 'marked'
 import katex from 'katex'
@@ -300,6 +314,7 @@ const uploadedImages = ref<{ file: File; preview: string }[]>([])
 const showSidebar = ref(false) // 默认不展开会话历史，用户可点击按钮打开
 const messageContainerRef = ref<HTMLElement>()
 const sessionSearchQuery = ref('')
+const showScrollToTop = ref(false) // 控制"回到顶部"按钮显示
 
 // 推荐问题
 const suggestedQuestions = [
@@ -683,8 +698,20 @@ const scrollToBottom = () => {
   }
 }
 
+const scrollToTop = () => {
+  if (messageContainerRef.value) {
+    messageContainerRef.value.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    })
+  }
+}
+
 const handleScroll = () => {
-  // 可以实现滚动加载更多历史消息
+  if (messageContainerRef.value) {
+    showScrollToTop.value = messageContainerRef.value.scrollTop > 300
+  }
+  // 未来可扩展：滚动加载更多历史消息
 }
 
 // ========== 生命周期 ==========
@@ -704,6 +731,17 @@ defineOptions({
 
 <style scoped lang="scss">
 // 注意：variables 和 mixins 已通过 vite.config.ts 全局注入，无需再导入
+
+// 淡入淡出动画
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
 
 .modern-learning-page {
   width: 100%;
@@ -1056,7 +1094,7 @@ defineOptions({
   flex-shrink: 0;
   background: #ebeef5; // 加深背景色，更明显的区分
   border-top: 2px solid #d8dce5; // 加深边框颜色
-  padding: $spacing-md $spacing-xl;
+  padding: $spacing-md $spacing-xl 0; // 移除底部 padding
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08); // 增强阴影深度
   position: relative;
 
@@ -1313,6 +1351,29 @@ defineOptions({
       z-index: $z-index-fixed;
       box-shadow: $box-shadow-xl;
       width: 320px;
+    }
+  }
+
+  // 回到顶部按钮
+  .scroll-to-top-button {
+    position: fixed;
+    right: 40px;
+    bottom: 100px;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    background: var(--el-color-primary);
+    border-color: var(--el-color-primary);
+    color: white;
+
+    &:hover {
+      background: var(--el-color-primary-light-3);
+      border-color: var(--el-color-primary-light-3);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    &:active {
+      transform: translateY(0);
     }
   }
 
