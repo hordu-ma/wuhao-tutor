@@ -35,10 +35,15 @@ if ! git diff --quiet HEAD -- src/ frontend/src/; then
     echo "⚠️ 警告: 存在未提交的代码修改"
     git status --porcelain | grep -E "^(M|A|D)" | head -5
     echo ""
-    read -p "是否继续部署? (y/N): " confirm
-    if [ "$confirm" != "y" ]; then
-        echo "❌ 部署已取消"
-        exit 1
+    # 如果设置了 AUTO_DEPLOY 环境变量，自动继续
+    if [ "${AUTO_DEPLOY}" = "true" ]; then
+        echo "ℹ️ 自动部署模式：跳过确认，继续部署"
+    else
+        read -p "是否继续部署? (y/N): " confirm
+        if [ "$confirm" != "y" ]; then
+            echo "❌ 部署已取消"
+            exit 1
+        fi
     fi
 fi
 

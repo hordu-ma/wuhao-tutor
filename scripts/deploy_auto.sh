@@ -92,6 +92,8 @@ echo "----------------------------------------"
 log_info "🔍 检查代码格式..."
 if [ -f "scripts/pre_deploy_check.sh" ]; then
     chmod +x scripts/pre_deploy_check.sh
+    # 设置自动部署模式，跳过所有确认提示
+    export AUTO_DEPLOY=true
     ./scripts/pre_deploy_check.sh || {
         log_warning "代码检查有警告，但继续部署"
     }
