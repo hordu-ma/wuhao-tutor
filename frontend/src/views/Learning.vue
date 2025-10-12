@@ -745,7 +745,7 @@ defineOptions({
 
 .modern-learning-page {
   width: 100%;
-  height: 100vh;
+  height: 100%;
   display: flex;
   background: var(--color-bg-secondary, #f7f8fc);
   overflow: hidden;
@@ -1094,10 +1094,10 @@ defineOptions({
 
 // 输入容器
 .input-container {
-  flex-shrink: 0;
+  flex: none; // 🔥 关键修复：完全不参与 flex 增长/收缩，只占据内容自然高度
   background: #ebeef5; // 加深背景色，更明显的区分
   border-top: 2px solid #d8dce5; // 加深边框颜色
-  padding: $spacing-md $spacing-xl $spacing-md; // 恢复底部 padding，保持视觉平衡
+  padding: $spacing-md $spacing-xl 0; // 底部 padding 为 0，让输入区域紧贴页面底部
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08); // 增强阴影深度
   position: relative;
 
@@ -1114,7 +1114,8 @@ defineOptions({
 
   .input-wrapper {
     max-width: 900px;
-    margin: 0 auto;
+    margin: 0 auto 0 auto; // 明确设置所有 margin，底部为 0
+    padding: 0; // 确保无 padding
   }
 
   .image-preview-row {
@@ -1147,6 +1148,7 @@ defineOptions({
     background: #ffffff; // 纯白背景，与外层对比
     border-radius: $border-radius-lg;
     padding: $spacing-base;
+    margin: 0; // 明确设置 margin 为 0
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); // 添加轻微阴影，增加浮起感
     border: 1px solid #e4e7ed; // 添加边框
     transition: all 0.3s ease; // 平滑过渡效果
