@@ -757,6 +757,8 @@ defineOptions({
   display: flex;
   flex-direction: column;
   min-width: 0;
+  height: 100vh; // 确保容器高度为视口高度
+  overflow: hidden; // 防止整体滚动
 }
 
 // 顶部工具栏
@@ -814,9 +816,7 @@ defineOptions({
   flex: 1;
   overflow-y: auto;
   padding: $spacing-xl;
-  // 限制最大高度，确保输入框始终可见（100vh - 顶部工具栏64px - 输入框约150px）
-  max-height: calc(100vh - 64px - 180px);
-  min-height: 200px;
+  min-height: 0; // 关键：允许 flex 子元素收缩
 
   @include scrollbar-style(6px, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.15));
 }
