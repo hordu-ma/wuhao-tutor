@@ -402,9 +402,14 @@ async def get_submissions(
             filters["homework_type"] = homework_type
 
         # 调用服务层获取数据
+        # 注意: homework_submissions.student_id 是 UUID 类型, 提交时使用 uuid.UUID 对象写入
+        # 这里必须将字符串 current_user_id 转换为 UUID, 否则在查询条件
+        # HomeworkSubmission.student_id == <str> 时可能导致无法匹配任何记录
+        import uuid as uuid_lib
+
         result = await homework_service.list_submissions(
             session=db,
-            student_id=current_user_id,
+            student_id=uuid_lib.UUID(current_user_id),  # 转换为 UUID 保证类型一致
             filters=filters,
             page=page,
             size=size,
