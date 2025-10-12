@@ -290,12 +290,12 @@ export const useAuthStore = defineStore('auth', {
       this.userLoading = true
       try {
         const user = await AuthAPI.getCurrentUser()
-        
+
         // 处理用户头像字段兼容性
         if (user.avatar_url && !user.avatar) {
           user.avatar = user.avatar_url
         }
-        
+
         this.user = user
 
         // 更新本地存储
@@ -331,12 +331,12 @@ export const useAuthStore = defineStore('auth', {
     }): Promise<boolean> {
       try {
         const updatedUser = await AuthAPI.updateProfile(data)
-        
+
         // 处理用户头像字段兼容性
         if (updatedUser.avatar_url && !updatedUser.avatar) {
           updatedUser.avatar = updatedUser.avatar_url
         }
-        
+
         this.user = updatedUser
 
         // 更新本地存储
@@ -348,6 +348,24 @@ export const useAuthStore = defineStore('auth', {
         console.error('Failed to update profile:', error)
         return false
       }
+    },
+
+    /**
+     * 更新用户头像 - 专门用于头像上传后的更新
+     */
+    updateUserAvatar(avatarUrl: string): void {
+      if (!this.user) return
+
+      // 更新 user 对象的头像字段(同时更新两个字段以保持兼容性)
+      this.user = {
+        ...this.user,
+        avatar: avatarUrl,
+        avatar_url: avatarUrl,
+      }
+
+      // 持久化到本地存储
+      const storage = this.rememberMe ? localStorage : sessionStorage
+      storage.setItem('user_info', JSON.stringify(this.user))
     },
 
     /**

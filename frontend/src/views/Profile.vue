@@ -574,21 +574,15 @@ const handleAvatarUpload = async (file: UploadRawFile): Promise<boolean> => {
   try {
     // 调用API上传头像
     const response = await AuthAPI.uploadAvatar(file as File)
-    
+
     console.log('头像上传响应:', response)
-    
-    // 更新本地userInfo
+
+    // 更新本地userInfo显示
     userInfo.avatar_url = response.avatar_url
 
-    // 更新全局用户信息 - 同时更新 avatar 和 avatar_url
-    if (authStore.user) {
-      authStore.user.avatar = response.avatar_url
-      authStore.user.avatar_url = response.avatar_url
-
-      // 同时更新localStorage中的用户信息，确保页面刷新后头像不会丢失
-      const storage = authStore.rememberMe ? localStorage : sessionStorage
-      storage.setItem('user_info', JSON.stringify(authStore.user))
-    }
+    // 通过 authStore 的 action 更新全局用户信息
+    // 这样会触发响应式更新,MainLayout 的头像会立即更新
+    authStore.updateUserAvatar(response.avatar_url)
 
     ElMessage.success('头像上传成功！')
     return true
@@ -604,11 +598,7 @@ const handleSaveAll = async () => {
     isSaving.value = true
 
     // 验证所有表单
-    const forms = [
-      userInfoForm.value,
-      preferencesForm.value,
-      privacyForm.value,
-    ]
+    const forms = [userInfoForm.value, preferencesForm.value, privacyForm.value]
     const validations = await Promise.all(forms.map((form) => form?.validate().catch(() => false)))
 
     if (validations.some((valid) => !valid)) {
@@ -632,11 +622,11 @@ const handleSaveAll = async () => {
     }
 
     console.log('提交的资料更新数据:', profileUpdateData)
-    
+
     const updatedUser = await AuthAPI.updateProfile(profileUpdateData)
-    
+
     console.log('资料更新响应:', updatedUser)
-    
+
     // 更新authStore中的用户信息
     if (updatedUser && authStore.user) {
       // 保证头像同步
@@ -644,13 +634,13 @@ const handleSaveAll = async () => {
         authStore.user.avatar = updatedUser.avatar_url
         authStore.user.avatar_url = updatedUser.avatar_url
       }
-      
+
       // 更新其他字段
       authStore.user.name = updatedUser.name || authStore.user.name
       authStore.user.nickname = updatedUser.nickname || authStore.user.nickname
       authStore.user.school = updatedUser.school || authStore.user.school
       authStore.user.grade_level = updatedUser.grade_level || authStore.user.grade_level
-      
+
       // 更新localStorage
       const storage = authStore.rememberMe ? localStorage : sessionStorage
       storage.setItem('user_info', JSON.stringify(authStore.user))
