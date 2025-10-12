@@ -630,7 +630,6 @@ const handleSaveAll = async () => {
 
     // TODO: 后续扩展其他设置的保存
     // await UserAPI.updatePreferences(preferences);
-    // await UserAPI.updateAISettings(aiSettings);
     // await UserAPI.updatePrivacySettings(privacySettings);
 
     ElMessage.success('设置保存成功！')
@@ -730,8 +729,6 @@ const initData = async () => {
     // TODO: 后续扩展加载其他设置
     // const prefs = await UserAPI.getPreferences();
     // Object.assign(preferences, prefs);
-    // const aiPrefs = await UserAPI.getAISettings();
-    // Object.assign(aiSettings, aiPrefs);
     // const privacy = await UserAPI.getPrivacySettings();
     // Object.assign(privacySettings, privacy);
   } catch (error) {
