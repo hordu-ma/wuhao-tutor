@@ -165,14 +165,34 @@ export class AuthAPI {
    * 更新用户资料
    */
   static async updateProfile(data: {
+    name?: string
     nickname?: string
     email?: string
     avatar?: string
+    avatar_url?: string
+    school?: string
+    grade_level?: string
+    class_name?: string
+    institution?: string
+    parent_contact?: string
+    parent_name?: string
+    notification_enabled?: boolean
   }): Promise<User> {
-    return http.put<User>('/auth/profile', data, {
+    const response = await http.put<any>('/auth/profile', data, {
       showSuccessMessage: true,
       successMessage: '资料更新成功！',
     })
+    
+    // 处理后端返回的数据结构
+    // 后端可能返回 { success: true, data: user, message: '...' } 或直接返回 user
+    const user = response.data || response
+    
+    // 确保 avatar 和 avatar_url 同步
+    if (user.avatar_url && !user.avatar) {
+      user.avatar = user.avatar_url
+    }
+    
+    return user
   }
 
   /**

@@ -44,7 +44,8 @@ export interface User {
   phone: string
   name: string
   nickname?: string
-  avatar?: string
+  avatar?: string  // 兼容旧版，用于前端显示
+  avatar_url?: string  // 后端返回字段
   role: UserRole
   is_active: boolean
   is_verified: boolean
