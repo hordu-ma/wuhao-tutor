@@ -757,7 +757,7 @@ defineOptions({
   display: flex;
   flex-direction: column;
   min-width: 0;
-  height: 100vh; // 确保容器高度为视口高度
+  min-height: 0; // 允许 flex 收缩
   overflow: hidden; // 防止整体滚动
 }
 
@@ -1097,7 +1097,7 @@ defineOptions({
   flex-shrink: 0;
   background: #ebeef5; // 加深背景色，更明显的区分
   border-top: 2px solid #d8dce5; // 加深边框颜色
-  padding: $spacing-md $spacing-xl 0; // 移除底部 padding
+  padding: $spacing-md $spacing-xl $spacing-md; // 恢复底部 padding，保持视觉平衡
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08); // 增强阴影深度
   position: relative;
 
