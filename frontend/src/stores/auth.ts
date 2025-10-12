@@ -51,7 +51,10 @@ export const useAuthStore = defineStore('auth', {
     /**
      * 获取用户头像
      */
-    userAvatar: (state): string => state.user?.avatar || '/default-avatar.png',
+    userAvatar: (state): string => {
+      // 优先使用 avatar_url，回退到 avatar，最后使用默认头像
+      return state.user?.avatar_url || state.user?.avatar || '/default-avatar.png'
+    },
 
     /**
      * 获取用户昵称
@@ -144,6 +147,11 @@ export const useAuthStore = defineStore('auth', {
      */
     setAuth(response: LoginResponse, rememberMe: boolean = false): void {
       const { access_token, refresh_token, user, expires_in } = response
+
+      // 处理用户头像字段兼容性
+      if (user.avatar_url && !user.avatar) {
+        user.avatar = user.avatar_url
+      }
 
       // 更新状态
       this.accessToken = access_token
@@ -282,6 +290,12 @@ export const useAuthStore = defineStore('auth', {
       this.userLoading = true
       try {
         const user = await AuthAPI.getCurrentUser()
+        
+        // 处理用户头像字段兼容性
+        if (user.avatar_url && !user.avatar) {
+          user.avatar = user.avatar_url
+        }
+        
         this.user = user
 
         // 更新本地存储
@@ -309,9 +323,20 @@ export const useAuthStore = defineStore('auth', {
       nickname?: string
       email?: string
       avatar?: string
+      avatar_url?: string
+      name?: string
+      school?: string
+      grade_level?: string
+      notification_enabled?: boolean
     }): Promise<boolean> {
       try {
         const updatedUser = await AuthAPI.updateProfile(data)
+        
+        // 处理用户头像字段兼容性
+        if (updatedUser.avatar_url && !updatedUser.avatar) {
+          updatedUser.avatar = updatedUser.avatar_url
+        }
+        
         this.user = updatedUser
 
         // 更新本地存储
