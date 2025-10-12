@@ -167,6 +167,7 @@ import {
   DataAnalysis,
 } from '@element-plus/icons-vue'
 import { userAPI, type UserActivity, type UserStats } from '@/api/user'
+import { goalAPI, type DailyGoal } from '@/api/goals'
 
 const router = useRouter()
 
@@ -188,26 +189,7 @@ const userLevel = ref('中级')
 
 const recentActivities = ref<UserActivity[]>([])
 
-const todayGoals = ref([
-  {
-    id: 1,
-    title: '完成数学作业',
-    completed: true,
-    progress: 100,
-  },
-  {
-    id: 2,
-    title: '背诵20个英语单词',
-    completed: false,
-    progress: 60,
-  },
-  {
-    id: 3,
-    title: '阅读科学文章',
-    completed: false,
-    progress: 30,
-  },
-])
+const todayGoals = ref<DailyGoal[]>([])
 
 // 方法
 const navigateTo = (path: string) => {
@@ -256,13 +238,11 @@ const viewAllActivities = () => {
   router.push('/activities')
 }
 
-const updateGoalStatus = (goal: any) => {
+const updateGoalStatus = (goal: DailyGoal) => {
   if (goal.completed) {
-    goal.progress = 100
-    ElMessage.success(`恭喜完成目标：${goal.title}`)
-  } else {
-    // 这里可以根据实际情况调整进度
+    ElMessage.success(`🎉 恭喜完成目标：${goal.title}`)
   }
+  // 后续可以在这里调用 API 更新目标进度到后端
 }
 
 // 数据获取函数
@@ -290,9 +270,19 @@ const fetchRecentActivities = async () => {
   }
 }
 
+const fetchDailyGoals = async () => {
+  try {
+    const goals = await goalAPI.getDailyGoals()
+    todayGoals.value = goals
+  } catch (error) {
+    console.error('获取每日目标失败:', error)
+    ElMessage.error('获取每日目标失败')
+  }
+}
+
 // 组件挂载时获取数据
 onMounted(async () => {
-  await Promise.all([fetchUserStats(), fetchRecentActivities()])
+  await Promise.all([fetchUserStats(), fetchRecentActivities(), fetchDailyGoals()])
 })
 </script>
 

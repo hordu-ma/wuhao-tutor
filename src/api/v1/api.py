@@ -9,6 +9,7 @@ from src.api.v1.endpoints import (
     analytics,
     auth,
     file,
+    goals,
     health,
     homework,
     homework_compatibility,
@@ -37,6 +38,9 @@ api_router.include_router(analytics.router, tags=["学情分析"])
 
 # 错题手册路由
 api_router.include_router(mistakes.router, prefix="/mistakes", tags=["错题手册"])
+
+# 每日目标路由
+api_router.include_router(goals.router, tags=["每日目标"])
 
 api_router.include_router(file.router, tags=["文件管理"])
 
