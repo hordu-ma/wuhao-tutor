@@ -22,11 +22,11 @@
             </el-menu-item>
             <el-menu-item index="/learning">
               <el-icon><ChatDotRound /></el-icon>
-              <span>学习问答</span>
+              <span>作业问答</span>
             </el-menu-item>
-            <el-menu-item index="/homework">
-              <el-icon><Notebook /></el-icon>
-              <span>作业批改</span>
+            <el-menu-item index="/mistakes">
+              <el-icon><Collection /></el-icon>
+              <span>错题手册</span>
             </el-menu-item>
             <el-menu-item index="/analytics">
               <el-icon><DataAnalysis /></el-icon>
@@ -77,7 +77,7 @@ import {
   ArrowDown,
   House,
   ChatDotRound,
-  Notebook,
+  Collection,
   DataAnalysis,
   User,
 } from '@element-plus/icons-vue'
@@ -98,7 +98,7 @@ const activeRoute = computed(() => {
   const path = route.path
   // 匹配主路径，支持子路径
   if (path.startsWith('/learning')) return '/learning'
-  if (path.startsWith('/homework')) return '/homework'
+  if (path.startsWith('/mistakes')) return '/mistakes'
   if (path.startsWith('/analytics')) return '/analytics'
   if (path.startsWith('/profile')) return '/profile'
   if (path.startsWith('/dashboard') || path === '/') return '/dashboard'

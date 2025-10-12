@@ -29,12 +29,12 @@
     <!-- 功能卡片区域 -->
     <div class="feature-cards">
       <el-row :gutter="24">
-        <!-- 学习问答 -->
+        <!-- 作业问答 -->
         <el-col :xs="24" :sm="12" :lg="6">
           <el-card class="feature-card learning-card" @click="navigateTo('/learning')">
             <div class="card-content">
               <el-icon class="card-icon"><ChatLineSquare /></el-icon>
-              <h3>学习问答</h3>
+              <h3>作业问答</h3>
               <p>AI智能答疑，解决学习难题</p>
             </div>
             <div class="card-stats">
@@ -43,16 +43,16 @@
           </el-card>
         </el-col>
 
-        <!-- 作业批改 -->
+        <!-- 错题手册 -->
         <el-col :xs="24" :sm="12" :lg="6">
-          <el-card class="feature-card homework-card" @click="navigateTo('/homework')">
+          <el-card class="feature-card homework-card" @click="navigateTo('/mistakes')">
             <div class="card-content">
-              <el-icon class="card-icon"><EditPen /></el-icon>
-              <h3>作业批改</h3>
-              <p>智能批改，详细反馈</p>
+              <el-icon class="card-icon"><Collection /></el-icon>
+              <h3>错题手册</h3>
+              <p>记录错题，智能复习</p>
             </div>
             <div class="card-stats">
-              <span>待批改: {{ todayStats.pendingHomework }}</span>
+              <span>待复习: {{ todayStats.pendingHomework }}</span>
             </div>
           </el-card>
         </el-col>
@@ -178,7 +178,7 @@ import {
   Trophy,
   Calendar,
   ChatLineSquare,
-  EditPen,
+  Collection,
   TrendCharts,
   User,
   QuestionFilled,
