@@ -279,6 +279,7 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   ChatDotRound,
@@ -307,6 +308,8 @@ import FileAPI from '@/api/file'
 
 // ========== Store ==========
 const learningStore = useLearningStore()
+const route = useRoute()
+const router = useRouter()
 
 // ========== 响应式状态 ==========
 const inputText = ref('')
@@ -445,18 +448,7 @@ const handleSend = async () => {
     })),
   })
 
-  // 用于追踪当前的消息提示
-  let currentMessage: any = null
-
   try {
-    // 显示处理提示
-    currentMessage = ElMessage({
-      message: '正在处理您的问题，请稍候...',
-      type: 'info',
-      duration: 0, // 不自动关闭
-      showClose: false,
-    })
-
     // 1. 首先上传图片（如果有的话）
     let imageUrls: string[] = []
     if (imagesToUpload.length > 0) {
@@ -474,14 +466,7 @@ const handleSend = async () => {
         }))
       )
 
-      // 更新提示消息
-      if (currentMessage) currentMessage.close()
-      currentMessage = ElMessage({
-        message: `正在上传${imagesToUpload.length}张图片...`,
-        type: 'info',
-        duration: 0,
-        showClose: false,
-      })
+      ElMessage.info(`正在上传${imagesToUpload.length}张图片...`)
 
       try {
         console.log('📤 [DEBUG] 调用 FileAPI.uploadImageForAI...')
@@ -495,10 +480,6 @@ const handleSend = async () => {
         console.log('✅ [DEBUG] 所有图片上传完成，结果:', uploadResults)
         imageUrls = uploadResults.map((result) => result.ai_accessible_url)
         console.log('✅ [DEBUG] 提取的图片 URL:', imageUrls)
-
-        // 关闭上传提示，显示成功消息
-        if (currentMessage) currentMessage.close()
-        currentMessage = null
         ElMessage.success(`图片上传成功！`)
       } catch (uploadError: any) {
         console.error('❌ [DEBUG] 图片上传失败')
@@ -506,19 +487,14 @@ const handleSend = async () => {
         console.error('❌ [DEBUG] 错误信息:', uploadError?.message)
         console.error('❌ [DEBUG] 错误响应:', uploadError?.response)
         console.error('❌ [DEBUG] 完整错误栈:', uploadError?.stack)
-
-        // 关闭上传提示，显示错误消息
-        if (currentMessage) currentMessage.close()
-        currentMessage = null
         ElMessage.error('图片上传失败，请重试')
         return
       }
     } else {
       console.log('ℹ️ [DEBUG] 无图片上传')
-      // 无图片时也关闭初始提示
-      if (currentMessage) currentMessage.close()
-      currentMessage = null
-    } // 2. 构建问答请求
+    }
+
+    // 2. 构建问答请求
     const request: AskQuestionRequest = {
       content: questionText,
       question_type: QuestionType.GENERAL_INQUIRY,
@@ -533,34 +509,12 @@ const handleSend = async () => {
     inputText.value = ''
     uploadedImages.value = []
 
-    // 显示发送中提示
-    currentMessage = ElMessage({
-      message: '正在发送问题...',
-      type: 'info',
-      duration: 0,
-      showClose: false,
-    })
-
     // 4. 发送问答请求
     await learningStore.askQuestion(request)
-
-    // 关闭发送提示
-    if (currentMessage) {
-      currentMessage.close()
-      currentMessage = null
-    }
-
     await nextTick()
     scrollToBottom()
   } catch (error) {
     console.error('发送失败:', error)
-
-    // 确保关闭所有消息提示
-    if (currentMessage) {
-      currentMessage.close()
-      currentMessage = null
-    }
-
     // 恢复输入内容
     inputText.value = questionText
     uploadedImages.value = imagesToUpload
@@ -763,13 +717,130 @@ const handleScroll = () => {
   // 未来可扩展：滚动加载更多历史消息
 }
 
+// ========== 作业跳转自动处理 ==========
+const handleAutoStartFromHomework = async (query: any) => {
+  try {
+    console.log('🚀 检测到作业跳转，开始自动批改...', query)
+
+    // 解析参数
+    const imageUrls = JSON.parse(query.images || '[]')
+    const autoMessage = query.message || '请批改这份作业'
+    const context = JSON.parse(query.context || '{}')
+
+    if (imageUrls.length === 0) {
+      ElMessage.warning('未检测到图片，无法进行批改')
+      return
+    }
+
+    console.log('📸 作业图片URLs:', imageUrls)
+    console.log('💬 自动消息:', autoMessage)
+    console.log('🎯 上下文:', context)
+
+    ElMessage.info('正在为您准备作业批改...')
+
+    // 创建新会话（针对作业批改）
+    await createNewSession()
+
+    // 等待会话创建完成
+    await nextTick()
+
+    // 构造作业批改标题
+    const sessionTitle = context.subject
+      ? `${context.subject}作业批改 - 年级${context.grade_level}`
+      : '作业批改'
+
+    // 更新会话标题
+    if (learningStore.chatState.currentSession) {
+      try {
+        await learningStore.updateSession(learningStore.chatState.currentSession.id, {
+          title: sessionTitle,
+        })
+      } catch (error) {
+        console.warn('更新会话标题失败:', error)
+      }
+    }
+
+    // 设置批改指令到输入框
+    inputText.value = autoMessage
+
+    // 显示提示
+    ElMessage.success('已自动加载作业图片，正在发送AI批改请求...')
+
+    // 调用现有的handleSend，但传入预存的图片URLs
+    await nextTick() // 确保DOM更新完成
+    await handleSendWithExistingImages(imageUrls)
+
+    // 清理URL参数，避免刷新时重复触发
+    await router.replace({ path: '/learning' })
+  } catch (error) {
+    console.error('自动批改启动失败:', error)
+    ElMessage.error('自动批改启动失败，请手动操作')
+  }
+}
+
+// ========== 使用现有图片URLs发送消息（作业自动批改专用）==========
+const handleSendWithExistingImages = async (existingImageUrls: string[]) => {
+  console.log('🔥 [DEBUG] handleSendWithExistingImages 被调用', { existingImageUrls })
+
+  // 获取输入内容并保存，用于错误恢复
+  const questionText = inputText.value.trim()
+
+  if (!questionText) {
+    console.warn('⚠️ [DEBUG] 输入为空，中止发送')
+    return
+  }
+
+  console.log('� [DEBUG] 开始发送问题:', {
+    questionText,
+    imageCount: existingImageUrls.length,
+    imageUrls: existingImageUrls,
+  })
+
+  try {
+    // 跳过图片上传步骤，直接使用已有的图片URLs
+    const imageUrls = existingImageUrls
+
+    // 构建问答请求
+    const request: AskQuestionRequest = {
+      content: questionText,
+      question_type: QuestionType.GENERAL_INQUIRY,
+      image_urls: imageUrls.length > 0 ? imageUrls : undefined,
+      use_context: true,
+      include_history: true,
+      max_history: 10,
+    }
+    console.log('📝 [DEBUG] 构建请求:', request)
+
+    // 清空输入（在发送前清空，避免重复发送）
+    inputText.value = ''
+    uploadedImages.value = []
+
+    // 发送问答请求
+    await learningStore.askQuestion(request)
+    await nextTick()
+    scrollToBottom()
+  } catch (error) {
+    console.error('发送失败:', error)
+    // 恢复输入内容
+    inputText.value = questionText
+    ElMessage.error('发送失败，请重试')
+  }
+}
+
 // ========== 生命周期 ==========
 onMounted(async () => {
+  // 先初始化学习模块
   await learningStore.initialize()
 
-  // 如果有最新会话，自动加载
-  if (learningStore.latestActiveSession) {
-    await learningStore.switchSession(learningStore.latestActiveSession.id)
+  // ✅ 检查是否有作业跳转的自动启动参数
+  if (route.query.autoStart === 'true') {
+    // 作业跳转处理，会创建新会话并自动发送
+    await handleAutoStartFromHomework(route.query)
+  } else {
+    // 正常访问学习页面，加载最新会话
+    if (learningStore.latestActiveSession) {
+      await learningStore.switchSession(learningStore.latestActiveSession.id)
+    }
   }
 })
 
