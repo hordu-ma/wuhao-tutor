@@ -205,60 +205,6 @@
               </el-form>
             </el-card>
 
-            <!-- AI助手设置 -->
-            <el-card class="mb-6">
-              <template #header>
-                <div class="card-header">
-                  <el-icon><ChatDotRound /></el-icon>
-                  <span>AI助手设置</span>
-                </div>
-              </template>
-
-              <el-form ref="aiSettingsForm" :model="aiSettings" label-width="120px">
-                <el-form-item label="回答详细程度">
-                  <el-radio-group v-model="aiSettings.response_detail_level">
-                    <el-radio label="concise">简洁回答</el-radio>
-                    <el-radio label="detailed">详细解释</el-radio>
-                    <el-radio label="comprehensive">全面分析</el-radio>
-                  </el-radio-group>
-                </el-form-item>
-
-                <el-form-item label="学习指导风格">
-                  <el-radio-group v-model="aiSettings.teaching_style">
-                    <el-radio label="encouraging">鼓励型</el-radio>
-                    <el-radio label="strict">严格型</el-radio>
-                    <el-radio label="friendly">友善型</el-radio>
-                    <el-radio label="professional">专业型</el-radio>
-                  </el-radio-group>
-                </el-form-item>
-
-                <el-form-item label="智能功能">
-                  <div class="space-y-3">
-                    <el-checkbox v-model="aiSettings.enable_context_memory">
-                      启用学习上下文记忆
-                    </el-checkbox>
-                    <el-checkbox v-model="aiSettings.enable_auto_correction">
-                      自动错误检测与纠正
-                    </el-checkbox>
-                    <el-checkbox v-model="aiSettings.enable_smart_recommendations">
-                      智能学习建议
-                    </el-checkbox>
-                    <el-checkbox v-model="aiSettings.enable_progress_tracking">
-                      学习进度跟踪
-                    </el-checkbox>
-                  </div>
-                </el-form-item>
-
-                <el-form-item label="回答语言">
-                  <el-select v-model="aiSettings.response_language" placeholder="选择AI回答语言">
-                    <el-option label="中文" value="zh" />
-                    <el-option label="英文" value="en" />
-                    <el-option label="中英混合" value="zh-en" />
-                  </el-select>
-                </el-form-item>
-              </el-form>
-            </el-card>
-
             <!-- 隐私与安全 -->
             <el-card class="mb-6">
               <template #header>
@@ -438,7 +384,6 @@ import {
   UserFilled,
   Camera,
   Setting,
-  ChatDotRound,
   Lock,
   TrendCharts,
   Check,
@@ -471,7 +416,6 @@ const showDeleteDialog = ref(false)
 // 表单引用
 const userInfoForm = ref<FormInstance>()
 const preferencesForm = ref<FormInstance>()
-const aiSettingsForm = ref<FormInstance>()
 const privacyForm = ref<FormInstance>()
 const deleteForm = ref<FormInstance>()
 
@@ -497,17 +441,6 @@ const preferences = reactive({
   enable_homework_reminder: true,
   enable_achievement_notification: true,
   reminder_time: '19:00',
-})
-
-// AI助手设置
-const aiSettings = reactive({
-  response_detail_level: 'detailed',
-  teaching_style: 'encouraging',
-  enable_context_memory: true,
-  enable_auto_correction: true,
-  enable_smart_recommendations: true,
-  enable_progress_tracking: true,
-  response_language: 'zh',
 })
 
 // 隐私设置
@@ -669,7 +602,6 @@ const handleSaveAll = async () => {
     const forms = [
       userInfoForm.value,
       preferencesForm.value,
-      aiSettingsForm.value,
       privacyForm.value,
     ]
     const validations = await Promise.all(forms.map((form) => form?.validate().catch(() => false)))
