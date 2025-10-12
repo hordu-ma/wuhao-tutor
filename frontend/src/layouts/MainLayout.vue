@@ -246,6 +246,7 @@ const handleUserCommand = async (command: string) => {
 
 .main-content {
   flex: 1;
+  position: relative; /* 定位上下文：让子元素的 absolute 定位相对于此容器 */
   overflow: auto;
   background-color: var(--el-bg-color-page);
 }
