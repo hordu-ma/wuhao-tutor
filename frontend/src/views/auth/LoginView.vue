@@ -64,7 +64,7 @@
         <el-form-item>
           <div class="register-link">
             还没有账号？
-            <el-link type="primary" @click="router.push('/register')"> 立即注册 </el-link>
+            <el-link type="primary" @click="handleRegisterClick"> 立即注册 </el-link>
           </div>
         </el-form-item>
       </el-form>
@@ -149,6 +149,14 @@ const handleLogin = async () => {
   } finally {
     loginLoading.value = false
   }
+}
+
+// 处理注册按钮点击：根据环境决定跳转目标
+const handleRegisterClick = () => {
+  // 生产环境：跳转到注册禁用提示页
+  // 开发环境：跳转到正常注册页
+  const targetRoute = import.meta.env.PROD ? '/register-disabled' : '/register'
+  router.push(targetRoute)
 }
 
 // 处理开发模式登录

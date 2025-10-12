@@ -41,6 +41,20 @@ const routes: RouteRecordRaw[] = [
     },
   },
 
+  // 注册禁用提示页（生产环境）
+  {
+    path: '/register-disabled',
+    name: 'RegisterDisabled',
+    component: () =>
+      import(/* webpackChunkName: "auth" */ '@/views/auth/RegistrationDisabledView.vue'),
+    meta: {
+      title: '注册暂不开放',
+      requiresAuth: false,
+      hideInMenu: true,
+      layout: 'blank',
+    },
+  },
+
   // 主应用布局
   {
     path: '/',
@@ -98,7 +112,7 @@ const routes: RouteRecordRaw[] = [
         path: 'learning',
         component: () => import(/* webpackChunkName: "learning" */ '@/views/Learning.vue'),
         meta: {
-          title: '学习问答',
+          title: '作业问答',
           requiresAuth: true,
         },
       },
@@ -113,9 +127,12 @@ const routes: RouteRecordRaw[] = [
     ],
   },
 
-  // 作业管理
+  // 作业管理（已废弃，隐藏）
   {
     path: '/homework',
+    meta: {
+      hidden: true,
+    },
     children: [
       {
         path: '',
@@ -128,6 +145,7 @@ const routes: RouteRecordRaw[] = [
           icon: 'Notebook',
           keepAlive: true,
           layout: 'main',
+          hidden: true,
         },
       },
       {
@@ -166,7 +184,7 @@ const routes: RouteRecordRaw[] = [
         name: 'Learning',
         component: () => import(/* webpackChunkName: "learning" */ '@/views/Learning.vue'),
         meta: {
-          title: 'AI学习助手',
+          title: '作业问答',
           requiresAuth: true,
           icon: 'ChatDotRound',
           keepAlive: true,
@@ -189,6 +207,50 @@ const routes: RouteRecordRaw[] = [
           requiresAuth: true,
           icon: 'DataAnalysis',
           keepAlive: true,
+          layout: 'main',
+        },
+      },
+    ],
+  },
+
+  // 错题手册
+  {
+    path: '/mistakes',
+    children: [
+      {
+        path: '',
+        name: 'MistakeList',
+        component: () =>
+          import(/* webpackChunkName: "mistakes" */ '@/views/mistakes/MistakeList.vue'),
+        meta: {
+          title: '错题手册',
+          requiresAuth: true,
+          icon: 'Collection',
+          keepAlive: true,
+          layout: 'main',
+        },
+      },
+      {
+        path: 'today-review',
+        name: 'TodayReview',
+        component: () =>
+          import(/* webpackChunkName: "mistakes" */ '@/views/mistakes/TodayReview.vue'),
+        meta: {
+          title: '今日复习',
+          requiresAuth: true,
+          hideInMenu: true,
+          layout: 'main',
+        },
+      },
+      {
+        path: ':id',
+        name: 'MistakeDetail',
+        component: () =>
+          import(/* webpackChunkName: "mistakes" */ '@/views/mistakes/MistakeDetail.vue'),
+        meta: {
+          title: '错题详情',
+          requiresAuth: true,
+          hideInMenu: true,
           layout: 'main',
         },
       },
