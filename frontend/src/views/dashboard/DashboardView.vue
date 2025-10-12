@@ -87,7 +87,7 @@
       </el-row>
     </div>
 
-    <!-- 最近活动和快速操作 -->
+    <!-- 最近活动和今日目标 -->
     <el-row :gutter="24" class="bottom-section">
       <!-- 最近活动 -->
       <el-col :xs="24" :lg="16">
@@ -129,28 +129,9 @@
         </el-card>
       </el-col>
 
-      <!-- 快速操作 -->
+      <!-- 今日目标 -->
       <el-col :xs="24" :lg="8">
-        <el-card class="quick-actions-card">
-          <template #header>
-            <h3>快速操作</h3>
-          </template>
-          <div class="quick-actions">
-            <el-button
-              v-for="action in quickActions"
-              :key="action.key"
-              :type="action.type"
-              :icon="action.icon"
-              class="action-button"
-              @click="handleQuickAction(action.key)"
-            >
-              {{ action.label }}
-            </el-button>
-          </div>
-        </el-card>
-
-        <!-- 学习目标 -->
-        <el-card class="goals-card" style="margin-top: 16px">
+        <el-card class="goals-card">
           <template #header>
             <h3>今日目标</h3>
           </template>
@@ -206,33 +187,6 @@ const weekProgress = ref(75)
 const userLevel = ref('中级')
 
 const recentActivities = ref<UserActivity[]>([])
-
-const quickActions = ref([
-  {
-    key: 'ask',
-    label: '快速提问',
-    type: 'primary' as const,
-    icon: 'QuestionFilled',
-  },
-  {
-    key: 'upload',
-    label: '上传作业',
-    type: 'success' as const,
-    icon: 'DocumentAdd',
-  },
-  {
-    key: 'practice',
-    label: '练习题目',
-    type: 'warning' as const,
-    icon: 'Edit',
-  },
-  {
-    key: 'review',
-    label: '复习笔记',
-    type: 'info' as const,
-    icon: 'Document',
-  },
-])
 
 const todayGoals = ref([
   {
@@ -300,25 +254,6 @@ const formatTime = (time: string | Date) => {
 
 const viewAllActivities = () => {
   router.push('/activities')
-}
-
-const handleQuickAction = (actionKey: string) => {
-  switch (actionKey) {
-    case 'ask':
-      router.push('/learning')
-      break
-    case 'upload':
-      router.push('/homework/upload')
-      break
-    case 'practice':
-      router.push('/practice')
-      break
-    case 'review':
-      router.push('/notes')
-      break
-    default:
-      ElMessage.info('功能开发中，敬请期待！')
-  }
 }
 
 const updateGoalStatus = (goal: any) => {
