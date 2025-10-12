@@ -36,17 +36,6 @@ export interface UserPreferences {
   language: "zh" | "en";
 }
 
-// AI助手设置接口
-export interface AISettings {
-  response_detail_level: "concise" | "detailed" | "comprehensive";
-  teaching_style: "encouraging" | "strict" | "friendly" | "professional";
-  enable_context_memory: boolean;
-  enable_auto_correction: boolean;
-  enable_smart_recommendations: boolean;
-  enable_progress_tracking: boolean;
-  response_language: "zh" | "en" | "zh-en";
-}
-
 // 隐私设置接口
 export interface PrivacySettings {
   allow_data_analysis: boolean;
@@ -88,17 +77,6 @@ export const useUserStore = defineStore("user", () => {
     reminder_time: "19:00",
     theme: "auto",
     language: "zh",
-  });
-
-  // AI助手设置
-  const aiSettings = reactive<AISettings>({
-    response_detail_level: "detailed",
-    teaching_style: "encouraging",
-    enable_context_memory: true,
-    enable_auto_correction: true,
-    enable_smart_recommendations: true,
-    enable_progress_tracking: true,
-    response_language: "zh",
   });
 
   // 隐私设置
@@ -332,29 +310,6 @@ export const useUserStore = defineStore("user", () => {
   }
 
   /**
-   * 更新AI助手设置
-   */
-  async function updateAISettings(updates: Partial<AISettings>) {
-    try {
-      isUpdating.value = true;
-
-      // 这里应该调用更新AI设置的API
-      // await UserAPI.updateAISettings(updates);
-
-      Object.assign(aiSettings, updates);
-      localStorage.setItem("ai_settings", JSON.stringify(aiSettings));
-
-      ElMessage.success("AI助手设置更新成功");
-    } catch (error) {
-      console.error("更新AI设置失败:", error);
-      ElMessage.error("更新失败，请重试");
-      throw error;
-    } finally {
-      isUpdating.value = false;
-    }
-  }
-
-  /**
    * 更新隐私设置
    */
   async function updatePrivacySettings(updates: Partial<PrivacySettings>) {
@@ -492,15 +447,6 @@ export const useUserStore = defineStore("user", () => {
       theme: "auto",
       language: "zh",
     });
-    Object.assign(aiSettings, {
-      response_detail_level: "detailed",
-      teaching_style: "encouraging",
-      enable_context_memory: true,
-      enable_auto_correction: true,
-      enable_smart_recommendations: true,
-      enable_progress_tracking: true,
-      response_language: "zh",
-    });
     Object.assign(privacySettings, {
       allow_data_analysis: true,
       allow_learning_analytics: true,
@@ -515,7 +461,6 @@ export const useUserStore = defineStore("user", () => {
     userInfo,
     authState,
     preferences,
-    aiSettings,
     privacySettings,
     isLoading,
     isUpdating,
@@ -534,7 +479,6 @@ export const useUserStore = defineStore("user", () => {
     refreshToken,
     updateUserInfo,
     updatePreferences,
-    updateAISettings,
     updatePrivacySettings,
     uploadAvatar,
     exportUserData,
