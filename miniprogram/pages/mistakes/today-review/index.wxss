@@ -1,0 +1,67 @@
+/* pages/mistakes/today-review/index.wxss */
+.today-review-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #f5f5f5;
+}
+
+.review-header {
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  padding: 40rpx 30rpx;
+  color: #ffffff;
+}
+
+.header-title {
+  font-size: 36rpx;
+  font-weight: 600;
+  margin-bottom: 30rpx;
+}
+
+.header-stats {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40rpx;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-number {
+  font-size: 48rpx;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.stat-label {
+  font-size: 24rpx;
+  opacity: 0.8;
+  margin-top: 10rpx;
+}
+
+.stat-divider {
+  width: 2rpx;
+  height: 60rpx;
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+.review-scroll {
+  flex: 1;
+  padding: 30rpx;
+}
+
+.review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.review-footer {
+  padding: 20rpx 30rpx;
+  background-color: #ffffff;
+  box-shadow: 0 -2rpx 8rpx rgba(0, 0, 0, 0.08);
+}

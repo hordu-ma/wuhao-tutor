@@ -1,0 +1,142 @@
+/* pages/mistakes/detail/index.wxss */
+.mistake-detail-container {
+  min-height: 100vh;
+  background-color: #f5f5f5;
+  padding-bottom: 120rpx;
+}
+
+.mistake-detail {
+  padding: 30rpx;
+}
+
+/* 头部信息 */
+.detail-header {
+  background-color: #ffffff;
+  padding: 30rpx;
+  border-radius: 16rpx;
+  margin-bottom: 20rpx;
+}
+
+.header-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15rpx;
+  margin-bottom: 20rpx;
+}
+
+.header-time {
+  font-size: 24rpx;
+  color: #999999;
+}
+
+/* 详情区块 */
+.detail-section {
+  background-color: #ffffff;
+  padding: 30rpx;
+  border-radius: 16rpx;
+  margin-bottom: 20rpx;
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333333;
+  margin-bottom: 20rpx;
+  padding-bottom: 15rpx;
+  border-bottom: 2rpx solid #f0f0f0;
+}
+
+.section-content {
+  padding: 20rpx;
+  border-radius: 12rpx;
+  background-color: #fafafa;
+}
+
+.content-text {
+  font-size: 28rpx;
+  line-height: 1.8;
+  color: #333333;
+  word-break: break-all;
+}
+
+/* 错误答案样式 */
+.error-answer {
+  background-color: #fff2f0;
+  border-left: 4rpx solid #f5222d;
+}
+
+/* 正确答案样式 */
+.correct-answer {
+  background-color: #f6ffed;
+  border-left: 4rpx solid #52c41a;
+}
+
+/* 知识点标签 */
+.knowledge-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15rpx;
+}
+
+/* 复习记录 */
+.review-history {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.review-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20rpx;
+  background-color: #fafafa;
+  border-radius: 12rpx;
+}
+
+.review-date {
+  font-size: 26rpx;
+  color: #666666;
+}
+
+.review-result {
+  font-size: 26rpx;
+  font-weight: 500;
+}
+
+.review-result.correct {
+  color: #52c41a;
+}
+
+.review-result.wrong {
+  color: #f5222d;
+}
+
+/* 下次复习时间 */
+.next-review {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  background-color: #e6f7ff;
+  padding: 20rpx 30rpx;
+  border-radius: 12rpx;
+  font-size: 26rpx;
+  color: #1890ff;
+}
+
+/* 底部操作栏 */
+.detail-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: 20rpx;
+  padding: 20rpx 30rpx;
+  background-color: #ffffff;
+  box-shadow: 0 -2rpx 8rpx rgba(0, 0, 0, 0.08);
+}
+
+.detail-footer .van-button {
+  flex: 1;
+}

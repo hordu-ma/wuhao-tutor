@@ -1,0 +1,143 @@
+<!--pages/mistakes/list/index.wxml-->
+<view class="mistakes-list-container">
+  <!-- 头部筛选区域 -->
+  <view class="filter-section">
+    <view class="filter-tabs">
+      <view class="filter-tab {{activeTab === 'all' ? 'active' : ''}}"
+            bindtap="onTabChange" data-tab="all">
+        全部
+      </view>
+      <view class="filter-tab {{activeTab === 'not_mastered' ? 'active' : ''}}"
+            bindtap="onTabChange" data-tab="not_mastered">
+        未掌握
+      </view>
+      <view class="filter-tab {{activeTab === 'reviewing' ? 'active' : ''}}"
+            bindtap="onTabChange" data-tab="reviewing">
+        复习中
+      </view>
+      <view class="filter-tab {{activeTab === 'mastered' ? 'active' : ''}}"
+            bindtap="onTabChange" data-tab="mastered">
+        已掌握
+      </view>
+    </view>
+
+    <!-- 筛选和搜索按钮 -->
+    <view class="filter-actions">
+      <van-icon name="filter-o" size="20px" bindtap="onOpenFilter" />
+      <van-icon name="search" size="20px" bindtap="onOpenSearch" />
+    </view>
+  </view>
+
+  <!-- 搜索区域 -->
+  <view class="search-section" wx:if="{{showSearch}}">
+    <van-search
+      value="{{searchKeyword}}"
+      placeholder="搜索错题内容或知识点"
+      use-action-slot
+      bind:change="onSearchChange"
+      bind:search="onSearch"
+      bind:clear="onSearchClear">
+      <view slot="action" bindtap="onCloseSearch">取消</view>
+    </van-search>
+  </view>
+
+  <!-- 错题列表区域 -->
+  <scroll-view class="mistakes-scroll"
+               scroll-y="{{true}}"
+               refresher-enabled="{{true}}"
+               refresher-triggered="{{refreshing}}"
+               bindrefresherrefresh="onRefresh"
+               bindscrolltolower="onLoadMore">
+
+    <!-- 加载状态 -->
+    <loading wx:if="{{loading && !mistakesList.length}}" />
+
+    <!-- 空状态 -->
+    <empty-state wx:if="{{!loading && !mistakesList.length}}"
+                 type="mistakes"
+                 title="暂无错题"
+                 description="{{getEmptyDescription(activeTab)}}" />
+
+    <!-- 错题列表 -->
+    <view class="mistakes-list" wx:if="{{mistakesList.length > 0}}">
+      <mistake-card
+        wx:for="{{mistakesList}}"
+        wx:key="id"
+        mistake="{{item}}"
+        mode="list"
+        showActions="{{true}}"
+        bind:tap="onMistakeTap"
+        bind:delete="onMistakeDelete"
+        bind:review="onMistakeReview" />
+    </view>
+
+    <!-- 加载更多状态 -->
+    <view class="load-more" wx:if="{{hasMore && mistakesList.length > 0}}">
+      <view class="load-more-loading" wx:if="{{loadingMore}}">
+        <van-loading size="20rpx" />
+        <text class="load-more-text">加载中...</text>
+      </view>
+      <view class="load-more-text" wx:else>上拉加载更多</view>
+    </view>
+
+    <!-- 没有更多数据 -->
+    <view class="no-more" wx:if="{{!hasMore && mistakesList.length > 0}}">
+      <text class="no-more-text">没有更多错题了</text>
+    </view>
+  </scroll-view>
+
+  <!-- 浮动操作按钮 -->
+  <view class="fab-container">
+    <view class="fab" bindtap="onAddMistake">
+      <van-icon name="plus" size="40rpx" color="#fff" />
+    </view>
+  </view>
+
+  <!-- 错题筛选弹窗 -->
+  <van-popup show="{{showFilterPopup}}"
+             position="bottom"
+             round="{{true}}"
+             bind:close="onCloseFilter">
+    <view class="filter-popup">
+      <view class="filter-header">
+        <text class="filter-title">筛选条件</text>
+        <van-icon name="cross" bindtap="onCloseFilter" />
+      </view>
+
+      <view class="filter-content">
+        <!-- 科目筛选 -->
+        <view class="filter-group">
+          <text class="filter-label">科目</text>
+          <view class="filter-options">
+            <view class="filter-option {{selectedSubject === item ? 'selected' : ''}}"
+                  wx:for="{{subjectOptions}}"
+                  wx:key="*this"
+                  bindtap="onSubjectSelect"
+                  data-subject="{{item}}">
+              {{item}}
+            </view>
+          </view>
+        </view>
+
+        <!-- 难度筛选 -->
+        <view class="filter-group">
+          <text class="filter-label">难度</text>
+          <view class="filter-options">
+            <view class="filter-option {{selectedDifficulty === item.value ? 'selected' : ''}}"
+                  wx:for="{{difficultyOptions}}"
+                  wx:key="value"
+                  bindtap="onDifficultySelect"
+                  data-difficulty="{{item.value}}">
+              {{item.label}}
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <view class="filter-actions">
+        <van-button plain bindtap="onResetFilter">重置</van-button>
+        <van-button type="primary" bindtap="onConfirmFilter">确定</van-button>
+      </view>
+    </view>
+  </van-popup>
+</view>

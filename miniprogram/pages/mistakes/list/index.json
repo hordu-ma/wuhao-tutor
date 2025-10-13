@@ -1,0 +1,10 @@
+{
+  "navigationBarTitleText": "错题手册",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark",
+  "usingComponents": {
+    "loading": "/components/loading/index",
+    "empty-state": "/components/empty-state/index",
+    "mistake-card": "/components/mistake-card/index"
+  }
+}
