@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import legacy from '@vitejs/plugin-legacy'
 import { fileURLToPath, URL } from 'node:url'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
@@ -110,6 +111,19 @@ export default defineConfig(({ mode }) => {
         includeAssets: ['favicon.svg'],
         manifest: false, // 使用独立的 manifest.json 文件
       }),
+      // Legacy 插件配置 - 移动端浏览器兼容性
+      legacy({
+        targets: ['iOS >= 11', 'Android >= 5', 'Chrome >= 49'],
+        polyfills: [
+          'es.promise',
+          'es.object.entries',
+          'es.object.values',
+          'es.array.includes',
+          'es.string.includes',
+        ],
+        renderLegacyChunks: true,
+        modernPolyfills: false,
+      }),
     ],
     resolve: {
       alias: {
@@ -145,7 +159,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     build: {
-      target: ['es2020', 'edge88', 'firefox78', 'chrome87', 'safari14'],
+      target: 'es2015',
       outDir: 'dist',
       assetsDir: 'assets',
       sourcemap: !isProduction, // 生产环境关闭 sourcemap

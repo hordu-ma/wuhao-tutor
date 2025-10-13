@@ -3,11 +3,15 @@
     "pages/index/index",
     "pages/login/index",
     "pages/role-selection/index",
+    "pages/mistakes/list/index",
+    "pages/mistakes/detail/index",
+    "pages/mistakes/add/index",
+    "pages/mistakes/today-review/index",
     "pages/homework/list/index",
     "pages/homework/detail/index",
     "pages/homework/submit/index",
-    "pages/chat/index/index",
-    "pages/chat/detail/index",
+    "pages/learning/index/index",
+    "pages/learning/detail/index",
     "pages/analysis/report/index",
     "pages/analysis/progress/index",
     "pages/profile/index/index",
@@ -42,20 +46,20 @@
         "selectedIconPath": "assets/icons/home-active.png"
       },
       {
-        "pagePath": "pages/homework/list/index",
-        "text": "作业",
-        "iconPath": "assets/icons/homework.png",
-        "selectedIconPath": "assets/icons/homework-active.png"
+        "pagePath": "pages/mistakes/list/index",
+        "text": "错题本",
+        "iconPath": "assets/icons/mistakes.png",
+        "selectedIconPath": "assets/icons/mistakes-active.png"
       },
       {
-        "pagePath": "pages/chat/index/index",
-        "text": "问答",
-        "iconPath": "assets/icons/chat.png",
-        "selectedIconPath": "assets/icons/chat-active.png"
+        "pagePath": "pages/learning/index/index",
+        "text": "作业问答",
+        "iconPath": "assets/icons/learning.png",
+        "selectedIconPath": "assets/icons/learning-active.png"
       },
       {
         "pagePath": "pages/analysis/report/index",
-        "text": "报告",
+        "text": "学习报告",
         "iconPath": "assets/icons/report.png",
         "selectedIconPath": "assets/icons/report-active.png"
       },
@@ -101,13 +105,13 @@
     "choosePoi"
   ],
   "preloadRule": {
-    "pages/homework/list/index": {
+    "pages/mistakes/list/index": {
       "network": "all",
-      "packages": ["homework"]
+      "packages": ["mistakes"]
     },
-    "pages/chat/index/index": {
+    "pages/learning/index/index": {
       "network": "all",
-      "packages": ["chat"]
+      "packages": ["learning"]
     }
   },
   "entryPagePath": "pages/index/index",
@@ -120,8 +124,8 @@
       "pages": ["create/index", "correction/index", "history/index"]
     },
     {
-      "root": "subpackages/chat",
-      "name": "chat",
+      "root": "subpackages/learning",
+      "name": "learning",
       "pages": ["voice/index", "image/index", "history/index"]
     },
     {
@@ -138,7 +142,7 @@
   },
   "entranceDeclare": {
     "locationMessage": {
-      "path": "pages/chat/index/index",
+      "path": "pages/learning/index/index",
       "query": "type=location"
     }
   },
