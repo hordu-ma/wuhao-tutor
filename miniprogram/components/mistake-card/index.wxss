@@ -1,0 +1,234 @@
+/* components/mistake-card/index.wxss */
+.mistake-card {
+  position: relative;
+  background-color: #ffffff;
+  border-radius: 16rpx;
+  padding: 30rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
+  transition: all 0.3s;
+}
+
+.mistake-card:active {
+  transform: translateY(-2rpx);
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.12);
+}
+
+/* 复习模式样式 */
+.mistake-card.review {
+  border-left: 4rpx solid #1890ff;
+}
+
+/* 卡片头部 */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.subject-info {
+  display: flex;
+  align-items: center;
+  gap: 15rpx;
+}
+
+.subject-tag {
+  padding: 8rpx 20rpx;
+  background-color: #e6f7ff;
+  color: #1890ff;
+  font-size: 24rpx;
+  border-radius: 20rpx;
+  font-weight: 500;
+}
+
+.difficulty-tag {
+  display: flex;
+  align-items: center;
+  gap: 5rpx;
+  padding: 8rpx 16rpx;
+  border-radius: 20rpx;
+  font-size: 22rpx;
+}
+
+.difficulty-1 {
+  background-color: #f0f9ff;
+  color: #52c41a;
+}
+
+.difficulty-2 {
+  background-color: #fff7e6;
+  color: #faad14;
+}
+
+.difficulty-3 {
+  background-color: #fff2f0;
+  color: #f5222d;
+}
+
+.status-info {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.status-tag {
+  padding: 8rpx 16rpx;
+  border-radius: 20rpx;
+  font-size: 22rpx;
+  font-weight: 500;
+}
+
+.status-tag.not_mastered {
+  background-color: #fff2f0;
+  color: #f5222d;
+}
+
+.status-tag.reviewing {
+  background-color: #fff7e6;
+  color: #faad14;
+}
+
+.status-tag.mastered {
+  background-color: #f6ffed;
+  color: #52c41a;
+}
+
+/* 卡片内容 */
+.card-content {
+  margin-bottom: 20rpx;
+}
+
+.question-content {
+  font-size: 28rpx;
+  line-height: 1.6;
+  color: #333333;
+  margin-bottom: 20rpx;
+  word-break: break-all;
+}
+
+.knowledge-points {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  margin-bottom: 15rpx;
+}
+
+.review-progress {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15rpx 20rpx;
+  background-color: #fafafa;
+  border-radius: 12rpx;
+  margin-bottom: 15rpx;
+}
+
+.progress-info {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  font-size: 24rpx;
+  color: #666666;
+}
+
+.progress-rate {
+  font-size: 24rpx;
+}
+
+.rate-value {
+  font-weight: 500;
+}
+
+.rate-value.rate-high {
+  color: #52c41a;
+}
+
+.rate-value.rate-medium {
+  color: #faad14;
+}
+
+.rate-value.rate-low {
+  color: #f5222d;
+}
+
+.next-review {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  font-size: 24rpx;
+  color: #666666;
+}
+
+.next-review .overdue {
+  color: #f5222d;
+  font-weight: 500;
+}
+
+.next-review .today {
+  color: #1890ff;
+  font-weight: 500;
+}
+
+.next-review .upcoming {
+  color: #666666;
+}
+
+/* 时间信息 */
+.time-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 22rpx;
+  color: #999999;
+  margin-bottom: 20rpx;
+}
+
+.create-time,
+.update-time {
+  display: flex;
+  align-items: center;
+  gap: 5rpx;
+}
+
+/* 操作按钮 */
+.card-actions {
+  display: flex;
+  gap: 15rpx;
+  padding-top: 20rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.card-actions .van-button {
+  flex: 1;
+}
+
+/* 标识徽章 */
+.review-mode-badge,
+.mastered-badge,
+.need-review-badge {
+  position: absolute;
+  top: 20rpx;
+  right: 20rpx;
+  display: flex;
+  align-items: center;
+  gap: 5rpx;
+  padding: 8rpx 16rpx;
+  border-radius: 20rpx;
+  font-size: 20rpx;
+  font-weight: 500;
+}
+
+.review-mode-badge {
+  background-color: #e6f7ff;
+  color: #1890ff;
+}
+
+.mastered-badge {
+  background-color: #f6ffed;
+  color: #52c41a;
+}
+
+.need-review-badge {
+  background-color: #fff2f0;
+  color: #f5222d;
+}
