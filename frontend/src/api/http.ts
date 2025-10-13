@@ -8,7 +8,7 @@ import axios, {
   AxiosRequestConfig,
   AxiosResponse,
   AxiosError,
-  InternalAxiosRequestConfig
+  InternalAxiosRequestConfig,
 } from 'axios'
 import { ElMessage, ElMessageBox, ElLoading } from 'element-plus'
 import type { ApiResponse } from '@/types'
@@ -37,7 +37,7 @@ class HttpClient {
     // 创建axios实例
     this.instance = axios.create({
       baseURL: baseURL || import.meta.env.VITE_API_BASE_URL || '/api/v1',
-      timeout: 30000,
+      timeout: 60000, // 增加到60秒，适配移动端慢速网络和图片上传
       headers: {
         'Content-Type': 'application/json',
       },
@@ -212,15 +212,11 @@ class HttpClient {
     this.clearAuthToken()
 
     // 重定向到登录页
-    ElMessageBox.confirm(
-      '登录状态已过期，您可以继续留在该页面，或者重新登录',
-      '系统提示',
-      {
-        confirmButtonText: '重新登录',
-        cancelButtonText: '取消',
-        type: 'warning',
-      }
-    ).then(() => {
+    ElMessageBox.confirm('登录状态已过期，您可以继续留在该页面，或者重新登录', '系统提示', {
+      confirmButtonText: '重新登录',
+      cancelButtonText: '取消',
+      type: 'warning',
+    }).then(() => {
       // 跳转到登录页
       window.location.href = '/login'
     })
@@ -273,53 +269,35 @@ class HttpClient {
   /**
    * GET请求
    */
-  get<T = any>(
-    url: string,
-    config?: RequestConfig & ResponseConfig
-  ): Promise<T> {
+  get<T = any>(url: string, config?: RequestConfig & ResponseConfig): Promise<T> {
     return this.instance.get(url, config)
   }
 
   /**
    * POST请求
    */
-  post<T = any>(
-    url: string,
-    data?: any,
-    config?: RequestConfig & ResponseConfig
-  ): Promise<T> {
+  post<T = any>(url: string, data?: any, config?: RequestConfig & ResponseConfig): Promise<T> {
     return this.instance.post(url, data, config)
   }
 
   /**
    * PUT请求
    */
-  put<T = any>(
-    url: string,
-    data?: any,
-    config?: RequestConfig & ResponseConfig
-  ): Promise<T> {
+  put<T = any>(url: string, data?: any, config?: RequestConfig & ResponseConfig): Promise<T> {
     return this.instance.put(url, data, config)
   }
 
   /**
    * DELETE请求
    */
-  delete<T = any>(
-    url: string,
-    config?: RequestConfig & ResponseConfig
-  ): Promise<T> {
+  delete<T = any>(url: string, config?: RequestConfig & ResponseConfig): Promise<T> {
     return this.instance.delete(url, config)
   }
 
   /**
    * PATCH请求
    */
-  patch<T = any>(
-    url: string,
-    data?: any,
-    config?: RequestConfig & ResponseConfig
-  ): Promise<T> {
+  patch<T = any>(url: string, data?: any, config?: RequestConfig & ResponseConfig): Promise<T> {
     return this.instance.patch(url, data, config)
   }
 
@@ -329,9 +307,10 @@ class HttpClient {
   upload<T = any>(
     url: string,
     formData: FormData,
-    config?: RequestConfig & ResponseConfig & {
-      onUploadProgress?: (progressEvent: any) => void
-    }
+    config?: RequestConfig &
+      ResponseConfig & {
+        onUploadProgress?: (progressEvent: any) => void
+      }
   ): Promise<T> {
     return this.instance.post(url, formData, {
       ...config,
@@ -345,25 +324,23 @@ class HttpClient {
   /**
    * 下载文件
    */
-  download(
-    url: string,
-    filename?: string,
-    config?: RequestConfig
-  ): Promise<void> {
-    return this.instance.get(url, {
-      ...config,
-      responseType: 'blob',
-    }).then((response) => {
-      const blob = new Blob([response.data])
-      const downloadUrl = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = downloadUrl
-      link.download = filename || 'download'
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(downloadUrl)
-    })
+  download(url: string, filename?: string, config?: RequestConfig): Promise<void> {
+    return this.instance
+      .get(url, {
+        ...config,
+        responseType: 'blob',
+      })
+      .then((response) => {
+        const blob = new Blob([response.data])
+        const downloadUrl = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = downloadUrl
+        link.download = filename || 'download'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(downloadUrl)
+      })
   }
 
   /**
