@@ -485,10 +485,37 @@ const handleSend = async () => {
 
       try {
         console.log('📤 [DEBUG] 调用 FileAPI.uploadImageForAI...')
-        // 使用新的AI图片上传端点
+        // 使用新的AI图片上传端点（带压缩和进度提示）
         const uploadPromises = imagesToUpload.map((img, idx) => {
           console.log(`📤 [DEBUG] 创建上传 Promise ${idx + 1}/${imagesToUpload.length}`)
-          return FileAPI.uploadImageForAI(img.file)
+
+          // 更新进度信息
+          if (currentMessage) {
+            currentMessage.close()
+          }
+          currentMessage = ElMessage({
+            message: `正在处理图片 ${idx + 1}/${imagesToUpload.length}...`,
+            type: 'info',
+            duration: 0,
+            showClose: false,
+          })
+
+          // 传入压缩进度回调
+          return FileAPI.uploadImageForAI(
+            img.file,
+            true, // 启用压缩
+            (progress) => {
+              if (currentMessage) {
+                currentMessage.close()
+              }
+              currentMessage = ElMessage({
+                message: `${progress} (${idx + 1}/${imagesToUpload.length})`,
+                type: 'info',
+                duration: 0,
+                showClose: false,
+              })
+            }
+          )
         })
         console.log('📤 [DEBUG] 等待所有上传完成，Promise 数量:', uploadPromises.length)
         const uploadResults = await Promise.all(uploadPromises)
@@ -507,10 +534,32 @@ const handleSend = async () => {
         console.error('❌ [DEBUG] 错误响应:', uploadError?.response)
         console.error('❌ [DEBUG] 完整错误栈:', uploadError?.stack)
 
-        // 关闭上传提示，显示错误消息
+        // 关闭上传提示
         if (currentMessage) currentMessage.close()
         currentMessage = null
-        ElMessage.error('图片上传失败，请重试')
+
+        // 区分错误类型，提供更友好的提示
+        let errorMessage = '图片上传失败，请重试'
+
+        if (uploadError?.code === 'ECONNABORTED' || uploadError?.message?.includes('timeout')) {
+          // 超时错误
+          errorMessage = '上传超时，网络较慢，请尝试：\n1. 切换到WiFi网络\n2. 等待网络稳定后重试'
+        } else if (uploadError?.response?.status === 413) {
+          // 文件过大
+          errorMessage = '图片文件过大，请选择较小的图片'
+        } else if (uploadError?.response?.status === 400) {
+          // 参数错误
+          errorMessage = uploadError?.response?.data?.message || '图片格式不支持'
+        } else if (!navigator.onLine) {
+          // 离线状态
+          errorMessage = '网络连接已断开，请检查网络后重试'
+        }
+
+        ElMessage.error({
+          message: errorMessage,
+          duration: 5000,
+          showClose: true,
+        })
         return
       }
     } else {
