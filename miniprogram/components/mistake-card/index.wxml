@@ -1,0 +1,135 @@
+<!--components/mistake-card/index.wxml-->
+<view class="mistake-card {{mode}}"
+      bindtap="onCardTap"
+      data-mistake="{{mistake}}">
+
+  <!-- 卡片头部 -->
+  <view class="card-header">
+    <view class="subject-info">
+      <view class="subject-tag" data-subject="{{mistake.subject}}">
+        {{mistake.subject}}
+      </view>
+      <view class="difficulty-tag difficulty-{{mistake.difficulty_level}}">
+        <van-icon name="{{getDifficultyIcon(mistake.difficulty_level)}}" size="12" />
+        <text>{{getDifficultyText(mistake.difficulty_level)}}</text>
+      </view>
+    </view>
+
+    <view class="status-info">
+      <view class="status-tag {{mistake.mastery_status}}">
+        {{getMasteryStatusText(mistake.mastery_status)}}
+      </view>
+    </view>
+  </view>
+
+  <!-- 卡片内容 -->
+  <view class="card-content">
+    <!-- 题目内容预览 -->
+    <view class="question-content">
+      {{getContentPreview(mistake.question_content)}}
+    </view>
+
+    <!-- 知识点标签 -->
+    <view class="knowledge-points" wx:if="{{mistake.knowledge_points && mistake.knowledge_points.length > 0}}">
+      <van-tag
+        wx:for="{{mistake.knowledge_points.slice(0, 3)}}"
+        wx:key="*this"
+        plain
+        size="small">
+        {{item}}
+      </van-tag>
+      <van-tag wx:if="{{mistake.knowledge_points.length > 3}}" plain size="small">
+        +{{mistake.knowledge_points.length - 3}}
+      </van-tag>
+    </view>
+
+    <!-- 复习进度 -->
+    <view class="review-progress" wx:if="{{mistake.review_count > 0}}">
+      <view class="progress-info">
+        <van-icon name="replay" size="14" />
+        <text>已复习 {{mistake.review_count}} 次</text>
+      </view>
+      <view class="progress-rate" wx:if="{{mistake.correct_rate}}">
+        <text class="rate-value {{getRateClass(mistake.correct_rate)}}">
+          正确率 {{mistake.correct_rate}}%
+        </text>
+      </view>
+    </view>
+
+    <!-- 下次复习时间 -->
+    <view class="next-review" wx:if="{{mistake.next_review_date && mode !== 'review'}}">
+      <van-icon name="clock-o" size="12" />
+      <text class="{{getNextReviewClass(mistake.next_review_date)}}">
+        {{getNextReviewText(mistake.next_review_date)}}
+      </text>
+    </view>
+  </view>
+
+  <!-- 时间信息 -->
+  <view class="time-info">
+    <view class="create-time">
+      <van-icon name="clock-o" size="12" />
+      <text>{{formatTime(mistake.created_at)}}</text>
+    </view>
+
+    <view class="update-time" wx:if="{{mistake.updated_at && mistake.updated_at !== mistake.created_at}}">
+      <van-icon name="edit" size="12" />
+      <text>更新于 {{formatTime(mistake.updated_at)}}</text>
+    </view>
+  </view>
+
+  <!-- 操作按钮区域 -->
+  <view class="card-actions" wx:if="{{showActions}}">
+    <!-- 查看详情 -->
+    <van-button size="small"
+                plain
+                bindtap="onViewDetail"
+                data-mistake="{{mistake}}">
+      查看详情
+    </van-button>
+
+    <!-- 开始复习 -->
+    <van-button size="small"
+                type="primary"
+                wx:if="{{mistake.mastery_status !== 'mastered'}}"
+                bindtap="onStartReview"
+                data-mistake="{{mistake}}">
+      开始复习
+    </van-button>
+
+    <!-- 编辑 -->
+    <van-button size="small"
+                plain
+                bindtap="onEdit"
+                data-mistake="{{mistake}}">
+      编辑
+    </van-button>
+
+    <!-- 删除 -->
+    <van-button size="small"
+                plain
+                type="danger"
+                bindtap="onDelete"
+                data-mistake="{{mistake}}">
+      删除
+    </van-button>
+  </view>
+
+  <!-- 复习模式标识 -->
+  <view class="review-mode-badge" wx:if="{{mode === 'review'}}">
+    <van-icon name="thumb-circle-o" size="12" />
+    <text>待复习</text>
+  </view>
+
+  <!-- 已掌握标识 -->
+  <view class="mastered-badge" wx:if="{{mistake.mastery_status === 'mastered'}}">
+    <van-icon name="success" size="12" />
+    <text>已掌握</text>
+  </view>
+
+  <!-- 需要复习标识 -->
+  <view class="need-review-badge" wx:if="{{isNeedReview(mistake.next_review_date)}}">
+    <van-icon name="warning-o" size="12" />
+    <text>需复习</text>
+  </view>
+</view>
