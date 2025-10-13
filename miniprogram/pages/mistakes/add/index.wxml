@@ -1,0 +1,92 @@
+<!--pages/mistakes/add/index.wxml-->
+<view class="add-mistake-container">
+  <view class="add-form">
+    <!-- 基本信息 -->
+    <van-cell-group title="基本信息">
+      <van-field
+        label="科目"
+        value="{{formData.subject}}"
+        placeholder="请选择科目"
+        readonly
+        is-link
+        bind:click="onSelectSubject" />
+      
+      <van-field
+        label="难度"
+        value="{{getDifficultyText(formData.difficulty_level)}}"
+        placeholder="请选择难度"
+        readonly
+        is-link
+        bind:click="onSelectDifficulty" />
+    </van-cell-group>
+
+    <!-- 题目内容 -->
+    <van-cell-group title="题目内容">
+      <van-field
+        value="{{formData.question_content}}"
+        type="textarea"
+        placeholder="请输入题目内容"
+        autosize
+        maxlength="1000"
+        show-word-limit
+        bind:change="onQuestionChange" />
+    </van-cell-group>
+
+    <!-- 我的答案 -->
+    <van-cell-group title="我的答案(选填)">
+      <van-field
+        value="{{formData.student_answer}}"
+        type="textarea"
+        placeholder="请输入你的答案"
+        autosize
+        maxlength="500"
+        show-word-limit
+        bind:change="onStudentAnswerChange" />
+    </van-cell-group>
+
+    <!-- 正确答案 -->
+    <van-cell-group title="正确答案">
+      <van-field
+        value="{{formData.correct_answer}}"
+        type="textarea"
+        placeholder="请输入正确答案"
+        autosize
+        maxlength="500"
+        show-word-limit
+        bind:change="onCorrectAnswerChange" />
+    </van-cell-group>
+
+    <!-- 解析 -->
+    <van-cell-group title="解析(选填)">
+      <van-field
+        value="{{formData.explanation}}"
+        type="textarea"
+        placeholder="请输入解题思路或解析"
+        autosize
+        maxlength="1000"
+        show-word-limit
+        bind:change="onExplanationChange" />
+    </van-cell-group>
+  </view>
+
+  <!-- 提交按钮 -->
+  <view class="submit-footer">
+    <van-button type="primary" block bind:click="onSubmit" loading="{{submitting}}">
+      添加到错题本
+    </van-button>
+  </view>
+
+  <!-- 科目选择器 -->
+  <van-action-sheet
+    show="{{showSubjectPicker}}"
+    actions="{{subjectActions}}"
+    bind:select="onSubjectSelected"
+    bind:close="onCloseSubjectPicker" />
+
+  <!-- 难度选择器 -->
+  <van-action-sheet
+    show="{{showDifficultyPicker}}"
+    actions="{{difficultyActions}}"
+    bind:select="onDifficultySelected"
+    bind:close="onCloseDifficultyPicker" />
+</view>

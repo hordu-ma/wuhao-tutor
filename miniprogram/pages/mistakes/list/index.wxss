@@ -1,0 +1,196 @@
+/* pages/mistakes/list/index.wxss */
+.mistakes-list-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #f5f5f5;
+}
+
+/* 筛选区域 */
+.filter-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 30rpx;
+  background-color: #ffffff;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
+}
+
+.filter-tabs {
+  display: flex;
+  flex: 1;
+  gap: 30rpx;
+}
+
+.filter-tab {
+  font-size: 28rpx;
+  color: #666666;
+  padding: 10rpx 20rpx;
+  transition: all 0.3s;
+}
+
+.filter-tab.active {
+  color: #1890ff;
+  font-weight: 600;
+  position: relative;
+}
+
+.filter-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -10rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40rpx;
+  height: 4rpx;
+  background-color: #1890ff;
+  border-radius: 2rpx;
+}
+
+.filter-actions {
+  display: flex;
+  gap: 30rpx;
+  margin-left: 20rpx;
+}
+
+/* 搜索区域 */
+.search-section {
+  background-color: #ffffff;
+  padding: 20rpx 30rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+/* 滚动区域 */
+.mistakes-scroll {
+  flex: 1;
+  padding: 20rpx 30rpx;
+}
+
+/* 错题列表 */
+.mistakes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+/* 加载更多 */
+.load-more {
+  padding: 40rpx 0;
+  text-align: center;
+}
+
+.load-more-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20rpx;
+}
+
+.load-more-text {
+  font-size: 24rpx;
+  color: #999999;
+}
+
+/* 没有更多 */
+.no-more {
+  padding: 40rpx 0;
+  text-align: center;
+}
+
+.no-more-text {
+  font-size: 24rpx;
+  color: #999999;
+}
+
+/* 浮动操作按钮 */
+.fab-container {
+  position: fixed;
+  right: 30rpx;
+  bottom: 100rpx;
+  z-index: 100;
+}
+
+.fab {
+  width: 100rpx;
+  height: 100rpx;
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8rpx 16rpx rgba(24, 144, 255, 0.4);
+  transition: all 0.3s;
+}
+
+.fab:active {
+  transform: scale(0.95);
+}
+
+/* 筛选弹窗 */
+.filter-popup {
+  padding: 40rpx 30rpx;
+  background-color: #ffffff;
+  border-radius: 20rpx 20rpx 0 0;
+}
+
+.filter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40rpx;
+}
+
+.filter-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333333;
+}
+
+.filter-content {
+  display: flex;
+  flex-direction: column;
+  gap: 40rpx;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.filter-label {
+  font-size: 28rpx;
+  color: #666666;
+  font-weight: 500;
+}
+
+.filter-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20rpx;
+}
+
+.filter-option {
+  padding: 16rpx 32rpx;
+  background-color: #f5f5f5;
+  border-radius: 40rpx;
+  font-size: 26rpx;
+  color: #666666;
+  transition: all 0.3s;
+}
+
+.filter-option.selected {
+  background-color: #e6f7ff;
+  color: #1890ff;
+  font-weight: 500;
+}
+
+.filter-actions {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 40rpx;
+}
+
+.filter-actions .van-button {
+  flex: 1;
+}
