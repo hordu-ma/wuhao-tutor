@@ -1,0 +1,89 @@
+<!--pages/mistakes/detail/index.wxml-->
+<view class="mistake-detail-container">
+  <!-- 加载状态 -->
+  <loading wx:if="{{loading}}" />
+
+  <!-- 错题详情 -->
+  <view class="mistake-detail" wx:if="{{!loading && mistakeDetail}}">
+    <!-- 头部信息 -->
+    <view class="detail-header">
+      <view class="header-info">
+        <van-tag type="primary">{{mistakeDetail.subject}}</van-tag>
+        <van-tag type="{{getMasteryStatusTag(mistakeDetail.mastery_status).type}}" plain>
+          {{getMasteryStatusTag(mistakeDetail.mastery_status).text}}
+        </van-tag>
+        <van-tag type="warning" plain>难度: {{getDifficultyText(mistakeDetail.difficulty_level)}}</van-tag>
+      </view>
+      <view class="header-time">
+        创建时间: {{mistakeDetail.created_at}}
+      </view>
+    </view>
+
+    <!-- 题目内容 -->
+    <view class="detail-section">
+      <view class="section-title">题目内容</view>
+      <view class="section-content">
+        <text class="content-text">{{mistakeDetail.question_content}}</text>
+      </view>
+    </view>
+
+    <!-- 我的答案 -->
+    <view class="detail-section" wx:if="{{mistakeDetail.student_answer}}">
+      <view class="section-title">我的答案</view>
+      <view class="section-content error-answer">
+        <text class="content-text">{{mistakeDetail.student_answer}}</text>
+      </view>
+    </view>
+
+    <!-- 正确答案 -->
+    <view class="detail-section" wx:if="{{mistakeDetail.correct_answer}}">
+      <view class="section-title">正确答案</view>
+      <view class="section-content correct-answer">
+        <text class="content-text">{{mistakeDetail.correct_answer}}</text>
+      </view>
+    </view>
+
+    <!-- 解析 -->
+    <view class="detail-section" wx:if="{{mistakeDetail.explanation}}">
+      <view class="section-title">解析</view>
+      <view class="section-content">
+        <text class="content-text">{{mistakeDetail.explanation}}</text>
+      </view>
+    </view>
+
+    <!-- 知识点 -->
+    <view class="detail-section" wx:if="{{mistakeDetail.knowledge_points && mistakeDetail.knowledge_points.length}}">
+      <view class="section-title">相关知识点</view>
+      <view class="knowledge-tags">
+        <van-tag wx:for="{{mistakeDetail.knowledge_points}}" wx:key="*this" plain>
+          {{item}}
+        </van-tag>
+      </view>
+    </view>
+
+    <!-- 复习记录 -->
+    <view class="detail-section" wx:if="{{mistakeDetail.review_history && mistakeDetail.review_history.length}}">
+      <view class="section-title">复习记录 ({{mistakeDetail.review_count}}次)</view>
+      <view class="review-history">
+        <view class="review-item" wx:for="{{mistakeDetail.review_history}}" wx:key="id">
+          <view class="review-date">{{item.review_date}}</view>
+          <view class="review-result {{item.is_correct ? 'correct' : 'wrong'}}">
+            {{item.is_correct ? '✓ 正确' : '✗ 错误'}}
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 下次复习时间 -->
+    <view class="next-review" wx:if="{{mistakeDetail.next_review_date}}">
+      <van-icon name="clock-o" />
+      <text>下次复习: {{mistakeDetail.next_review_date}}</text>
+    </view>
+  </view>
+
+  <!-- 底部操作栏 -->
+  <view class="detail-footer" wx:if="{{!loading && mistakeDetail}}">
+    <van-button plain type="danger" bindtap="onDelete">删除</van-button>
+    <van-button type="primary" bindtap="onStartReview">开始复习</van-button>
+  </view>
+</view>
