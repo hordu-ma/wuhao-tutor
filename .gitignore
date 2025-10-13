@@ -107,3 +107,4 @@ nginx/*.bak
 
 # Git backup directory
 .git.backup/
+wuhao_tutor_dev.db
