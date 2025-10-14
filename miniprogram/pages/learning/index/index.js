@@ -35,6 +35,8 @@ Page({
     inputFocus: false, // 输入框焦点状态
     inputBottom: 0, // 输入框底部距离
     maxInputLength: 500, // 最大输入长度
+    inputMode: 'text', // 输入模式: text | voice
+    showImageActionSheet: false, // 显示图片操作选择
 
     // AI回复状态
     isAITyping: false, // AI正在回复
@@ -63,11 +65,7 @@ Page({
     ],
 
     // 快速问题
-    quickQuestions: [
-      '今天的作业有疑问吗？',
-      '需要复习什么知识点？',
-      '想了解什么新内容？',
-    ],
+    quickQuestions: ['今天的作业有疑问吗？', '需要复习什么知识点？', '想了解什么新内容？'],
 
     // 学科分类
     subjects: [
@@ -198,7 +196,7 @@ Page({
     return {
       title: '五好AI助手 - 智能学习问答',
       path: '/pages/chat/index/index',
-      imageUrl: '/assets/images/share-chat.png'
+      imageUrl: '/assets/images/share-chat.png',
     };
   },
 
@@ -208,7 +206,7 @@ Page({
   onShareTimeline() {
     return {
       title: '五好AI助手 - 智能学习问答',
-      imageUrl: '/assets/images/share-chat.png'
+      imageUrl: '/assets/images/share-chat.png',
     };
   },
 
@@ -238,7 +236,7 @@ Page({
       this.setData({
         canAsk: permissions.includes('chat:ask'),
         canView: permissions.includes('chat:view'),
-        canModerate: permissions.includes('chat:moderate')
+        canModerate: permissions.includes('chat:moderate'),
       });
     } catch (error) {
       console.error('获取权限失败:', error);
@@ -246,7 +244,7 @@ Page({
       this.setData({
         canAsk: true,
         canView: true,
-        canModerate: false
+        canModerate: false,
       });
     }
   },
@@ -263,14 +261,14 @@ Page({
 
       // 获取个性化学习上下文
       const context = await mcpService.getPersonalizedContext(userInfo.id);
-      
+
       this.setData({
         personalizedContext: {
           learningStyle: context.learningStyle,
           weaknessPoints: context.weaknessPoints,
           recentErrors: context.recentErrors,
           preferences: context.preferences,
-        }
+        },
       });
 
       console.log('MCP上下文初始化成功:', context);
@@ -321,7 +319,6 @@ Page({
 
       // 加载用户统计
       await this.loadUserStats();
-
     } catch (error) {
       console.error('初始化聊天功能失败:', error);
       this.showError('聊天功能初始化失败');
@@ -335,9 +332,9 @@ Page({
    */
   initNetworkMonitor() {
     // 监听网络状态变化
-    wx.onNetworkStatusChange((res) => {
+    wx.onNetworkStatusChange(res => {
       this.setData({
-        networkStatus: res.isConnected ? 'online' : 'offline'
+        networkStatus: res.isConnected ? 'online' : 'offline',
       });
 
       if (res.isConnected) {
@@ -347,11 +344,11 @@ Page({
 
     // 获取当前网络状态
     wx.getNetworkType({
-      success: (res) => {
+      success: res => {
         this.setData({
-          networkStatus: res.networkType === 'none' ? 'offline' : 'online'
+          networkStatus: res.networkType === 'none' ? 'offline' : 'online',
         });
-      }
+      },
     });
   },
 
@@ -363,13 +360,13 @@ Page({
       // 根据用户角色和学科获取推荐问题
       const recommendations = await api.chat.getRecommendedQuestions({
         role: this.data.userRole,
-        subject: this.data.currentSubject
+        subject: this.data.currentSubject,
       });
 
       if (recommendations.success) {
         this.setData({
           quickReplies: recommendations.data.slice(0, 5),
-          quickQuestions: recommendations.data.slice(0, 3)
+          quickQuestions: recommendations.data.slice(0, 3),
         });
       }
     } catch (error) {
@@ -393,7 +390,7 @@ Page({
       const status = await api.chat.getAIStatus();
       this.setData({
         isConnected: status.success && status.data.online,
-        aiCapabilities: status.data.capabilities || []
+        aiCapabilities: status.data.capabilities || [],
       });
     } catch (error) {
       console.error('检查AI状态失败:', error);
@@ -409,7 +406,7 @@ Page({
       const response = await api.chat.getMessages({
         session_id: this.data.sessionId,
         page: 1,
-        size: 20
+        size: 20,
       });
 
       if (response.success) {
@@ -419,12 +416,12 @@ Page({
           type: msg.type,
           sender: msg.sender,
           timestamp: msg.created_at,
-          status: msg.status || 'sent'
+          status: msg.status || 'sent',
         }));
 
         this.setData({
           messageList: messages,
-          hasMore: response.pagination?.has_more || false
+          hasMore: response.pagination?.has_more || false,
         });
 
         // 滚动到底部
@@ -448,7 +445,7 @@ Page({
       const response = await api.chat.getMessages({
         session_id: this.data.sessionId,
         page,
-        size: 20
+        size: 20,
       });
 
       if (response.success && response.data.length > 0) {
@@ -458,12 +455,12 @@ Page({
           type: msg.type,
           sender: msg.sender,
           timestamp: msg.created_at,
-          status: msg.status || 'sent'
+          status: msg.status || 'sent',
         }));
 
         this.setData({
           messageList: [...newMessages, ...this.data.messageList],
-          hasMore: response.pagination?.has_more || false
+          hasMore: response.pagination?.has_more || false,
         });
       } else {
         this.setData({ hasMore: false });
@@ -472,7 +469,7 @@ Page({
       console.error('加载更多消息失败:', error);
       wx.showToast({
         title: '加载失败',
-        icon: 'error'
+        icon: 'error',
       });
     } finally {
       this.setData({ loadingHistory: false });
@@ -504,9 +501,8 @@ Page({
         this.loadHistoryMessages(),
         this.checkAIStatus(),
         this.loadUserStats(),
-        this.loadRecommendedQuestions()
+        this.loadRecommendedQuestions(),
       ]);
-
     } catch (error) {
       console.error('刷新数据失败:', error);
     } finally {
@@ -523,7 +519,7 @@ Page({
     if (!inputText) {
       wx.showToast({
         title: '请输入问题',
-        icon: 'none'
+        icon: 'none',
       });
       return;
     }
@@ -531,7 +527,7 @@ Page({
     if (!this.data.canAsk) {
       wx.showToast({
         title: '您暂无提问权限',
-        icon: 'none'
+        icon: 'none',
       });
       return;
     }
@@ -539,7 +535,7 @@ Page({
     if (!this.data.isConnected) {
       wx.showToast({
         title: 'AI助手暂时离线',
-        icon: 'none'
+        icon: 'none',
       });
       return;
     }
@@ -552,7 +548,7 @@ Page({
         type: 'text',
         sender: 'user',
         timestamp: new Date().toISOString(),
-        status: 'sending'
+        status: 'sending',
       };
 
       // 添加到消息列表
@@ -560,7 +556,7 @@ Page({
         messageList: [...this.data.messageList, userMessage],
         inputText: '',
         sending: true,
-        isAITyping: true
+        isAITyping: true,
       });
 
       // 滚动到底部
@@ -572,7 +568,7 @@ Page({
         content: inputText,
         type: 'text',
         subject: this.data.currentSubject,
-        context: this.getConversationContext()
+        context: this.getConversationContext(),
       });
 
       if (response.success) {
@@ -580,7 +576,7 @@ Page({
         const updatedUserMessage = {
           ...userMessage,
           status: 'sent',
-          id: response.data.user_message_id
+          id: response.data.user_message_id,
         };
 
         // 创建AI回复消息
@@ -592,7 +588,7 @@ Page({
           timestamp: response.data.created_at,
           status: 'received',
           confidence: response.data.confidence,
-          sources: response.data.sources || []
+          sources: response.data.sources || [],
         };
 
         // 更新消息列表
@@ -602,7 +598,7 @@ Page({
 
         this.setData({
           messageList: newMessageList,
-          isAITyping: false
+          isAITyping: false,
         });
 
         // 打字机效果显示AI回复
@@ -613,11 +609,9 @@ Page({
 
         // 更新统计
         this.updateQuestionStats();
-
       } else {
         throw new Error(response.message || '发送失败');
       }
-
     } catch (error) {
       console.error('发送消息失败:', error);
 
@@ -629,12 +623,11 @@ Page({
 
       this.setData({
         messageList: newMessageList,
-        isAITyping: false
+        isAITyping: false,
       });
 
       // 显示重试选项
       this.showRetryOption(error.message);
-
     } finally {
       this.setData({ sending: false });
     }
@@ -650,16 +643,16 @@ Page({
       // 如果MCP启用，添加个性化上下文
       if (this.data.mcpEnabled && this.data.personalizedContext) {
         const { userInfo, personalizedContext } = this.data;
-        
+
         // 分析问题类型
         const questionType = await mcpService.analyzeQuestionType(messageData.content);
-        
+
         // 构建个性化上下文
         const contextPrompt = mcpService.buildContextPrompt(
-          personalizedContext, 
-          messageData.content
+          personalizedContext,
+          messageData.content,
         );
-        
+
         // 增强消息内容
         if (contextPrompt) {
           enhancedMessage.enhanced_prompt = contextPrompt;
@@ -670,24 +663,24 @@ Page({
             recent_subjects: personalizedContext.preferences.preferred_subjects || [],
           };
         }
-        
+
         console.log('MCP增强上下文:', enhancedMessage.user_context);
       }
 
       // 调用API
       const response = await api.learning.askQuestion(enhancedMessage);
-      
+
       // 记录学习行为
       if (response.success && this.data.mcpEnabled) {
         setTimeout(() => {
           mcpService.updateLearningBehavior(
             response.data.ai_message_id,
             enhancedMessage.question_type || 'general',
-            true // 默认有帮助，后续可根据用户评价更新
+            true, // 默认有帮助，后续可根据用户评价更新
           );
         }, 1000);
       }
-      
+
       return response;
     } catch (error) {
       console.error('MCP增强发送失败:', error);
@@ -714,7 +707,7 @@ Page({
 
     return recentMessages.map(msg => ({
       role: msg.sender === 'user' ? 'user' : 'assistant',
-      content: msg.content
+      content: msg.content,
     }));
   },
 
@@ -725,7 +718,7 @@ Page({
     const context = this.data.conversationContext;
     context.push(
       { role: 'user', content: userMessage.content },
-      { role: 'assistant', content: aiMessage.content }
+      { role: 'assistant', content: aiMessage.content },
     );
 
     // 保持上下文长度不超过20条
@@ -800,7 +793,7 @@ Page({
   scrollToBottom() {
     setTimeout(() => {
       this.setData({
-        scrollTop: 999999
+        scrollTop: 999999,
       });
     }, 100);
   },
@@ -814,11 +807,11 @@ Page({
       content: errorMessage || '网络异常，是否重试？',
       confirmText: '重试',
       cancelText: '取消',
-      success: (res) => {
+      success: res => {
         if (res.confirm) {
           this.retryLastMessage();
         }
-      }
+      },
     });
   },
 
@@ -855,7 +848,7 @@ Page({
   onInputFocus(e) {
     this.setData({
       inputFocus: true,
-      inputBottom: e.detail.height || 0
+      inputBottom: e.detail.height || 0,
     });
 
     // 延迟滚动到底部
@@ -870,7 +863,7 @@ Page({
   onInputBlur() {
     this.setData({
       inputFocus: false,
-      inputBottom: 0
+      inputBottom: 0,
     });
   },
 
@@ -889,6 +882,352 @@ Page({
   onQuickQuestion(e) {
     const { question } = e.currentTarget.dataset;
     this.setData({ inputText: question });
+  },
+
+  /**
+   * 切换输入模式（文本/语音）
+   */
+  onSwitchInputMode() {
+    const newMode = this.data.inputMode === 'text' ? 'voice' : 'text';
+    this.setData({ inputMode: newMode });
+
+    if (newMode === 'voice') {
+      // 检查录音权限
+      this.checkRecordPermission();
+    }
+  },
+
+  /**
+   * 检查录音权限
+   */
+  checkRecordPermission() {
+    wx.getSetting({
+      success: res => {
+        if (!res.authSetting['scope.record']) {
+          wx.authorize({
+            scope: 'scope.record',
+            success: () => {
+              console.log('录音权限获取成功');
+            },
+            fail: () => {
+              wx.showModal({
+                title: '需要录音权限',
+                content: '请在设置中开启录音权限以使用语音功能',
+                confirmText: '去设置',
+                success: res => {
+                  if (res.confirm) {
+                    wx.openSetting();
+                  }
+                },
+              });
+            },
+          });
+        }
+      },
+    });
+  },
+
+  /**
+   * 开始录音
+   */
+  startVoiceRecord() {
+    if (this.data.recordStatus !== 'idle') return;
+
+    this.setData({ recordStatus: 'recording' });
+
+    const recorderManager = wx.getRecorderManager();
+    this.recorderManager = recorderManager;
+
+    recorderManager.onStart(() => {
+      console.log('开始录音');
+      wx.showToast({
+        title: '正在录音...',
+        icon: 'loading',
+        duration: 60000,
+      });
+    });
+
+    recorderManager.onStop(res => {
+      console.log('录音结束', res);
+      wx.hideToast();
+      this.setData({ recordStatus: 'uploading' });
+      this.uploadVoiceFile(res.tempFilePath);
+    });
+
+    recorderManager.onError(err => {
+      console.error('录音错误', err);
+      wx.hideToast();
+      this.setData({ recordStatus: 'idle' });
+      wx.showToast({
+        title: '录音失败',
+        icon: 'error',
+      });
+    });
+
+    recorderManager.start({
+      duration: 60000, // 最长录音60秒
+      sampleRate: 16000,
+      numberOfChannels: 1,
+      encodeBitRate: 96000,
+      format: 'mp3',
+    });
+  },
+
+  /**
+   * 停止录音
+   */
+  stopVoiceRecord() {
+    if (this.data.recordStatus === 'recording' && this.recorderManager) {
+      this.recorderManager.stop();
+    }
+  },
+
+  /**
+   * 上传语音文件并转换为文字
+   * TODO: 需要集成阿里云语音识别服务
+   */
+  async uploadVoiceFile(filePath) {
+    // 暂时禁用语音转文字功能，等待后端实现
+    wx.showToast({
+      title: '语音转文字功能开发中',
+      icon: 'none',
+    });
+    this.setData({ recordStatus: 'idle' });
+    return;
+
+    /* 
+    // 原始实现，等后端API开发完成后启用
+    try {
+      const userInfo = await authManager.getUserInfo();
+      const token = await authManager.getToken();
+
+      // 上传语音文件
+      const uploadResult = await new Promise((resolve, reject) => {
+        wx.uploadFile({
+          url: `${api.baseUrl}/learning/voice-to-text`,
+          filePath: filePath,
+          name: 'voice',
+          header: {
+            Authorization: `Bearer ${token}`,
+          },
+          success: res => {
+            try {
+              const data = JSON.parse(res.data);
+              if (data.success) {
+                resolve(data.data);
+              } else {
+                reject(new Error(data.message || '语音转换失败'));
+              }
+            } catch (error) {
+              reject(new Error('响应解析失败'));
+            }
+          },
+          fail: reject,
+        });
+      });
+
+      // 将转换的文字设置到输入框
+      if (uploadResult.text) {
+        this.setData({
+          inputText: uploadResult.text,
+          recordStatus: 'idle',
+        });
+        wx.showToast({
+          title: '语音转换成功',
+          icon: 'success',
+        });
+      } else {
+        throw new Error('语音转换结果为空');
+      }
+    } catch (error) {
+      console.error('语音上传失败:', error);
+      this.setData({ recordStatus: 'idle' });
+      wx.showToast({
+        title: '语音转换失败',
+        icon: 'error',
+      });
+    }
+    */
+  },
+
+  /**
+   * 语音按钮长按开始录音
+   */
+  onVoiceTouchStart() {
+    if (this.data.inputMode === 'voice') {
+      this.startVoiceRecord();
+    }
+  },
+
+  /**
+   * 语音按钮松开停止录音
+   */
+  onVoiceTouchEnd() {
+    if (this.data.inputMode === 'voice') {
+      this.stopVoiceRecord();
+    }
+  },
+
+  /**
+   * 显示图片上传选择
+   */
+  onImageUpload() {
+    this.setData({ showImageActionSheet: true });
+  },
+
+  /**
+   * 关闭图片选择弹窗
+   */
+  onCloseImageActionSheet() {
+    this.setData({ showImageActionSheet: false });
+  },
+
+  /**
+   * 从相机拍照
+   */
+  onChooseFromCamera() {
+    this.setData({ showImageActionSheet: false });
+    this.chooseImage('camera');
+  },
+
+  /**
+   * 从相册选择
+   */
+  onChooseFromAlbum() {
+    this.setData({ showImageActionSheet: false });
+    this.chooseImage('album');
+  },
+
+  /**
+   * 选择图片
+   */
+  chooseImage(sourceType) {
+    wx.chooseMedia({
+      count: 1,
+      mediaType: ['image'],
+      sourceType: [sourceType],
+      camera: 'back',
+      success: res => {
+        const tempFilePath = res.tempFiles[0].tempFilePath;
+        this.uploadImage(tempFilePath);
+      },
+      fail: error => {
+        console.error('选择图片失败:', error);
+        if (error.errMsg.includes('cancel')) return;
+
+        wx.showToast({
+          title: '选择图片失败',
+          icon: 'error',
+        });
+      },
+    });
+  },
+
+  /**
+   * 上传图片
+   */
+  async uploadImage(filePath) {
+    try {
+      wx.showLoading({
+        title: '上传中...',
+        mask: true,
+      });
+
+      const token = await authManager.getToken();
+
+      const uploadResult = await new Promise((resolve, reject) => {
+        wx.uploadFile({
+          url: `${api.baseUrl}/files/upload-image-for-learning`,
+          filePath: filePath,
+          name: 'file', // 注意：后端期望的字段名是 'file'
+          header: {
+            Authorization: `Bearer ${token}`,
+          },
+          success: res => {
+            try {
+              const data = JSON.parse(res.data);
+              if (data.success) {
+                resolve(data.data);
+              } else {
+                reject(new Error(data.message || '图片上传失败'));
+              }
+            } catch (error) {
+              reject(new Error('响应解析失败'));
+            }
+          },
+          fail: reject,
+        });
+      });
+
+      wx.hideLoading();
+
+      // 创建包含图片的消息
+      const message = {
+        id: utils.generateId(),
+        type: 'user',
+        content: '[图片]',
+        imageUrl: uploadResult.url,
+        timestamp: Date.now(),
+        status: 'success',
+      };
+
+      // 添加到消息列表
+      this.addMessage(message);
+
+      // 发送图片分析请求
+      this.sendImageAnalysis(uploadResult.url);
+    } catch (error) {
+      wx.hideLoading();
+      console.error('图片上传失败:', error);
+      wx.showToast({
+        title: error.message || '图片上传失败',
+        icon: 'error',
+      });
+    }
+  },
+
+  /**
+   * 发送图片分析请求
+   * 使用Qwen VL多模态模型进行图片理解
+   */
+  async sendImageAnalysis(imageUrl) {
+    try {
+      this.setData({ isAITyping: true });
+
+      // 构建包含图片的消息，通过现有的askQuestion接口发送
+      const response = await api.learning.askQuestion({
+        question: '请分析这张图片中的内容，如果是学习相关的题目，请详细解答。',
+        session_id: this.data.sessionId,
+        image_urls: [imageUrl], // 传递图片URL给Qwen VL模型
+        subject: this.data.currentSubject !== 'all' ? this.data.currentSubject : undefined,
+      });
+
+      if (response.success) {
+        const aiMessage = {
+          id: utils.generateId(),
+          type: 'ai',
+          content: response.data.answer || response.data.analysis || '图片分析完成',
+          timestamp: Date.now(),
+          status: 'success',
+        };
+
+        this.addMessage(aiMessage);
+      } else {
+        throw new Error(response.message || '图片分析失败');
+      }
+    } catch (error) {
+      console.error('图片分析失败:', error);
+      const errorMessage = {
+        id: utils.generateId(),
+        type: 'ai',
+        content: '抱歉，图片分析失败，请稍后重试',
+        timestamp: Date.now(),
+        status: 'error',
+      };
+      this.addMessage(errorMessage);
+    } finally {
+      this.setData({ isAITyping: false });
+    }
   },
 
   /**
@@ -923,9 +1262,9 @@ Page({
       success: () => {
         wx.showToast({
           title: '已复制',
-          icon: 'success'
+          icon: 'success',
         });
-      }
+      },
     });
   },
 
@@ -936,19 +1275,22 @@ Page({
     const { messageId, liked } = e.detail;
 
     // 调用API记录点赞
-    api.chat.likeMessage({
-      message_id: messageId,
-      liked: !liked
-    }).then(response => {
-      if (response.success) {
-        wx.showToast({
-          title: liked ? '已取消点赞' : '已点赞',
-          icon: 'success'
-        });
-      }
-    }).catch(error => {
-      console.error('点赞失败:', error);
-    });
+    api.chat
+      .likeMessage({
+        message_id: messageId,
+        liked: !liked,
+      })
+      .then(response => {
+        if (response.success) {
+          wx.showToast({
+            title: liked ? '已取消点赞' : '已点赞',
+            icon: 'success',
+          });
+        }
+      })
+      .catch(error => {
+        console.error('点赞失败:', error);
+      });
   },
 
   /**
@@ -997,12 +1339,12 @@ Page({
     // 更新学科选择状态
     const subjects = this.data.subjects.map(s => ({
       ...s,
-      active: s.id === subject
+      active: s.id === subject,
     }));
 
     this.setData({
       subjects,
-      currentSubject: subject
+      currentSubject: subject,
     });
 
     this.switchSubject(subject);
@@ -1016,15 +1358,15 @@ Page({
 
     wx.showActionSheet({
       itemList: subjects,
-      success: (res) => {
+      success: res => {
         const selectedSubject = this.data.subjects[res.tapIndex];
         this.switchSubject(selectedSubject.id);
 
         wx.showToast({
           title: `已切换到${selectedSubject.name}`,
-          icon: 'success'
+          icon: 'success',
         });
-      }
+      },
     });
   },
 
@@ -1036,9 +1378,9 @@ Page({
       count: 1,
       mediaType: ['image'],
       sourceType: ['album', 'camera'],
-      success: (res) => {
+      success: res => {
         this.handleImageUpload(res.tempFiles[0]);
-      }
+      },
     });
   },
 
@@ -1051,7 +1393,7 @@ Page({
 
       const uploadResult = await api.chat.uploadImage({
         filePath: file.tempFilePath,
-        session_id: this.data.sessionId
+        session_id: this.data.sessionId,
       });
 
       if (uploadResult.success) {
@@ -1062,11 +1404,11 @@ Page({
           type: 'image',
           sender: 'user',
           timestamp: new Date().toISOString(),
-          status: 'sent'
+          status: 'sent',
         };
 
         this.setData({
-          messageList: [...this.data.messageList, imageMessage]
+          messageList: [...this.data.messageList, imageMessage],
         });
 
         this.scrollToBottom();
@@ -1074,14 +1416,14 @@ Page({
         wx.hideLoading();
         wx.showToast({
           title: '上传成功',
-          icon: 'success'
+          icon: 'success',
         });
       }
     } catch (error) {
       wx.hideLoading();
       wx.showToast({
         title: '上传失败',
-        icon: 'error'
+        icon: 'error',
       });
     }
   },
@@ -1093,7 +1435,7 @@ Page({
     wx.showModal({
       title: '提示',
       content: '语音输入功能开发中，敬请期待',
-      showCancel: false
+      showCancel: false,
     });
   },
 
@@ -1102,7 +1444,7 @@ Page({
    */
   onSettings() {
     wx.navigateTo({
-      url: '/pages/chat/settings/index'
+      url: '/pages/chat/settings/index',
     });
   },
 
@@ -1111,7 +1453,7 @@ Page({
    */
   onHistory() {
     wx.navigateTo({
-      url: '/pages/chat/history/index'
+      url: '/pages/chat/history/index',
     });
   },
 
@@ -1122,11 +1464,11 @@ Page({
     wx.showModal({
       title: '确认清空',
       content: '确定要清空所有聊天记录吗？此操作不可恢复。',
-      success: (res) => {
+      success: res => {
         if (res.confirm) {
           this.clearAllMessages();
         }
-      }
+      },
     });
   },
 
@@ -1136,24 +1478,24 @@ Page({
   async clearAllMessages() {
     try {
       const response = await api.chat.clearMessages({
-        session_id: this.data.sessionId
+        session_id: this.data.sessionId,
       });
 
       if (response.success) {
         this.setData({
           messageList: [],
-          conversationContext: []
+          conversationContext: [],
         });
 
         wx.showToast({
           title: '已清空',
-          icon: 'success'
+          icon: 'success',
         });
       }
     } catch (error) {
       wx.showToast({
         title: '清空失败',
-        icon: 'error'
+        icon: 'error',
       });
     }
   },
@@ -1169,7 +1511,7 @@ Page({
 
     wx.previewImage({
       current: url,
-      urls: imageUrls
+      urls: imageUrls,
     });
   },
 
@@ -1188,7 +1530,7 @@ Page({
     wx.showToast({
       title: message,
       icon: 'error',
-      duration: 2000
+      duration: 2000,
     });
-  }
+  },
 });

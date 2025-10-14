@@ -383,7 +383,9 @@
 }
 
 @keyframes typing {
-  0%, 60%, 100% {
+  0%,
+  60%,
+  100% {
     transform: scale(1);
     opacity: 0.5;
   }
@@ -412,6 +414,156 @@
   border-top: 2rpx solid #f0f0f0;
   padding-bottom: env(safe-area-inset-bottom);
   z-index: 99;
+}
+
+/* WeChat风格输入区域 */
+.wechat-input-area {
+  display: flex;
+  align-items: flex-end;
+  padding: 16rpx 32rpx;
+  gap: 16rpx;
+  min-height: 88rpx;
+}
+
+.input-mode-toggle {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 8rpx;
+  background-color: #f7f8fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.input-mode-toggle:active {
+  background-color: #e6f7ff;
+}
+
+.input-mode-toggle .van-icon {
+  font-size: 48rpx;
+  color: #1890ff;
+}
+
+.main-input-wrapper {
+  flex: 1;
+  position: relative;
+}
+
+.text-input {
+  width: 100%;
+  min-height: 64rpx;
+  max-height: 200rpx;
+  padding: 16rpx 20rpx;
+  background-color: #f7f8fa;
+  border-radius: 8rpx;
+  border: 2rpx solid transparent;
+  font-size: 32rpx;
+  line-height: 1.4;
+  resize: none;
+  transition: all 0.2s ease;
+}
+
+.text-input:focus {
+  background-color: #fff;
+  border-color: #1890ff;
+}
+
+.voice-input {
+  width: 100%;
+  height: 64rpx;
+  background-color: #f7f8fa;
+  border-radius: 8rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32rpx;
+  color: #666;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.voice-input.recording {
+  background-color: #ff4d4f;
+  color: #fff;
+}
+
+.voice-input:active {
+  transform: scale(0.98);
+}
+
+.image-upload-btn {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 8rpx;
+  background-color: #f7f8fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.image-upload-btn:active {
+  background-color: #e6f7ff;
+}
+
+.image-upload-btn .van-icon {
+  font-size: 48rpx;
+  color: #1890ff;
+}
+
+.send-button {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 8rpx;
+  background-color: #1890ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.send-button:active {
+  transform: scale(0.95);
+  background-color: #0050b3;
+}
+
+.send-button.disabled {
+  background-color: #d9d9d9;
+  pointer-events: none;
+}
+
+.send-button .van-icon {
+  font-size: 44rpx;
+  color: #fff;
+}
+
+/* 图片上传动作表单 */
+.image-action-sheet {
+  background-color: #fff;
+}
+
+.action-sheet-item {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+  padding: 32rpx;
+  font-size: 32rpx;
+  color: #333;
+  border-bottom: 2rpx solid #f5f5f5;
+}
+
+.action-sheet-item:last-child {
+  border-bottom: none;
+}
+
+.action-sheet-item .van-icon {
+  font-size: 48rpx;
+  color: #1890ff;
+}
+
+.action-sheet-item:active {
+  background-color: #f5f5f5;
 }
 
 .input-tools {
@@ -723,14 +875,31 @@
   animation: wave 1s infinite ease-in-out;
 }
 
-.wave-item:nth-child(1) { height: 40rpx; animation-delay: 0s; }
-.wave-item:nth-child(2) { height: 60rpx; animation-delay: 0.1s; }
-.wave-item:nth-child(3) { height: 80rpx; animation-delay: 0.2s; }
-.wave-item:nth-child(4) { height: 60rpx; animation-delay: 0.3s; }
-.wave-item:nth-child(5) { height: 40rpx; animation-delay: 0.4s; }
+.wave-item:nth-child(1) {
+  height: 40rpx;
+  animation-delay: 0s;
+}
+.wave-item:nth-child(2) {
+  height: 60rpx;
+  animation-delay: 0.1s;
+}
+.wave-item:nth-child(3) {
+  height: 80rpx;
+  animation-delay: 0.2s;
+}
+.wave-item:nth-child(4) {
+  height: 60rpx;
+  animation-delay: 0.3s;
+}
+.wave-item:nth-child(5) {
+  height: 40rpx;
+  animation-delay: 0.4s;
+}
 
 @keyframes wave {
-  0%, 40%, 100% {
+  0%,
+  40%,
+  100% {
     transform: scaleY(0.4);
   }
   20% {
