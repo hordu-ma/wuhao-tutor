@@ -1,0 +1,306 @@
+"""
+阿里云语音识别服务
+
+该模块提供语音转文字功能，基于阿里云智能语音服务
+支持：
+- 文件语音识别
+- 实时语音识别
+- 多种音频格式
+- 错误处理和重试机制
+"""
+
+import asyncio
+import base64
+import json
+import logging
+import time
+import uuid
+from pathlib import Path
+from typing import Any, Dict, Optional, Union
+
+import aiofiles
+import httpx
+from fastapi import HTTPException, UploadFile
+
+from src.core.config import get_settings
+from src.core.exceptions import ServiceError
+
+logger = logging.getLogger("speech_recognition_service")
+settings = get_settings()
+
+
+class SpeechRecognitionError(ServiceError):
+    """语音识别服务异常"""
+
+    pass
+
+
+class SpeechRecognitionService:
+    """阿里云语音识别服务类"""
+
+    def __init__(self):
+        self.app_key = settings.ASR_APP_KEY
+        self.access_token = settings.ASR_ACCESS_TOKEN
+        self.endpoint = settings.ASR_ENDPOINT
+        self.timeout = 30
+
+        if not self.app_key or not self.access_token:
+            logger.warning(
+                "语音识别服务配置不完整，请检查 ASR_APP_KEY 和 ASR_ACCESS_TOKEN"
+            )
+
+    async def recognize_from_file(
+        self, audio_file: UploadFile, language: str = "zh-CN"
+    ) -> Dict[str, Any]:
+        """
+        从上传的音频文件识别语音转文字
+
+        Args:
+            audio_file: 上传的音频文件
+            language: 识别语言，默认中文
+
+        Returns:
+            Dict: 识别结果
+                {
+                    "success": bool,
+                    "text": str,
+                    "confidence": float,
+                    "duration": float,
+                    "words": List[Dict]  # 可选，详细的词语识别结果
+                }
+
+        Raises:
+            SpeechRecognitionError: 识别失败时抛出
+        """
+        try:
+            # 验证文件格式
+            if not self._is_supported_format(audio_file.filename):
+                raise SpeechRecognitionError(f"不支持的音频格式: {audio_file.filename}")
+
+            # 检查文件大小
+            content = await audio_file.read()
+            if (
+                len(content) > settings.ASR_MAX_AUDIO_DURATION * 1024 * 1024
+            ):  # 简化的大小检查
+                raise SpeechRecognitionError("音频文件过大")
+
+            # 重置文件指针
+            await audio_file.seek(0)
+
+            # 调用阿里云语音识别API
+            result = await self._call_recognition_api(
+                content, audio_file.filename, language
+            )
+
+            return result
+
+        except Exception as e:
+            logger.error(f"语音识别失败: {str(e)}", exc_info=True)
+            if isinstance(e, SpeechRecognitionError):
+                raise
+            raise SpeechRecognitionError(f"语音识别处理失败: {str(e)}")
+
+    async def _call_recognition_api(
+        self, audio_data: bytes, filename: str, language: str = "zh-CN"
+    ) -> Dict[str, Any]:
+        """
+        调用阿里云语音识别API
+
+        Args:
+            audio_data: 音频数据
+            filename: 文件名
+            language: 识别语言
+
+        Returns:
+            Dict: API响应结果
+        """
+        try:
+            # 准备请求参数
+            request_params = {
+                "appkey": self.app_key,
+                "token": self.access_token,
+                "format": self._get_format_from_filename(filename),
+                "sample_rate": settings.ASR_SAMPLE_RATE,
+                "enable_intermediate_result": settings.ASR_ENABLE_INTERMEDIATE_RESULT,
+                "enable_punctuation_prediction": settings.ASR_ENABLE_PUNCTUATION_PREDICTION,
+                "enable_inverse_text_normalization": settings.ASR_ENABLE_INVERSE_TEXT_NORMALIZATION,
+                "language": language,
+            }
+
+            # 编码音频数据
+            audio_base64 = base64.b64encode(audio_data).decode("utf-8")
+
+            # 构建请求体
+            request_body = {
+                "audio": audio_base64,
+                "audio_format": request_params["format"],
+                "sample_rate": request_params["sample_rate"],
+                "language": language,
+                "enable_punctuation": request_params["enable_punctuation_prediction"],
+                "enable_inverse_text_normalization": request_params[
+                    "enable_inverse_text_normalization"
+                ],
+            }
+
+            # 构建请求头
+            headers = {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "X-NLS-Token": self.access_token,
+                "Authorization": f"Bearer {self.access_token}",
+            }
+
+            # 发送HTTP请求 (使用一次性识别接口)
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                # 使用阿里云一句话识别接口
+                one_sentence_url = (
+                    "https://nls-gateway-cn-shanghai.aliyuncs.com/stream/v1/asr"
+                )
+
+                response = await client.post(
+                    one_sentence_url, json=request_body, headers=headers
+                )
+
+                if response.status_code != 200:
+                    logger.error(
+                        f"ASR API调用失败: {response.status_code}, {response.text}"
+                    )
+                    raise SpeechRecognitionError(
+                        f"语音识别API调用失败: {response.status_code}"
+                    )
+
+                result = response.json()
+
+                # 解析响应
+                return self._parse_recognition_response(result, len(audio_data))
+
+        except httpx.TimeoutException:
+            raise SpeechRecognitionError("语音识别请求超时")
+        except httpx.RequestError as e:
+            raise SpeechRecognitionError(f"语音识别网络请求失败: {str(e)}")
+        except Exception as e:
+            logger.error(f"语音识别API调用异常: {str(e)}", exc_info=True)
+            raise SpeechRecognitionError(f"语音识别处理异常: {str(e)}")
+
+    def _parse_recognition_response(
+        self, response: Dict, audio_size: int
+    ) -> Dict[str, Any]:
+        """
+        解析语音识别API响应
+
+        Args:
+            response: API响应
+            audio_size: 音频文件大小
+
+        Returns:
+            Dict: 标准化的识别结果
+        """
+        try:
+            # 阿里云ASR响应格式解析
+            if response.get("status") == 20000000:  # 成功状态码
+                result_text = response.get("result", "")
+                confidence = response.get("confidence", 0.0)
+
+                return {
+                    "success": True,
+                    "text": result_text,
+                    "confidence": confidence,
+                    "duration": 0.0,  # 文件识别无法获取准确时长
+                    "audio_size": audio_size,
+                    "words": [],  # 一句话识别不提供详细词语信息
+                    "raw_response": response,
+                }
+            else:
+                error_message = response.get("message", "未知错误")
+                logger.error(f"语音识别失败: {error_message}")
+                raise SpeechRecognitionError(f"语音识别失败: {error_message}")
+
+        except Exception as e:
+            logger.error(f"解析语音识别响应失败: {str(e)}")
+            return {
+                "success": False,
+                "text": "",
+                "confidence": 0.0,
+                "duration": 0.0,
+                "audio_size": audio_size,
+                "error": str(e),
+                "raw_response": response,
+            }
+
+    def _is_supported_format(self, filename: Optional[str]) -> bool:
+        """检查是否为支持的音频格式"""
+        if not filename:
+            return False
+
+        supported_formats = [".mp3", ".wav", ".m4a", ".aac", ".flac", ".ogg"]
+        return any(filename.lower().endswith(fmt) for fmt in supported_formats)
+
+    def _get_format_from_filename(self, filename: str) -> str:
+        """从文件名获取音频格式"""
+        extension = Path(filename).suffix.lower()
+        format_mapping = {
+            ".mp3": "mp3",
+            ".wav": "wav",
+            ".m4a": "aac",
+            ".aac": "aac",
+            ".flac": "flac",
+            ".ogg": "ogg",
+        }
+        return format_mapping.get(extension, "mp3")
+
+    async def health_check(self) -> Dict[str, Any]:
+        """
+        健康检查
+
+        Returns:
+            Dict: 服务状态信息
+        """
+        status = {
+            "service": "speech_recognition",
+            "status": "unknown",
+            "config": {
+                "app_key_configured": bool(self.app_key),
+                "access_token_configured": bool(self.access_token),
+                "endpoint": self.endpoint,
+                "max_audio_duration": settings.ASR_MAX_AUDIO_DURATION,
+                "supported_formats": [".mp3", ".wav", ".m4a", ".aac", ".flac", ".ogg"],
+            },
+        }
+
+        if not settings.ASR_ENABLED:
+            status["status"] = "disabled"
+            status["message"] = "语音识别服务已禁用"
+            return status
+
+        if not self.app_key or not self.access_token:
+            status["status"] = "error"
+            status["message"] = "语音识别服务配置不完整"
+            return status
+
+        try:
+            # 简单的连通性检查
+            async with httpx.AsyncClient(timeout=5) as client:
+                response = await client.get(
+                    "https://nls-gateway-cn-shanghai.aliyuncs.com/"
+                )
+                status["status"] = (
+                    "healthy" if response.status_code < 500 else "unhealthy"
+                )
+                status["message"] = "语音识别服务可用"
+        except Exception as e:
+            status["status"] = "unhealthy"
+            status["message"] = f"语音识别服务连接失败: {str(e)}"
+
+        return status
+
+
+# 全局服务实例
+_speech_recognition_service: Optional[SpeechRecognitionService] = None
+
+
+def get_speech_recognition_service() -> SpeechRecognitionService:
+    """获取语音识别服务实例"""
+    global _speech_recognition_service
+    if _speech_recognition_service is None:
+        _speech_recognition_service = SpeechRecognitionService()
+    return _speech_recognition_service

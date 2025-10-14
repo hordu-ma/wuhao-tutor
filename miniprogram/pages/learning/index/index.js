@@ -984,29 +984,17 @@ Page({
 
   /**
    * 上传语音文件并转换为文字
-   * TODO: 需要集成阿里云语音识别服务
    */
   async uploadVoiceFile(filePath) {
-    // 暂时禁用语音转文字功能，等待后端实现
-    wx.showToast({
-      title: '语音转文字功能开发中',
-      icon: 'none',
-    });
-    this.setData({ recordStatus: 'idle' });
-    return;
-
-    /* 
-    // 原始实现，等后端API开发完成后启用
     try {
-      const userInfo = await authManager.getUserInfo();
       const token = await authManager.getToken();
 
-      // 上传语音文件
+      // 上传语音文件到新的API接口
       const uploadResult = await new Promise((resolve, reject) => {
         wx.uploadFile({
           url: `${api.baseUrl}/learning/voice-to-text`,
           filePath: filePath,
-          name: 'voice',
+          name: 'voice', // 后端期望的字段名
           header: {
             Authorization: `Bearer ${token}`,
           },
@@ -1042,12 +1030,22 @@ Page({
     } catch (error) {
       console.error('语音上传失败:', error);
       this.setData({ recordStatus: 'idle' });
+
+      // 更详细的错误处理
+      let errorMessage = '语音转换失败';
+      if (error.message.includes('配置')) {
+        errorMessage = '语音识别服务暂不可用';
+      } else if (error.message.includes('格式')) {
+        errorMessage = '不支持的音频格式';
+      } else if (error.message.includes('大小') || error.message.includes('时长')) {
+        errorMessage = '音频文件过大或过长';
+      }
+
       wx.showToast({
-        title: '语音转换失败',
+        title: errorMessage,
         icon: 'error',
       });
     }
-    */
   },
 
   /**

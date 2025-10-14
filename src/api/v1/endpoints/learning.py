@@ -7,7 +7,7 @@ import logging
 from datetime import datetime
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi import status as http_status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,6 +37,7 @@ from src.schemas.learning import (
 from src.services.learning_service import get_learning_service
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 # ========== 测试和健康检查 ==========
@@ -918,4 +919,81 @@ async def get_weekly_stats(
         raise HTTPException(
             status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"日期格式错误: {str(e)}",
+        )
+
+
+# ========== 语音识别功能 ==========
+
+
+@router.post("/voice-to-text", summary="语音转文字")
+async def voice_to_text(
+    voice: UploadFile = File(..., description="语音文件"),
+    language: Optional[str] = Query("zh-CN", description="识别语言"),
+    current_user_id: str = Depends(get_current_user_id),
+):
+    """
+    语音转文字接口
+
+    **支持的音频格式:**
+    - MP3, WAV, M4A, AAC, FLAC, OGG
+
+    **文件限制:**
+    - 最大文件大小: 基于配置的最大时长限制
+    - 最大时长: 60秒（可配置）
+
+    **返回数据:**
+    - 识别的文字内容
+    - 置信度评分
+    - 音频时长等信息
+    """
+    try:
+        from src.services.speech_recognition_service import (
+            get_speech_recognition_service,
+        )
+
+        # 验证文件名
+        if not voice.filename:
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST, detail="文件名不能为空"
+            )
+
+        # 获取语音识别服务
+        speech_service = get_speech_recognition_service()
+
+        # 调用语音识别
+        result = await speech_service.recognize_from_file(voice, language)
+
+        if result["success"]:
+            return {
+                "success": True,
+                "data": {
+                    "text": result["text"],
+                    "confidence": result["confidence"],
+                    "duration": result.get("duration", 0.0),
+                    "audio_size": result.get("audio_size", 0),
+                    "language": language,
+                },
+                "message": "语音识别成功",
+            }
+        else:
+            raise HTTPException(
+                status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=result.get("error", "语音识别失败"),
+            )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"语音转文字处理失败: {str(e)}", exc_info=True)
+
+        # 检查是否是配置问题
+        if "配置" in str(e) or "ASR_" in str(e):
+            raise HTTPException(
+                status_code=http_status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="语音识别服务配置不完整，请联系管理员",
+            )
+
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"语音识别处理失败: {str(e)}",
         )
