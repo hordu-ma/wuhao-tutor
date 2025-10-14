@@ -158,13 +158,9 @@ Page({
       console.log('开始手机号密码登录流程');
 
       // 调用登录接口
-      const response = await request({
-        url: '/auth/login',
-        method: 'POST',
-        data: {
-          username: phone,
-          password: password,
-        },
+      const response = await request.post('/auth/login', {
+        username: phone,
+        password: password,
       });
 
       console.log('登录响应:', response);

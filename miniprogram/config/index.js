@@ -14,7 +14,7 @@ const config = {
     // 后端 API 基础地址
     // 开发环境: 'http://localhost:8000'
     // 生产环境: 'https://api.wuhao-tutor.com'
-    baseUrl: 'https://wuhao.maliguo.xyz', // 生产环境API地址
+    baseUrl: 'https://121.199.173.244', // 生产环境API地址 - 使用IP地址
     // API 版本
     version: 'v1',
     // 请求超时时间 (毫秒)
