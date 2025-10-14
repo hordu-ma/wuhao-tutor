@@ -16,13 +16,13 @@ class FeedbackManager {
   showLoading(title = '加载中...', options = {}) {
     const loadingId = `loading_${Date.now()}`;
     this.loadingStack.push(loadingId);
-    
+
     wx.showLoading({
       title,
       mask: options.mask !== false,
-      ...options
+      ...options,
     });
-    
+
     return loadingId;
   }
 
@@ -35,7 +35,7 @@ class FeedbackManager {
     } else {
       this.loadingStack.pop();
     }
-    
+
     if (this.loadingStack.length === 0) {
       wx.hideLoading();
     }
@@ -49,7 +49,7 @@ class FeedbackManager {
       title,
       icon: 'success',
       duration: options.duration || 2000,
-      mask: options.mask || false
+      mask: options.mask || false,
     });
   }
 
@@ -61,7 +61,7 @@ class FeedbackManager {
       title,
       icon: 'error',
       duration: options.duration || 3000,
-      mask: options.mask || false
+      mask: options.mask || false,
     });
   }
 
@@ -69,19 +69,19 @@ class FeedbackManager {
    * 显示确认对话框
    */
   showConfirm(title, content, options = {}) {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       wx.showModal({
         title,
         content,
         showCancel: options.showCancel !== false,
         cancelText: options.cancelText || '取消',
         confirmText: options.confirmText || '确定',
-        success: (res) => {
+        success: res => {
           resolve(res.confirm);
         },
         fail: () => {
           resolve(false);
-        }
+        },
       });
     });
   }
@@ -103,10 +103,10 @@ class OfflineManager {
    */
   init() {
     // 监听网络状态变化
-    wx.onNetworkStatusChange((res) => {
+    wx.onNetworkStatusChange(res => {
       const wasOffline = !this.isOnline;
       this.isOnline = res.isConnected;
-      
+
       if (wasOffline && this.isOnline) {
         console.log('网络已恢复，开始同步离线数据');
         this.syncOfflineData();
@@ -118,9 +118,9 @@ class OfflineManager {
 
     // 检查当前网络状态
     wx.getNetworkType({
-      success: (res) => {
+      success: res => {
         this.isOnline = res.networkType !== 'none';
-      }
+      },
     });
 
     // 加载离线数据
@@ -134,7 +134,7 @@ class OfflineManager {
     wx.showToast({
       title: '当前处于离线状态',
       icon: 'none',
-      duration: 3000
+      duration: 3000,
     });
   }
 
@@ -147,7 +147,7 @@ class OfflineManager {
       if (offlineData) {
         this.offlineData = new Map(JSON.parse(offlineData));
       }
-      
+
       const offlineQueue = wx.getStorageSync('offline_queue');
       if (offlineQueue) {
         this.offlineQueue = JSON.parse(offlineQueue);
@@ -176,9 +176,9 @@ class OfflineManager {
     this.offlineQueue.push({
       ...operation,
       timestamp: Date.now(),
-      id: `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      id: `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     });
-    
+
     this.saveOfflineData();
     console.log('添加离线操作:', operation);
   }
@@ -213,18 +213,18 @@ class OfflineManager {
       this.saveOfflineData();
 
       wx.hideLoading();
-      
+
       if (syncedCount > 0) {
         wx.showToast({
           title: `已同步 ${syncedCount} 条数据`,
-          icon: 'success'
+          icon: 'success',
         });
       }
 
       if (failedCount > 0) {
         wx.showToast({
           title: `${failedCount} 条数据同步失败`,
-          icon: 'none'
+          icon: 'none',
         });
       }
     } catch (error) {
@@ -240,7 +240,7 @@ class OfflineManager {
    */
   async executeOfflineOperation(operation) {
     const api = require('../api/index.js');
-    
+
     switch (operation.type) {
       case 'homework_submit':
         return await api.homework.submit(operation.data);
@@ -266,7 +266,7 @@ class OfflineManager {
   setOfflineData(key, data) {
     this.offlineData.set(key, {
       data,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
     this.saveOfflineData();
   }
@@ -280,34 +280,16 @@ class OfflineManager {
 }
 
 // 创建全局实例
-const errorHandler = new ErrorHandler();
 const feedbackManager = new FeedbackManager();
 const offlineManager = new OfflineManager();
 
 // 初始化离线管理器
 offlineManager.init();
 
-// 全局错误处理
-wx.onError((error) => {
-  errorHandler.handleError(error, { 
-    type: 'global',
-    page: getCurrentPages().slice(-1)[0]?.route 
-  });
-});
-
-// 全局未处理的Promise错误
-wx.onUnhandledRejection((res) => {
-  errorHandler.handleError(res.reason, { 
-    type: 'promise',
-    page: getCurrentPages().slice(-1)[0]?.route 
-  });
-});
-
+// 导出类和实例
 module.exports = {
-  ErrorHandler,
-  FeedbackManager,  
+  FeedbackManager,
   OfflineManager,
-  errorHandler,
   feedbackManager,
-  offlineManager
+  offlineManager,
 };

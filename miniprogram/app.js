@@ -3,7 +3,8 @@
 const { authManager } = require('./utils/auth.js');
 const { networkMonitor } = require('./utils/network-monitor.js');
 const { tabBarManager } = require('./utils/tabbar-manager.js');
-const { errorHandler, feedbackManager, offlineManager } = require('./utils/user-experience.js');
+const { errorHandler } = require('./utils/error-handler.js');
+const { feedbackManager, offlineManager } = require('./utils/user-experience.js');
 const { preloadManager, memoryManager, networkOptimizer } = require('./utils/performance.js');
 
 App({
@@ -19,8 +20,8 @@ App({
       appLaunchTime: Date.now(),
       pageLoadTimes: {},
       apiResponseTimes: {},
-      errorCount: 0
-    }
+      errorCount: 0,
+    },
   },
 
   onLaunch(options) {
@@ -47,7 +48,7 @@ App({
     // 使用错误处理器处理全局错误
     errorHandler.handleError(error, {
       type: 'app',
-      context: 'global'
+      context: 'global',
     });
     // 错误计数
     this.globalData.performanceData.errorCount++;
@@ -60,27 +61,26 @@ App({
     try {
       // 获取系统信息
       await this.getSystemInfo();
-      
+
       // 初始化网络监控
       this.initNetworkMonitor();
-      
+
       // 检查更新
       this.checkUpdate();
-      
+
       // 初始化认证系统
       await this.initAuthSystem();
-      
+
       // 初始化TabBar
       await this.initTabBar();
-      
+
       // 检查用户会话
       await this.checkUserSession();
-      
+
       // 标记初始化完成
       this.globalData.isInitialized = true;
-      
+
       console.log('应用初始化完成');
-      
     } catch (error) {
       console.error('应用初始化失败:', error);
       errorHandler.handleError(error, { type: 'app', context: 'init' });
@@ -95,12 +95,12 @@ App({
   getSystemInfo() {
     return new Promise((resolve, reject) => {
       wx.getSystemInfo({
-        success: (res) => {
+        success: res => {
           this.globalData.systemInfo = res;
           console.log('系统信息:', res);
           resolve(res);
         },
-        fail: (err) => {
+        fail: err => {
           console.error('获取系统信息失败:', err);
           reject(err);
         },
@@ -115,10 +115,10 @@ App({
     try {
       // 初始化页面监听器
       this.initPageMonitor();
-      
+
       // 初始化网络优化器
       this.initNetworkOptimizer();
-      
+
       console.log('性能和用户体验模块初始化完成');
     } catch (error) {
       console.error('性能模块初始化失败:', error);
@@ -132,52 +132,52 @@ App({
     // 监听页面加载时间
     const originalPage = Page;
     const app = this;
-    
-    Page = function(options) {
+
+    Page = function (options) {
       const originalOnLoad = options.onLoad;
       const originalOnHide = options.onHide;
       const originalOnUnload = options.onUnload;
-      
+
       // 包装onLoad
-      options.onLoad = function(query) {
+      options.onLoad = function (query) {
         const startTime = Date.now();
         const route = this.route || this.__route__;
-        
+
         // 记录页面进入
         memoryManager.onPageEnter(route, query);
-        
+
         if (originalOnLoad) {
           const result = originalOnLoad.call(this, query);
-          
+
           // 记录加载时间
           const loadTime = Date.now() - startTime;
           app.globalData.performanceData.pageLoadTimes[route] = loadTime;
           console.log(`页面加载时间: ${route} - ${loadTime}ms`);
-          
+
           return result;
         }
       };
-      
+
       // 包装onHide/onUnload
-      const handlePageLeave = function() {
+      const handlePageLeave = function () {
         const route = this.route || this.__route__;
         memoryManager.onPageLeave(route);
       };
-      
-      options.onHide = function() {
+
+      options.onHide = function () {
         handlePageLeave.call(this);
         if (originalOnHide) {
           return originalOnHide.call(this);
         }
       };
-      
-      options.onUnload = function() {
+
+      options.onUnload = function () {
         handlePageLeave.call(this);
         if (originalOnUnload) {
           return originalOnUnload.call(this);
         }
       };
-      
+
       return originalPage(options);
     };
   },
@@ -189,41 +189,41 @@ App({
     // 简化版本，只做响应时间监控
     const app = this;
     const originalRequest = wx.request;
-    
-    wx.request = function(options) {
+
+    wx.request = function (options) {
       const startTime = Date.now();
       const originalSuccess = options.success;
       const originalFail = options.fail;
-      
-      options.success = function(res) {
+
+      options.success = function (res) {
         const responseTime = Date.now() - startTime;
         app.globalData.performanceData.apiResponseTimes[options.url] = responseTime;
         console.log(`API响应时间: ${options.url} - ${responseTime}ms`);
-        
+
         if (originalSuccess) {
           originalSuccess(res);
         }
       };
-      
-      options.fail = function(err) {
+
+      options.fail = function (err) {
         console.error(`API请求失败: ${options.url}`, err);
         if (originalFail) {
           originalFail(err);
         }
       };
-      
+
       return originalRequest(options);
     };
   },
   getSystemInfo() {
     return new Promise((resolve, reject) => {
       wx.getSystemInfo({
-        success: (res) => {
+        success: res => {
           this.globalData.systemInfo = res;
           console.log('系统信息:', res);
           resolve(res);
         },
-        fail: (err) => {
+        fail: err => {
           console.error('获取系统信息失败:', err);
           reject(err);
         },
@@ -238,22 +238,22 @@ App({
     try {
       const status = networkMonitor.getCurrentStatus();
       this.globalData.networkStatus = status.isConnected ? 'connected' : 'disconnected';
-      
+
       // 监听网络状态变化
       networkMonitor.addListener((currentStatus, previousStatus) => {
         const newStatus = currentStatus.isConnected ? 'connected' : 'disconnected';
         const oldStatus = this.globalData.networkStatus;
-        
+
         this.globalData.networkStatus = newStatus;
-        
+
         console.log('网络状态变化:', oldStatus, '->', newStatus);
-        
+
         // 触发全局网络状态变化事件
         if (this.onNetworkStatusChange) {
           this.onNetworkStatusChange(currentStatus, previousStatus);
         }
       });
-      
+
       console.log('网络监控初始化完成');
     } catch (error) {
       console.error('网络监控初始化失败:', error);
@@ -266,16 +266,15 @@ App({
   async initTabBar() {
     try {
       console.log('初始化TabBar系统');
-      
+
       // 初始化tabBar管理器
       const result = await tabBarManager.initTabBar();
-      
+
       if (result.success) {
         console.log('TabBar初始化成功:', result.role);
       } else {
         console.warn('TabBar初始化失败:', result.error);
       }
-      
     } catch (error) {
       console.error('TabBar系统初始化失败:', error);
     }
@@ -288,16 +287,17 @@ App({
     try {
       // 认证管理器会自动初始化，这里只需要等待初始化完成
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       // 监听认证事件
-      authManager.on && authManager.on('auth:logout', async () => {
-        console.log('用户登出，清理全局状态');
-        await this.clearUserInfo();
-        
-        // 重置TabBar到默认状态
-        await tabBarManager.resetTabBar();
-      });
-      
+      authManager.on &&
+        authManager.on('auth:logout', async () => {
+          console.log('用户登出，清理全局状态');
+          await this.clearUserInfo();
+
+          // 重置TabBar到默认状态
+          await tabBarManager.resetTabBar();
+        });
+
       console.log('认证系统初始化完成');
     } catch (error) {
       console.error('认证系统初始化失败:', error);
@@ -310,22 +310,22 @@ App({
   async checkUserSession() {
     try {
       const isLoggedIn = await authManager.isLoggedIn();
-      
+
       if (isLoggedIn) {
         // 获取并更新全局状态
         const [userInfo, token, role] = await Promise.all([
           authManager.getUserInfo(),
           authManager.getToken(),
-          authManager.getUserRole()
+          authManager.getUserRole(),
         ]);
-        
+
         if (userInfo && token) {
           this.globalData.userInfo = userInfo;
           this.globalData.token = token;
           this.globalData.role = role;
-          
+
           console.log('用户会话有效:', { userId: userInfo.id, role });
-          
+
           // 检查Token是否有效
           const isTokenValid = await authManager.isTokenValid();
           if (!isTokenValid) {
@@ -358,11 +358,11 @@ App({
     try {
       await authManager.clearUserSession();
       this.clearUserInfo();
-      
+
       // 如果当前不在登录页，则跳转到登录页
       const pages = getCurrentPages();
       const currentPage = pages[pages.length - 1];
-      
+
       if (currentPage && !currentPage.route.includes('login')) {
         wx.showModal({
           title: '登录过期',
@@ -370,9 +370,9 @@ App({
           showCancel: false,
           success: () => {
             wx.redirectTo({
-              url: '/pages/login/index'
+              url: '/pages/login/index',
             });
-          }
+          },
         });
       }
     } catch (error) {
@@ -387,7 +387,7 @@ App({
     if (wx.canIUse('getUpdateManager')) {
       const updateManager = wx.getUpdateManager();
 
-      updateManager.onCheckForUpdate((res) => {
+      updateManager.onCheckForUpdate(res => {
         console.log('检查更新结果:', res.hasUpdate);
       });
 
@@ -395,7 +395,7 @@ App({
         wx.showModal({
           title: '更新提示',
           content: '新版本已准备好，是否重启应用？',
-          success: (res) => {
+          success: res => {
             if (res.confirm) {
               updateManager.applyUpdate();
             }
@@ -427,19 +427,19 @@ App({
   async setUserInfo(userInfo, token, role) {
     try {
       const oldRole = this.globalData.role;
-      
+
       this.globalData.userInfo = userInfo;
       this.globalData.token = token;
       this.globalData.role = role || userInfo.role;
-      
+
       console.log('全局用户信息已更新');
-      
+
       // 如果角色变化，更新TabBar
       if (oldRole !== this.globalData.role) {
         console.log('用户角色变化，更新TabBar');
         await tabBarManager.onRoleSwitch(this.globalData.role, oldRole);
       }
-      
+
       // 执行回调
       if (this.userInfoReadyCallback) {
         this.userInfoReadyCallback(userInfo);
@@ -457,7 +457,7 @@ App({
     this.globalData.token = undefined;
     this.globalData.role = undefined;
     console.log('全局用户信息已清除');
-    
+
     // 重置TabBar到默认状态
     try {
       await tabBarManager.resetTabBar();
@@ -474,7 +474,7 @@ App({
     if (this.globalData.userInfo) {
       return this.globalData.userInfo;
     }
-    
+
     // 尝试从认证管理器获取
     try {
       const userInfo = await authManager.getUserInfo();
@@ -495,7 +495,7 @@ App({
     if (this.globalData.token) {
       return this.globalData.token;
     }
-    
+
     // 尝试从认证管理器获取
     try {
       const token = await authManager.getToken();
@@ -516,7 +516,7 @@ App({
     if (this.globalData.role) {
       return this.globalData.role;
     }
-    
+
     // 尝试从认证管理器获取
     try {
       const role = await authManager.getUserRole();
@@ -554,5 +554,5 @@ App({
    */
   isInitialized() {
     return this.globalData.isInitialized;
-  }
+  },
 });

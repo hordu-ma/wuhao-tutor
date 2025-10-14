@@ -48,14 +48,14 @@
       {
         "pagePath": "pages/mistakes/list/index",
         "text": "错题本",
-        "iconPath": "assets/icons/mistakes.png",
-        "selectedIconPath": "assets/icons/mistakes-active.png"
+        "iconPath": "assets/icons/homework.png",
+        "selectedIconPath": "assets/icons/homework-active.png"
       },
       {
         "pagePath": "pages/learning/index/index",
         "text": "作业问答",
-        "iconPath": "assets/icons/learning.png",
-        "selectedIconPath": "assets/icons/learning-active.png"
+        "iconPath": "assets/icons/chat.png",
+        "selectedIconPath": "assets/icons/chat-active.png"
       },
       {
         "pagePath": "pages/analysis/report/index",
@@ -83,18 +83,6 @@
     },
     "scope.writePhotosAlbum": {
       "desc": "需要使用您的相册权限，用于保存学习报告和作业图片"
-    },
-    "scope.camera": {
-      "desc": "需要使用您的摄像头权限，用于拍照提交作业"
-    },
-    "scope.record": {
-      "desc": "需要使用您的录音权限，用于语音问答功能"
-    },
-    "scope.userInfo": {
-      "desc": "需要使用您的用户信息，用于登录和个性化服务"
-    },
-    "scope.address": {
-      "desc": "需要使用您的通讯地址，用于学习资料邮寄"
     }
   },
   "requiredBackgroundModes": ["audio", "backgroundFetch"],
@@ -105,10 +93,6 @@
     "choosePoi"
   ],
   "preloadRule": {
-    "pages/mistakes/list/index": {
-      "network": "all",
-      "packages": ["mistakes"]
-    },
     "pages/learning/index/index": {
       "network": "all",
       "packages": ["learning"]
@@ -160,10 +144,7 @@
   "halfPage": {
     "firstPageNavigationStyle": "custom"
   },
-  "debugOptions": {
-    "enableFPSPanel": false,
-    "enableProfilerPanel": false
-  },
+
   "enablePassiveEvent": {
     "touchstart": true,
     "touchmove": true

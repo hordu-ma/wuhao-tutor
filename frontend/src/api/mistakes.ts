@@ -19,7 +19,7 @@ import type {
  * 获取今日复习任务
  */
 export const getTodayReviewTasks = (): Promise<TodayReviewResponse> => {
-  return http.get<TodayReviewResponse>('/api/v1/mistakes/today-review')
+  return http.get<TodayReviewResponse>('/mistakes/today-review')
 }
 
 /**
@@ -32,28 +32,28 @@ export function getMistakeList(params?: {
   mastery_status?: string
   search?: string
 }): Promise<MistakeListResponse> {
-  return http.get('/api/v1/mistakes', { params })
+  return http.get('/mistakes', { params })
 }
 
 /**
  * 获取错题详情
  */
 export function getMistakeDetail(id: string): Promise<MistakeDetail> {
-  return http.get(`/api/v1/mistakes/${id}`)
+  return http.get(`/mistakes/${id}`)
 }
 
 /**
  * 完成复习
  */
 export const completeReview = (data: ReviewCompleteRequest): Promise<ReviewCompleteResponse> => {
-  return http.post<ReviewCompleteResponse>(`/api/v1/mistakes/${data.mistake_id}/review`, data)
+  return http.post<ReviewCompleteResponse>(`/mistakes/${data.mistake_id}/review`, data)
 }
 
 /**
  * 获取错题统计
  */
 export function getMistakeStatistics(): Promise<MistakeStatistics> {
-  return http.get('/api/v1/mistakes/statistics')
+  return http.get('/mistakes/statistics')
 }
 
 /**
@@ -70,14 +70,14 @@ export function createMistake(data: {
   knowledge_points?: string[]
   image_urls?: string[]
 }): Promise<MistakeDetail> {
-  return http.post('/api/v1/mistakes', data)
+  return http.post('/mistakes', data)
 }
 
 /**
  * 删除错题
  */
 export function deleteMistake(id: string): Promise<void> {
-  return http.delete(`/api/v1/mistakes/${id}`)
+  return http.delete(`/mistakes/${id}`)
 }
 
 export default {

@@ -19,7 +19,7 @@ const ErrorType = {
   VALIDATION_ERROR: 'VALIDATION_ERROR',
   BUSINESS_ERROR: 'BUSINESS_ERROR',
   SERVER_ERROR: 'SERVER_ERROR',
-  UNKNOWN_ERROR: 'UNKNOWN_ERROR'
+  UNKNOWN_ERROR: 'UNKNOWN_ERROR',
 };
 
 /**
@@ -29,7 +29,7 @@ const RetryStrategy = {
   FIXED_DELAY: 'FIXED_DELAY',
   LINEAR_DELAY: 'LINEAR_DELAY',
   EXPONENTIAL_BACKOFF: 'EXPONENTIAL_BACKOFF',
-  RANDOM_DELAY: 'RANDOM_DELAY'
+  RANDOM_DELAY: 'RANDOM_DELAY',
 };
 
 /**
@@ -53,7 +53,7 @@ class EnhancedApiClient {
       failedRequests: 0,
       cacheHits: 0,
       averageResponseTime: 0,
-      startTime: Date.now()
+      startTime: Date.now(),
     };
 
     // 请求去重映射
@@ -70,18 +70,18 @@ class EnhancedApiClient {
         baseDelay: 1000,
         maxDelay: 10000,
         multiplier: 2,
-        jitter: 0.1
+        jitter: 0.1,
       },
       cache: {
         strategy: CacheStrategy.MEMORY_CACHE,
         ttl: 5 * 60 * 1000,
-        enableCache: false
+        enableCache: false,
       },
       queue: {
         enableQueue: true,
         priority: Priority.NORMAL,
-        enableDeduplication: true
-      }
+        enableDeduplication: true,
+      },
     };
 
     this.setupDefaultInterceptors();
@@ -93,14 +93,14 @@ class EnhancedApiClient {
    */
   setupDefaultInterceptors() {
     // 请求拦截器 - 添加认证头
-    this.addRequestInterceptor(async (config) => {
+    this.addRequestInterceptor(async config => {
       try {
         if (!config.skipAuth) {
           const token = await auth.getToken();
           if (token) {
             config.header = {
               ...config.header,
-              'Authorization': `Bearer ${token}`
+              Authorization: `Bearer ${token}`,
             };
           }
         }
@@ -111,22 +111,22 @@ class EnhancedApiClient {
     });
 
     // 请求拦截器 - 添加公共头部
-    this.addRequestInterceptor((config) => {
+    this.addRequestInterceptor(config => {
       config.header = {
         'Content-Type': 'application/json',
         'X-Client-Type': 'miniprogram',
         'X-Client-Version': this.version,
         'X-Request-ID': this.generateRequestId(),
         'X-Timestamp': Date.now().toString(),
-        ...config.header
+        ...config.header,
       };
       return config;
     });
 
     // 响应拦截器 - 统一错误处理
     this.addResponseInterceptor(
-      (response) => response,
-      async (error) => {
+      response => response,
+      async error => {
         // Token过期处理
         if (error.statusCode === 401) {
           try {
@@ -149,7 +149,7 @@ class EnhancedApiClient {
         }
 
         throw error;
-      }
+      },
     );
   }
 
@@ -276,7 +276,12 @@ class EnhancedApiClient {
 
       // 处理URL
       if (!config.url.startsWith('http')) {
-        config.url = `${this.baseUrl}/api/${this.version}${config.url}`;
+        // 检查URL是否已经包含/api/前缀
+        if (config.url.startsWith('/api/')) {
+          config.url = `${this.baseUrl}${config.url}`;
+        } else {
+          config.url = `${this.baseUrl}/api/${this.version}${config.url}`;
+        }
       }
 
       // 请求去重检查
@@ -302,7 +307,12 @@ class EnhancedApiClient {
       const response = await responsePromise;
 
       // 缓存响应
-      if (config.enableCache && config.method === 'GET' && response.statusCode >= 200 && response.statusCode < 300) {
+      if (
+        config.enableCache &&
+        config.method === 'GET' &&
+        response.statusCode >= 200 &&
+        response.statusCode < 300
+      ) {
         await this.cacheResponse(config, response);
       }
 
@@ -310,7 +320,6 @@ class EnhancedApiClient {
       this.updateStats(config, true);
 
       return response;
-
     } catch (error) {
       this.updateStats(config, false);
       throw this.normalizeError(error, config);
@@ -327,7 +336,7 @@ class EnhancedApiClient {
         priority: config.priority,
         timeout: config.timeout,
         retryCount: config.retry.maxRetries,
-        metadata: { url: config.url, method: config.method }
+        metadata: { url: config.url, method: config.method },
       });
     } else {
       // 直接执行请求
@@ -367,7 +376,7 @@ class EnhancedApiClient {
         timeout: config.timeout,
         dataType: config.dataType || 'json',
         responseType: config.responseType || 'text',
-        success: (res) => {
+        success: res => {
           const endTime = Date.now();
           const duration = endTime - startTime;
 
@@ -377,10 +386,10 @@ class EnhancedApiClient {
             header: res.header,
             config,
             timestamp: endTime,
-            duration
+            duration,
           });
         },
-        fail: (error) => {
+        fail: error => {
           const endTime = Date.now();
           const duration = endTime - startTime;
 
@@ -391,9 +400,9 @@ class EnhancedApiClient {
             originalError: error,
             timestamp: endTime,
             duration,
-            type: ErrorType.NETWORK_ERROR
+            type: ErrorType.NETWORK_ERROR,
           });
-        }
+        },
       };
 
       // 发出请求事件
@@ -414,7 +423,7 @@ class EnhancedApiClient {
         type: ErrorType.NETWORK_ERROR,
         message: '网络未连接',
         statusCode: 0,
-        config
+        config,
       };
     }
 
@@ -430,7 +439,7 @@ class EnhancedApiClient {
           type: ErrorType.NETWORK_ERROR,
           message: suitability.reason,
           statusCode: 0,
-          config
+          config,
         };
       }
     }
@@ -441,7 +450,9 @@ class EnhancedApiClient {
    */
   getOperationType(config) {
     if (config.url.includes('/upload')) {
-      return config.data && this.calculateSize(config.data) > 1024 * 1024 ? 'large_download' : 'image_upload';
+      return config.data && this.calculateSize(config.data) > 1024 * 1024
+        ? 'large_download'
+        : 'image_upload';
     }
     if (config.url.includes('/chat')) {
       return 'chat';
@@ -459,7 +470,7 @@ class EnhancedApiClient {
     try {
       const cacheKey = this.generateCacheKey(config);
       const cachedData = await cacheManager.get(cacheKey, {
-        strategy: config.cache.strategy
+        strategy: config.cache.strategy,
       });
 
       if (cachedData) {
@@ -470,7 +481,7 @@ class EnhancedApiClient {
           config,
           timestamp: Date.now(),
           duration: 0,
-          fromCache: true
+          fromCache: true,
         };
       }
     } catch (error) {
@@ -488,7 +499,7 @@ class EnhancedApiClient {
       await cacheManager.set(cacheKey, response.data, {
         strategy: config.cache.strategy,
         ttl: config.cache.ttl,
-        tags: config.cache.tags || []
+        tags: config.cache.tags || [],
       });
     } catch (error) {
       console.warn('缓存响应失败', error);
@@ -589,7 +600,7 @@ class EnhancedApiClient {
       priority: this.defaultConfig.queue.priority,
       retry: { ...this.defaultConfig.retry },
       cache: { ...this.defaultConfig.cache },
-      ...options
+      ...options,
     };
   }
 
@@ -604,7 +615,7 @@ class EnhancedApiClient {
       data: error.data,
       config,
       timestamp: Date.now(),
-      originalError: error
+      originalError: error,
     };
 
     // 根据状态码确定错误类型
@@ -640,7 +651,8 @@ class EnhancedApiClient {
     if (config.startTime) {
       const responseTime = Date.now() - config.startTime;
       const totalResponses = this.stats.successRequests + this.stats.failedRequests;
-      this.stats.averageResponseTime = (this.stats.averageResponseTime * (totalResponses - 1) + responseTime) / totalResponses;
+      this.stats.averageResponseTime =
+        (this.stats.averageResponseTime * (totalResponses - 1) + responseTime) / totalResponses;
     }
   }
 
@@ -724,7 +736,7 @@ class EnhancedApiClient {
     return this.request({
       url: fullUrl,
       method: 'GET',
-      ...options
+      ...options,
     });
   }
 
@@ -736,7 +748,7 @@ class EnhancedApiClient {
       url,
       method: 'POST',
       data,
-      ...options
+      ...options,
     });
   }
 
@@ -748,7 +760,7 @@ class EnhancedApiClient {
       url,
       method: 'PUT',
       data,
-      ...options
+      ...options,
     });
   }
 
@@ -759,7 +771,7 @@ class EnhancedApiClient {
     return this.request({
       url,
       method: 'DELETE',
-      ...options
+      ...options,
     });
   }
 
@@ -771,7 +783,7 @@ class EnhancedApiClient {
       url,
       method: 'PATCH',
       data,
-      ...options
+      ...options,
     });
   }
 
@@ -808,7 +820,7 @@ class EnhancedApiClient {
           reject({
             type: ErrorType.NETWORK_ERROR,
             message: '网络未连接',
-            statusCode: 0
+            statusCode: 0,
           });
           return;
         }
@@ -818,7 +830,7 @@ class EnhancedApiClient {
           reject({
             type: ErrorType.VALIDATION_ERROR,
             message: '文件路径不能为空',
-            statusCode: 400
+            statusCode: 400,
           });
           return;
         }
@@ -829,7 +841,7 @@ class EnhancedApiClient {
           'X-Client-Type': 'miniprogram',
           'X-Client-Version': this.version,
           'X-Request-ID': this.generateRequestId(),
-          ...options.header
+          ...options.header,
         };
 
         if (token && !options.skipAuth) {
@@ -842,7 +854,7 @@ class EnhancedApiClient {
           name: options.name || 'file',
           formData: options.formData || {},
           header,
-          success: (res) => {
+          success: res => {
             if (res.statusCode >= 200 && res.statusCode < 300) {
               try {
                 const data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
@@ -850,14 +862,14 @@ class EnhancedApiClient {
                   data,
                   statusCode: res.statusCode,
                   header: res.header,
-                  timestamp: Date.now()
+                  timestamp: Date.now(),
                 });
               } catch (parseError) {
                 resolve({
                   data: res.data,
                   statusCode: res.statusCode,
                   header: res.header,
-                  timestamp: Date.now()
+                  timestamp: Date.now(),
                 });
               }
             } else {
@@ -865,36 +877,35 @@ class EnhancedApiClient {
                 statusCode: res.statusCode,
                 data: res.data,
                 message: `HTTP ${res.statusCode}`,
-                type: ErrorType.SERVER_ERROR
+                type: ErrorType.SERVER_ERROR,
               });
             }
           },
-          fail: (error) => {
+          fail: error => {
             reject({
               statusCode: 0,
               message: error.errMsg || '文件上传失败',
               originalError: error,
-              type: ErrorType.NETWORK_ERROR
+              type: ErrorType.NETWORK_ERROR,
             });
-          }
+          },
         };
 
         // 上传进度回调
         if (options.onProgress) {
           const uploadTask = wx.uploadFile(uploadConfig);
-          uploadTask.onProgressUpdate((res) => {
+          uploadTask.onProgressUpdate(res => {
             options.onProgress({
               loaded: res.totalBytesSent,
               total: res.totalBytesExpectedToSend,
               progress: res.progress,
               speed: 0, // 微信小程序API不提供速度信息
-              timeRemaining: 0
+              timeRemaining: 0,
             });
           });
         } else {
           wx.uploadFile(uploadConfig);
         }
-
       } catch (error) {
         reject(this.normalizeError(error));
       }
@@ -913,7 +924,7 @@ class EnhancedApiClient {
           reject({
             type: ErrorType.NETWORK_ERROR,
             message: '网络未连接',
-            statusCode: 0
+            statusCode: 0,
           });
           return;
         }
@@ -924,7 +935,7 @@ class EnhancedApiClient {
           'X-Client-Type': 'miniprogram',
           'X-Client-Version': this.version,
           'X-Request-ID': this.generateRequestId(),
-          ...options.header
+          ...options.header,
         };
 
         if (token && !options.skipAuth) {
@@ -935,40 +946,39 @@ class EnhancedApiClient {
           url: url.startsWith('http') ? url : `${this.baseUrl}/api/${this.version}${url}`,
           filePath: options.filePath,
           header,
-          success: (res) => {
+          success: res => {
             resolve({
               tempFilePath: res.tempFilePath,
               statusCode: res.statusCode,
               header: res.header,
-              timestamp: Date.now()
+              timestamp: Date.now(),
             });
           },
-          fail: (error) => {
+          fail: error => {
             reject({
               statusCode: 0,
               message: error.errMsg || '文件下载失败',
               originalError: error,
-              type: ErrorType.NETWORK_ERROR
+              type: ErrorType.NETWORK_ERROR,
             });
-          }
+          },
         };
 
         // 下载进度回调
         if (options.onProgress) {
           const downloadTask = wx.downloadFile(downloadConfig);
-          downloadTask.onProgressUpdate((res) => {
+          downloadTask.onProgressUpdate(res => {
             options.onProgress({
               loaded: res.totalBytesWritten,
               total: res.totalBytesExpectedToWrite,
               progress: res.progress,
               speed: 0, // 微信小程序API不提供速度信息
-              timeRemaining: 0
+              timeRemaining: 0,
             });
           });
         } else {
           wx.downloadFile(downloadConfig);
         }
-
       } catch (error) {
         reject(this.normalizeError(error));
       }
@@ -982,10 +992,16 @@ class EnhancedApiClient {
     return {
       ...this.stats,
       uptime: Date.now() - this.stats.startTime,
-      successRate: this.stats.totalRequests > 0 ? (this.stats.successRequests / this.stats.totalRequests * 100).toFixed(2) : '0.00',
-      cacheHitRate: this.stats.totalRequests > 0 ? (this.stats.cacheHits / this.stats.totalRequests * 100).toFixed(2) : '0.00',
+      successRate:
+        this.stats.totalRequests > 0
+          ? ((this.stats.successRequests / this.stats.totalRequests) * 100).toFixed(2)
+          : '0.00',
+      cacheHitRate:
+        this.stats.totalRequests > 0
+          ? ((this.stats.cacheHits / this.stats.totalRequests) * 100).toFixed(2)
+          : '0.00',
       queueStatus: requestQueue.getStatus(),
-      networkStatus: networkMonitor.getCurrentStatus()
+      networkStatus: networkMonitor.getCurrentStatus(),
     };
   }
 
@@ -999,7 +1015,7 @@ class EnhancedApiClient {
       failedRequests: 0,
       cacheHits: 0,
       averageResponseTime: 0,
-      startTime: Date.now()
+      startTime: Date.now(),
     };
   }
 
@@ -1032,40 +1048,48 @@ const api = {
   // 用户认证相关
   auth: {
     // 微信登录
-    wechatLogin: (data) => apiClient.post('/auth/wechat-login', data),
+    wechatLogin: data => apiClient.post('/auth/wechat-login', data),
     // 刷新Token
-    refreshToken: (data) => apiClient.post('/auth/refresh-token', data),
+    refreshToken: data => apiClient.post('/auth/refresh-token', data),
     // 登出
     logout: () => apiClient.post('/auth/logout'),
     // 获取用户信息
-    getUserInfo: () => apiClient.get('/auth/user-info', {}, { enableCache: true, cache: { ttl: 10 * 60 * 1000 } }),
+    getUserInfo: () =>
+      apiClient.get('/auth/user-info', {}, { enableCache: true, cache: { ttl: 10 * 60 * 1000 } }),
     // 更新用户信息
-    updateUserInfo: (data) => apiClient.put('/auth/user-info', data),
+    updateUserInfo: data => apiClient.put('/auth/user-info', data),
   },
 
   // 作业相关
   homework: {
     // 获取作业列表
-    getList: (params) => apiClient.get('/homework', params, {
-      enableCache: true,
-      cache: { ttl: 2 * 60 * 1000, tags: ['homework'] }
-    }),
+    getList: params =>
+      apiClient.get('/homework', params, {
+        enableCache: true,
+        cache: { ttl: 2 * 60 * 1000, tags: ['homework'] },
+      }),
     // 获取作业详情
-    getDetail: (id) => apiClient.get(`/homework/${id}`, {}, {
-      enableCache: true,
-      cache: { ttl: 5 * 60 * 1000, tags: ['homework', `homework:${id}`] }
-    }),
+    getDetail: id =>
+      apiClient.get(
+        `/homework/${id}`,
+        {},
+        {
+          enableCache: true,
+          cache: { ttl: 5 * 60 * 1000, tags: ['homework', `homework:${id}`] },
+        },
+      ),
     // 提交作业
-    submit: (id, data) => apiClient.post(`/homework/${id}/submit`, data, {
-      priority: Priority.HIGH,
-      retry: { maxRetries: 2 }
-    }),
+    submit: (id, data) =>
+      apiClient.post(`/homework/${id}/submit`, data, {
+        priority: Priority.HIGH,
+        retry: { maxRetries: 2 },
+      }),
     // 创建作业（教师）
-    create: (data) => apiClient.post('/homework', data, { priority: Priority.HIGH }),
+    create: data => apiClient.post('/homework', data, { priority: Priority.HIGH }),
     // 更新作业（教师）
     update: (id, data) => apiClient.put(`/homework/${id}`, data),
     // 删除作业（教师）
-    delete: (id) => apiClient.delete(`/homework/${id}`),
+    delete: id => apiClient.delete(`/homework/${id}`),
     // 批改作业（教师）
     grade: (id, data) => apiClient.post(`/homework/${id}/grade`, data, { priority: Priority.HIGH }),
   },
@@ -1073,108 +1097,137 @@ const api = {
   // AI问答相关
   chat: {
     // 发送消息
-    sendMessage: (data) => apiClient.post('/chat/message', data, {
-      priority: Priority.HIGH,
-      timeout: 30000,
-      retry: { maxRetries: 1 }
-    }),
+    sendMessage: data =>
+      apiClient.post('/chat/message', data, {
+        priority: Priority.HIGH,
+        timeout: 30000,
+        retry: { maxRetries: 1 },
+      }),
     // 获取对话历史
-    getHistory: (params) => apiClient.get('/chat/history', params, {
-      enableCache: true,
-      cache: { ttl: 1 * 60 * 1000, tags: ['chat'] }
-    }),
+    getHistory: params =>
+      apiClient.get('/chat/history', params, {
+        enableCache: true,
+        cache: { ttl: 1 * 60 * 1000, tags: ['chat'] },
+      }),
     // 获取对话详情
-    getSession: (sessionId) => apiClient.get(`/chat/session/${sessionId}`, {}, {
-      enableCache: true,
-      cache: { ttl: 5 * 60 * 1000, tags: ['chat', `session:${sessionId}`] }
-    }),
+    getSession: sessionId =>
+      apiClient.get(
+        `/chat/session/${sessionId}`,
+        {},
+        {
+          enableCache: true,
+          cache: { ttl: 5 * 60 * 1000, tags: ['chat', `session:${sessionId}`] },
+        },
+      ),
     // 创建新对话
-    createSession: (data) => apiClient.post('/chat/session', data),
+    createSession: data => apiClient.post('/chat/session', data),
     // 删除对话
-    deleteSession: (sessionId) => apiClient.delete(`/chat/session/${sessionId}`),
+    deleteSession: sessionId => apiClient.delete(`/chat/session/${sessionId}`),
   },
 
   // 学情分析相关
   analysis: {
     // 获取学习报告
-    getReport: (params) => apiClient.get('/analysis/report', params, {
-      enableCache: true,
-      cache: { ttl: 10 * 60 * 1000, tags: ['analysis'] }
-    }),
+    getReport: params =>
+      apiClient.get('/analysis/report', params, {
+        enableCache: true,
+        cache: { ttl: 10 * 60 * 1000, tags: ['analysis'] },
+      }),
     // 获取学习进度
-    getProgress: (params) => apiClient.get('/analysis/progress', params, {
-      enableCache: true,
-      cache: { ttl: 5 * 60 * 1000, tags: ['analysis'] }
-    }),
+    getProgress: params =>
+      apiClient.get('/analysis/progress', params, {
+        enableCache: true,
+        cache: { ttl: 5 * 60 * 1000, tags: ['analysis'] },
+      }),
     // 获取知识点掌握情况
-    getKnowledgePoints: (params) => apiClient.get('/analysis/knowledge-points', params, {
-      enableCache: true,
-      cache: { ttl: 10 * 60 * 1000, tags: ['analysis'] }
-    }),
+    getKnowledgePoints: params =>
+      apiClient.get('/analysis/knowledge-points', params, {
+        enableCache: true,
+        cache: { ttl: 10 * 60 * 1000, tags: ['analysis'] },
+      }),
     // 获取学习统计
-    getStatistics: (params) => apiClient.get('/analysis/statistics', params, {
-      enableCache: true,
-      cache: { ttl: 15 * 60 * 1000, tags: ['analysis'] }
-    }),
+    getStatistics: params =>
+      apiClient.get('/analysis/statistics', params, {
+        enableCache: true,
+        cache: { ttl: 15 * 60 * 1000, tags: ['analysis'] },
+      }),
   },
 
   // 文件上传相关
   upload: {
     // 上传图片
-    image: (filePath, options = {}) => apiClient.upload('/upload/image', filePath, {
-      name: 'image',
-      priority: Priority.NORMAL,
-      ...options
-    }),
+    image: (filePath, options = {}) =>
+      apiClient.upload('/upload/image', filePath, {
+        name: 'image',
+        priority: Priority.NORMAL,
+        ...options,
+      }),
     // 上传文件
-    file: (filePath, options = {}) => apiClient.upload('/upload/file', filePath, {
-      name: 'file',
-      priority: Priority.NORMAL,
-      ...options
-    }),
+    file: (filePath, options = {}) =>
+      apiClient.upload('/upload/file', filePath, {
+        name: 'file',
+        priority: Priority.NORMAL,
+        ...options,
+      }),
   },
 
   // 用户设置相关
   settings: {
     // 获取设置
 
-    get: () => apiClient.get('/settings', {}, {
-      enableCache: true,
-      cache: { ttl: 30 * 60 * 1000, tags: ['settings'] }
-    }),
+    get: () =>
+      apiClient.get(
+        '/settings',
+        {},
+        {
+          enableCache: true,
+          cache: { ttl: 30 * 60 * 1000, tags: ['settings'] },
+        },
+      ),
     // 更新设置
-    update: (data) => apiClient.put('/settings', data),
+    update: data => apiClient.put('/settings', data),
     // 获取消息设置
-    getNotification: () => apiClient.get('/settings/notification', {}, {
-      enableCache: true,
-      cache: { ttl: 30 * 60 * 1000, tags: ['settings'] }
-    }),
+    getNotification: () =>
+      apiClient.get(
+        '/settings/notification',
+        {},
+        {
+          enableCache: true,
+          cache: { ttl: 30 * 60 * 1000, tags: ['settings'] },
+        },
+      ),
     // 更新消息设置
-    updateNotification: (data) => apiClient.put('/settings/notification', data),
+    updateNotification: data => apiClient.put('/settings/notification', data),
   },
 
   // 反馈相关
   feedback: {
     // 提交反馈
-    submit: (data) => apiClient.post('/feedback', data, { priority: Priority.LOW }),
+    submit: data => apiClient.post('/feedback', data, { priority: Priority.LOW }),
     // 获取反馈列表
-    getList: (params) => apiClient.get('/feedback', params, { priority: Priority.LOW }),
+    getList: params => apiClient.get('/feedback', params, { priority: Priority.LOW }),
   },
 
   // 系统相关
   system: {
     // 获取系统信息
-    getInfo: () => apiClient.get('/system/info', {}, {
-      enableCache: true,
-      cache: { ttl: 60 * 60 * 1000, tags: ['system'] }
-    }),
+    getInfo: () =>
+      apiClient.get(
+        '/system/info',
+        {},
+        {
+          enableCache: true,
+          cache: { ttl: 60 * 60 * 1000, tags: ['system'] },
+        },
+      ),
     // 检查更新
     checkUpdate: () => apiClient.get('/system/update'),
     // 获取公告
-    getNotices: (params) => apiClient.get('/system/notices', params, {
-      enableCache: true,
-      cache: { ttl: 10 * 60 * 1000, tags: ['system'] }
-    }),
+    getNotices: params =>
+      apiClient.get('/system/notices', params, {
+        enableCache: true,
+        cache: { ttl: 10 * 60 * 1000, tags: ['system'] },
+      }),
   },
 };
 
@@ -1183,11 +1236,11 @@ const compatApi = {
   // 作业相关 - 兼容旧版本调用方式
   getHomeworkList: api.homework.getList,
   getHomeworkDetail: api.homework.getDetail,
-  submitHomework: (data) => api.homework.submit(data.homeworkId, data),
+  submitHomework: data => api.homework.submit(data.homeworkId, data),
   createHomework: api.homework.create,
-  updateHomework: (data) => api.homework.update(data.id, data),
+  updateHomework: data => api.homework.update(data.id, data),
   deleteHomework: api.homework.delete,
-  gradeHomework: (data) => api.homework.grade(data.homeworkId, data),
+  gradeHomework: data => api.homework.grade(data.homeworkId, data),
 
   // 认证相关 - 兼容旧版本调用方式
   wechatLogin: api.auth.wechatLogin,
@@ -1233,9 +1286,11 @@ module.exports = {
   CacheStrategy,
 
   // 工具方法
-  addRequestInterceptor: (fulfilled, rejected) => apiClient.addRequestInterceptor(fulfilled, rejected),
-  addResponseInterceptor: (fulfilled, rejected) => apiClient.addResponseInterceptor(fulfilled, rejected),
-  setDefaults: (config) => apiClient.setDefaults(config),
+  addRequestInterceptor: (fulfilled, rejected) =>
+    apiClient.addRequestInterceptor(fulfilled, rejected),
+  addResponseInterceptor: (fulfilled, rejected) =>
+    apiClient.addResponseInterceptor(fulfilled, rejected),
+  setDefaults: config => apiClient.setDefaults(config),
   getStats: () => apiClient.getStats(),
   resetStats: () => apiClient.resetStats(),
   on: (eventType, listener) => apiClient.on(eventType, listener),
@@ -1251,7 +1306,7 @@ module.exports = {
   download: (url, options) => apiClient.download(url, options),
 
   // 缓存管理
-  clearCache: (tags) => cacheManager.deleteByTags(tags),
+  clearCache: tags => cacheManager.deleteByTags(tags),
   clearAllCache: () => cacheManager.clear(),
 
   // 队列管理
@@ -1263,5 +1318,5 @@ module.exports = {
   // 网络监控
   getNetworkStatus: () => networkMonitor.getCurrentStatus(),
   getNetworkQuality: () => networkMonitor.getNetworkQuality(),
-  refreshNetworkStatus: () => networkMonitor.refresh()
+  refreshNetworkStatus: () => networkMonitor.refresh(),
 };

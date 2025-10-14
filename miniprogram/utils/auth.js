@@ -91,7 +91,7 @@ class AuthManager {
         console.log('用户会话恢复成功', {
           userId: userInfo.id,
           role: this.currentRole,
-          hasRefreshToken: !!refreshToken
+          hasRefreshToken: !!refreshToken,
         });
 
         // 检查Token是否需要刷新
@@ -116,7 +116,85 @@ class AuthManager {
   }
 
   /**
-   * 微信登录
+   * 微信登录（带用户信息）
+   * @param {Object} userProfile - 已获取的用户信息
+   */
+  async wechatLoginWithProfile(userProfile) {
+    try {
+      // 1. 获取微信登录code
+      const loginResult = await this.getWechatLoginCode();
+
+      // 2. 准备登录数据
+      const loginData = {
+        code: loginResult.code,
+        userInfo: userProfile.userInfo,
+        signature: userProfile.signature,
+        encryptedData: userProfile.encryptedData,
+        iv: userProfile.iv,
+        deviceInfo: await this.getDeviceInfo(),
+        loginMethod: 'wechat',
+        timestamp: Date.now(),
+      };
+
+      // 3. 调用后端登录接口
+      const response = await this.callLoginAPI(loginData);
+
+      if (response.success) {
+        const { access_token, refresh_token, user, session_id } = response.data;
+        const userInfo = user;
+        const role = user.role || 'student';
+
+        // 4. 执行安全登录流程
+        const securitySystem = getSecuritySystem();
+        const secureLoginResult = await securitySystem.performSecureLogin({
+          token: access_token,
+          userInfo,
+          role,
+          refreshToken: refresh_token,
+          sessionId: session_id,
+          deviceInfo: loginData.deviceInfo,
+          loginMethod: 'wechat',
+        });
+
+        if (!secureLoginResult.success) {
+          throw new Error(secureLoginResult.message || '安全验证失败');
+        }
+
+        // 5. 保存登录信息
+        await this.saveUserSession(access_token, refresh_token, userInfo, role, session_id);
+
+        console.log('微信登录成功', { userId: userInfo.id, role });
+
+        return {
+          success: true,
+          data: {
+            access_token,
+            refresh_token,
+            user: userInfo,
+            role,
+            session_id,
+          },
+          securityInfo: secureLoginResult.securityInfo,
+        };
+      } else {
+        throw new Error(response.error?.message || '登录失败');
+      }
+    } catch (error) {
+      console.error('微信登录失败', error);
+
+      return {
+        success: false,
+        error: {
+          code: error.code || 'LOGIN_FAILED',
+          message: error.message || '登录失败，请重试',
+        },
+      };
+    }
+  }
+
+  /**
+   * 微信登录（旧方法，保留以兼容）
+   * @deprecated 请使用 wechatLoginWithProfile 方法
    */
   async wechatLogin() {
     try {
@@ -135,58 +213,52 @@ class AuthManager {
         iv: userProfile.iv,
         deviceInfo: await this.getDeviceInfo(),
         loginMethod: 'wechat',
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
       // 4. 调用后端登录接口
       const response = await this.callLoginAPI(loginData);
 
       if (response.success) {
-        const { token, userInfo, role, refreshToken } = response.data;
+        const { access_token, refresh_token, user, session_id } = response.data;
+        const userInfo = user;
+        const role = user.role || 'student';
 
-        // 4. 调用后端登录接口
-        const response = await this.callLoginAPI(loginData);
+        // 5. 执行安全登录流程
+        const securitySystem = getSecuritySystem();
+        const secureLoginResult = await securitySystem.performSecureLogin({
+          token: access_token,
+          userInfo,
+          role,
+          refreshToken: refresh_token,
+          sessionId: session_id,
+          deviceInfo: loginData.deviceInfo,
+          loginMethod: 'wechat',
+        });
 
-        if (response.success) {
-          const { access_token, refresh_token, user, session_id } = response.data;
-          const userInfo = user;
-          const role = user.role || 'student';
-
-          // 5. 执行安全登录流程
-          const securitySystem = getSecuritySystem();
-          const secureLoginResult = await securitySystem.performSecureLogin({
-            token: access_token,
-            userInfo,
-            role,
-            refreshToken: refresh_token,
-            sessionId: session_id,
-            deviceInfo: loginData.deviceInfo,
-            loginMethod: 'wechat'
-          });
-
-          if (!secureLoginResult.success) {
-            throw new Error(secureLoginResult.message || '安全验证失败');
-          }
-
-          // 6. 保存登录信息
-          await this.saveUserSession(access_token, refresh_token, userInfo, role, session_id);
-
-          console.log('微信登录成功', { userId: userInfo.id, role });
-
-          return {
-            success: true,
-            data: { 
-              access_token, 
-              refresh_token, 
-              user: userInfo, 
-              role, 
-              session_id 
-            },
-            securityInfo: secureLoginResult.securityInfo
-          };
-        } else {
-          throw new Error(response.error?.message || '登录失败');
+        if (!secureLoginResult.success) {
+          throw new Error(secureLoginResult.message || '安全验证失败');
         }
+
+        // 6. 保存登录信息
+        await this.saveUserSession(access_token, refresh_token, userInfo, role, session_id);
+
+        console.log('微信登录成功', { userId: userInfo.id, role });
+
+        return {
+          success: true,
+          data: {
+            access_token,
+            refresh_token,
+            user: userInfo,
+            role,
+            session_id,
+          },
+          securityInfo: secureLoginResult.securityInfo,
+        };
+      } else {
+        throw new Error(response.error?.message || '登录失败');
+      }
     } catch (error) {
       console.error('微信登录失败', error);
 
@@ -194,8 +266,8 @@ class AuthManager {
         success: false,
         error: {
           code: error.code || 'LOGIN_FAILED',
-          message: error.message || '登录失败，请重试'
-        }
+          message: error.message || '登录失败，请重试',
+        },
       };
     }
   }
@@ -206,16 +278,16 @@ class AuthManager {
   getWechatLoginCode() {
     return new Promise((resolve, reject) => {
       wx.login({
-        success: (res) => {
+        success: res => {
           if (res.code) {
             resolve(res);
           } else {
             reject(new Error('获取登录code失败'));
           }
         },
-        fail: (error) => {
+        fail: error => {
           reject(new Error(error.errMsg || '微信登录失败'));
-        }
+        },
       });
     });
   }
@@ -227,17 +299,17 @@ class AuthManager {
     return new Promise((resolve, reject) => {
       wx.getUserProfile({
         desc: '用于完善用户资料',
-        success: (res) => {
+        success: res => {
           resolve(res);
         },
-        fail: (error) => {
+        fail: error => {
           // 用户拒绝授权的情况
           if (error.errMsg && error.errMsg.includes('cancel')) {
             reject(new Error('用户取消授权'));
           } else {
             reject(new Error(error.errMsg || '获取用户信息失败'));
           }
-        }
+        },
       });
     });
   }
@@ -252,7 +324,7 @@ class AuthManager {
         method: 'POST',
         data: loginData,
         skipAuth: true, // 登录请求不需要认证头
-        timeout: config.api.timeout || 10000
+        timeout: config.api.timeout || 10000,
       });
 
       return response;
@@ -278,13 +350,13 @@ class AuthManager {
       const savePromises = [
         storage.set(this.tokenKey, accessToken),
         storage.set(this.userInfoKey, userInfo),
-        storage.set(this.roleKey, role)
+        storage.set(this.roleKey, role),
       ];
 
       if (refreshToken) {
         savePromises.push(storage.set(this.refreshTokenKey, refreshToken));
       }
-      
+
       if (sessionId) {
         savePromises.push(storage.set(this.sessionIdKey, sessionId));
       }
@@ -396,7 +468,7 @@ class AuthManager {
       // 合并新的用户信息
       const updatedUserInfo = {
         ...this.currentUser,
-        ...newUserInfo
+        ...newUserInfo,
       };
 
       // 更新内存和本地存储
@@ -487,7 +559,7 @@ class AuthManager {
       const now = Math.floor(Date.now() / 1000);
       const bufferTime = 5 * 60; // 5分钟缓冲
 
-      return payload.exp > (now + bufferTime);
+      return payload.exp > now + bufferTime;
     } catch (error) {
       console.error('检查Token有效性失败', error);
       return false;
@@ -551,10 +623,10 @@ class AuthManager {
         url: '/api/v1/auth/refresh-token',
         method: 'POST',
         data: {
-          refresh_token: currentRefreshToken
+          refresh_token: currentRefreshToken,
         },
         skipAuth: true, // 刷新请求不需要access token
-        timeout: config.api.timeout || 10000
+        timeout: config.api.timeout || 10000,
       });
 
       if (response.success) {
@@ -564,11 +636,11 @@ class AuthManager {
         await this.saveUserSession(access_token, refresh_token, user, user.role, session_id);
 
         console.log('Token刷新成功');
-        return { 
-          access_token, 
-          refresh_token, 
-          user, 
-          session_id 
+        return {
+          access_token,
+          refresh_token,
+          user,
+          session_id,
         };
       } else {
         throw new Error(response.error?.message || 'Token刷新失败');
@@ -589,7 +661,7 @@ class AuthManager {
       const logoutResult = await securitySystem.performSecureLogout({
         method: 'normal',
         reason: 'user_initiated',
-        cleanupLevel: 'standard'
+        cleanupLevel: 'standard',
       });
 
       if (logoutResult.success) {
@@ -601,10 +673,10 @@ class AuthManager {
       return logoutResult;
     } catch (error) {
       console.error('登出失败', error);
-      
+
       // 如果安全退出失败，执行基础清理
       await this.clearUserSession();
-      
+
       throw error;
     }
   }
@@ -625,7 +697,7 @@ class AuthManager {
       const removePromises = [
         storage.remove(this.tokenKey),
         storage.remove(this.userInfoKey),
-        storage.remove(this.roleKey)
+        storage.remove(this.roleKey),
       ];
 
       // 清理可选的存储项
@@ -677,9 +749,9 @@ class AuthManager {
               showCancel: false,
               success: () => {
                 wx.redirectTo({
-                  url: '/pages/login/index'
+                  url: '/pages/login/index',
                 });
-              }
+              },
             });
           }
         }
@@ -717,10 +789,10 @@ class AuthManager {
 
       // 定义角色权限级别
       const roleLevel = {
-        'student': 1,
-        'parent': 2,
-        'teacher': 3,
-        'admin': 4
+        student: 1,
+        parent: 2,
+        teacher: 3,
+        admin: 4,
       };
 
       const currentLevel = roleLevel[currentRole] || 0;
@@ -775,7 +847,7 @@ class AuthManager {
         screenWidth: systemInfo.screenWidth,
         screenHeight: systemInfo.screenHeight,
         language: systemInfo.language,
-        wechatVersion: systemInfo.version
+        wechatVersion: systemInfo.version,
       };
     } catch (error) {
       console.error('获取设备信息失败', error);
@@ -803,8 +875,8 @@ class AuthManager {
     const cacheTime = this.getUserInfoCacheTime();
     const now = Date.now();
     const oneHour = 60 * 60 * 1000;
-    
-    return (now - cacheTime) > oneHour;
+
+    return now - cacheTime > oneHour;
   }
 }
 
@@ -822,13 +894,13 @@ module.exports = {
   getToken: () => authManager.getToken(),
   getUserInfo: () => authManager.getUserInfo(),
   getUserRole: () => authManager.getUserRole(),
-  updateUserInfo: (userInfo) => authManager.updateUserInfo(userInfo),
-  switchRole: (role) => authManager.switchRole(role),
+  updateUserInfo: userInfo => authManager.updateUserInfo(userInfo),
+  switchRole: role => authManager.switchRole(role),
   needsRoleSelection: () => authManager.needsRoleSelection(),
   isLoggedIn: () => authManager.isLoggedIn(),
   isTokenValid: () => authManager.isTokenValid(),
   refreshToken: () => authManager.refreshToken(),
-  checkPermission: (role) => authManager.checkPermission(role),
+  checkPermission: role => authManager.checkPermission(role),
   getAvatarUrl: () => authManager.getAvatarUrl(),
   getDisplayName: () => authManager.getDisplayName(),
 
@@ -837,7 +909,7 @@ module.exports = {
     const isLoggedIn = await authManager.isLoggedIn();
     if (!isLoggedIn) {
       wx.redirectTo({
-        url: '/pages/login/index'
+        url: '/pages/login/index',
       });
       return false;
     }
@@ -855,7 +927,7 @@ module.exports = {
         if (!hasPermission) {
           wx.showToast({
             title: '权限不足',
-            icon: 'error'
+            icon: 'error',
           });
           return;
         }
@@ -865,5 +937,5 @@ module.exports = {
 
       return descriptor;
     };
-  }
+  },
 };
