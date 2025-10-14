@@ -32,13 +32,44 @@
           <van-icon name="warning-o" color="#ee0a24" />
           <text class="error-text">{{loginError}}</text>
         </view>
-        <view class="error-actions">
-          <button class="retry-btn" size="mini" bind:tap="onRetryLogin">重试</button>
-          <button class="network-btn" size="mini" bind:tap="onCheckNetwork">网络设置</button>
-        </view>
       </view>
 
-      <!-- 微信登录按钮 -->
+      <!-- 手机号密码登录表单 -->
+      <view class="form-section">
+        <!-- 手机号输入 -->
+        <van-field
+          value="{{ phone }}"
+          type="number"
+          label="手机号"
+          placeholder="请输入手机号"
+          maxlength="11"
+          border="{{ true }}"
+          bind:change="onPhoneChange"
+          clearable
+        >
+          <van-icon slot="left-icon" name="phone-o" />
+        </van-field>
+
+        <!-- 密码输入 -->
+        <van-field
+          value="{{ password }}"
+          type="{{ showPassword ? 'text' : 'password' }}"
+          label="密码"
+          placeholder="请输入密码"
+          border="{{ true }}"
+          bind:change="onPasswordChange"
+          clearable
+        >
+          <van-icon slot="left-icon" name="lock" />
+          <van-icon 
+            slot="right-icon" 
+            name="{{ showPassword ? 'eye-o' : 'closed-eye' }}" 
+            bind:tap="togglePassword"
+          />
+        </van-field>
+      </view>
+
+      <!-- 登录按钮 -->
       <van-button
         class="login-btn"
         type="primary"
@@ -46,11 +77,10 @@
         round
         loading="{{loading}}"
         disabled="{{loading || networkStatus !== 'connected'}}"
-        bind:click="onWechatLogin"
+        bind:click="onLogin"
         loading-text="登录中..."
       >
-        <van-icon wx:if="{{!loading}}" name="wechat" />
-        微信登录
+        登录
       </van-button>
 
       <!-- 用户协议 -->
