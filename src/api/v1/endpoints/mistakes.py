@@ -76,6 +76,32 @@ async def get_mistake_list(
         )
 
 
+# ========== 统计分析 ========== (移到这里，避免被 {mistake_id} 拦截)
+
+
+@router.get(
+    "/statistics",
+    response_model=MistakeStatisticsResponse,
+    summary="获取错题统计",
+    description="获取用户的错题统计数据,包括总数、掌握情况、学科分布等",
+)
+async def get_mistake_statistics(
+    user_id: UUID = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> MistakeStatisticsResponse:
+    """获取错题统计"""
+    try:
+        service = MistakeService(db)
+        statistics = await service.get_statistics(user_id)
+        return statistics
+    except ServiceError as e:
+        logger.error(f"获取错题统计失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取错题统计失败: {str(e)}",
+        )
+
+
 @router.get(
     "/{mistake_id}",
     response_model=MistakeDetailResponse,
@@ -207,30 +233,4 @@ async def complete_review(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"完成复习失败: {str(e)}",
-        )
-
-
-# ========== 统计分析 ==========
-
-
-@router.get(
-    "/statistics",
-    response_model=MistakeStatisticsResponse,
-    summary="获取错题统计",
-    description="获取用户的错题统计数据,包括总数、掌握情况、学科分布等",
-)
-async def get_mistake_statistics(
-    user_id: UUID = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db),
-) -> MistakeStatisticsResponse:
-    """获取错题统计"""
-    try:
-        service = MistakeService(db)
-        statistics = await service.get_statistics(user_id)
-        return statistics
-    except ServiceError as e:
-        logger.error(f"获取错题统计失败: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取错题统计失败: {str(e)}",
         )
