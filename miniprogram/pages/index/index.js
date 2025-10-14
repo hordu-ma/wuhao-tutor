@@ -282,7 +282,7 @@ Page({
           {
             id: 'quick_homework',
             title: '快速提交',
-            icon: '/assets/icons/upload.png',
+            icon: '/assets/icons/homework.png',
             action: 'quickSubmitHomework',
             color: '#52c41a',
             type: 'action',
@@ -298,7 +298,7 @@ Page({
           {
             id: 'quick_chat',
             title: '快速提问',
-            icon: '/assets/icons/question.png',
+            icon: '/assets/icons/chat.png',
             action: 'quickAskQuestion',
             color: '#722ed1',
             type: 'action',
@@ -326,7 +326,7 @@ Page({
           {
             id: 'progress',
             title: '学情',
-            icon: '/assets/icons/progress.png',
+            icon: '/assets/icons/report.png',
             path: '/pages/analysis/progress/index',
             color: '#1890ff',
             type: 'navigate',
@@ -342,7 +342,7 @@ Page({
           {
             id: 'quick_message',
             title: '快速消息',
-            icon: '/assets/icons/message.png',
+            icon: '/assets/icons/chat.png',
             action: 'quickSendMessage',
             color: '#faad14',
             type: 'action',
@@ -358,7 +358,7 @@ Page({
           {
             id: 'settings',
             title: '设置',
-            icon: '/assets/icons/settings.png',
+            icon: '/assets/icons/profile.png',
             path: '/pages/profile/settings/index',
             color: '#722ed1',
             type: 'navigate',
@@ -378,7 +378,7 @@ Page({
           {
             id: 'quick_grade',
             title: '快速批改',
-            icon: '/assets/icons/grade.png',
+            icon: '/assets/icons/homework.png',
             action: 'quickGradeHomework',
             color: '#52c41a',
             type: 'action',
@@ -386,7 +386,7 @@ Page({
           {
             id: 'analysis',
             title: '班级分析',
-            icon: '/assets/icons/analysis.png',
+            icon: '/assets/icons/report.png',
             path: '/pages/analysis/class/index',
             color: '#faad14',
             type: 'navigate',
@@ -394,7 +394,7 @@ Page({
           {
             id: 'students',
             title: '学生管理',
-            icon: '/assets/icons/students.png',
+            icon: '/assets/icons/profile.png',
             path: '/pages/students/list/index',
             color: '#ff7875',
             type: 'navigate',
@@ -402,7 +402,7 @@ Page({
           {
             id: 'quick_announce',
             title: '快速通知',
-            icon: '/assets/icons/announce.png',
+            icon: '/assets/icons/chat.png',
             action: 'quickSendAnnouncement',
             color: '#722ed1',
             type: 'action',
