@@ -159,8 +159,10 @@ Page({
 
       // 调用登录接口
       const response = await request.post('/auth/login', {
-        username: phone,
+        phone: phone,
         password: password,
+        device_type: 'mini_program',
+        remember_me: false,
       });
 
       console.log('登录响应:', response);
