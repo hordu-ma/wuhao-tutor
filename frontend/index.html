@@ -11,10 +11,7 @@
       name="description"
       content="五好伴学是一个集作业批改、学习问答、学情分析于一体的智能学习平台，帮助学生提升学习效率和成绩。"
     />
-    <meta
-      name="keywords"
-      content="智能学习,作业批改,学习问答,学情分析,AI教育,学习助手"
-    />
+    <meta name="keywords" content="智能学习,作业批改,学习问答,学情分析,AI教育,学习助手" />
     <meta name="author" content="五好伴学团队" />
 
     <!-- Open Graph / Facebook -->
@@ -38,10 +35,7 @@
     <!-- 移动端优化 -->
     <meta name="format-detection" content="telephone=no" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta
-      name="apple-mobile-web-app-status-bar-style"
-      content="black-translucent"
-    />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="五好伴学" />
 
     <!-- PWA相关 -->
@@ -69,6 +63,7 @@
     connect-src 'self' *;
     media-src 'self' blob: *;
     object-src 'none';
+    worker-src 'self' blob:;
   "
     />
 
@@ -88,8 +83,8 @@
         flex-direction: column;
         z-index: 9999;
         font-family:
-          "PingFang SC", "Helvetica Neue", Helvetica, "Microsoft YaHei",
-          "微软雅黑", Arial, sans-serif;
+          'PingFang SC', 'Helvetica Neue', Helvetica, 'Microsoft YaHei', '微软雅黑', Arial,
+          sans-serif;
       }
 
       .loading-logo {
@@ -310,104 +305,97 @@
     <!-- 浏览器兼容性检查脚本 -->
     <script>
       // 检查浏览器兼容性
-      (function () {
-        "use strict";
+      ;(function () {
+        'use strict'
 
         // 检查必要的浏览器特性
-        var requiredFeatures = [
-          "fetch",
-          "Promise",
-          "Map",
-          "Set",
-          "Symbol",
-          "Object.assign",
-        ];
+        var requiredFeatures = ['fetch', 'Promise', 'Map', 'Set', 'Symbol', 'Object.assign']
 
-        var unsupported = [];
+        var unsupported = []
         for (var i = 0; i < requiredFeatures.length; i++) {
-          var feature = requiredFeatures[i];
-          var parts = feature.split(".");
-          var obj = window;
+          var feature = requiredFeatures[i]
+          var parts = feature.split('.')
+          var obj = window
 
           for (var j = 0; j < parts.length; j++) {
-            if (!obj || typeof obj[parts[j]] === "undefined") {
-              unsupported.push(feature);
-              break;
+            if (!obj || typeof obj[parts[j]] === 'undefined') {
+              unsupported.push(feature)
+              break
             }
-            obj = obj[parts[j]];
+            obj = obj[parts[j]]
           }
         }
 
         if (unsupported.length > 0) {
           // 显示浏览器升级提示
-          document.getElementById("loading").innerHTML =
+          document.getElementById('loading').innerHTML =
             '<div class="error-message">' +
-            "<h2>浏览器版本过低</h2>" +
-            "<p>您的浏览器不支持以下特性：" +
-            unsupported.join(", ") +
-            "</p>" +
-            "<p>请升级到最新版本的Chrome、Firefox、Safari或Edge浏览器</p>" +
-            "</div>";
-          return;
+            '<h2>浏览器版本过低</h2>' +
+            '<p>您的浏览器不支持以下特性：' +
+            unsupported.join(', ') +
+            '</p>' +
+            '<p>请升级到最新版本的Chrome、Firefox、Safari或Edge浏览器</p>' +
+            '</div>'
+          return
         }
 
         // 设置全局错误处理
         window.onerror = function (msg, url, lineNo, columnNo, error) {
-          console.error("Global Error:", {
+          console.error('Global Error:', {
             message: msg,
             source: url,
             line: lineNo,
             column: columnNo,
             error: error,
-          });
+          })
 
           // 在加载屏幕显示错误信息
-          var loading = document.getElementById("loading");
-          if (loading && loading.style.display !== "none") {
+          var loading = document.getElementById('loading')
+          if (loading && loading.style.display !== 'none') {
             loading.innerHTML =
               '<div class="error-message">' +
-              "<h2>应用加载失败</h2>" +
-              "<p>请刷新页面重试，如果问题持续存在，请联系技术支持。</p>" +
+              '<h2>应用加载失败</h2>' +
+              '<p>请刷新页面重试，如果问题持续存在，请联系技术支持。</p>' +
               '<button onclick="location.reload()" style="' +
-              "background: #3b82f6; color: white; border: none; " +
-              "padding: 12px 24px; border-radius: 6px; cursor: pointer; " +
-              "font-size: 16px; margin-top: 16px;" +
+              'background: #3b82f6; color: white; border: none; ' +
+              'padding: 12px 24px; border-radius: 6px; cursor: pointer; ' +
+              'font-size: 16px; margin-top: 16px;' +
               '">刷新页面</button>' +
-              "</div>";
+              '</div>'
           }
-          return false;
-        };
+          return false
+        }
 
         // Promise错误处理
-        window.addEventListener("unhandledrejection", function (event) {
-          console.error("Unhandled promise rejection:", event.reason);
-        });
+        window.addEventListener('unhandledrejection', function (event) {
+          console.error('Unhandled promise rejection:', event.reason)
+        })
 
         // 应用加载完成后隐藏加载屏幕
-        window.addEventListener("DOMContentLoaded", function () {
+        window.addEventListener('DOMContentLoaded', function () {
           // 立即显示应用容器
-          var app = document.getElementById("app");
+          var app = document.getElementById('app')
           if (app) {
-            app.classList.remove("loading");
+            app.classList.remove('loading')
           }
 
           // 等待Vue应用初始化
           setTimeout(function () {
-            var loading = document.getElementById("loading");
+            var loading = document.getElementById('loading')
 
             if (loading) {
-              loading.classList.add("loaded");
+              loading.classList.add('loaded')
 
               // 完全移除加载屏幕
               setTimeout(function () {
                 if (loading.parentNode) {
-                  loading.parentNode.removeChild(loading);
+                  loading.parentNode.removeChild(loading)
                 }
-              }, 500);
+              }, 500)
             }
-          }, 2000); // 给Vue更多时间初始化
-        });
-      })();
+          }, 2000) // 给Vue更多时间初始化
+        })
+      })()
     </script>
 
     <!-- Vue应用脚本 -->

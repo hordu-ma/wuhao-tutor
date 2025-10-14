@@ -53,7 +53,7 @@ export const useAuthStore = defineStore('auth', {
      */
     userAvatar: (state): string => {
       // 优先使用 avatar_url，回退到 avatar，最后使用默认头像
-      return state.user?.avatar_url || state.user?.avatar || '/default-avatar.png'
+      return state.user?.avatar_url || state.user?.avatar || '/default-avatar.svg'
     },
 
     /**
