@@ -3,7 +3,9 @@
   <view class="login-content">
     <!-- Logo区域 -->
     <view class="logo-section">
-      <image class="logo" src="/assets/images/logo.png" mode="aspectFit" />
+      <view class="logo-placeholder">
+        <text class="logo-text">五好伴学</text>
+      </view>
       <text class="app-name">五好伴学</text>
       <text class="app-desc">AI智能学习助手</text>
     </view>
