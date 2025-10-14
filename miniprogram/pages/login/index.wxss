@@ -148,13 +148,80 @@
   padding: 8rpx 0;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.1);
 }
-  background-color: #ff4d4f;
-  color: #ffffff;
+
+.error-message .van-icon {
+  margin-right: 8rpx;
+}
+
+.error-text {
+  color: #ee0a24;
+  font-size: 26rpx;
+}
+
+/* 验证码按钮 */
+.sms-code-btn {
+  background-color: #f2f3f5;
+  color: #323233;
   border: none;
   border-radius: 12rpx;
   padding: 8rpx 16rpx;
   font-size: 24rpx;
   min-width: 80rpx;
+}
+
+.network-btn {
+  background-color: #ff976a;
+  border-color: #ff976a;
+}
+
+/* 登录按钮 */
+.login-btn {
+  --button-primary-background-color: #007aff;
+  --button-primary-border-color: #007aff;
+  --button-disabled-opacity: 0.6;
+  font-weight: bold;
+  font-size: 32rpx;
+  border-radius: 48rpx;
+  height: 96rpx;
+  line-height: 96rpx;
+  margin-top: 32rpx;
+  box-shadow: 0 8rpx 16rpx rgba(0, 122, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.login-btn:active {
+  transform: translateY(2rpx);
+  box-shadow: 0 4rpx 8rpx rgba(0, 122, 255, 0.2);
+}
+
+/* 切换到微信登录 */
+.switch-to-wechat {
+  text-align: center;
+  margin-top: 48rpx;
+}
+
+.switch-link {
+  color: #007aff;
+  font-size: 28rpx;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.switch-link .van-icon {
+  margin-right: 8rpx;
+  font-size: 36rpx;
+}
+
+/* 底部版权信息 */
+.footer {
+  position: absolute;
+  bottom: 40rpx;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 24rpx;
+  color: #c8c9cc;
 }
 
 .network-btn {
