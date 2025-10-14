@@ -3,13 +3,16 @@
 const { authManager } = require('../../utils/auth.js');
 const { networkMonitor } = require('../../utils/network-monitor.js');
 const { errorToast } = require('../../utils/error-toast.js');
+const { request } = require('../../utils/request.js');
 
 Page({
   data: {
     loading: false,
-    canIUseGetUserProfile: !!wx.getUserProfile,
     networkStatus: 'unknown',
     loginError: null,
+    phone: '',
+    password: '',
+    showPassword: false,
   },
 
   onLoad() {
@@ -81,9 +84,38 @@ Page({
   },
 
   /**
-   * 微信登录
+   * 手机号输入变化
    */
-  async onWechatLogin() {
+  onPhoneChange(e) {
+    this.setData({
+      phone: e.detail,
+      loginError: null,
+    });
+  },
+
+  /**
+   * 密码输入变化
+   */
+  onPasswordChange(e) {
+    this.setData({
+      password: e.detail,
+      loginError: null,
+    });
+  },
+
+  /**
+   * 切换密码显示/隐藏
+   */
+  togglePassword() {
+    this.setData({
+      showPassword: !this.data.showPassword,
+    });
+  },
+
+  /**
+   * 手机号密码登录
+   */
+  async onLogin() {
     if (this.data.loading) {
       return; // 防止重复点击
     }
@@ -94,37 +126,60 @@ Page({
       return;
     }
 
+    // 验证输入
+    const { phone, password } = this.data;
+
+    if (!phone) {
+      this.showError('请输入手机号');
+      return;
+    }
+
+    if (!/^1[3-9]\d{9}$/.test(phone)) {
+      this.showError('请输入正确的手机号');
+      return;
+    }
+
+    if (!password) {
+      this.showError('请输入密码');
+      return;
+    }
+
+    if (password.length < 6) {
+      this.showError('密码长度不能少于6位');
+      return;
+    }
+
     try {
       this.setData({
         loading: true,
         loginError: null,
       });
 
-      console.log('开始微信登录流程');
+      console.log('开始手机号密码登录流程');
 
-      // **关键修复**: 在用户点击事件中直接获取用户信息授权
-      const userProfile = await new Promise((resolve, reject) => {
-        wx.getUserProfile({
-          desc: '用于完善用户资料',
-          success: res => resolve(res),
-          fail: error => {
-            if (error.errMsg && error.errMsg.includes('cancel')) {
-              reject(new Error('用户取消授权'));
-            } else {
-              reject(new Error(error.errMsg || '获取用户信息失败'));
-            }
-          },
-        });
+      // 调用登录接口
+      const response = await request({
+        url: '/auth/login',
+        method: 'POST',
+        data: {
+          username: phone,
+          password: password,
+        },
       });
 
-      console.log('用户信息授权成功');
+      console.log('登录响应:', response);
 
-      // 使用认证管理器执行登录（传入已获取的用户信息）
-      const result = await authManager.wechatLoginWithProfile(userProfile);
+      if (response && response.access_token) {
+        // 保存 token 和用户信息
+        await authManager.saveUserSession(
+          response.access_token,
+          response.refresh_token,
+          response.user,
+          response.user?.role || 'student',
+          response.session_id,
+        );
 
-      if (result.success) {
-        const { user: userInfo, role } = result.data;
-        console.log('登录成功:', { userId: userInfo.id, role });
+        console.log('登录成功:', { userId: response.user?.id, role: response.user?.role });
 
         // 显示登录成功提示
         wx.showToast({
@@ -133,16 +188,9 @@ Page({
           duration: 1500,
         });
 
-        // 延迟跳转，让用户看到成功提示
+        // 延迟跳转
         setTimeout(() => {
-          // 检查是否需要角色选择
-          if (!role || role === 'undefined') {
-            // 新用户需要选择角色
-            wx.redirectTo({
-              url: '/pages/role-selection/index',
-            });
-            return;
-          }
+          const role = response.user?.role;
 
           // 根据用户角色跳转到相应页面
           if (role === 'teacher') {
@@ -161,10 +209,7 @@ Page({
           }
         }, 1500);
       } else {
-        // 登录失败
-        const errorMessage = result.error?.message || '登录失败，请重试';
-        this.showError(errorMessage);
-        console.error('登录失败:', result.error);
+        this.showError('登录失败，请检查用户名和密码');
       }
     } catch (error) {
       console.error('登录过程异常:', error);
@@ -172,12 +217,14 @@ Page({
       let errorMessage = '登录失败，请重试';
 
       if (error.message) {
-        if (error.message.includes('用户取消授权')) {
-          errorMessage = '需要获取您的微信信息才能继续使用';
+        if (error.message.includes('401') || error.message.includes('认证失败')) {
+          errorMessage = '用户名或密码错误';
         } else if (error.message.includes('网络')) {
           errorMessage = '网络连接异常，请检查网络后重试';
         } else if (error.message.includes('timeout')) {
           errorMessage = '请求超时，请稍后重试';
+        } else {
+          errorMessage = error.message;
         }
       }
 
@@ -192,26 +239,10 @@ Page({
    */
   showError(message) {
     this.setData({ loginError: message });
-    errorToast.show(message, {
+    wx.showToast({
+      title: message,
+      icon: 'none',
       duration: 3000,
-    });
-  },
-
-  /**
-   * 重试登录
-   */
-  onRetryLogin() {
-    this.setData({ loginError: null });
-    this.onWechatLogin();
-  },
-
-  /**
-   * 查看网络设置
-   */
-  onCheckNetwork() {
-    errorToast.confirm('网络设置', '请检查您的网络连接是否正常，或者尝试切换网络环境', {
-      confirmText: '我知道了',
-      showCancel: false,
     });
   },
 });

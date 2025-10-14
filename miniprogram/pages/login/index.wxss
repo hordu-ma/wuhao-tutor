@@ -130,7 +130,6 @@
 .error-message {
   display: flex;
   align-items: center;
-  margin-bottom: 16rpx;
 }
 
 .error-text {
@@ -140,14 +139,15 @@
   line-height: 1.4;
 }
 
-.error-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 16rpx;
+/* 表单区域 */
+.form-section {
+  width: 100%;
+  margin-bottom: 32rpx;
+  background-color: rgba(255, 255, 255, 0.95);
+  border-radius: 16rpx;
+  padding: 8rpx 0;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.1);
 }
-
-.retry-btn,
-.network-btn {
   background-color: #ff4d4f;
   color: #ffffff;
   border: none;
