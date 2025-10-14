@@ -45,8 +45,11 @@ export function getMistakeDetail(id: string): Promise<MistakeDetail> {
 /**
  * 完成复习
  */
-export const completeReview = (data: ReviewCompleteRequest): Promise<ReviewCompleteResponse> => {
-  return http.post<ReviewCompleteResponse>(`/mistakes/${data.mistake_id}/review`, data)
+export const completeReview = (
+  id: string,
+  data: ReviewCompleteRequest
+): Promise<ReviewCompleteResponse> => {
+  return http.post<ReviewCompleteResponse>(`/mistakes/${id}/review`, data)
 }
 
 /**
