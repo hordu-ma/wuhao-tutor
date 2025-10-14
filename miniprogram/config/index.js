@@ -3,14 +3,18 @@
 
 const config = {
   // 环境配置
-  environment: 'development', // development | staging | production
-  debug: true,
+  // 可选值: 'development' | 'staging' | 'production'
+  // 修改为 'production' 以连接生产环境
+  environment: 'production', // 默认使用生产环境进行测试
+  debug: false, // 生产环境关闭调试
   version: '1.0.0',
 
   // API 配置
   api: {
     // 后端 API 基础地址
-    baseUrl: 'http://localhost:8000', // 开发环境使用http协议
+    // 开发环境: 'http://localhost:8000'
+    // 生产环境: 'https://api.wuhao-tutor.com'
+    baseUrl: 'https://wuhao.maliguo.xyz', // 生产环境API地址
     // API 版本
     version: 'v1',
     // 请求超时时间 (毫秒)
@@ -306,12 +310,19 @@ if (config.environment === 'production') {
   config.log.console = false;
   config.log.remote = true;
   config.error.showDetails = false;
-  config.performance.sampleRate = 1.0;
+  config.performance.sampleRate = 0.1; // 生产环境降低采样率
+
+  console.log('🚀 运行于生产环境模式:', config.api.baseUrl);
 } else if (config.environment === 'staging') {
   // 预发布环境配置
   config.debug = false;
   config.log.level = 'info';
   config.performance.sampleRate = 0.5;
+
+  console.log('🧪 运行于预发布环境模式:', config.api.baseUrl);
+} else {
+  // 开发环境配置
+  console.log('🛠️ 运行于开发环境模式:', config.api.baseUrl);
 }
 
 module.exports = config;

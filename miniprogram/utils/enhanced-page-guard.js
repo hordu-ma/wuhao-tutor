@@ -15,19 +15,19 @@ const PAGE_PERMISSION_CONFIG = {
     permissions: ['profile.view_self'],
     roles: ['student', 'parent', 'teacher'],
     requireLogin: true,
-    description: '个人信息展示页面'
+    description: '个人信息展示页面',
   },
   'pages/profile/edit/index': {
     permissions: ['profile.edit_self'],
     roles: ['student', 'parent', 'teacher'],
     requireLogin: true,
-    description: '个人信息编辑页面'
+    description: '个人信息编辑页面',
   },
   'pages/profile/settings/index': {
     permissions: ['settings.view'],
     roles: ['student', 'parent', 'teacher'],
     requireLogin: true,
-    description: '设置页面'
+    description: '设置页面',
   },
 
   // 作业模块页面
@@ -35,19 +35,19 @@ const PAGE_PERMISSION_CONFIG = {
     permissions: ['homework.view'],
     roles: ['student', 'parent', 'teacher'],
     requireLogin: true,
-    description: '作业列表页面'
+    description: '作业列表页面',
   },
   'pages/homework/detail/index': {
     permissions: ['homework.view'],
     roles: ['student', 'parent', 'teacher'],
     requireLogin: true,
-    description: '作业详情页面'
+    description: '作业详情页面',
   },
   'pages/homework/submit/index': {
     permissions: ['homework.submit'],
     roles: ['student'],
     requireLogin: true,
-    description: '作业提交页面'
+    description: '作业提交页面',
   },
 
   // 问答模块页面
@@ -55,13 +55,13 @@ const PAGE_PERMISSION_CONFIG = {
     permissions: ['chat.ask'],
     roles: ['student', 'parent', 'teacher'],
     requireLogin: true,
-    description: '问答页面'
+    description: '问答页面',
   },
   'pages/chat/detail/index': {
     permissions: ['chat.view'],
     roles: ['student', 'parent', 'teacher'],
     requireLogin: true,
-    description: '问答详情页面'
+    description: '问答详情页面',
   },
 
   // 分析模块页面
@@ -69,13 +69,13 @@ const PAGE_PERMISSION_CONFIG = {
     permissions: ['analysis.view_self'],
     roles: ['student', 'parent', 'teacher'],
     requireLogin: true,
-    description: '学习报告页面'
+    description: '学习报告页面',
   },
   'pages/analysis/progress/index': {
     permissions: ['analysis.view_self'],
     roles: ['student', 'parent', 'teacher'],
     requireLogin: true,
-    description: '学习进度页面'
+    description: '学习进度页面',
   },
 
   // 管理页面（仅教师可访问）
@@ -83,13 +83,13 @@ const PAGE_PERMISSION_CONFIG = {
     permissions: ['homework.manage'],
     roles: ['teacher'],
     requireLogin: true,
-    description: '作业管理页面'
+    description: '作业管理页面',
   },
   'pages/students/list/index': {
     permissions: ['user.view_students'],
     roles: ['teacher'],
     requireLogin: true,
-    description: '学生列表页面'
+    description: '学生列表页面',
   },
 
   // 公共页面（无需权限）
@@ -97,20 +97,20 @@ const PAGE_PERMISSION_CONFIG = {
     permissions: [],
     roles: [],
     requireLogin: false,
-    description: '首页'
+    description: '首页',
   },
   'pages/login/index': {
     permissions: [],
     roles: [],
     requireLogin: false,
-    description: '登录页面'
+    description: '登录页面',
   },
   'pages/role-selection/index': {
     permissions: [],
     roles: [],
     requireLogin: true,
-    description: '角色选择页面'
-  }
+    description: '角色选择页面',
+  },
 };
 
 /**
@@ -128,7 +128,7 @@ class EnhancedPageGuard {
    */
   createGuardedPage(pageObject, pagePath) {
     const config = PAGE_PERMISSION_CONFIG[pagePath];
-    
+
     if (!config) {
       console.warn(`页面 ${pagePath} 没有权限配置，使用默认保护`);
       return this.createDefaultGuardedPage(pageObject);
@@ -143,13 +143,14 @@ class EnhancedPageGuard {
   createConfiguredGuardedPage(pageObject, config, pagePath) {
     const originalOnLoad = pageObject.onLoad;
     const originalOnShow = pageObject.onShow;
+    const guard = this; // 保存当前实例的引用
 
     return {
       ...pageObject,
 
       async onLoad(options) {
-        const guardResult = await this.executePageGuard(config, pagePath, options);
-        
+        const guardResult = await guard.executePageGuard(config, pagePath, options);
+
         if (!guardResult.success) {
           return; // 守卫失败，停止页面加载
         }
@@ -159,7 +160,7 @@ class EnhancedPageGuard {
           this.setData({
             userPermissions: guardResult.permissions,
             userRole: guardResult.role,
-            canPerformActions: guardResult.actions
+            canPerformActions: guardResult.actions,
           });
         }
 
@@ -171,8 +172,8 @@ class EnhancedPageGuard {
 
       async onShow() {
         // 每次显示时重新验证权限（处理角色切换情况）
-        const quickCheck = await this.quickPermissionCheck(config, pagePath);
-        
+        const quickCheck = await guard.quickPermissionCheck(config, pagePath);
+
         if (!quickCheck.success) {
           return; // 快速检查失败，可能权限已变更
         }
@@ -189,8 +190,8 @@ class EnhancedPageGuard {
       },
 
       async checkFeatureAccess(feature) {
-        return await this.checkFeaturePermission(feature);
-      }
+        return await guard.checkFeaturePermission(feature);
+      },
     };
   }
 
@@ -206,11 +207,11 @@ class EnhancedPageGuard {
       async onLoad(options) {
         // 默认只检查登录状态
         const isLoggedIn = await authManager.isLoggedIn();
-        
+
         if (!isLoggedIn) {
           console.log('页面需要登录，跳转到登录页');
           wx.redirectTo({
-            url: '/pages/login/index'
+            url: '/pages/login/index',
           });
           return;
         }
@@ -218,7 +219,7 @@ class EnhancedPageGuard {
         if (originalOnLoad) {
           return originalOnLoad.call(this, options);
         }
-      }
+      },
     };
   }
 
@@ -254,27 +255,32 @@ class EnhancedPageGuard {
         const userRole = await authManager.getUserRole();
         if (!config.roles.includes(userRole)) {
           this.handleRolePermissionDenied(userRole, config.roles, pagePath);
-          return { success: false, reason: 'role_not_allowed', userRole, requiredRoles: config.roles };
+          return {
+            success: false,
+            reason: 'role_not_allowed',
+            userRole,
+            requiredRoles: config.roles,
+          };
         }
       }
 
       // 3. 具体权限检查
       if (config.permissions && config.permissions.length > 0) {
         const permissionResults = await Promise.all(
-          config.permissions.map(async (permission) => ({
+          config.permissions.map(async permission => ({
             permission,
-            hasPermission: await permissionManager.hasPermission(permission)
-          }))
+            hasPermission: await permissionManager.hasPermission(permission),
+          })),
         );
 
         const failedPermissions = permissionResults.filter(result => !result.hasPermission);
-        
+
         if (failedPermissions.length > 0) {
           this.handlePermissionDenied(failedPermissions, pagePath);
-          return { 
-            success: false, 
-            reason: 'permission_denied', 
-            failedPermissions: failedPermissions.map(fp => fp.permission)
+          return {
+            success: false,
+            reason: 'permission_denied',
+            failedPermissions: failedPermissions.map(fp => fp.permission),
           };
         }
       }
@@ -297,7 +303,7 @@ class EnhancedPageGuard {
         permissions: userPermissions,
         role: userRole,
         actions: availableActions,
-        executionTime: Date.now() - startTime
+        executionTime: Date.now() - startTime,
       };
 
       // 调试模式下记录结果
@@ -307,7 +313,6 @@ class EnhancedPageGuard {
       }
 
       return guardResult;
-
     } catch (error) {
       console.error('页面守卫执行失败:', error);
       this.handleGuardError(error, pagePath);
@@ -359,26 +364,21 @@ class EnhancedPageGuard {
    */
   async collectUserPermissions() {
     const userRole = await authManager.getUserRole();
-    const commonPermissions = [
-      'profile.view_self', 'settings.view', 'settings.role_switch'
-    ];
+    const commonPermissions = ['profile.view_self', 'settings.view', 'settings.role_switch'];
 
     const roleBasedPermissions = {
-      'student': ['homework.view', 'homework.submit', 'chat.ask', 'analysis.view_self'],
-      'parent': ['homework.view_child', 'chat.view_child', 'analysis.view_child'],
-      'teacher': ['homework.view_all', 'homework.correct', 'homework.manage', 'user.view_students']
+      student: ['homework.view', 'homework.submit', 'chat.ask', 'analysis.view_self'],
+      parent: ['homework.view_child', 'chat.view_child', 'analysis.view_child'],
+      teacher: ['homework.view_all', 'homework.correct', 'homework.manage', 'user.view_students'],
     };
 
-    const allPermissions = [
-      ...commonPermissions,
-      ...(roleBasedPermissions[userRole] || [])
-    ];
+    const allPermissions = [...commonPermissions, ...(roleBasedPermissions[userRole] || [])];
 
     const permissionResults = await Promise.all(
-      allPermissions.map(async (permission) => ({
+      allPermissions.map(async permission => ({
         permission,
-        hasPermission: await permissionManager.hasPermission(permission)
-      }))
+        hasPermission: await permissionManager.hasPermission(permission),
+      })),
     );
 
     return permissionResults
@@ -424,14 +424,14 @@ class EnhancedPageGuard {
    */
   handleLoginRequired(pagePath) {
     console.log(`页面 ${pagePath} 需要登录，跳转到登录页`);
-    
+
     friendlyPermissionDialog.showPermissionError('not_logged_in', {
       pagePath,
       retryCallback: () => {
         wx.redirectTo({
-          url: `/pages/login/index?redirect=${encodeURIComponent(pagePath)}`
+          url: `/pages/login/index?redirect=${encodeURIComponent(pagePath)}`,
         });
-      }
+      },
     });
   }
 
@@ -440,11 +440,11 @@ class EnhancedPageGuard {
    */
   handleRolePermissionDenied(userRole, requiredRoles, pagePath) {
     console.log(`角色 ${userRole} 无权访问页面 ${pagePath}，需要角色: ${requiredRoles.join(', ')}`);
-    
+
     friendlyPermissionDialog.showPermissionError('role_not_allowed', {
       userRole,
       requiredRoles,
-      pagePath
+      pagePath,
     });
   }
 
@@ -453,11 +453,11 @@ class EnhancedPageGuard {
    */
   handlePermissionDenied(failedPermissions, pagePath) {
     console.log(`页面 ${pagePath} 权限检查失败:`, failedPermissions);
-    
+
     friendlyPermissionDialog.showPermissionError('permission_denied', {
       failedPermissions,
       pagePath,
-      feature: pagePath
+      feature: pagePath,
     });
   }
 
@@ -466,7 +466,7 @@ class EnhancedPageGuard {
    */
   handleGuardError(error, pagePath) {
     console.error(`页面 ${pagePath} 权限守卫执行出错:`, error);
-    
+
     friendlyPermissionDialog.showPermissionError('server_error', {
       pagePath,
       error: error.message,
@@ -474,11 +474,11 @@ class EnhancedPageGuard {
         wx.navigateBack({
           fail: () => {
             wx.switchTab({
-              url: '/pages/index/index'
+              url: '/pages/index/index',
             });
-          }
+          },
         });
-      }
+      },
     });
   }
 
@@ -487,13 +487,13 @@ class EnhancedPageGuard {
    */
   async checkFeaturePermission(feature) {
     const featurePermissionMap = {
-      'submit_homework': 'homework.submit',
-      'correct_homework': 'homework.correct',
-      'manage_homework': 'homework.manage',
-      'ask_question': 'chat.ask',
-      'view_analysis': 'analysis.view_self',
-      'edit_profile': 'profile.edit_self',
-      'view_students': 'user.view_students'
+      submit_homework: 'homework.submit',
+      correct_homework: 'homework.correct',
+      manage_homework: 'homework.manage',
+      ask_question: 'chat.ask',
+      view_analysis: 'analysis.view_self',
+      edit_profile: 'profile.edit_self',
+      view_students: 'user.view_students',
     };
 
     const permission = featurePermissionMap[feature];
@@ -521,7 +521,7 @@ class EnhancedPageGuard {
       guardEnabled: this.guardEnabled,
       debugMode: this.debugMode,
       guardResults: Object.fromEntries(this.guardResults),
-      pageConfigs: PAGE_PERMISSION_CONFIG
+      pageConfigs: PAGE_PERMISSION_CONFIG,
     };
   }
 
@@ -531,7 +531,7 @@ class EnhancedPageGuard {
   updatePageConfig(pagePath, config) {
     PAGE_PERMISSION_CONFIG[pagePath] = {
       ...PAGE_PERMISSION_CONFIG[pagePath],
-      ...config
+      ...config,
     };
   }
 
@@ -552,12 +552,12 @@ const createGuardedPage = (pageObject, pagePath) => {
 };
 
 const requirePermissions = (permissions, roles = []) => {
-  return (pageObject) => {
+  return pageObject => {
     const config = {
       permissions: Array.isArray(permissions) ? permissions : [permissions],
       roles: Array.isArray(roles) ? roles : [roles],
       requireLogin: true,
-      description: '需要特定权限的页面'
+      description: '需要特定权限的页面',
     };
 
     return enhancedPageGuard.createConfiguredGuardedPage(pageObject, config, 'dynamic_page');
@@ -568,5 +568,5 @@ module.exports = {
   enhancedPageGuard,
   createGuardedPage,
   requirePermissions,
-  PAGE_PERMISSION_CONFIG
+  PAGE_PERMISSION_CONFIG,
 };

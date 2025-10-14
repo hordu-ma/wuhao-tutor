@@ -57,7 +57,7 @@
             </view>
             <van-progress percentage="{{point.score}}" stroke-width="6" color="{{getMasteryColor(point.level)}}" />
           </view>
-        </div>
+        </view>
       </view>
     </view>
   </view>
