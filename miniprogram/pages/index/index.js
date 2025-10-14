@@ -1394,4 +1394,14 @@ Page({
       url: '/pages/homework/list/index',
     });
   },
+
+  /**
+   * 点击登录按钮
+   */
+  onLoginTap() {
+    console.log('点击登录按钮');
+    wx.navigateTo({
+      url: '/pages/login/index',
+    });
+  },
 });
