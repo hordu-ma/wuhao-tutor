@@ -154,55 +154,61 @@
 
   <!-- 输入区域 -->
   <view class="chat-input-container">
-    <!-- 功能按钮区域 -->
-    <view class="input-tools" wx:if="{{showTools}}">
-      <view class="tool-item" bindtap="onSelectSubject">
-        <van-icon name="bookmark-o" size="20" />
-        <text>选择科目</text>
-      </view>
-      <view class="tool-item" bindtap="onUploadImage">
-        <van-icon name="photograph" size="20" />
-        <text>拍照提问</text>
-      </view>
-      <view class="tool-item" bindtap="onVoiceInput">
-        <van-icon name="volume-o" size="20" />
-        <text>语音输入</text>
-      </view>
-    </view>
-
     <!-- 输入框区域 -->
     <view class="input-area">
       <view class="input-wrapper">
+        <!-- 添加按钮（图片上传/拍照） -->
         <view class="input-left">
-          <van-icon name="{{showTools ? 'close' : 'plus'}}" size="20"
-                    bindtap="onToggleTools"
-                    class="tools-toggle {{showTools ? 'active' : ''}}" />
+          <van-icon name="plus" size="22" 
+                    bindtap="onShowImageActions"
+                    class="add-btn" />
         </view>
 
+        <!-- 主输入区域 -->
         <view class="input-main">
-          <textarea class="input-text"
-                    placeholder="{{inputPlaceholder || '有什么问题想问我吗？'}}"
-                    value="{{inputText}}"
-                    bindinput="onInputChange"
-                    bindfocus="onInputFocus"
-                    bindblur="onInputBlur"
-                    auto-height="{{true}}"
-                    show-confirm-bar="{{false}}"
-                    cursor-spacing="10"
-                    maxlength="{{maxInputLength || 500}}"
-                    fixed="{{true}}" />
+          <!-- 文本输入框 -->
+          <view class="text-input-wrapper" wx:if="{{inputMode === 'text'}}">
+            <textarea class="input-text"
+                      placeholder="{{inputPlaceholder || '有什么问题想问我吗？'}}"
+                      value="{{inputText}}"
+                      bindinput="onInputChange"
+                      bindfocus="onInputFocus"
+                      bindblur="onInputBlur"
+                      auto-height="{{true}}"
+                      show-confirm-bar="{{false}}"
+                      cursor-spacing="10"
+                      maxlength="{{maxInputLength || 500}}"
+                      fixed="{{true}}" />
+          </view>
+
+          <!-- 语音输入按钮 -->
+          <view class="voice-input-wrapper" wx:else>
+            <view class="voice-btn {{recordStatus === 'recording' ? 'recording' : ''}}"
+                  bindtouchstart="onVoiceStart"
+                  bindtouchend="onVoiceEnd"
+                  bindtouchmove="onVoiceMove">
+              <van-icon name="volume-o" size="20" />
+              <text>{{recordStatus === 'recording' ? '松开结束' : '按住说话'}}</text>
+            </view>
+          </view>
 
           <!-- 字符计数 -->
-          <view class="char-count" wx:if="{{inputText.length > 0}}">
+          <view class="char-count" wx:if="{{inputMode === 'text' && inputText.length > 0}}">
             {{inputText.length}}/{{maxInputLength || 500}}
           </view>
         </view>
 
+        <!-- 右侧功能区 -->
         <view class="input-right">
+          <!-- 语音/文字切换按钮 -->
+          <view class="mode-switch" bindtap="onSwitchInputMode">
+            <van-icon name="{{inputMode === 'text' ? 'volume-o' : 'edit'}}" size="20" />
+          </view>
+
           <!-- 发送按钮 -->
-          <view class="send-btn {{inputText.trim() ? 'active' : ''}}"
+          <view class="send-btn {{inputText.trim() || recordStatus === 'recorded' ? 'active' : ''}}"
                 bindtap="sendMessage">
-            <van-icon name="send" size="20" color="{{inputText.trim() ? '#fff' : '#999'}}" />
+            <van-icon name="send" size="20" color="{{inputText.trim() || recordStatus === 'recorded' ? '#fff' : '#999'}}" />
           </view>
         </view>
       </view>
@@ -218,22 +224,6 @@
                 bindtap="onQuickReply"
                 data-question="{{item}}">
             {{item}}
-          </view>
-        </view>
-      </scroll-view>
-    </view>
-
-    <!-- 学科标签 -->
-    <view class="subject-tabs" wx:if="{{showSubjectTabs && subjects.length > 0}}">
-      <scroll-view scroll-x="{{true}}" class="subject-scroll">
-        <view class="subject-items">
-          <view class="subject-item {{item.active ? 'active' : ''}}"
-                wx:for="{{subjects}}"
-                wx:key="id"
-                bindtap="onSwitchSubject"
-                data-subject="{{item.id}}">
-            <van-icon name="{{item.icon}}" size="16" />
-            <text>{{item.name}}</text>
           </view>
         </view>
       </scroll-view>
@@ -281,6 +271,23 @@
     <view class="action-item" bindtap="onSettings">
       <van-icon name="setting-o" size="24" />
       <text>设置</text>
+    </view>
+  </view>
+</van-action-sheet>
+
+<!-- 图片上传选择菜单 -->
+<van-action-sheet
+  show="{{showImageActions}}"
+  title="选择图片"
+  bind:close="onCloseImageActions">
+  <view class="action-items">
+    <view class="action-item" bindtap="onTakePhoto">
+      <van-icon name="photograph" size="24" />
+      <text>拍照</text>
+    </view>
+    <view class="action-item" bindtap="onChooseImage">
+      <van-icon name="photo-o" size="24" />
+      <text>从相册选择</text>
     </view>
   </view>
 </van-action-sheet>
