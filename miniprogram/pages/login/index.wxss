@@ -32,6 +32,25 @@
   box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.2);
 }
 
+.logo-placeholder {
+  width: 160rpx;
+  height: 160rpx;
+  margin: 0 auto 32rpx;
+  border-radius: 32rpx;
+  background: linear-gradient(135deg, #ffffff 0%, #f0f2f5 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.2);
+}
+
+.logo-text {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #1890ff;
+  text-align: center;
+}
+
 .app-name {
   display: block;
   font-size: 48rpx;
@@ -321,7 +340,8 @@
 }
 
 @keyframes logoFloat {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0rpx);
   }
   50% {
