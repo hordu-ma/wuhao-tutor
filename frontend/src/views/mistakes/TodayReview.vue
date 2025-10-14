@@ -69,13 +69,14 @@
       :close-on-click-modal="false"
     >
       <el-form :model="reviewForm" label-width="100px">
-        <el-form-item label="是否答对">
-          <el-radio-group v-model="reviewForm.is_correct">
-            <el-radio :label="true">答对了</el-radio>
-            <el-radio :label="false">答错了</el-radio>
+        <el-form-item label="复习结果">
+          <el-radio-group v-model="reviewForm.review_result">
+            <el-radio label="correct">答对了</el-radio>
+            <el-radio label="incorrect">答错了</el-radio>
+            <el-radio label="partial">部分正确</el-radio>
           </el-radio-group>
         </el-form-item>
-        <el-form-item label="复习笔记" v-if="reviewForm.is_correct === false">
+        <el-form-item label="复习笔记" v-if="reviewForm.review_result !== 'correct'">
           <el-input
             v-model="reviewForm.notes"
             type="textarea"
@@ -106,8 +107,8 @@ const completedTasks = ref<Set<string>>(new Set())
 const reviewDialogVisible = ref(false)
 const submitting = ref(false)
 
-const reviewForm = ref<Omit<ReviewCompleteRequest, 'mistake_id'>>({
-  is_correct: true,
+const reviewForm = ref<ReviewCompleteRequest>({
+  review_result: 'correct',
   notes: '',
 })
 
@@ -137,7 +138,7 @@ const loadTodayTasks = async () => {
 const showReviewDialog = (task: TodayReviewTask) => {
   currentTask.value = task
   reviewForm.value = {
-    is_correct: true,
+    review_result: 'correct',
     notes: '',
   }
   reviewDialogVisible.value = true
@@ -149,14 +150,15 @@ const submitReview = async () => {
 
   submitting.value = true
   try {
-    const request: ReviewCompleteRequest = {
-      mistake_id: currentTask.value.mistake_id,
-      ...reviewForm.value,
-    }
+    const request: ReviewCompleteRequest = { ...reviewForm.value }
 
-    await completeReview(request)
+    await completeReview(currentTask.value.mistake_id, request)
 
-    ElMessage.success(reviewForm.value.is_correct ? '复习完成！继续加油！' : '没关系,再接再厉！')
+    ElMessage.success(
+      reviewForm.value.review_result === 'correct'
+        ? '复习完成！继续加油！'
+        : '已记录本次结果，继续努力！'
+    )
 
     // 标记为已完成
     completedTasks.value.add(currentTask.value.mistake_id)
