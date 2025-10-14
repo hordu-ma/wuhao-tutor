@@ -77,6 +77,18 @@ class Settings(BaseSettings):
     ALICLOUD_ACCESS_KEY_SECRET: Optional[str] = None
     ALICLOUD_REGION: str = "cn-hangzhou"
 
+    # 语音识别服务配置
+    ASR_ENABLED: bool = True
+    ASR_APP_KEY: Optional[str] = None  # 语音识别应用Key
+    ASR_ACCESS_TOKEN: Optional[str] = None  # 实时语音识别访问令牌
+    ASR_ENDPOINT: str = "https://nls-gateway-cn-shanghai.aliyuncs.com/stream/v1/asr"
+    ASR_FORMAT: str = "mp3"  # 音频格式
+    ASR_SAMPLE_RATE: int = 16000  # 采样率
+    ASR_ENABLE_INTERMEDIATE_RESULT: bool = False  # 是否返回中间结果
+    ASR_ENABLE_PUNCTUATION_PREDICTION: bool = True  # 是否开启智能断句
+    ASR_ENABLE_INVERSE_TEXT_NORMALIZATION: bool = True  # 是否开启ITN
+    ASR_MAX_AUDIO_DURATION: int = 60  # 最大音频时长（秒）
+
     # 文件存储配置
     OSS_BUCKET_NAME: str = "wuhao-tutor-files"
     OSS_ENDPOINT: str = "oss-cn-hangzhou.aliyuncs.com"
