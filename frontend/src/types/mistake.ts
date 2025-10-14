@@ -82,20 +82,22 @@ export interface TodayReviewResponse {
   completed_count: number
 }
 
-// 复习完成请求
+// 复习完成请求（对齐后端契约）
 export interface ReviewCompleteRequest {
-  mistake_id: string
-  is_correct: boolean
+  // correct | incorrect | partial
+  review_result: 'correct' | 'incorrect' | 'partial'
   time_spent?: number
+  confidence_level?: number
+  user_answer?: string
   notes?: string
 }
 
-// 复习完成响应
+// 复习完成响应（对齐后端契约）
 export interface ReviewCompleteResponse {
-  success: boolean
-  message: string
-  mastery_status: MasteryStatus
-  next_review_date?: string
+  review_id: string
+  mastery_level: number
+  next_review_date: string
+  is_mastered: boolean
 }
 
 // 错题统计
