@@ -30,7 +30,7 @@
     "include": []
   },
   "setting": {
-    "urlCheck": false,
+    "urlCheck": true,
     "es6": true,
     "enhance": true,
     "postcss": true,
@@ -57,7 +57,7 @@
       "outputPath": ""
     },
     "enableEngineNative": false,
-    "useIsolateContext": false,
+    "useIsolateContext": true,
     "userConfirmedBundleSwitch": false,
     "packNpmManually": false,
     "packNpmRelationList": [],
@@ -66,23 +66,61 @@
     "minifyWXML": true,
     "showES6CompileOption": false,
     "useCompilerPlugins": false,
-    "ignoreUploadUnusedFiles": true,
-    "compileWorklet": false,
-    "localPlugins": false,
-    "condition": false,
-    "swc": false,
-    "disableSWC": true
+    "ignoreDevUnusedFiles": false,
+    "ignoreUploadUnusedFiles": false
   },
   "compileType": "miniprogram",
   "libVersion": "2.32.3",
   "appid": "wx2a8b340606664785",
   "projectname": "五好伴学小程序",
+  "debugOptions": {
+    "hidedInDevtools": []
+  },
+  "scripts": {
+    "beforeCompile": "",
+    "beforePreview": "",
+    "beforeUpload": ""
+  },
+  "editorSetting": {
+    "tabIndent": "auto",
+    "tabSize": 2
+  },
+  "staticServerOptions": {
+    "baseURL": "",
+    "serveOnStart": false
+  },
+  "srcMiniprogramRoot": "miniprogram/",
   "cloudfunctionRoot": "cloudfunctions/",
-  "cloudbaseRoot": "cloudbase/",
-  "isGameTourist": false,
-  "simulatorType": "wechat",
-  "simulatorPluginLibVersion": {},
+  "packNpmManually": true,
+  "packNpmRelationList": [
+    {
+      "packageJsonPath": "./package.json",
+      "miniprogramNpmDistDir": "./miniprogram/"
+    }
+  ],
   "cloudfunctionTemplateRoot": "cloudfunctionTemplate/",
+  "downloadDomain": [
+    "https://t.alicdn.com"
+  ],
+  "network": {
+    "request": {
+      "timeout": 10000
+    },
+    "uploadFile": {
+      "timeout": 60000
+    },
+    "downloadFile": {
+      "timeout": 60000
+    }
+  },
+  "security": {
+    "password": {
+      "minLength": 6,
+      "maxLength": 20,
+      "specialChar": true
+    }
+  },
+  "lazyCodeLoading": "requiredComponents",
   "condition": {
     "search": {
       "list": []
@@ -127,6 +165,5 @@
         }
       ]
     }
-  },
-  "editorSetting": {}
+  }
 }
