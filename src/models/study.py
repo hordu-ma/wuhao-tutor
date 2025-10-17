@@ -3,19 +3,19 @@
 包含错题记录、复习计划、知识点掌握度等
 """
 
-from typing import Optional
 import enum
+from typing import Optional
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     Column,
+    DateTime,
     ForeignKey,
     Integer,
     Numeric,
     String,
     Text,
-    DateTime,
-    JSON,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -65,14 +65,23 @@ class MistakeRecord(BaseModel):
 
     __tablename__ = "mistake_records"
 
-    # 用户关联
-    user_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id"),
-        nullable=False,
-        index=True,
-        comment="用户ID",
-    )
+    # 用户关联 - 兼容SQLite和PostgreSQL
+    if is_sqlite:
+        user_id = Column(
+            String(36),
+            ForeignKey("users.id"),
+            nullable=False,
+            index=True,
+            comment="用户ID",
+        )
+    else:
+        user_id = Column(
+            UUID(as_uuid=True),
+            ForeignKey("users.id"),
+            nullable=False,
+            index=True,
+            comment="用户ID",
+        )
 
     # 学科信息
     subject = Column(String(20), nullable=False, index=True, comment="学科")

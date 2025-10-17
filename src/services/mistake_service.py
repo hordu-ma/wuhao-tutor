@@ -7,7 +7,9 @@
 版本: v1.0
 """
 
+import json
 import logging
+import re
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 from uuid import UUID
@@ -15,6 +17,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exceptions import NotFoundError, ServiceError, ValidationError
+from src.models.base import is_sqlite
 from src.models.study import MistakeRecord, MistakeReview
 from src.repositories.mistake_repository import MistakeRepository
 from src.repositories.mistake_review_repository import MistakeReviewRepository
@@ -49,6 +52,17 @@ class MistakeService:
 
     def _to_list_item(self, mistake: MistakeRecord) -> MistakeListItem:
         """转换为列表项"""
+
+        # 在SQLite中，日期字段是字符串；在PostgreSQL中是datetime对象
+        # 需要处理两种情况
+        def to_iso_string(value):
+            """将日期字段转换为ISO格式字符串"""
+            if value is None:
+                return None
+            if isinstance(value, str):
+                return value  # SQLite中已经是字符串
+            return value.isoformat()  # PostgreSQL中是datetime对象
+
         return MistakeListItem(
             id=mistake.id,
             title=mistake.title or "未命名错题",
@@ -59,15 +73,24 @@ class MistakeService:
             mastery_status=mistake.mastery_status,
             correct_count=mistake.correct_count,
             total_reviews=mistake.review_count,
-            next_review_date=(
-                mistake.next_review_at.isoformat() if mistake.next_review_at else None
-            ),
-            created_at=mistake.created_at.isoformat(),
+            next_review_date=to_iso_string(mistake.next_review_at),
+            created_at=to_iso_string(mistake.created_at),
             knowledge_points=mistake.knowledge_points or [],
         )
 
     def _to_detail_response(self, mistake: MistakeRecord) -> MistakeDetailResponse:
         """转换为详情响应"""
+
+        # 在SQLite中，日期字段是字符串；在PostgreSQL中是datetime对象
+        # 需要处理两种情况
+        def to_iso_string(value):
+            """将日期字段转换为ISO格式字符串"""
+            if value is None:
+                return None
+            if isinstance(value, str):
+                return value  # SQLite中已经是字符串
+            return value.isoformat()  # PostgreSQL中是datetime对象
+
         return MistakeDetailResponse(
             id=mistake.id,
             title=mistake.title or "未命名错题",
@@ -84,11 +107,9 @@ class MistakeService:
             mastery_status=mistake.mastery_status,
             correct_count=mistake.correct_count,
             total_reviews=mistake.review_count,
-            next_review_date=(
-                mistake.next_review_at.isoformat() if mistake.next_review_at else None
-            ),
-            created_at=mistake.created_at.isoformat(),
-            updated_at=mistake.updated_at.isoformat(),
+            next_review_date=to_iso_string(mistake.next_review_at),
+            created_at=to_iso_string(mistake.created_at),
+            updated_at=to_iso_string(mistake.updated_at),
             image_urls=mistake.image_urls or [],
         )
 
@@ -164,7 +185,9 @@ class MistakeService:
         """
         # 构造数据
         data = {
-            "user_id": str(user_id),
+            "user_id": (
+                str(user_id) if is_sqlite else user_id
+            ),  # SQLite使用字符串，PostgreSQL使用UUID
             "subject": request.subject,
             "title": request.title,
             "ocr_text": request.question_content,
@@ -244,7 +267,9 @@ class MistakeService:
         Returns:
             今日复习任务响应
         """
-        mistakes = await self.mistake_repo.find_due_for_review(user_id=user_id, limit=50)
+        mistakes = await self.mistake_repo.find_due_for_review(
+            user_id=user_id, limit=50
+        )
 
         tasks = []
         total_minutes = 0
@@ -257,9 +282,11 @@ class MistakeService:
                     title=mistake.title or "未命名错题",
                     subject=mistake.subject,
                     review_round=mistake.review_count + 1,
-                    due_date=mistake.next_review_at.isoformat()
-                    if mistake.next_review_at
-                    else datetime.now().isoformat(),
+                    due_date=(
+                        mistake.next_review_at.isoformat()
+                        if mistake.next_review_at
+                        else datetime.now().isoformat()
+                    ),
                     question_content=mistake.ocr_text or "",
                     image_urls=mistake.image_urls or [],
                 )
@@ -340,9 +367,7 @@ class MistakeService:
             update_data["correct_count"] = mistake.correct_count + 1
 
         # 8. 判断是否已掌握
-        consecutive_correct = (
-            update_data.get("correct_count", mistake.correct_count)
-        )
+        consecutive_correct = update_data.get("correct_count", mistake.correct_count)
         is_mastered = self.algorithm.is_mastered(
             mastery_level=current_mastery,
             consecutive_correct=consecutive_correct,
@@ -506,9 +531,7 @@ class MistakeService:
             items=items, trend=trend, improvement=round(improvement, 2)
         )
 
-    async def analyze_mistake_with_ai(
-        self, mistake_id: UUID, user_id: UUID
-    ) -> Dict:
+    async def analyze_mistake_with_ai(self, mistake_id: UUID, user_id: UUID) -> Dict:
         """
         使用AI分析错题
 
@@ -517,7 +540,10 @@ class MistakeService:
             user_id: 用户ID
 
         Returns:
-            AI分析结果
+            AI分析结果，包含：
+            - knowledge_points: 知识点列表
+            - error_reasons: 错误原因分析
+            - suggestions: 学习建议
         """
         mistake = await self.mistake_repo.get_by_id(str(mistake_id))
         if not mistake or str(mistake.user_id) != str(user_id):
@@ -526,11 +552,132 @@ class MistakeService:
         if not self.bailian_service:
             raise ServiceError("AI服务未配置")
 
-        # TODO: 集成百炼AI服务分析知识点和错误原因
-        logger.warning("AI analysis not fully implemented")
+        try:
+            # 构造分析提示词
+            analysis_prompt = f"""请分析以下错题，提取关键信息并给出学习建议。
+
+【题目信息】
+学科：{mistake.subject}
+难度：{mistake.difficulty_level if mistake.difficulty_level else '未知'}
+题目内容：
+{mistake.ocr_text if mistake.ocr_text else '无题目内容'}
+
+【任务要求】
+请以JSON格式返回分析结果，包含以下字段：
+1. knowledge_points: 知识点列表（数组，3-5个核心知识点）
+2. error_reason: 错误原因分析（字符串，100字以内）
+3. suggestions: 学习建议（字符串，150字以内，给出具体可行的学习建议）
+
+示例格式：
+{{
+    "knowledge_points": ["一元二次方程", "配方法", "判别式"],
+    "error_reason": "对判别式的计算理解有误，导致解题思路错误。",
+    "suggestions": "建议复习判别式的定义和应用，多做相关练习题，重点掌握b²-4ac的计算方法。可以从简单题目入手，逐步提升难度。"
+}}
+
+请严格按照JSON格式返回，不要包含其他内容。"""
+
+            # 调用百炼AI服务
+            logger.info(f"开始AI分析错题: {mistake_id}")
+
+            messages = [
+                {
+                    "role": "system",
+                    "content": "你是一位经验丰富的学科教师，擅长分析学生的错题，找出知识盲点并给出针对性建议。",
+                },
+                {"role": "user", "content": analysis_prompt},
+            ]
+
+            response = await self.bailian_service.chat_completion(
+                messages=messages,
+                stream=False,
+                temperature=0.7,  # 适中的创造性
+                max_tokens=1000,  # 足够的token用于详细分析
+            )
+
+            if not response.success:
+                logger.error(f"AI分析失败: {response.error_message}")
+                # 降级方案：返回基础信息
+                return self._fallback_analysis(mistake)
+
+            # 解析AI返回的JSON
+            ai_content = response.content.strip()
+
+            # 尝试提取JSON（处理AI可能返回的额外文本）
+            import re
+
+            json_match = re.search(r"\{.*\}", ai_content, re.DOTALL)
+            if json_match:
+                json_str = json_match.group()
+                analysis_result = json.loads(json_str)
+            else:
+                # 如果无法提取JSON，尝试直接解析
+                analysis_result = json.loads(ai_content)
+
+            # 验证和标准化返回结果
+            result = {
+                "knowledge_points": analysis_result.get("knowledge_points", []),
+                "error_reason": analysis_result.get("error_reason", ""),
+                "suggestions": analysis_result.get("suggestions", ""),
+                "ai_tokens_used": response.tokens_used,
+                "analysis_time": response.processing_time,
+            }
+
+            # 更新错题记录中的AI分析结果（可选）
+            if result["knowledge_points"]:
+                mistake.knowledge_points = result["knowledge_points"]
+            if result["error_reason"]:
+                mistake.error_reasons = [result["error_reason"]]
+
+            await self.db.commit()
+
+            logger.info(
+                f"AI分析完成: {mistake_id}, "
+                f"知识点数量: {len(result['knowledge_points'])}, "
+                f"Token使用: {response.tokens_used}"
+            )
+
+            return result
+
+        except json.JSONDecodeError as e:
+            logger.error(f"AI返回的JSON解析失败: {e}, 原始内容: {ai_content[:200]}")
+            # 降级方案
+            return self._fallback_analysis(mistake)
+
+        except Exception as e:
+            logger.error(f"AI分析错题失败: {e}", exc_info=True)
+            # 降级方案：返回基础信息
+            return self._fallback_analysis(mistake)
+
+    def _fallback_analysis(self, mistake) -> Dict:
+        """
+        AI分析失败时的降级方案
+
+        Args:
+            mistake: 错题记录
+
+        Returns:
+            基础分析结果
+        """
+        logger.warning(f"使用降级分析方案: {mistake.id}")
+
+        # 根据学科提供默认的学习建议
+        subject_suggestions = {
+            "math": "建议回顾相关章节的基础概念，多做类似题目练习，注意解题步骤的规范性。",
+            "chinese": "建议加强基础知识的积累，多阅读优秀范文，注意答题技巧和表达规范。",
+            "english": "建议复习相关语法点，积累词汇，多做阅读和写作练习。",
+            "physics": "建议理解物理概念的本质，掌握公式的推导过程，多做实验分析题。",
+            "chemistry": "建议熟记化学方程式，理解反应原理，注意实验操作的细节。",
+            "biology": "建议系统复习相关知识点，理解生物过程，注意图表分析能力的培养。",
+        }
 
         return {
             "knowledge_points": mistake.knowledge_points or [],
-            "error_reasons": mistake.error_reasons or [],
-            "suggestions": [],
+            "error_reason": "建议仔细分析题目要求，对比正确答案找出差异。",
+            "suggestions": subject_suggestions.get(
+                mistake.subject, "建议回顾课本知识，多做练习，及时请教老师或同学。"
+            ),
+            "ai_tokens_used": 0,
+            "analysis_time": 0.0,
+            "is_fallback": True,
         }
