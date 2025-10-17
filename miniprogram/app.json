@@ -1,5 +1,6 @@
 {
   "pages": [
+    "pages/test-async/index",
     "pages/index/index",
     "pages/login/index",
     "pages/role-selection/index",

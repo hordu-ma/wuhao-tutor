@@ -21,6 +21,9 @@ const api = {
   // 学习问答模块（重新定位为作业问答）
   learning: learningAPI,
 
+  // chat 别名，兼容旧代码
+  chat: learningAPI,
+
   // 学情分析模块
   analysis: analysisAPI,
 
