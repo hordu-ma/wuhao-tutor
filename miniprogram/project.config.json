@@ -99,7 +99,7 @@
     }
   ],
   "cloudfunctionTemplateRoot": "cloudfunctionTemplate/",
-  "downloadDomain": ["https://t.alicdn.com"],
+  "downloadDomain": ["https://t.alicdn.com", "https://at.alicdn.com"],
   "requestDomain": ["https://121.199.173.244"],
   "network": {
     "request": {
