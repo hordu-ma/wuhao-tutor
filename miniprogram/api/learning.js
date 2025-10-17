@@ -425,6 +425,124 @@ const learningAPI = {
       },
     );
   },
+
+  // ========== 聊天会话相关方法 (向后兼容) ==========
+
+  /**
+   * 获取 AI 服务状态
+   * @param {Object} [config] - 请求配置
+   * @returns {Promise<Object>} AI 服务状态
+   */
+  async getAIStatus(config = {}) {
+    try {
+      const response = await request.get(
+        'api/v1/learning/health',
+        {},
+        {
+          showLoading: false,
+          ...config,
+        },
+      );
+
+      // 适配后端返回格式 -> 前端期望格式
+      // 后端返回: { status: "ok", module: "learning", ... }
+      // 前端期望: { success: true, data: { online: true, capabilities: [...] } }
+      return {
+        success: response.status === 'ok',
+        data: {
+          online: response.status === 'ok',
+          capabilities: [
+            'text_qa', // 文本问答
+            'image_upload', // 图片上传
+            'context_aware', // 上下文感知
+            'multi_subject', // 多学科支持
+          ],
+          module: response.module,
+          timestamp: response.timestamp,
+        },
+      };
+    } catch (error) {
+      console.error('[getAIStatus] 获取AI状态失败:', error);
+      // 返回离线状态
+      return {
+        success: false,
+        data: {
+          online: false,
+          capabilities: [],
+        },
+      };
+    }
+  },
+
+  /**
+   * 获取会话消息列表
+   * @param {Object} params - 查询参数
+   * @param {string} params.sessionId - 会话 ID (也支持 session_id)
+   * @param {number} [params.page=1] - 页码
+   * @param {number} [params.size=20] - 每页大小
+   * @param {Object} [config] - 请求配置
+   * @returns {Promise<Object>} 消息列表
+   */
+  getMessages(params = {}, config = {}) {
+    // 兼容两种参数命名：sessionId (驼峰) 和 session_id (下划线)
+    const sessionId = params.sessionId || params.session_id;
+    const { page = 1, size = 20 } = params;
+
+    if (!sessionId) {
+      console.error('[API错误] getMessages 缺少必需参数 sessionId');
+      return Promise.reject(new Error('缺少会话ID'));
+    }
+
+    return request.get(
+      `api/v1/learning/sessions/${sessionId}/history`,
+      { page, size },
+      {
+        showLoading: false,
+        ...config,
+      },
+    );
+  },
+
+  /**
+   * 获取用户统计信息
+   * @param {Object} params - 查询参数
+   * @param {string} [params.date] - 日期 (YYYY-MM-DD)
+   * @param {Object} [config] - 请求配置
+   * @returns {Promise<Object>} 用户统计
+   */
+  getUserStats(params = {}, config = {}) {
+    const { date } = params;
+
+    return request.get('api/v1/learning/stats/daily', date ? { date } : {}, {
+      showLoading: false,
+      ...config,
+    });
+  },
+
+  /**
+   * 清除会话消息
+   * @param {Object} params - 参数
+   * @param {string} params.sessionId - 会话 ID (也支持 session_id)
+   * @param {Object} [config] - 请求配置
+   * @returns {Promise<Object>} 操作结果
+   * @deprecated 后端未实现删除会话功能，返回模拟成功
+   */
+  clearMessages(params = {}, config = {}) {
+    // 兼容两种参数命名：sessionId (驼峰) 和 session_id (下划线)
+    const sessionId = params.sessionId || params.session_id;
+
+    if (!sessionId) {
+      console.error('[API错误] clearMessages 缺少必需参数 sessionId');
+      return Promise.reject(new Error('缺少会话ID'));
+    }
+
+    // 注意：后端暂无删除会话接口，这里返回模拟成功
+    console.warn('[API未实现] 清除消息功能待后端实现');
+    return Promise.resolve({
+      success: true,
+      message: '功能开发中，敬请期待',
+    });
+  },
 };
 
 module.exports = learningAPI;

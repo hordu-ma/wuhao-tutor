@@ -67,7 +67,8 @@
     "showES6CompileOption": false,
     "useCompilerPlugins": false,
     "ignoreDevUnusedFiles": false,
-    "ignoreUploadUnusedFiles": false
+    "ignoreUploadUnusedFiles": false,
+    "condition": true
   },
   "compileType": "miniprogram",
   "libVersion": "2.32.3",
@@ -99,8 +100,13 @@
     }
   ],
   "cloudfunctionTemplateRoot": "cloudfunctionTemplate/",
-  "downloadDomain": ["https://t.alicdn.com", "https://at.alicdn.com"],
-  "requestDomain": ["https://121.199.173.244"],
+  "downloadDomain": [
+    "https://t.alicdn.com",
+    "https://at.alicdn.com"
+  ],
+  "requestDomain": [
+    "https://121.199.173.244"
+  ],
   "network": {
     "request": {
       "timeout": 10000
