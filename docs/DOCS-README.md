@@ -1,468 +1,444 @@
-# 五好伴学 - 项目文档中心# 五好伴学 - 项目文档中心
+# 五好伴学 - 项目文档中心
 
-> **Documentation Hub** > **📚 Documentation Hub**
-
-> 最后更新: 2025-10-12 > 最后更新: 2025-10-09
-
-> 文档已完成全面重组,反映当前项目实际状态> 文档已完成系统清理，移除过时内容，优化结构
+> **📚 Documentation Hub**
+>
+> 最后更新: 2025-10-12
+>
+> 文档已完成全面重组，反映当前项目实际状态
 
 ---
 
-## 📖 文档目录结构## 📖 文档目录结构
+## 📖 文档目录结构
 
-````
-
-docs/docs/
-
-├── api/              # 🔌 API 接口文档├── api/              # 🔌 API 接口文档
-
-├── architecture/     # 🏗️ 系统架构设计├── architecture/     # 🏗️ 系统架构设计
-
-├── deployment/       # 🚀 生产部署指南├── deployment/       # 🚀 生产部署指南
-
-├── fixes/            # 🔧 Bug 修复记录├── development/      # 💻 开发规划文档
-
-├── frontend/         # 🎨 前端开发文档├── guide/            # 📖 开发使用指南
-
-├── guide/            # 📖 开发使用指南├── integration/      # 🔗 前端和小程序集成
-
-├── integration/      # 🔗 前端和小程序集成├── miniprogram/      # 📱 微信小程序专项
-
-├── miniprogram/      # 📱 微信小程序专项├── operations/       # ⚙️ 运维和清理文档
-
-├── operations/       # ⚙️ 运维和清理文档├── reference/        # 📚 参考资料
-
-├── reference/        # 📚 参考资料└── reports/          # 📊 项目报告和总结
-
-└── reports/          # 📊 项目报告和总结```
-
+```
+docs/
+├── api/              # 🔌 API 接口文档
+├── architecture/     # 🏗️ 系统架构设计
+├── database/         # 🗄️ 数据库设计与迁移
+├── deployment/       # 🚀 生产部署指南
+├── frontend/         # 🎨 前端开发文档
+├── guide/            # 📖 开发使用指南
+├── integration/      # 🔗 前端和小程序集成
+├── miniprogram/      # 📱 微信小程序专项
+├── operations/       # ⚙️ 运维和清理文档
+├── reference/        # 📚 参考资料
+├── solutions/        # 💡 问题解决方案
+└── archive/          # 📦 历史文档归档
 ```
 
 ---
-
----
-
-## 🚀 快速导航
 
 ## 🚀 快速导航
 
 ### 📌 核心文档（项目根目录）
 
-### 📌 核心文档 (项目根目录)
-
 - **[README.md](../README.md)** ⭐ - 项目概览、快速开始、核心特性
-
-- **[README.md](../README.md)** ⭐ - 项目概览、快速开始、核心特性- **[AI-CONTEXT.md](../AI-CONTEXT.md)** ⭐ - AI 助手必读上下文、开发约定
-
-- **[DEVELOPMENT_ROADMAP.md](../DEVELOPMENT_ROADMAP.md)** ⭐ - 开发路线图和未来规划
-
-- **[AI-CONTEXT.md](../AI-CONTEXT.md)** - AI 助手必读上下文、开发约定---
-
-- **[.github/copilot-instructions.md](../.github/copilot-instructions.md)** - GitHub Copilot 使用规范
-
-## 📂 分类文档索引
+- **[DEVELOPMENT_ROADMAP.md](../DEVELOPMENT_ROADMAP.md)** ⭐ - 开发路线图和版本规划
+- **[CHANGELOG.md](../CHANGELOG.md)** ⭐ - 版本更新日志和修复记录
+- **[.github/copilot-instructions.md](../.github/copilot-instructions.md)** - GitHub Copilot 开发指令
 
 ---
+
+## 📂 分类文档索引
 
 ### 🏗️ 架构设计 (architecture/)
 
-## 📂 分类文档索引
+| 文档                                      | 说明                           | 状态      |
+| ----------------------------------------- | ------------------------------ | --------- |
+| [架构概览](architecture/overview.md)      | 四层架构设计、技术栈、设计原则 | ✅ 已更新 |
+| [数据访问层](architecture/data-access.md) | Repository 模式、数据库设计    | ✅ 已更新 |
+| [安全策略](architecture/security.md)      | JWT 认证、多维限流、安全措施   | ✅ 已更新 |
+| [可观测性](architecture/observability.md) | 监控指标、日志策略、性能追踪   | ✅ 已更新 |
 
-| 文档                                      | 说明                           |
+**状态**: ✅ 核心架构文档完整，需要定期更新以反映最新实现
 
-### 🏗️ 架构设计 (architecture/)| ----------------------------------------- | ------------------------------ |
+---
 
-| [架构概览](architecture/overview.md)      | 四层架构设计、技术栈、设计原则 |
+### 🔌 API 文档 (api/)
 
-| 文档 | 说明 | 更新时间 || [数据访问层](architecture/data-access.md) | Repository 模式、数据库设计    |
+| 文档                         | 说明                                 | 状态      |
+| ---------------------------- | ------------------------------------ | --------- |
+| [API 概览](api/overview.md)  | RESTful 设计原则、认证机制           | ✅ 已更新 |
+| [API 端点](api/endpoints.md) | 完整接口列表和参数说明（~94 个端点） | ✅ 已更新 |
+| [数据模型](api/models.md)    | 请求响应结构定义                     | ⚠️ 待更新 |
+| [错误码](api/errors.md)      | 错误处理和状态码                     | ⚠️ 待更新 |
 
-|------|------|----------|| [安全策略](architecture/security.md)      | JWT 认证、多维限流、安全措施   |
+**待完成**:
 
-| [架构概览](architecture/overview.md) | 四层架构设计、技术栈、设计原则 | 2025-09 || [可观测性](architecture/observability.md) | 监控指标、日志策略、性能追踪   |
+- [ ] `models.md` 需要根据当前 Pydantic 模型自动生成
+- [ ] `errors.md` 需要同步 `src/core/exceptions.py` 的异常类型
 
-| [数据访问层](architecture/data-access.md) | Repository 模式、数据库设计 | 2025-09 |
+---
 
-| [安全策略](architecture/security.md) | JWT 认证、多维限流、安全措施 | 2025-09 |### 🔌 API 文档 (api/)
+### 🗄️ 数据库设计 (database/)
 
-| [可观测性](architecture/observability.md) | 监控指标、日志策略、性能追踪 | 2025-09 |
+| 文档                                          | 说明                       | 状态      |
+| --------------------------------------------- | -------------------------- | --------- |
+| [数据库设计文档](database/database-design.md) | 表结构、关系图、索引设计   | ✅ 已更新 |
+| [迁移指南](database/migration-guide.md)       | Alembic 迁移流程和最佳实践 | ⚠️ 待补充 |
 
-| 文档                            | 说明                       |
+**已实现的表**:
 
-**状态**: ✅ 核心架构文档完整,需要定期更新以反映最新实现| ------------------------------- | -------------------------- |
+- `users` - 用户信息
+- `mistakes` - 错题记录
+- `mistake_reviews` - 复习记录（艾宾浩斯曲线）
+- `learning_records` - 学习记录
+- `homework_submissions` - 作业提交
+- `learning_goals` - 学习目标
 
-| [API 概览](api/overview.md)     | RESTful 设计原则、认证机制 |
+---
 
-### 🔌 API 文档 (api/)| [API 端点](api/endpoints.md)    | 完整接口列表和参数说明     |
+### 🚀 部署指南 (deployment/)
 
-| [数据模型](api/models.md)       | 请求响应结构定义           |
+| 文档                                                             | 说明                         | 状态      |
+| ---------------------------------------------------------------- | ---------------------------- | --------- |
+| [生产部署标准流程](deployment/production-deployment-guide.md) ⭐ | systemd + Nginx 部署完整流程 | ✅ 已验证 |
+| [本地代码验证](deployment/local-code-verification.md)            | 部署前代码安全检查           | ✅ 已更新 |
+| [RDS 数据库配置](deployment/RDS_CONNECTION_GUIDE.md)             | PostgreSQL 连接和配置        | ✅ 已更新 |
+| [Redis 缓存配置](deployment/REDIS_CONNECTION_GUIDE.md)           | Redis 连接和使用             | ✅ 已更新 |
+| [安全密钥管理](deployment/SECURITY_KEYS_GUIDE.md)                | API Key 和密钥配置           | ✅ 已更新 |
 
-| 文档 | 说明 | 状态 || [错误码](api/errors.md)         | 错误处理和状态码           |
+**状态**: ✅ 部署文档完整且最新，已验证生产环境可用
 
-|------|------|------|| [JavaScript SDK](api/sdk-js.md) | 前端 TypeScript SDK        |
-
-| [API 概览](api/overview.md) | RESTful 设计原则、认证机制 | ✅ 有效 || [Python SDK](api/sdk-python.md) | Python 客户端 SDK          |
-
-| [API 端点](api/endpoints.md) | 完整接口列表和参数说明 | ⚠️ 需要更新为当前实现 |
-
-| [数据模型](api/models.md) | 请求响应结构定义 | ✅ 有效 |### 🚀 部署指南 (deployment/)
-
-| [错误码](api/errors.md) | 错误处理和状态码 | ✅ 有效 |
-
-| [JavaScript SDK](api/sdk-js.md) | 前端 TypeScript SDK | ⚠️ 需要验证 || 文档                                                             | 说明                         |
-
-| [Python SDK](api/sdk-python.md) | Python 客户端 SDK | ⚠️ 需要验证 || ---------------------------------------------------------------- | ---------------------------- |
-
-| [生产部署标准流程](deployment/production-deployment-guide.md) ⭐ | systemd + Nginx 部署完整流程 |
-
-**待更新**: `endpoints.md` 需要反映当前已实现的 API (Learning, Mistakes, Analytics, Goals)| [本地代码验证](deployment/local-code-verification.md)            | 部署前代码安全检查           |
-
-| [RDS 数据库配置](deployment/RDS_CONNECTION_GUIDE.md)             | PostgreSQL 连接和配置        |
-
-### 🚀 部署指南 (deployment/)| [Redis 缓存配置](deployment/REDIS_CONNECTION_GUIDE.md)           | Redis 连接和使用             |
-
-| [安全密钥管理](deployment/SECURITY_KEYS_GUIDE.md)                | API Key 和密钥配置           |
-
-| 文档 | 说明 | 状态 |
-
-|------|------|------|### 💻 开发规划 (development/)
-
-| [生产部署标准流程](deployment/production-deployment-guide.md) ⭐ | systemd + Nginx 部署完整流程 | ✅ 已更新 |
-
-| [本地代码验证](deployment/local-code-verification.md) | 部署前代码安全检查 | ✅ 有效 || 文档                                                            | 说明                             |
-
-| [RDS 数据库配置](deployment/RDS_CONNECTION_GUIDE.md) | PostgreSQL 连接和配置 | ✅ 有效 || --------------------------------------------------------------- | -------------------------------- |
-
-| [Redis 缓存配置](deployment/REDIS_CONNECTION_GUIDE.md) | Redis 连接和使用 | ✅ 有效 || [全链条开发补齐计划](development/COMPREHENSIVE_TODO_PLAN.md) ⭐ | 当前开发状态、任务规划、技术债务 |
-
-| [安全密钥管理](deployment/SECURITY_KEYS_GUIDE.md) | API Key 和密钥配置 | ✅ 有效 |
+---
 
 ### 📖 开发指南 (guide/)
 
-**状态**: ✅ 部署文档完整且最新,已验证生产环境可用
+| 文档                               | 说明                         | 状态                    |
+| ---------------------------------- | ---------------------------- | ----------------------- |
+| [开发工作流](guide/development.md) | 环境搭建、开发流程、工具使用 | ⚠️ 需要更新 uv 使用说明 |
+| [测试指南](guide/testing.md)       | 测试策略、规范和最佳实践     | ✅ 已更新               |
 
-| 文档                               | 说明                         |
+**待补充**: 添加错题手册、AI 学习助手等新功能的开发指南
 
-### 📖 开发指南 (guide/)| ---------------------------------- | ---------------------------- |
+---
 
-| [开发工作流](guide/development.md) | 环境搭建、开发流程、工具使用 |
+### 🔗 集成指南 (integration/)
 
-| 文档 | 说明 | 状态 || [测试指南](guide/testing.md)       | 测试策略、规范和最佳实践     |
+| 文档                                                | 说明                            | 状态                     |
+| --------------------------------------------------- | ------------------------------- | ------------------------ |
+| [前端集成](integration/frontend.md)                 | Vue3 + Pinia 集成方案、API 调用 | ⚠️ 需要更新为 Pinia 模式 |
+| [微信小程序开发](integration/wechat-miniprogram.md) | 小程序架构和开发规范            | ✅ 已实现                |
+| [微信认证集成](integration/wechat-auth.md)          | 微信登录和用户绑定              | 🔜 规划中                |
 
-|------|------|------|
+**说明**: 小程序已完成基础开发，包含 TabBar、错题手册、学习记录等页面
 
-| [开发工作流](guide/development.md) | 环境搭建、开发流程、工具使用 | ⚠️ 需要更新 uv 使用说明 |### 🔗 集成指南 (integration/)
-
-| [测试指南](guide/testing.md) | 测试策略、规范和最佳实践 | ✅ 有效 |
-
-| 文档                                                | 说明                    |
-
-**待补充**: 添加错题手册、RAG 等新功能的开发指南| --------------------------------------------------- | ----------------------- |
-
-| [前端集成](integration/frontend.md)                 | Vue3 集成方案、API 调用 |
-
-### 🔗 集成指南 (integration/)| [微信小程序开发](integration/wechat-miniprogram.md) | 小程序架构和开发规范    |
-
-| [微信认证集成](integration/wechat-auth.md)          | 微信登录和用户绑定      |
-
-| 文档 | 说明 | 状态 |
-
-|------|------|------|### 📱 小程序专项 (miniprogram/)
-
-| [前端集成](integration/frontend.md) | Vue3 集成方案、API 调用 | ⚠️ 需要更新为 Pinia 模式 |
-
-| [微信小程序开发](integration/wechat-miniprogram.md) | 小程序架构和开发规范 | 🔜 规划中 || 文档                                            | 说明                    |
-
-| [微信认证集成](integration/wechat-auth.md) | 微信登录和用户绑定 | 🔜 规划中 || ----------------------------------------------- | ----------------------- |
-
-| [API 集成](miniprogram/api-integration.md)      | 后端 API 对接和数据交互 |
-
-**状态**: 前端集成文档需要更新,小程序文档待后续开发时补充| [网络架构](miniprogram/network-architecture.md) | 请求层、缓存、错误处理  |
-
-| [用户角色系统](miniprogram/user-role-system.md) | 权限管理和角色设计      |
-
-### 🎨 前端开发 (frontend/)
-
-### ⚙️ 运维文档 (operations/)
-
-| 文档 | 说明 | 状态 |
-
-|------|------|------|| 文档                                                   | 说明                        |
-
-| [前端 README](../frontend/FRONTEND-README.md) | 前端项目说明 | ✅ 有效 || ------------------------------------------------------ | --------------------------- |
-
-| [Pinia 状态管理](../frontend/src/stores/) | 状态管理实现 | ✅ 代码即文档 || [清理执行报告](operations/cleanup-execution-report.md) | 2025-10-09 环境清理完整记录 |
-
-| [组件库](../frontend/src/components/) | 可复用组件 | ✅ 代码即文档 || [本地清理计划](operations/local-cleanup-plan.md)       | 本地开发环境清理方案        |
-
-| [生产清理计划](operations/production-cleanup-plan.md)  | 生产服务器优化方案          |
-
-**状态**: 前端项目结构清晰,代码注释完善,暂不需要额外文档
-
-### 📚 参考资料 (reference/)
+---
 
 ### 📱 小程序专项 (miniprogram/)
 
-| 文档                                    | 说明             |
-
-| 文档 | 说明 | 状态 || --------------------------------------- | ---------------- |
-
-|------|------|------|| [术语表](reference/glossary.md)         | 项目专业术语定义 |
-
-| [API 集成](miniprogram/api-integration.md) | 后端 API 对接和数据交互 | 🔜 Phase 4 规划 || [学习指南](reference/learning-guide.md) | 技术栈学习资源   |
-
-| [网络架构](miniprogram/network-architecture.md) | 请求层、缓存、错误处理 | 🔜 Phase 4 规划 |
-
-| [用户角色系统](miniprogram/user-role-system.md) | 权限管理和角色设计 | 🔜 Phase 4 规划 |### 📊 项目报告 (reports/)
-
-
-
-**状态**: 小程序开发计划在 Phase 4 (2026 Q1-Q2),文档待开发时补充| 文档                                                                | 说明                        |
-
-| ------------------------------------------------------------------- | --------------------------- |
-
-### ⚙️ 运维文档 (operations/)| [部署后总结](reports/post-deployment-summary.md) ⭐                 | 2025-10-08 生产部署完整总结 |
-
-| [作业 API 兼容性报告](reports/homework-api-compatibility-report.md) | API 重构兼容性分析          |
-
-| 文档 | 说明 | 状态 || [作业 API 重构总结](reports/homework-api-refactor-summary.md)       | 从硬编码到生产就绪          |
-
-|------|------|------|
-
-| [数据库清理计划](operations/database-cleanup-plan.md) | 数据归档和清理策略 | ✅ 有效 |---
-
-| [日志管理](operations/logging.md) | 日志收集和分析 | ⚠️ 需要补充 ELK 集成 |
-
-| [监控告警](operations/monitoring.md) | Prometheus + Grafana 配置 | ⚠️ 需要补充实际部署步骤 |## � 场景化快速查找
-
-
-
-**待完善**: 生产环境监控和告警系统配置文档### 🆕 新手入门路径
-
-
-
-### 🔧 Bug 修复记录 (fixes/)1. **[项目主页](../README.md)** - 了解项目概览和核心功能
-
-2. **[架构概览](architecture/overview.md)** - 理解技术架构
-
-| 文档 | 说明 | 日期 |3. **[开发工作流](guide/development.md)** - 搭建开发环境
-
-|------|------|------|4. **[API 概览](api/overview.md)** - 熟悉接口规范
-
-| [Enum 字符串修复](fixes/2025-10-11-enum-string-fix.md) | 修复枚举类型序列化问题 | 2025-10-11 |
-
-| [头像上传修复](fixes/2025-10-12-avatar-upload-fix.md) | Pinia 响应式 + Nginx 配置 | 2025-10-12 |### 💻 开发者工作流
-
-
-
-**用途**: 记录重要 Bug 修复过程,便于后续查阅和学习1. **[开发工作流](guide/development.md)** - 环境配置和启动
-
-2. **[API 端点](api/endpoints.md)** - 查看可用接口
-
-### 📊 项目报告 (reports/)3. **[测试指南](guide/testing.md)** - 编写和运行测试
-
-4. **[AI-CONTEXT.md](../AI-CONTEXT.md)** - 了解开发约定
-
-| 文档 | 说明 | 状态 |
-
-|------|------|------|### 🎨 前端集成路径
-
-| [Learning 500 错误修复](reports/FIX_LEARNING_500_ERROR_2025-10-11.md) | MCP 集成错误排查 | ✅ 已归档 |
-
-| [UI 增强报告](reports/UI_ENHANCEMENT_INPUT_AREA_2025-10-11.md) | 输入区域优化 | ✅ 已归档 |1. **[前端集成](integration/frontend.md)** - Vue3 项目集成
-
-| [Homework API 兼容性](reports/homework-api-compatibility-report.md) | API 重构兼容性分析 | ✅ 已归档 |2. **[API 端点](api/endpoints.md)** - 接口清单
-
-| [Homework API 重构总结](reports/homework-api-refactor-summary.md) | 重构成果总结 | ✅ 已归档 |3. **[JavaScript SDK](api/sdk-js.md)** - 使用前端 SDK
-
-| [错题手册实现报告](reports/mistake-notebook-implementation.md) | 前端组件实现记录 | ✅ 已归档 |4. **[错误码](api/errors.md)** - 错误处理
-
-| [部署后总结](reports/post-deployment-summary.md) | 生产部署经验总结 | ✅ 已归档 |
-
-| [VL 模型修复](reports/vl-model-fix-report.md) | 视觉语言模型问题修复 | ✅ 已归档 |### 📱 小程序开发路径
-
-
-
-**用途**: 历史记录和经验总结,供后续参考1. **[微信小程序开发](integration/wechat-miniprogram.md)** - 开发规范
-
-2. **[API 集成](miniprogram/api-integration.md)** - 后端对接
-
-### 📚 参考资料 (reference/)3. **[网络架构](miniprogram/network-architecture.md)** - 网络层设计
-
-4. **[用户角色系统](miniprogram/user-role-system.md)** - 权限管理
-
-| 文档 | 说明 | 状态 |
-
-|------|------|------|### 🚀 部署和运维路径
-
-| [知识图谱设计](reference/knowledge-graph.md) | 知识图谱结构和关系定义 | ⚠️ 需要扩展 |
-
-| [AI Prompt 模板](reference/prompt-templates.md) | 常用 Prompt 设计模式 | ⚠️ 需要补充 |1. **[生产部署标准流程](deployment/production-deployment-guide.md)** ⭐ - 完整部署指南
-
-| [数据库 Schema](reference/database-schema.md) | 完整数据库表结构 | ⚠️ 需要更新 |2. **[RDS 数据库配置](deployment/RDS_CONNECTION_GUIDE.md)** - 数据库设置
-
-3. **[安全密钥管理](deployment/SECURITY_KEYS_GUIDE.md)** - 密钥配置
-
-**待补充**: 随着项目发展持续补充参考资料4. **[生产清理计划](operations/production-cleanup-plan.md)** - 环境优化
-
-
-
-------
-
-
-
-## 🎯 文档维护指南## 📝 文档维护原则
-
-
-
-### 文档更新原则### ✅ 保留标准
-
-
-
-1. **及时性**: 代码变更后立即更新相关文档- **有价值**: 内容对开发、部署、运维有实际帮助
-
-2. **准确性**: 文档内容必须与实际代码一致- **准确性**: 反映当前系统实际状态（systemd 部署，非 Docker）
-
-3. **完整性**: 重要功能必须有完整的文档说明- **时效性**: 信息是最新的，技术方案是当前使用的
-
-4. **可读性**: 使用清晰的语言和示例代码
-
-### 🗑️ 清理标准
-
-### 文档分类标准
-
-- **临时性**: 一次性任务文档（如问题修复记录）
-
-- **✅ 有效**: 内容准确,无需更新- **过时性**: 引用已废弃技术（Docker Compose、Alembic）
-
-- **⚠️ 需要更新**: 内容部分过时,需要修订- **重复性**: 内容已在其他文档中覆盖
-
-- **🔜 规划中**: 功能未实现,文档待补充
-
-- **🗑️ 已废弃**: 内容完全过时,可以删除### 📅 最近更新 (2025-10-09)
-
-
-
-### 文档审查周期- ✅ 删除 `.dockerignore`（项目已不使用 Docker）
-
-- ✅ 移动 6 个根目录文档到 docs 对应子目录
-
-- **核心文档** (README, ROADMAP): 每月审查- ✅ 删除 8 个过时/临时文档：
-
-- **API 文档**: 每次 API 变更后更新  - `deployment/SSH_PASSPHRASE_HELP.md`
-
-- **部署文档**: 每次部署流程变更后更新  - `deployment/DEPLOYMENT_INFO_FORM.md`
-
-- **开发指南**: 每季度审查  - `deployment/SSH_KEY_SETUP.md`
-
-  - `deployment/TEST_ACCOUNTS.md`
-
----  - `guide/deployment.md` (过时的 Docker 部署)
-
-  - `operations/database-migration.md` (过时的 Alembic 迁移)
-
-## 📝 文档贡献  - `miniprogram/MINIPROGRAM_FIXES.md` (临时修复记录)
-
-  - `reports/README.md` (空目录说明)
-
-### 新增文档流程- ✅ 优化文档目录结构，清晰分类
-
-
-
-1. 在对应目录创建 Markdown 文件---
-
-2. 遵循项目文档模板格式
-
-3. 在本文件中添加索引链接## 🤝 贡献指南
-
-4. 提交 PR 并 @文档维护者
-
-### 新增文档时
-
-### 文档模板
-
-1. 选择合适的目录（api/architecture/deployment 等）
-
-```markdown2. 使用清晰的文件名（kebab-case）
-
-# 文档标题3. 添加到本文档的对应索引中
-
-4. 确保内容准确反映当前系统状态
-
-> **最后更新**: YYYY-MM-DD
-
-> **维护者**: @username### 更新文档时
-
-
-
-## 概述1. 修改后更新"最后更新"日期
-
-2. 如果涉及重大变更，在变更日志中记录
-
-[简要说明文档目的和适用场景]3. 确保引用的技术栈是当前使用的
-
-
-
-## 详细内容### 删除文档时
-
-
-
-[具体内容]1. 确认内容确实过时或无价值
-
-2. 检查是否有其他文档引用
-
-## 参考链接3. 在本文档中移除对应索引
-
-
-
-- [相关文档链接]---
-
-
-
----**维护者**: Liguo Ma <maliguo@outlook.com>
-
-**最后清理**: 2025-10-09
-
-最后更新: YYYY-MM-DD**文档总数**: 33 个（清理前 41 个，删除 8 个）
-
-```**原则**: 保持简洁实用，及时更新，定期清理
-
+| 文档                                            | 说明                     | 状态      |
+| ----------------------------------------------- | ------------------------ | --------- |
+| [小程序 README](../miniprogram/README.md)       | 小程序项目说明和快速开始 | ✅ 已更新 |
+| [API 集成](miniprogram/api-integration.md)      | 后端 API 对接和数据交互  | ✅ 已实现 |
+| [网络架构](miniprogram/network-architecture.md) | 请求层、缓存、错误处理   | ✅ 已实现 |
+| [用户角色系统](miniprogram/user-role-system.md) | 权限管理和角色设计       | 🔜 规划中 |
+| [故障排查](../miniprogram/TROUBLESHOOTING.md)   | 常见问题和解决方案       | ✅ 已更新 |
+
+**当前状态**: ✅ 小程序已完成基础功能开发，包含：
+
+- TabBar 导航（首页、错题、作业、学习、分析、我的）
+- 错题手册列表和详情页
+- 学习记录和问答
+- 个人中心
 
 ---
 
-## 🔍 快速查找
+### 🎨 前端开发 (frontend/)
 
-### 我想了解...
+| 文档                                      | 说明         | 状态          |
+| ----------------------------------------- | ------------ | ------------- |
+| [前端 README](../frontend/README.md)      | 前端项目说明 | ✅ 已更新     |
+| [Pinia 状态管理](../frontend/src/stores/) | 状态管理实现 | ✅ 代码即文档 |
+| [组件库](../frontend/src/components/)     | 可复用组件   | ✅ 代码即文档 |
 
-- **项目整体情况** → [README.md](../README.md)
-- **如何部署到生产环境** → [生产部署指南](deployment/production-deployment-guide.md)
-- **如何配置开发环境** → [开发工作流](guide/development.md)
-- **API 接口如何调用** → [API 端点](api/endpoints.md)
-- **系统架构设计** → [架构概览](architecture/overview.md)
-- **下一步开发什么** → [开发路线图](../DEVELOPMENT_ROADMAP.md)
-- **如何贡献代码** → [README.md - 贡献指南](../README.md#🤝-贡献指南)
+**已实现的 Pinia Stores**:
 
-### 我遇到问题...
+- `authStore` - 用户认证
+- `learningStore` - 学习记录
+- `homeworkStore` - 作业管理
+- `analyticsStore` - 数据分析
+- `userStore` - 用户信息
 
-- **部署失败** → [本地代码验证](deployment/local-code-verification.md)
-- **API 错误** → [错误码文档](api/errors.md)
-- **性能问题** → [可观测性文档](architecture/observability.md)
-- **数据库问题** → [数据访问层文档](architecture/data-access.md)
-
----
-
-## 📞 联系方式
-
-- **问题反馈**: [GitHub Issues](https://github.com/hordu-ma/wuhao-tutor/issues)
-- **文档建议**: 在对应文档下提 Issue
-- **紧急问题**: 联系项目维护者
+**状态**: ✅ 前端项目结构清晰，代码注释完善
 
 ---
 
-<div align="center">
+### ⚙️ 运维文档 (operations/)
 
-**文档即代码,让项目更易维护**
+| 文档                                                   | 说明                        | 状态      |
+| ------------------------------------------------------ | --------------------------- | --------- |
+| [清理执行报告](operations/cleanup-execution-report.md) | 2025-10-09 环境清理完整记录 | ✅ 已归档 |
+| [本地清理计划](operations/local-cleanup-plan.md)       | 本地开发环境清理方案        | ✅ 已完成 |
+| [生产清理计划](operations/production-cleanup-plan.md)  | 生产服务器优化方案          | 🔜 规划中 |
 
-最后更新: 2025-10-12 by hordu-ma
+---
 
-</div>
-````
+### 💡 解决方案 (solutions/)
+
+| 文档                                                                           | 说明               | 状态      |
+| ------------------------------------------------------------------------------ | ------------------ | --------- |
+| [移动浏览器兼容性实现](../docs/mobile-browser-compatibility-implementation.md) | 移动端适配详细方案 | ✅ 已更新 |
+| [移动浏览器兼容性快速参考](../docs/mobile-browser-compatibility-quickref.md)   | 快速参考指南       | ✅ 已更新 |
+
+---
+
+### 📦 历史文档归档 (archive/)
+
+| 目录                       | 说明                                        | 归档时间   |
+| -------------------------- | ------------------------------------------- | ---------- |
+| `fixes-2025-10/`           | 2025 年 10 月修复记录（已整合到 CHANGELOG） | 2025-10-12 |
+| `reports/`                 | 历史实施报告和总结                          | 2025-10-12 |
+| `tasks-phase1/`            | Phase 1 任务文档                            | 2025-10-12 |
+| `miniprogram-docs/`        | 小程序临时开发文档                          | 2025-10-12 |
+| `PROJECT_STATUS_REPORT.md` | 旧版项目状态报告                            | 2025-10-12 |
+
+**说明**: 归档文档保留用于历史参考，不再维护更新
+
+---
+
+## 👥 按角色导航
+
+### 🆕 新加入的开发者
+
+**推荐阅读顺序**:
+
+1. [README.md](../README.md) - 项目概览
+2. [架构概览](architecture/overview.md) - 理解系统设计
+3. [开发工作流](guide/development.md) - 环境搭建
+4. [API 概览](api/overview.md) - 了解接口规范
+5. [.github/copilot-instructions.md](../.github/copilot-instructions.md) - 开发规范
+
+**预计学习时间**: 1-2 天
+
+---
+
+### 👨‍💻 后端开发者
+
+**核心文档**:
+
+- [架构概览](architecture/overview.md) - 四层架构设计
+- [数据访问层](architecture/data-access.md) - Repository 模式
+- [API 端点](api/endpoints.md) - 接口实现参考
+- [数据库设计](database/database-design.md) - 表结构和关系
+- [安全策略](architecture/security.md) - 认证和限流
+- [测试指南](guide/testing.md) - 测试策略
+
+**快速命令**:
+
+```bash
+make db-init      # 数据库迁移
+make test         # 运行测试
+make lint         # 代码检查
+make type-check   # 类型检查
+```
+
+---
+
+### 🎨 前端开发者
+
+**核心文档**:
+
+- [前端 README](../frontend/README.md) - 项目说明
+- [API 端点](api/endpoints.md) - 后端接口文档
+- [前端集成](integration/frontend.md) - Vue3 + Pinia 集成
+- [数据模型](api/models.md) - 请求响应结构
+
+**Pinia Stores**:
+
+- `src/stores/auth.ts` - 用户认证
+- `src/stores/learning.ts` - 学习记录
+- `src/stores/homework.ts` - 作业管理
+- `src/stores/analytics.ts` - 数据分析
+
+**快速命令**:
+
+```bash
+cd frontend
+npm run dev       # 启动开发服务器
+npm run build     # 生产构建
+npm run type-check # TypeScript 检查
+```
+
+---
+
+### 📱 小程序开发者
+
+**核心文档**:
+
+- [小程序 README](../miniprogram/README.md) - 项目说明
+- [API 集成](miniprogram/api-integration.md) - 后端对接
+- [网络架构](miniprogram/network-architecture.md) - 请求封装
+- [故障排查](../miniprogram/TROUBLESHOOTING.md) - 常见问题
+
+**关键代码**:
+
+- `utils/request.js` - 网络请求封装
+- `utils/auth.js` - 认证逻辑
+- `pages/mistakes/` - 错题手册页面
+- `app.json` - 小程序配置
+
+**开发环境**:
+
+- 微信开发者工具
+- AppID 配置（联系管理员获取）
+
+---
+
+### 🚀 运维工程师
+
+**核心文档**:
+
+- [生产部署标准流程](deployment/production-deployment-guide.md) ⭐
+- [RDS 数据库配置](deployment/RDS_CONNECTION_GUIDE.md)
+- [Redis 缓存配置](deployment/REDIS_CONNECTION_GUIDE.md)
+- [安全密钥管理](deployment/SECURITY_KEYS_GUIDE.md)
+- [可观测性](architecture/observability.md)
+
+**部署命令**:
+
+```bash
+./scripts/deploy_to_production.sh  # 生产部署
+./scripts/pre_deploy_check.sh      # 部署前检查
+./scripts/verify_deployment.sh     # 部署验证
+```
+
+**监控端点**:
+
+- `/api/v1/health` - 健康检查
+- `/api/v1/health/metrics` - 性能指标
+
+---
+
+## 📚 学习路径
+
+### Level 1: 基础 (1-2 天)
+
+✅ 理解项目架构和技术栈
+✅ 搭建本地开发环境
+✅ 运行并测试基础功能
+✅ 阅读核心 API 文档
+
+---
+
+### Level 2: 进阶 (1 周)
+
+✅ 理解四层架构设计模式
+✅ 掌握 Repository 和 Service 层
+✅ 熟悉 Pinia 状态管理
+✅ 了解 AI 服务集成（阿里云百炼）
+✅ 掌握错题手册业务逻辑
+
+---
+
+### Level 3: 精通 (2-4 周)
+
+✅ 独立实现新功能模块
+✅ 优化性能和 N+1 查询
+✅ 处理限流和安全策略
+✅ 生产环境部署和运维
+✅ 参与架构决策和重构
+
+---
+
+## 📊 文档统计
+
+### 文档数量概览
+
+| 分类     | 文档数 | 状态          |
+| -------- | ------ | ------------- |
+| 核心文档 | 4      | ✅ 已更新     |
+| 架构设计 | 4      | ✅ 已更新     |
+| API 文档 | 4      | ⚠️ 部分待更新 |
+| 数据库   | 2      | ⚠️ 部分待补充 |
+| 部署指南 | 5      | ✅ 已验证     |
+| 开发指南 | 2      | ⚠️ 部分待更新 |
+| 集成指南 | 3      | ⚠️ 部分待更新 |
+| 小程序   | 5      | ✅ 已实现     |
+| 前端     | 3      | ✅ 已更新     |
+| 运维     | 3      | ⚠️ 部分规划中 |
+| 解决方案 | 2      | ✅ 已更新     |
+| 归档文档 | 5      | 📦 已归档     |
+
+**总计**: ~40 个有效文档，~20 个归档文档
+
+---
+
+## 🎯 待完成任务
+
+### 高优先级 (本周内)
+
+- [ ] 自动生成 `api/models.md` - 基于 Pydantic 模型
+- [ ] 更新 `api/errors.md` - 同步异常类型
+- [ ] 更新 `guide/development.md` - 添加 uv 使用说明
+- [ ] 补充 `database/migration-guide.md` - Alembic 最佳实践
+
+### 中优先级 (2 周内)
+
+- [ ] 更新 `integration/frontend.md` - 反映 Pinia 实现
+- [ ] 创建 OpenAPI JSON 生成 CI 任务
+- [ ] 添加 markdown-link-check CI 检查
+- [ ] 建立文档模板和贡献指南
+
+### 低优先级 (未来)
+
+- [ ] 规划微信认证集成文档
+- [ ] 规划生产清理计划
+- [ ] 提取架构决策记录（ADR）
+- [ ] 扩展性能优化指南
+
+---
+
+## 🔧 文档维护
+
+### 更新原则
+
+1. **代码优先**: 代码是单一真相来源，文档跟随代码更新
+2. **自动生成**: API 文档尽可能从 OpenAPI/代码自动生成
+3. **及时归档**: 过时文档及时移入 `archive/`
+4. **版本标记**: 重要文档标注最后更新日期
+
+### 维护流程
+
+```
+代码变更 → PR 包含文档更新 → Code Review + Doc Review → 合并 → 更新日期
+```
+
+### CI 检查（规划中）
+
+- [ ] `markdownlint` - Markdown 格式检查
+- [ ] `markdown-link-check` - 链接有效性检查
+- [ ] `openapi-diff` - API 文档一致性检查
+
+---
+
+## 📞 反馈与贡献
+
+### 发现文档问题？
+
+- **错误或过时**: 创建 GitHub Issue，标签 `documentation`
+- **缺失内容**: 提交 PR 补充，或在 Issue 中说明需求
+- **改进建议**: 在项目 Discussions 中讨论
+
+### 文档贡献指南
+
+1. Fork 项目并创建分支
+2. 更新文档内容
+3. 运行 `markdownlint` 检查格式（如果可用）
+4. 提交 PR，说明更新内容和原因
+5. 等待 Review 和合并
+
+---
+
+## 📝 版本历史
+
+| 日期       | 版本 | 主要变更                                         |
+| ---------- | ---- | ------------------------------------------------ |
+| 2025-10-12 | v2.0 | 完成文档全面重组，清理冗余内容，更新所有核心文档 |
+| 2025-10-09 | v1.1 | 完成环境清理，归档历史文档                       |
+| 2025-09    | v1.0 | 初始文档结构建立                                 |
+
+---
+
+**维护者**: 五好伴学开发团队
+**联系方式**: 通过 GitHub Issues 或项目 Discussions
