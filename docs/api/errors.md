@@ -1,359 +1,593 @@
-# 五好伴学 API 错误码规范 (errors.md)
+# API 错误码文档
 
-Last Updated: 2025-09-29
-适用版本：后端 0.1.x （文档重构阶段）
-状态：初稿（需与实际实现逐步核对）
-
----
-
-## 1. 文档目的
-
-本文件作为“统一错误语义来源（Single Source of Truth）”，用于：
-- 规范错误码命名、分组与使用场景
-- 指导前端/客户端统一处理与展示
-- 支撑日志归类、监控统计、告警与回归测试
-- 降低散乱自造错误结构的风险
-
-与之相关的结构定义参见：`api/overview.md` 与 `api/models.md` 中的“错误结构”章节。
+> **最后更新**: 2025-10-12
+> **状态**: ✅ 已更新 - 反映当前实现
 
 ---
 
-## 2. 错误响应基础结构
+## 📋 目录
 
-标准失败响应（所有 API 保持一致）：
+1. [概述](#概述)
+2. [错误响应格式](#错误响应格式)
+3. [HTTP 状态码映射](#http-状态码映射)
+4. [错误码分类](#错误码分类)
+5. [详细错误码列表](#详细错误码列表)
+6. [错误处理最佳实践](#错误处理最佳实践)
+
+---
+
+## 概述
+
+本文档定义了五好伴学 API 的所有错误码和错误处理规范。
+
+**位置**: `src/core/exceptions.py`
+
+**设计原则**:
+
+- ✅ 错误码采用 `SCREAMING_SNAKE_CASE` 命名
+- ✅ 错误信息清晰易懂，便于前端展示
+- ✅ 包含详细的错误上下文（details）
+- ✅ 支持国际化（i18n）
+- ✅ 统一的错误响应格式
+
+---
+
+## 错误响应格式
+
+### 标准错误响应
 
 ```json
 {
-  "success": false,
-  "error": {
-    "code": "RESOURCE_NOT_FOUND",
-    "message": "资源不存在",
-    "details": {
-      "resource": "HomeworkSubmission",
-      "id": "9d5e8ab1-..."
+  "detail": "用户不存在",
+  "error_code": "USER_NOT_FOUND_ERROR",
+  "details": {
+    "user_id": "550e8400-e29b-41d4-a716-446655440000"
+  }
+}
+```
+
+### 字段说明
+
+| 字段         | 类型   | 说明                               |
+| ------------ | ------ | ---------------------------------- |
+| `detail`     | `str`  | 人类可读的错误描述                 |
+| `error_code` | `str`  | 机器可解析的错误码（用于程序处理） |
+| `details`    | `dict` | 错误的详细上下文信息（可选）       |
+
+### 验证错误响应
+
+```json
+{
+  "detail": [
+    {
+      "loc": ["body", "phone"],
+      "msg": "手机号格式不正确",
+      "type": "value_error"
+    }
+  ]
+}
+```
+
+**说明**: Pydantic 验证错误返回详细的字段级错误信息。
+
+---
+
+## HTTP 状态码映射
+
+| HTTP 状态码 | 说明                  | 典型场景                   |
+| ----------- | --------------------- | -------------------------- |
+| `400`       | Bad Request           | 请求参数错误、验证失败     |
+| `401`       | Unauthorized          | 未认证、Token 无效或过期   |
+| `403`       | Forbidden             | 权限不足                   |
+| `404`       | Not Found             | 资源不存在                 |
+| `409`       | Conflict              | 资源冲突（如重复创建）     |
+| `429`       | Too Many Requests     | 请求频率超限               |
+| `500`       | Internal Server Error | 服务器内部错误             |
+| `502`       | Bad Gateway           | 上游服务错误（如 AI 服务） |
+| `503`       | Service Unavailable   | 服务暂时不可用（如限流）   |
+| `504`       | Gateway Timeout       | 上游服务超时               |
+
+---
+
+## 错误码分类
+
+### 1. 认证与授权错误 (401/403)
+
+| 错误码                  | HTTP | 说明         |
+| ----------------------- | ---- | ------------ |
+| `AUTHENTICATION_ERROR`  | 401  | 认证失败     |
+| `TOKEN_EXPIRED_ERROR`   | 401  | Token 已过期 |
+| `INVALID_TOKEN_ERROR`   | 401  | 无效的 Token |
+| `USER_AUTH_ERROR`       | 401  | 用户认证失败 |
+| `AUTHORIZATION_ERROR`   | 403  | 授权失败     |
+| `USER_PERMISSION_ERROR` | 403  | 用户权限不足 |
+
+### 2. 资源错误 (404/409)
+
+| 错误码                        | HTTP | 说明         |
+| ----------------------------- | ---- | ------------ |
+| `RECORD_NOT_FOUND_ERROR`      | 404  | 记录未找到   |
+| `USER_NOT_FOUND_ERROR`        | 404  | 用户不存在   |
+| `CACHE_KEY_NOT_FOUND_ERROR`   | 404  | 缓存键不存在 |
+| `RECORD_ALREADY_EXISTS_ERROR` | 409  | 记录已存在   |
+
+### 3. 验证与请求错误 (400)
+
+| 错误码                   | HTTP | 说明         |
+| ------------------------ | ---- | ------------ |
+| `VALIDATION_ERROR`       | 400  | 数据验证失败 |
+| `HOMEWORK_UPLOAD_ERROR`  | 400  | 作业上传失败 |
+| `QUESTION_PROCESS_ERROR` | 400  | 问题处理失败 |
+| `FILE_PROCESS_ERROR`     | 400  | 文件处理失败 |
+
+### 4. 限流错误 (429/503)
+
+| 错误码                         | HTTP | 说明                  |
+| ------------------------------ | ---- | --------------------- |
+| `RATE_LIMIT_ERROR`             | 429  | API 调用频率过高      |
+| `BAILIAN_RATE_LIMIT_ERROR`     | 503  | 百炼 API 调用频率过高 |
+| `BAILIAN_QUOTA_EXCEEDED_ERROR` | 503  | 百炼 API 配额已用完   |
+
+### 5. AI 服务错误 (502/504)
+
+| 错误码                         | HTTP | 说明                  |
+| ------------------------------ | ---- | --------------------- |
+| `BAILIAN_AUTH_ERROR`           | 502  | 百炼 API 认证失败     |
+| `BAILIAN_RESPONSE_PARSE_ERROR` | 502  | 百炼 API 响应格式错误 |
+| `BAILIAN_TIMEOUT_ERROR`        | 504  | 百炼 API 调用超时     |
+| `AI_SERVICE_ERROR`             | 502  | AI 服务错误           |
+| `OCR_PROCESS_ERROR`            | 500  | OCR 处理失败          |
+
+### 6. 业务逻辑错误 (500)
+
+| 错误码                      | HTTP | 说明               |
+| --------------------------- | ---- | ------------------ |
+| `HOMEWORK_CORRECTION_ERROR` | 500  | 作业批改失败       |
+| `CONTEXT_LOAD_ERROR`        | 500  | 学习上下文加载失败 |
+
+### 7. 系统错误 (500)
+
+| 错误码                      | HTTP | 说明             |
+| --------------------------- | ---- | ---------------- |
+| `DATABASE_CONNECTION_ERROR` | 500  | 数据库连接失败   |
+| `CACHE_CONNECTION_ERROR`    | 500  | 缓存服务连接失败 |
+| `CONFIGURATION_ERROR`       | 500  | 配置错误         |
+| `ENVIRONMENT_ERROR`         | 500  | 环境变量错误     |
+
+---
+
+## 详细错误码列表
+
+### AUTHENTICATION_ERROR
+
+**HTTP 状态码**: 401
+
+**说明**: 认证失败，用户身份验证未通过
+
+**示例**:
+
+```json
+{
+  "detail": "认证失败",
+  "error_code": "AUTHENTICATION_ERROR"
+}
+```
+
+**前端处理**: 跳转到登录页面
+
+---
+
+### TOKEN_EXPIRED_ERROR
+
+**HTTP 状态码**: 401
+
+**说明**: JWT Token 已过期
+
+**示例**:
+
+```json
+{
+  "detail": "Token已过期",
+  "error_code": "TOKEN_EXPIRED_ERROR"
+}
+```
+
+**前端处理**: 使用 Refresh Token 刷新，或提示用户重新登录
+
+---
+
+### INVALID_TOKEN_ERROR
+
+**HTTP 状态码**: 401
+
+**说明**: Token 格式错误或签名验证失败
+
+**示例**:
+
+```json
+{
+  "detail": "无效的Token",
+  "error_code": "INVALID_TOKEN_ERROR"
+}
+```
+
+**前端处理**: 清除本地 Token，跳转到登录页面
+
+---
+
+### USER_NOT_FOUND_ERROR
+
+**HTTP 状态码**: 404
+
+**说明**: 指定的用户不存在
+
+**示例**:
+
+```json
+{
+  "detail": "用户不存在",
+  "error_code": "USER_NOT_FOUND_ERROR",
+  "details": {
+    "user_id": "550e8400-e29b-41d4-a716-446655440000"
+  }
+}
+```
+
+**前端处理**: 显示友好的错误提示
+
+---
+
+### USER_PERMISSION_ERROR
+
+**HTTP 状态码**: 403
+
+**说明**: 用户权限不足，无法访问该资源
+
+**示例**:
+
+```json
+{
+  "detail": "用户权限不足",
+  "error_code": "USER_PERMISSION_ERROR",
+  "details": {
+    "required_permission": "admin"
+  }
+}
+```
+
+**前端处理**: 显示权限不足提示，禁用相关功能
+
+---
+
+### VALIDATION_ERROR
+
+**HTTP 状态码**: 400
+
+**说明**: 请求参数验证失败
+
+**示例**:
+
+```json
+{
+  "detail": "数据验证失败",
+  "error_code": "VALIDATION_ERROR",
+  "details": {
+    "field_errors": {
+      "phone": "手机号格式不正确",
+      "password": "密码长度必须在8-32位之间"
     }
   }
 }
 ```
 
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| success | boolean | 是 | 固定为 false |
-| error.code | string | 是 | 参见本文件错误码枚举 |
-| error.message | string | 是 | 人类可读短语（中文，前端可直接展示或二次本地化） |
-| error.details | object/null | 否 | 结构化上下文（字段名、资源标识、限制值等） |
-
-约束：
-1. 不在根级直接返回 `message`（保持结构统一）
-2. 不追加无定义的顶级字段（如 `status`, `err`, `reason` 等）
-3. `error.code` 必须来自本文件（或通过“新增流程”正式引入）
+**前端处理**: 在表单对应字段显示错误提示
 
 ---
 
-## 3. 错误码命名原则
+### RECORD_NOT_FOUND_ERROR
 
-| 原则 | 描述 | 示例 |
-|------|------|------|
-| 全大写 + 下划线 | 统一格式 | `RESOURCE_NOT_FOUND` |
-| 语义明确 | 读名字即可判断类型 | `INVALID_CREDENTIALS` |
-| 避免歧义 | 不使用模糊词：`FAILED` / `ERROR` | ✅ `PERMISSION_DENIED` |
-| 不含领域耦合 | 领域限定放到 details | `HOMEWORK_NOT_FOUND` → ❌（推荐 RESOURCE_NOT_FOUND + details.resource="Homework"） |
-| 可扩展 | 预留分类空间 | 认证前缀：`AUTH_`、文件：`FILE_` |
-| 非破坏性演进 | 新增 > 修改；废弃需标记 | 旧值保留一个小版本周期 |
+**HTTP 状态码**: 404
 
----
+**说明**: 数据库记录不存在
 
-## 4. 错误分层分类
+**示例**:
 
-| 类别 | 说明 | Code 前缀建议 |
-|------|------|---------------|
-| 验证/输入 | 参数格式、业务规则、类型约束 | （无或 VALIDATION_*） |
-| 认证/授权 | 登录、令牌、权限 | AUTH_* / PERMISSION_* |
-| 资源状态 | 不存在、冲突、状态非法 | RESOURCE_* / CONFLICT_* |
-| 限流/配额 | 请求频率、容量限制 | RATE_LIMIT_* / QUOTA_* |
-| 外部依赖 | AI 服务 / 第三方系统不可用 | DEPENDENCY_* / AI_* |
-| 文件处理 | 类型、大小、存储失败 | FILE_* |
-| 系统内部 | 未预期异常、不可恢复错误 | INTERNAL_* |
-| 业务规则 | 合法但被业务拒绝（策略/状态） | BUSINESS_* |
-| 安全策略 | 访问被策略阻止 | SECURITY_* |
-| 运行模式 | 系统处于维护/只读 | MAINTENANCE_* |
-
----
-
-## 5. 错误码总表（初稿）
-
-| 错误码 | HTTP 状态建议 | 分类 | 典型场景 | details 示例 |
-|--------|----------------|------|----------|--------------|
-| VALIDATION_ERROR | 422 | 输入校验 | Pydantic 验证失败 / 自定义验证不通过 | { "field": "subject", "reason": "unsupported" } |
-| INVALID_REQUEST | 400 | 输入格式 | JSON 解析失败 / 不支持的内容类型 | { "content_type": "text/plain" } |
-| MISSING_REQUIRED_FIELD | 400 | 输入校验 | 必填字段缺失（业务层补充） | { "field": "template_id" } |
-| AUTH_INVALID_CREDENTIALS | 401 | 认证 | 用户名或密码错误 | { "attempts": 1 } |
-| AUTH_TOKEN_EXPIRED | 401 | 认证 | Access Token 过期（需刷新） | { "expired_at": "…" } |
-| AUTH_TOKEN_INVALID | 401 | 认证 | Token 格式不合法或签名错误 | { "reason": "signature_mismatch" } |
-| PERMISSION_DENIED | 403 | 授权 | 角色/权限不足 | { "required_role": "teacher" } |
-| RESOURCE_NOT_FOUND | 404 | 资源 | 查询的 ID 不存在 | { "resource": "HomeworkSubmission", "id": "…" } |
-| RESOURCE_GONE (规划) | 410 | 资源 | 已删除或不可访问 | { "resource": "File", "id": "…" } |
-| CONFLICT | 409 | 资源冲突 | 并发更新 / 重复创建 | { "resource": "Template", "field": "name" } |
-| DUPLICATE_SUBMISSION | 409 | 业务冲突 | 用户重复提交同作业 | { "template_id": "…" } |
-| RATE_LIMIT_EXCEEDED | 429 | 限流 | IP / 用户请求频率超限 | { "scope": "per_ip", "limit": 60, "remaining": 0 } |
-| QUOTA_EXCEEDED (规划) | 429/403 | 配额 | 用户月度配额耗尽 | { "quota_type": "ai_calls", "allocated": 1000 } |
-| AI_SERVICE_FAILURE | 502 | 外部依赖 | AI 响应异常 / 格式错误 | { "provider": "bailian", "trace_id": "…" } |
-| AI_TIMEOUT | 504 | 外部依赖 | AI 超时未响应 | { "timeout_ms": 10000 } |
-| DEPENDENCY_UNAVAILABLE | 503 | 外部依赖 | Redis/DB/对象存储暂不可用 | { "service": "redis" } |
-| FILE_TOO_LARGE | 413 | 文件 | 上传超过最大大小 | { "max_size": 5242880, "actual_size": 7340032 } |
-| FILE_TYPE_NOT_ALLOWED | 415 | 文件 | 不允许的 MIME/扩展名 | { "allowed": ["jpg","png"], "actual": "exe" } |
-| FILE_STORAGE_FAILED | 500 | 文件 | 保存失败（IO/权限） | { "reason": "disk_full" } |
-| BUSINESS_RULE_VIOLATION | 400/409 | 业务 | 状态不允许操作 | { "rule": "submission_locked" } |
-| STATE_NOT_ALLOWED | 409 | 业务状态 | 当前状态不支持该动作 | { "current_state": "correcting", "action": "cancel" } |
-| SECURITY_POLICY_BLOCKED | 403 | 安全 | 被安全策略拒绝（CSP/Host） | { "policy": "trusted_host" } |
-| MAINTENANCE_MODE | 503 | 运行模式 | 系统维护中只读 | { "mode": "read_only" } |
-| INTERNAL_SERVER_ERROR | 500 | 系统 | 未捕获异常 | { "trace_id": "…" } |
-| SERVICE_DEGRADED (规划) | 503 | 系统/降级 | 系统进入降级模式 | { "reason": "high_latency" } |
-| RETRY_REQUIRED (规划) | 425/503 | 并发/一致性 | 需客户端稍后重试 | { "retry_after_ms": 500 } |
-| UNSUPPORTED_OPERATION | 400/501 | 功能 | 端点存在但未启用 | { "feature": "analysis" } |
-| IDempotency_KEY_CONFLICT (规划) | 409 | 幂等 | 相同幂等键重复冲突 | { "key": "abc123" } |
-| PAYLOAD_TOO_LARGE (与 FILE 分离) | 413 | 输入 | JSON/文本体超限 | { "max_bytes": 1048576 } |
-| REQUEST_TOO_LARGE_FIELD | 400 | 输入 | 单字段长度超限 | { "field": "content_text", "max_len": 5000 } |
-| UNSUPPORTED_VERSION (规划) | 400 | 版本 | Client/Schema 版本不兼容 | { "client_version": "0.9.0" } |
-| FEATURE_NOT_AVAILABLE | 403/404 | 功能开关 | 功能未启用（灰度/付费） | { "feature": "advanced_analysis" } |
-| SESSION_EXPIRED (规划) | 401 | 会话 | 会话过期需重建 | { "session_id": "…" } |
-| RATE_LIMIT_SOFT (规划) | 200 + header | 限流提示 | 软限流提醒（不阻断） | { "scope": "per_user", "warning": true } |
-| DATA_INTEGRITY_ERROR | 500 | 数据 | 违反内部约束（非用户可控） | { "constraint": "fk_submission_template" } |
-| UPLOAD_INCOMPLETE (规划) | 400 | 文件 | 分片或断点上传未完成 | { "received_chunks": 3, "expected": 5 } |
-| UNSUPPORTED_MEDIA_TYPE | 415 | 输入 | Content-Type 不被接受 | { "content_type": "text/xml" } |
-| INVALID_STATE_TRANSITION | 409 | 状态机 | 状态转移非法 | { "from": "closed", "to": "active" } |
-
-> HTTP 状态选择说明：如业务仍想用 200 包含错误语义（不推荐），需团队评审；**必须**使用标准 4xx/5xx 体现语义，不使用自定义非标准码。
-
----
-
-## 6. HTTP 状态码映射指南
-
-| HTTP Code | 使用边界说明 | 备注 |
-|-----------|--------------|------|
-| 400 | 请求格式合法但语义/业务不通过 | 与 422 区分：422 更偏结构级/类型级 |
-| 401 | 未认证或 Token 无效/过期 | 认证通过但权限不足 → 403 |
-| 403 | 认证通过但权限不足或策略阻断 | 也用于功能未授权 |
-| 404 | 资源真实不存在或不暴露 | 避免返回对象内部状态差异 |
-| 409 | 资源当前状态与请求冲突 | 并发修改 / 状态不合法 |
-| 410 | 资源已删除且不再可用 | （规划，谨慎使用） |
-| 413 | 请求/文件过大 | 同时可返回可接受的限制 |
-| 415 | 媒体类型不支持 | 文件类型或请求 Content-Type |
-| 422 | 结构化验证失败 | 主要由 Pydantic / Schema 层触发 |
-| 425/425-like | 幂等性/排序等待（可选） | 需明确客户端行为 |
-| 429 | 限流触发 | 需带 `Retry-After` 头 |
-| 500 | 未预料内部错误 | 避免返回敏感信息 |
-| 502 | 下游 AI / 代理层错误 | 语义：上游返回非法响应 |
-| 503 | 依赖不可用 / 维护模式 | 临时状态，客户端可重试 |
-| 504 | 下游超时 | 支持重试或失败提示 |
-| 501 | 暂未实现（谨慎） | 多用 FEATURE_NOT_AVAILABLE |
-
----
-
-## 7. 与前端展示策略建议（摘要）
-
-| 错误码 | 展示优先建议 |
-|--------|--------------|
-| AUTH_INVALID_CREDENTIALS | 表单内错误提示（不弹窗） |
-| RATE_LIMIT_EXCEEDED | 顶部警告条 + 倒计时（如果有 reset_in） |
-| RESOURCE_NOT_FOUND | 页面级空状态 / 返回上一层 |
-| PERMISSION_DENIED | 引导联系管理员或降级说明 |
-| AI_SERVICE_FAILURE | “AI 服务暂不可用，稍后再试” |
-| FILE_* | 上传组件内错误提示 |
-| VALIDATION_ERROR | 高亮字段 + 逐字段 messages |
-| INTERNAL_SERVER_ERROR | 统一“系统繁忙，请稍后再试” |
-| MAINTENANCE_MODE | 维护页跳转或覆盖层 |
-| CONFLICT / STATE_NOT_ALLOWED | Toast + 可选“刷新重试”按钮 |
-
----
-
-## 8. 日志与监控映射（初步）
-
-| 维度 | 记录内容 | 示例字段 |
-|------|----------|----------|
-| 错误分类 | `error.code` | RATE_LIMIT_EXCEEDED |
-| 请求上下文 | trace_id / path / method | 自动注入 |
-| 用户上下文 | user_id / role | 认证中间件填充 |
-| 重试信息 | retry_count（若中间层实现） | 2 |
-| 依赖信息 | dependency_name / latency | ai_service |
-| 安全告警 | policy / blocked | trusted_host |
-| 限流指标 | scope / limit / remaining | per_ip / 60 / 0 |
-| 性能关联 | duration_ms / p95 flag | 最高层中间件 |
-
-监控指标（规划）：
-- `api_errors_total{code="…"}`
-- `api_error_rate{code="…"}`
-- `rate_limit_trigger_total{scope="per_user"}`
-- `ai_failures_total{provider="bailian"}`
-
----
-
-## 9. 新增错误码流程
-
-| 步骤 | 内容 | 输出 |
-|------|------|------|
-| 1 | 评估是否可复用现有错误码 | 若可复用，终止申请 |
-| 2 | 给出场景 & 语义描述 | 场景说明（谁 + 何时 + why） |
-| 3 | 拟定命名（遵循规范） | CODE_CANDIDATE |
-| 4 | 确认 HTTP 状态码 | 对齐上表 |
-| 5 | 补充 details 结构约定 | 字段名与样例 |
-| 6 | 更新本文件表格（暂记“候选”） | PR 中标注 |
-| 7 | 代码中实现映射 | 异常 → 统一处理器 |
-| 8 | 添加测试覆盖 | 单元 + 集成用例 |
-| 9 | 完成 PR / 评审 | 合并后归档 |
-| 10 | 发布时写入 CHANGELOG | 可追踪演进 |
-
----
-
-## 10. 废弃（Deprecated）策略
-
-| 阶段 | 说明 |
-|------|------|
-| 标记阶段 | 在本文件对应行尾添加 `[DEPRECATED: YYYY-MM-DD]` |
-| 过渡期 | 保留 ≥ 1 个次版本周期（0.x 阶段可为 2~3 周） |
-| 替代方案 | 明确替换错误码 |
-| 移除 | 移除行并在 CHANGELOG 中注明 |
-
-示例：
-```
-OLD_ERROR_CODE  →  新：BUSINESS_RULE_VIOLATION
+```json
+{
+  "detail": "记录未找到",
+  "error_code": "RECORD_NOT_FOUND_ERROR",
+  "details": {
+    "resource": "Mistake",
+    "resource_id": "550e8400-e29b-41d4-a716-446655440000"
+  }
+}
 ```
 
----
-
-## 11. 统一使用建议 & 反例
-
-| 坑 / 反例 | 原因 | 正确做法 |
-|-----------|------|----------|
-| 混用 `message` + `error.message` | 解析不统一 | 仅使用结构化包装 |
-| 在 details 放用户可见文案 | 表达层与结构耦合 | details 仅结构化上下文 |
-| 用 200 返回错误语义 | 客户端难以兼容 | 使用正确 4xx/5xx |
-| 抛出裸字符串异常 | 无结构 | 自定义异常或统一转换 |
-| `code` 与 HTTP 状态重复 | 语义贫乏 | code 要表达业务语义 |
-| 文案硬编码英文 | 不适合中文用户 | 统一中文，可二次国际化 |
-| details 无字段约定 | 难以解析 | 明确字段名（resource/id/field） |
-| 过度拆分错误码 | 爆炸式增长 | 优先复用 + details 说明差异 |
+**前端处理**: 显示资源不存在提示，返回列表页面
 
 ---
 
-## 12. 示例（Python 伪代码片段）
+### RECORD_ALREADY_EXISTS_ERROR
+
+**HTTP 状态码**: 409
+
+**说明**: 记录已存在，违反唯一性约束
+
+**示例**:
+
+```json
+{
+  "detail": "记录已存在",
+  "error_code": "RECORD_ALREADY_EXISTS_ERROR",
+  "details": {
+    "resource": "User",
+    "unique_field": "phone"
+  }
+}
+```
+
+**前端处理**: 提示用户该资源已存在（如手机号已注册）
+
+---
+
+### RATE_LIMIT_ERROR
+
+**HTTP 状态码**: 429
+
+**说明**: API 调用频率超过限制
+
+**示例**:
+
+```json
+{
+  "detail": "API调用频率过高",
+  "error_code": "RATE_LIMIT_ERROR",
+  "details": {
+    "limit": 100,
+    "window": 3600
+  }
+}
+```
+
+**前端处理**: 显示限流提示，建议稍后重试
+
+**Retry-After**: 响应头包含建议的重试时间（秒）
+
+---
+
+### BAILIAN_AUTH_ERROR
+
+**HTTP 状态码**: 502
+
+**说明**: 阿里云百炼 API 认证失败
+
+**示例**:
+
+```json
+{
+  "detail": "百炼API认证失败",
+  "error_code": "BAILIAN_AUTH_ERROR"
+}
+```
+
+**前端处理**: 显示 AI 服务暂时不可用提示
+
+---
+
+### BAILIAN_TIMEOUT_ERROR
+
+**HTTP 状态码**: 504
+
+**说明**: 阿里云百炼 API 调用超时
+
+**示例**:
+
+```json
+{
+  "detail": "百炼API调用超时",
+  "error_code": "BAILIAN_TIMEOUT_ERROR",
+  "details": {
+    "timeout": 30
+  }
+}
+```
+
+**前端处理**: 提示 AI 服务响应超时，建议重试
+
+---
+
+### BAILIAN_RATE_LIMIT_ERROR
+
+**HTTP 状态码**: 503
+
+**说明**: 百炼 API 调用频率过高
+
+**示例**:
+
+```json
+{
+  "detail": "百炼API调用频率过高",
+  "error_code": "BAILIAN_RATE_LIMIT_ERROR",
+  "details": {
+    "retry_after": 60
+  }
+}
+```
+
+**前端处理**: 显示限流提示，建议等待后重试
+
+---
+
+### FILE_PROCESS_ERROR
+
+**HTTP 状态码**: 400
+
+**说明**: 文件处理失败（如格式不支持、文件过大）
+
+**示例**:
+
+```json
+{
+  "detail": "文件处理失败",
+  "error_code": "FILE_PROCESS_ERROR",
+  "details": {
+    "file_name": "homework.pdf",
+    "file_size": 15728640
+  }
+}
+```
+
+**前端处理**: 显示文件相关错误提示（如"文件过大，请上传小于10MB的文件"）
+
+---
+
+### DATABASE_CONNECTION_ERROR
+
+**HTTP 状态码**: 500
+
+**说明**: 数据库连接失败
+
+**示例**:
+
+```json
+{
+  "detail": "数据库连接失败",
+  "error_code": "DATABASE_CONNECTION_ERROR"
+}
+```
+
+**前端处理**: 显示系统错误提示，建议联系管理员
+
+---
+
+## 错误处理最佳实践
+
+### 前端处理原则
+
+1. **根据 HTTP 状态码进行分类处理**
+
+```typescript
+switch (error.response.status) {
+  case 401:
+    // 跳转登录
+    router.push("/login");
+    break;
+  case 403:
+    // 显示权限不足
+    showMessage("权限不足");
+    break;
+  case 404:
+    // 显示资源不存在
+    showMessage("资源不存在");
+    break;
+  case 429:
+    // 显示限流提示
+    showMessage("请求过于频繁，请稍后重试");
+    break;
+  case 500:
+  case 502:
+  case 503:
+  case 504:
+    // 显示服务器错误
+    showMessage("服务暂时不可用，请稍后重试");
+    break;
+}
+```
+
+2. **使用错误码进行精确处理**
+
+```typescript
+if (error.response.data.error_code === "TOKEN_EXPIRED_ERROR") {
+  // 刷新 Token
+  await refreshToken();
+  // 重试原请求
+  return retryRequest(originalRequest);
+}
+```
+
+3. **显示友好的错误消息**
+
+```typescript
+const errorMessages = {
+  USER_NOT_FOUND_ERROR: "用户不存在",
+  VALIDATION_ERROR: "输入信息有误，请检查后重试",
+  RATE_LIMIT_ERROR: "操作过于频繁，请稍后再试",
+  // ...
+};
+
+const message = errorMessages[error.error_code] || error.detail || "操作失败";
+showMessage(message);
+```
+
+### 后端处理原则
+
+1. **使用具体的异常类型**
 
 ```python
-from fastapi import HTTPException
+# ✅ 推荐
+from src.core.exceptions import UserNotFoundError
 
-class DomainError(HTTPException):
-    def __init__(self, code: str, message: str, status: int, details: dict | None = None):
-        super().__init__(status_code=status, detail={
-            "success": False,
-            "error": {
-                "code": code,
-                "message": message,
-                "details": details or {}
-            }
-        })
+if not user:
+    raise UserNotFoundError(f"用户 {user_id} 不存在")
 
-# 使用示例：
-def get_submission(submission_id: str):
-    submission = repo.get(submission_id)
-    if not submission:
-        raise DomainError(
-            code="RESOURCE_NOT_FOUND",
-            message="资源不存在",
-            status=404,
-            details={"resource": "HomeworkSubmission", "id": submission_id}
-        )
-    return submission
+# ❌ 避免
+raise Exception("用户不存在")
 ```
 
-（实际项目中可通过统一异常转换中间件代替直接抛 HTTPException。）
+2. **提供详细的错误上下文**
 
----
-
-## 13. 测试建议
-
-| 测试类型 | 重点 |
-|----------|------|
-| 单元测试 | 每个自定义异常 → 结构断言（code/message/details） |
-| 集成测试 | 端到端触发典型错误场景（权限/不存在/限流） |
-| 回归测试 | 避免错误码/状态码被意外更改 |
-| 负载测试 | 错误率统计与限流触发比对 |
-| 模糊输入测试 | 验证不会触发 500 而是期望的校验错误 |
-| 合规测试 | 不泄露内部实现（堆栈/绝对路径） |
-
-示例断言（伪）：
 ```python
-resp = client.get("/api/v1/homework/submissions/non-exist-id")
-assert resp.status_code == 404
-j = resp.json()
-assert j["error"]["code"] == "RESOURCE_NOT_FOUND"
-assert "HomeworkSubmission" in j["error"]["details"]["resource"]
+raise ValidationError(
+    message="数据验证失败",
+    field_errors={
+        "phone": "手机号格式不正确",
+        "password": "密码长度必须在8-32位之间"
+    }
+)
 ```
 
----
+3. **记录错误日志**
 
-## 14. 监控与告警（规划）
+```python
+import logging
 
-| 告警指标 | 条件示例 | 动作 |
-|----------|----------|------|
-| error_rate_total | 5 分钟窗口 > 5% | 记录 + 分析 |
-| error_code_surge{code="AI_SERVICE_FAILURE"} | 5 分钟次数突增 | 检查 AI 依赖 |
-| rate_limit_exceeded | 单用户连续超过阈值 | 观察是否攻击 |
-| internal_server_error | 短时间 > 基线 | 触发紧急排障流程 |
-| dependency_unavailable | 持续 > 1 分钟 | 切换降级策略 |
+logger = logging.getLogger(__name__)
 
----
+try:
+    result = await service.process()
+except BailianServiceError as e:
+    logger.error(f"百炼服务调用失败: {e.message}", extra=e.details)
+    raise
+```
 
-## 15. 未来扩展占位
+### 重试策略
 
-| 方向 | 说明 |
-|------|------|
-| 分级错误严重度 | 增加 severity（INFO/WARN/ERROR）辅助监控 |
-| 可本地化 message key | `message_key` + i18n 资源映射 |
-| 批量错误返回结构 | 用于批处理（例如文件批量操作） |
-| partial success | 混合成功/失败部分结果语义 |
-| trace_id 链路化 | 错误中自动包含 trace_id |
-| 自动统计脚本 | 校验代码中是否有未登记错误码 |
-
----
-
-## 16. 变更记录（本文件）
-
-| 日期 | 版本 | 变更 | 描述 |
-|------|------|------|------|
-| 2025-09-29 | draft-1 | 初稿 | 建立基础分类与错误码集合 |
-| (待填) | ... | ... | ... |
+| 错误类型       | 是否重试 | 重试策略                |
+| -------------- | -------- | ----------------------- |
+| 4xx 客户端错误 | ❌       | 不重试（除 429）        |
+| 429 限流       | ✅       | 指数退避，最多重试 3 次 |
+| 500 服务器错误 | ✅       | 立即重试 1 次           |
+| 502/503/504    | ✅       | 延迟重试，最多重试 2 次 |
+| 网络错误       | ✅       | 指数退避，最多重试 3 次 |
 
 ---
 
-## 17. TODO（执行优先级建议）
+## 版本历史
 
-| 项 | 优先级 | 说明 |
-|----|--------|------|
-| 与现有异常处理代码核对 | P0 | 确认未遗漏/未使用的 code |
-| 增加统一异常转换层说明 | P0 | 使所有异常进入统一结构 |
-| 定义 details 字段规范清单 | P1 | 避免字段混乱 |
-| 增加错误监控指标导出 | P1 | Prometheus 接入 |
-| 设计幂等冲突错误码 & 语义 | P2 | 结合未来 idempotency-key |
-| 引入 severity 字段 | P2 | 方便日志分级 |
-| 加入国际化 message_key | P3 | 为后续英文界面准备 |
-| 自动化 lint：发现未注册错误码 | P3 | CI 检测 |
-| 废弃过期/不再使用的错误码标记流程 | P3 | 规范生命周期 |
+| 日期       | 版本 | 变更说明                        |
+| ---------- | ---- | ------------------------------- |
+| 2025-10-12 | v2.0 | 根据 exceptions.py 完全重写文档 |
+| 2025-09-29 | v1.0 | 初始版本（草稿）                |
 
 ---
 
-## 18. 反馈方式
+## 相关文档
 
-发现以下情况之一：
-- 错误码语义不清晰 / 与现实现不符
-- HTTP 状态不符合标准
-- 某端点返回了未登记错误码
-- 需要新增错误码
-
-请：
-1. 创建 Issue（标签：`api-error`）
-2. 填写：场景 → 期望行为 → 当前行为 → 复现步骤
-3. 若需新增：附命名建议 + HTTP 状态 + details 示例
+- [API 端点文档](./endpoints.md) - 完整的 API 接口列表
+- [API 数据模型](./models.md) - 请求响应数据结构
+- [API 概览](./overview.md) - RESTful 设计原则
 
 ---
 
-（END）
+**维护者**: 五好伴学开发团队
+**反馈**: 通过 GitHub Issues 提交文档问题和改进建议
