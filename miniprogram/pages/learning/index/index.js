@@ -99,6 +99,7 @@ Page({
 
     // 会话管理
     sessionId: '', // 当前会话ID
+    isNewSession: false, // 是否为新创建的会话
     conversationContext: [], // 对话上下文
 
     // 网络状态
@@ -301,18 +302,24 @@ Page({
       });
 
       let sessionId;
+      let isNewSession = false;
       if (sessionResponse.success) {
         sessionId = sessionResponse.data.id;
         wx.setStorageSync('chat_session_id', sessionId);
+        isNewSession = true;
         console.log('新会话创建成功:', sessionId);
       } else {
         // 如果创建会话失败，回退到本地生成
         sessionId = this.generateSessionId();
         wx.setStorageSync('chat_session_id', sessionId);
+        isNewSession = true;
         console.log('使用本地生成的sessionId:', sessionId);
       }
 
-      this.setData({ sessionId });
+      this.setData({
+        sessionId,
+        isNewSession, // 标记是否为新会话
+      });
 
       // 恢复草稿
       const draft = wx.getStorageSync('chat_draft');
@@ -324,7 +331,10 @@ Page({
       console.error('初始化会话失败:', error);
       // 发生错误时使用本地生成的会话ID
       const sessionId = this.generateSessionId();
-      this.setData({ sessionId });
+      this.setData({
+        sessionId,
+        isNewSession: true,
+      });
       wx.setStorageSync('chat_session_id', sessionId);
     }
   },
@@ -336,8 +346,14 @@ Page({
     try {
       this.setData({ loading: true });
 
-      // 加载历史消息
-      await this.loadHistoryMessages();
+      // 只有非新会话才加载历史消息
+      // 新会话没有历史，跳过加载避免404错误
+      if (!this.data.isNewSession) {
+        await this.loadHistoryMessages();
+      } else {
+        console.log('新会话跳过历史消息加载');
+        this.setData({ messageList: [] });
+      }
 
       // 初始化AI连接状态
       await this.checkAIStatus();
