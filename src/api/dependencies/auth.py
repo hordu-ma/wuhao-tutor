@@ -4,15 +4,16 @@
 """
 
 from typing import Optional
+
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import get_db
+from src.core.exceptions import AuthenticationError, AuthorizationError
 from src.models.user import User
 from src.services.auth_service import AuthService
 from src.services.user_service import UserService, get_user_service
-from src.core.exceptions import AuthenticationError, AuthorizationError
 
 security = HTTPBearer()
 
@@ -20,7 +21,7 @@ security = HTTPBearer()
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: AsyncSession = Depends(get_db),
-    user_service: UserService = Depends(get_user_service)
+    user_service: UserService = Depends(get_user_service),
 ) -> User:
     """
     获取当前认证用户
@@ -75,7 +76,7 @@ async def get_current_user(
 
 
 async def get_current_active_user(
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ) -> User:
     """
     获取当前活跃用户
@@ -89,10 +90,9 @@ async def get_current_active_user(
     Raises:
         HTTPException: 用户未激活时抛出403错误
     """
-    if not getattr(current_user, 'is_active', True):
+    if not getattr(current_user, "is_active", True):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Inactive user"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user"
         )
 
     return current_user
@@ -101,7 +101,7 @@ async def get_current_active_user(
 async def get_optional_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: AsyncSession = Depends(get_db),
-    user_service: UserService = Depends(get_user_service)
+    user_service: UserService = Depends(get_user_service),
 ) -> Optional[User]:
     """
     获取可选的当前用户（允许匿名访问）
@@ -132,9 +132,7 @@ async def get_optional_current_user(
         return None
 
 
-async def get_current_user_id(
-    current_user: User = Depends(get_current_user)
-) -> str:
+async def get_current_user_id(current_user: User = Depends(get_current_user)) -> str:
     """
     获取当前用户ID
 
@@ -149,25 +147,19 @@ async def get_current_user_id(
 
 def require_role(*allowed_roles: str):
     """
-    角色权限装饰器
+    角色权限装饰器 - 简化版，所有认证用户都是学生角色
 
     Args:
-        allowed_roles: 允许的角色列表
+        allowed_roles: 允许的角色列表（保留接口兼容性，但实际不再检查）
 
     Returns:
         依赖函数
     """
+
     async def role_checker(
-        current_user: User = Depends(get_current_active_user)
+        current_user: User = Depends(get_current_active_user),
     ) -> User:
-        user_role = getattr(current_user, 'role', None)
-
-        if user_role not in allowed_roles:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Access denied. Required roles: {', '.join(allowed_roles)}"
-            )
-
+        # 简化：所有认证用户都被视为学生角色，无需角色检查
         return current_user
 
     return role_checker
@@ -183,17 +175,18 @@ def require_permission(permission: str):
     Returns:
         依赖函数
     """
+
     async def permission_checker(
-        current_user: User = Depends(get_current_active_user)
+        current_user: User = Depends(get_current_active_user),
     ) -> User:
         # 这里可以实现更复杂的权限检查逻辑
         # 例如检查用户的permissions字段
-        user_permissions = getattr(current_user, 'permissions', [])
+        user_permissions = getattr(current_user, "permissions", [])
 
         if permission not in user_permissions:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Access denied. Required permission: {permission}"
+                detail=f"Access denied. Required permission: {permission}",
             )
 
         return current_user

@@ -1,546 +1,284 @@
-// tabBar 管理工具 - 角色专属tabBar配置
+// TabBar 管理工具 - 简化版
 
-const { roleManager } = require('./role-manager.js');
 const { authManager } = require('./auth.js');
-const { permissionManager } = require('./permission-manager.js');
 
 /**
- * TabBar管理类
+ * TabBar管理类 - 简化版
+ * 策略：基础TabBar在app.json中静态配置，页面级做访问控制
  */
 class TabBarManager {
   constructor() {
-    // 角色专属tabBar配置
-    this.roleTabBarConfigs = {
-      student: {
-        color: '#999999',
-        selectedColor: '#1890ff',
-        backgroundColor: '#ffffff',
-        borderStyle: 'black',
-        list: [
-          {
-            pagePath: 'pages/index/index',
-            text: '首页',
-            iconPath: 'assets/icons/home.png',
-            selectedIconPath: 'assets/icons/home-active.png',
-          },
-          {
-            pagePath: 'pages/mistakes/list/index',
-            text: '错题本',
-            iconPath: 'assets/icons/homework.png',
-            selectedIconPath: 'assets/icons/homework-active.png',
-          },
-          {
-            pagePath: 'pages/learning/index/index',
-            text: '作业问答',
-            iconPath: 'assets/icons/chat.png',
-            selectedIconPath: 'assets/icons/chat-active.png',
-          },
-          {
-            pagePath: 'pages/analysis/report/index',
-            text: '学习报告',
-            iconPath: 'assets/icons/report.png',
-            selectedIconPath: 'assets/icons/report-active.png',
-          },
-          {
-            pagePath: 'pages/profile/index/index',
-            text: '我的',
-            iconPath: 'assets/icons/profile.png',
-            selectedIconPath: 'assets/icons/profile-active.png',
-          },
-        ],
-      },
+    this.isLoggedIn = false;
+    this.isInitialized = false;
+  }
 
-      parent: {
-        color: '#999999',
-        selectedColor: '#52c41a',
-        backgroundColor: '#ffffff',
-        borderStyle: 'black',
-        list: [
-          {
-            pagePath: 'pages/index/index',
-            text: '首页',
-            iconPath: 'assets/icons/home.png',
-            selectedIconPath: 'assets/icons/home-active.png',
-          },
-          {
-            pagePath: 'pages/analysis/progress/index',
-            text: '学情',
-            iconPath: 'assets/icons/progress.png',
-            selectedIconPath: 'assets/icons/progress-active.png',
-          },
-          {
-            pagePath: 'pages/homework/list/index',
-            text: '作业',
-            iconPath: 'assets/icons/homework.png',
-            selectedIconPath: 'assets/icons/homework-active.png',
-          },
-          {
-            pagePath: 'pages/profile/index/index',
-            text: '我的',
-            iconPath: 'assets/icons/profile.png',
-            selectedIconPath: 'assets/icons/profile-active.png',
-          },
-        ],
-      },
+  /**
+   * 初始化TabBar管理器
+   */
+  async initTabBar() {
+    console.log('🚀 初始化TabBar管理器（简化版）');
 
-      teacher: {
-        color: '#999999',
-        selectedColor: '#faad14',
-        backgroundColor: '#ffffff',
-        borderStyle: 'black',
-        list: [
-          {
-            pagePath: 'pages/index/index',
-            text: '首页',
-            iconPath: 'assets/icons/home.png',
-            selectedIconPath: 'assets/icons/home-active.png',
+    try {
+      const isLoggedIn = await authManager.isLoggedIn();
+      this.isLoggedIn = isLoggedIn;
+      this.isInitialized = true;
+
+      console.log(`📱 TabBar初始化完成 - 登录状态: ${isLoggedIn}`);
+
+      return { success: true, isLoggedIn };
+    } catch (error) {
+      console.error('TabBar初始化失败:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * 登录状态变化时的处理
+   */
+  async onLoginStatusChange(isLoggedIn) {
+    console.log(`🔄 登录状态变化: ${this.isLoggedIn} -> ${isLoggedIn}`);
+
+    this.isLoggedIn = isLoggedIn;
+
+    if (isLoggedIn) {
+      console.log('✅ 用户已登录，可以访问所有功能');
+    } else {
+      console.log('ℹ️ 用户未登录，部分功能受限');
+    }
+
+    return { success: true, isLoggedIn };
+  }
+
+  /**
+   * 检查页面是否需要登录
+   */
+  async checkLoginRequired(pagePath) {
+    const loginRequiredPages = [
+      'pages/mistakes/list/index',
+      'pages/learning/index/index',
+      'pages/analysis/report/index',
+    ];
+
+    if (loginRequiredPages.includes(pagePath)) {
+      const isLoggedIn = await authManager.isLoggedIn();
+      if (!isLoggedIn) {
+        wx.showModal({
+          title: '需要登录',
+          content: '此功能需要登录后使用，是否前往登录？',
+          success(res) {
+            if (res.confirm) {
+              wx.navigateTo({
+                url: '/pages/login/index',
+              });
+            }
           },
-          {
-            pagePath: 'pages/homework/list/index',
-            text: '作业',
-            iconPath: 'assets/icons/homework.png',
-            selectedIconPath: 'assets/icons/homework-active.png',
-          },
-          {
-            pagePath: 'pages/analysis/report/index',
-            text: '分析',
-            iconPath: 'assets/icons/analysis.png',
-            selectedIconPath: 'assets/icons/analysis-active.png',
-          },
-          {
-            pagePath: 'pages/profile/index/index',
-            text: '我的',
-            iconPath: 'assets/icons/profile.png',
-            selectedIconPath: 'assets/icons/profile-active.png',
-          },
-        ],
-      },
+        });
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * 获取当前TabBar配置信息
+   */
+  async getCurrentTabBarConfig() {
+    const isLoggedIn = await authManager.isLoggedIn();
+    return {
+      isLoggedIn,
+      message: isLoggedIn ? '已登录，可访问所有功能' : '未登录，部分功能受限',
     };
+  }
 
-    // 默认tabBar配置（未登录或未选择角色时使用）
-    this.defaultTabBarConfig = {
+  /**
+   * 获取当前登录状态
+   */
+  getLoginStatus() {
+    return this.isLoggedIn;
+  }
+
+  // 保留的兼容性方法
+  async setTabBar() {
+    return await this.initTabBar();
+  }
+
+  async filterTabBarByPermissions(tabBarList, isLoggedIn) {
+    if (!isLoggedIn) {
+      const allowedPages = ['pages/index/index', 'pages/profile/index/index'];
+      return tabBarList.filter(item => allowedPages.includes(item.pagePath));
+    }
+    return tabBarList;
+  }
+
+  setTabBarBadge(index, text) {
+    try {
+      if (wx.setTabBarBadge && typeof index === 'number' && text) {
+        wx.setTabBarBadge({
+          index,
+          text: String(text),
+          success: () => console.log(`📱 TabBar徽章设置成功: ${index} - ${text}`),
+          fail: error => console.error('TabBar徽章设置失败:', error),
+        });
+      }
+    } catch (error) {
+      console.error('setTabBarBadge调用失败:', error);
+    }
+  }
+
+  removeTabBarBadge(index) {
+    try {
+      if (wx.removeTabBarBadge && typeof index === 'number') {
+        wx.removeTabBarBadge({
+          index,
+          success: () => console.log(`📱 TabBar徽章移除成功: ${index}`),
+          fail: error => console.error('TabBar徽章移除失败:', error),
+        });
+      }
+    } catch (error) {
+      console.error('removeTabBarBadge调用失败:', error);
+    }
+  }
+
+  showTabBarRedDot(index) {
+    try {
+      if (wx.showTabBarRedDot && typeof index === 'number') {
+        wx.showTabBarRedDot({
+          index,
+          success: () => console.log(`📱 TabBar红点显示成功: ${index}`),
+          fail: error => console.error('TabBar红点显示失败:', error),
+        });
+      }
+    } catch (error) {
+      console.error('showTabBarRedDot调用失败:', error);
+    }
+  }
+
+  hideTabBarRedDot(index) {
+    try {
+      if (wx.hideTabBarRedDot && typeof index === 'number') {
+        wx.hideTabBarRedDot({
+          index,
+          success: () => console.log(`📱 TabBar红点隐藏成功: ${index}`),
+          fail: error => console.error('TabBar红点隐藏失败:', error),
+        });
+      }
+    } catch (error) {
+      console.error('hideTabBarRedDot调用失败:', error);
+    }
+  }
+
+  hideTabBar() {
+    try {
+      if (wx.hideTabBar) {
+        wx.hideTabBar({
+          animation: true,
+          success: () => console.log('📱 TabBar隐藏成功'),
+          fail: error => console.error('TabBar隐藏失败:', error),
+        });
+      }
+    } catch (error) {
+      console.error('hideTabBar调用失败:', error);
+    }
+  }
+
+  showTabBar() {
+    try {
+      if (wx.showTabBar) {
+        wx.showTabBar({
+          animation: true,
+          success: () => console.log('📱 TabBar显示成功'),
+          fail: error => console.error('TabBar显示失败:', error),
+        });
+      }
+    } catch (error) {
+      console.error('showTabBar调用失败:', error);
+    }
+  }
+
+  // 兼容性方法 - 保留原有接口但简化实现
+  async onRoleSwitch(newRole, oldRole) {
+    console.log(`角色切换: ${oldRole} -> ${newRole} (简化版本 - 仅学生角色)`);
+    return { success: true };
+  }
+
+  getRoleTabBarConfig(role) {
+    // 简化版本：只返回基础配置
+    return {
       color: '#999999',
       selectedColor: '#1890ff',
       backgroundColor: '#ffffff',
       borderStyle: 'black',
-      list: [
-        {
-          pagePath: 'pages/index/index',
-          text: '首页',
-          iconPath: 'assets/icons/home.png',
-          selectedIconPath: 'assets/icons/home-active.png',
-        },
-        {
-          pagePath: 'pages/profile/index/index',
-          text: '我的',
-          iconPath: 'assets/icons/profile.png',
-          selectedIconPath: 'assets/icons/profile-active.png',
-        },
-      ],
+      list: [],
     };
-
-    // 当前应用的tabBar配置
-    this.currentTabBarConfig = null;
-    this.currentRole = null;
   }
 
-  /**
-   * 获取角色对应的tabBar配置
-   */
-  getRoleTabBarConfig(role) {
-    return this.roleTabBarConfigs[role] || this.defaultTabBarConfig;
-  }
-
-  /**
-   * 获取当前用户的tabBar配置
-   */
-  async getCurrentTabBarConfig() {
-    try {
-      const userRole = await authManager.getUserRole();
-      return this.getRoleTabBarConfig(userRole);
-    } catch (error) {
-      console.error('获取当前tabBar配置失败:', error);
-      return this.defaultTabBarConfig;
-    }
-  }
-
-  /**
-   * 设置tabBar配置
-   */
-  async setTabBar(role = null) {
-    try {
-      const targetRole = role || (await authManager.getUserRole());
-      const tabBarConfig = this.getRoleTabBarConfig(targetRole);
-
-      // 检查是否需要更新
-      if (this.currentRole === targetRole && this.currentTabBarConfig) {
-        console.log('TabBar配置未变化，跳过更新');
-        return { success: true, updated: false };
-      }
-
-      console.log(`设置${targetRole}角色的tabBar配置`);
-
-      // 过滤有权限访问的页面
-      const filteredList = await this.filterTabBarByPermissions(tabBarConfig.list, targetRole);
-
-      if (filteredList.length === 0) {
-        console.warn('没有可访问的tabBar页面');
-        return { success: false, error: '没有可访问的页面' };
-      }
-
-      // 应用tabBar配置
-      const finalConfig = {
-        ...tabBarConfig,
-        list: filteredList,
-      };
-
-      // 由于小程序限制，无法动态修改app.json中的tabBar
-      // 这里使用 wx.setTabBarStyle 和 wx.setTabBarItem 来更新
-      await this.applyTabBarConfig(finalConfig);
-
-      // 更新当前配置
-      this.currentTabBarConfig = finalConfig;
-      this.currentRole = targetRole;
-
-      console.log('TabBar配置更新成功:', { role: targetRole, items: filteredList.length });
-
-      return { success: true, updated: true, config: finalConfig };
-    } catch (error) {
-      console.error('设置tabBar失败:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  /**
-   * 根据权限过滤tabBar项目
-   */
-  async filterTabBarByPermissions(tabBarList, role) {
-    const filteredList = [];
-
-    for (const item of tabBarList) {
-      try {
-        // 检查页面访问权限
-        const canAccess = await permissionManager.checkPageAccess(item.pagePath);
-
-        if (canAccess) {
-          filteredList.push(item);
-        } else {
-          console.log(`用户${role}无权访问页面: ${item.pagePath}`);
-        }
-      } catch (error) {
-        console.error(`检查页面权限失败: ${item.pagePath}`, error);
-        // 权限检查失败时，默认不添加该项
-      }
-    }
-
-    return filteredList;
-  }
-
-  /**
-   * 应用tabBar配置到小程序
-   */
-  async applyTabBarConfig(config) {
-    try {
-      // 设置tabBar样式
-      await this.setTabBarStyle({
-        color: config.color,
-        selectedColor: config.selectedColor,
-        backgroundColor: config.backgroundColor,
-        borderStyle: config.borderStyle,
-      });
-
-      // 设置每个tabBar项目
-      for (let index = 0; index < config.list.length; index++) {
-        const item = config.list[index];
-        await this.setTabBarItem(index, {
-          text: item.text,
-          iconPath: item.iconPath,
-          selectedIconPath: item.selectedIconPath,
-        });
-      }
-
-      console.log('TabBar配置应用成功');
-    } catch (error) {
-      console.error('应用tabBar配置失败:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * 设置tabBar样式
-   */
-  setTabBarStyle(style) {
-    return new Promise((resolve, reject) => {
-      wx.setTabBarStyle({
-        ...style,
-        success: resolve,
-        fail: reject,
-      });
-    });
-  }
-
-  /**
-   * 设置tabBar项目
-   */
-  setTabBarItem(index, item) {
-    return new Promise((resolve, reject) => {
-      wx.setTabBarItem({
-        index,
-        ...item,
-        success: resolve,
-        fail: reject,
-      });
-    });
-  }
-
-  /**
-   * 显示tabBar徽标
-   */
-  showTabBarRedDot(index) {
-    wx.showTabBarRedDot({ index });
-  }
-
-  /**
-   * 隐藏tabBar徽标
-   */
-  hideTabBarRedDot(index) {
-    wx.hideTabBarRedDot({ index });
-  }
-
-  /**
-   * 设置tabBar徽标文本
-   */
-  setTabBarBadge(index, text) {
-    wx.setTabBarBadge({ index, text });
-  }
-
-  /**
-   * 移除tabBar徽标文本
-   */
-  removeTabBarBadge(index) {
-    wx.removeTabBarBadge({ index });
-  }
-
-  /**
-   * 角色切换时更新tabBar
-   */
-  async onRoleSwitch(newRole, oldRole) {
-    console.log(`角色切换: ${oldRole} -> ${newRole}`);
-
-    try {
-      // 更新tabBar配置
-      const result = await this.setTabBar(newRole);
-
-      if (result.success) {
-        // 切换到角色对应的首页
-        const roleConfig = roleManager.getRoleConfig(newRole);
-        const homePage = roleConfig.homePage;
-
-        // 如果首页在tabBar中，切换到该页面
-        const homePageInTabBar = result.config.list.find(
-          item => item.pagePath === homePage.replace('/', ''),
-        );
-
-        if (homePageInTabBar) {
-          wx.switchTab({
-            url: homePage,
-            fail: error => {
-              console.error('切换到首页失败:', error);
-              // 如果切换失败，使用 redirectTo
-              wx.redirectTo({
-                url: homePage,
-              });
-            },
-          });
-        } else {
-          // 如果首页不在tabBar中，使用 redirectTo
-          wx.redirectTo({
-            url: homePage,
-          });
-        }
-
-        return result;
-      } else {
-        throw new Error(result.error);
-      }
-    } catch (error) {
-      console.error('角色切换tabBar更新失败:', error);
-
-      // 显示错误提示
-      wx.showToast({
-        title: 'TabBar更新失败',
-        icon: 'none',
-        duration: 2000,
-      });
-
-      return { success: false, error: error.message };
-    }
-  }
-
-  /**
-   * 初始化tabBar
-   */
-  async initTabBar() {
-    try {
-      console.log('初始化tabBar配置');
-
-      // 检查用户登录状态
-      const isLoggedIn = await authManager.isLoggedIn();
-
-      if (!isLoggedIn) {
-        console.log('用户未登录，使用默认tabBar');
-        await this.applyTabBarConfig(this.defaultTabBarConfig);
-        return { success: true, role: 'guest' };
-      }
-
-      // 获取用户角色并设置对应tabBar
-      const userRole = await authManager.getUserRole();
-      const result = await this.setTabBar(userRole);
-
-      return { ...result, role: userRole };
-    } catch (error) {
-      console.error('初始化tabBar失败:', error);
-
-      // 降级到默认配置
-      try {
-        await this.applyTabBarConfig(this.defaultTabBarConfig);
-        return { success: true, role: 'fallback', error: error.message };
-      } catch (fallbackError) {
-        console.error('应用默认tabBar失败:', fallbackError);
-        return { success: false, error: fallbackError.message };
-      }
-    }
-  }
-
-  /**
-   * 重置tabBar到默认状态
-   */
   async resetTabBar() {
-    try {
-      console.log('重置tabBar到默认状态');
-      await this.applyTabBarConfig(this.defaultTabBarConfig);
-
-      this.currentTabBarConfig = this.defaultTabBarConfig;
-      this.currentRole = null;
-
-      return { success: true };
-    } catch (error) {
-      console.error('重置tabBar失败:', error);
-      return { success: false, error: error.message };
-    }
+    return await this.initTabBar();
   }
 
-  /**
-   * 获取当前tabBar状态
-   */
   getCurrentTabBarState() {
     return {
-      role: this.currentRole,
-      config: this.currentTabBarConfig,
-      initialized: !!this.currentTabBarConfig,
+      isLoggedIn: this.isLoggedIn,
+      isInitialized: this.isInitialized,
     };
   }
 
-  /**
-   * 自定义tabBar配置
-   */
   addCustomTabBarConfig(role, config) {
-    this.roleTabBarConfigs[role] = config;
-    console.log(`添加自定义tabBar配置: ${role}`);
+    console.log('addCustomTabBarConfig: 简化版本不支持自定义配置');
   }
 
-  /**
-   * 移除自定义tabBar配置
-   */
   removeCustomTabBarConfig(role) {
-    if (this.roleTabBarConfigs[role]) {
-      delete this.roleTabBarConfigs[role];
-      console.log(`移除自定义tabBar配置: ${role}`);
-    }
+    console.log('removeCustomTabBarConfig: 简化版本不支持自定义配置');
   }
 
-  /**
-   * 更新tabBar项目的徽标状态
-   */
   async updateTabBarBadges() {
+    console.log('updateTabBarBadges: 简化版本暂不实现');
+    return { success: true };
+  }
+
+  async checkNewHomework() {
+    console.log('checkNewHomework: 简化版本暂不实现');
+    return 0;
+  }
+
+  async getUnreadMessageCount() {
+    console.log('getUnreadMessageCount: 简化版本暂不实现');
+    return 0;
+  }
+
+  setTabBarStyle(style) {
     try {
-      const currentConfig = this.currentTabBarConfig;
-      if (!currentConfig) return;
-
-      // 这里可以根据业务需求更新徽标
-      // 例如：未读消息数量、待处理作业数量等
-
-      // 示例：检查作业页面是否有新作业
-      const homeworkPageIndex = currentConfig.list.findIndex(item =>
-        item.pagePath.includes('homework'),
-      );
-
-      if (homeworkPageIndex !== -1) {
-        // TODO: 检查是否有新作业
-        const hasNewHomework = await this.checkNewHomework();
-
-        if (hasNewHomework) {
-          this.showTabBarRedDot(homeworkPageIndex);
-        } else {
-          this.hideTabBarRedDot(homeworkPageIndex);
-        }
-      }
-
-      // 示例：检查个人中心是否有新消息
-      const profilePageIndex = currentConfig.list.findIndex(item =>
-        item.pagePath.includes('profile'),
-      );
-
-      if (profilePageIndex !== -1) {
-        // TODO: 检查是否有新消息
-        const unreadCount = await this.getUnreadMessageCount();
-
-        if (unreadCount > 0) {
-          this.setTabBarBadge(profilePageIndex, unreadCount.toString());
-        } else {
-          this.removeTabBarBadge(profilePageIndex);
-        }
+      if (wx.setTabBarStyle) {
+        wx.setTabBarStyle(style);
       }
     } catch (error) {
-      console.error('更新tabBar徽标失败:', error);
+      console.error('setTabBarStyle调用失败:', error);
     }
   }
 
-  /**
-   * 检查新作业（示例方法）
-   */
-  async checkNewHomework() {
-    // TODO: 实现检查新作业的逻辑
-    return false;
+  setTabBarItem(index, item) {
+    try {
+      if (wx.setTabBarItem) {
+        wx.setTabBarItem({
+          index,
+          ...item,
+        });
+      }
+    } catch (error) {
+      console.error('setTabBarItem调用失败:', error);
+    }
   }
 
-  /**
-   * 获取未读消息数量（示例方法）
-   */
-  async getUnreadMessageCount() {
-    // TODO: 实现获取未读消息数量的逻辑
-    return 0;
+  async applyTabBarConfig(config) {
+    console.log('applyTabBarConfig: 简化版本不支持动态配置');
+    return { success: true };
   }
 }
 
-// 创建全局实例
+// 创建单例
 const tabBarManager = new TabBarManager();
 
-// 导出
 module.exports = {
-  TabBarManager,
   tabBarManager,
-
-  // 便捷方法
-  initTabBar: () => tabBarManager.initTabBar(),
-  setTabBar: role => tabBarManager.setTabBar(role),
-  resetTabBar: () => tabBarManager.resetTabBar(),
-  onRoleSwitch: (newRole, oldRole) => tabBarManager.onRoleSwitch(newRole, oldRole),
-  updateBadges: () => tabBarManager.updateTabBarBadges(),
-
-  // 徽标方法
-  showRedDot: index => tabBarManager.showTabBarRedDot(index),
-  hideRedDot: index => tabBarManager.hideTabBarRedDot(index),
-  setBadge: (index, text) => tabBarManager.setTabBarBadge(index, text),
-  removeBadge: index => tabBarManager.removeTabBarBadge(index),
+  TabBarManager,
 };

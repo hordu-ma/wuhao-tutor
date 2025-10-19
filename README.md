@@ -3,7 +3,7 @@
 > 基于阿里云百炼智能体的 K12 智能学习支持平台
 > AI 驱动的作业问答 + 智能错题手册 + 全面学情分析
 
-一个现代化的教育科技平台,利用 AI 技术为 K12 学生提供智能学习问答、错题管理和全面的学情分析服务。
+一个现代化的教育科技平台，专为 K12 学生打造，利用 AI 技术提供智能学习问答、错题管理和全面的学情分析服务。
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.11+-blue.svg)

@@ -14,7 +14,6 @@ Page({
     unreadNotificationCount: 0, // 未读消息数量
     recommendations: [], // 个性化推荐内容
     todoItems: [], // 待办事项
-    recentActivities: [], // 最近活动
     stats: {
       homeworkCount: 0,
       questionCount: 0,
@@ -220,7 +219,6 @@ Page({
         this.loadNotifications(),
         this.loadRecommendations(),
         this.loadTodoItems(),
-        this.loadRecentActivities(),
       ]);
 
       console.log('首页数据刷新完成');
@@ -431,7 +429,6 @@ Page({
       this.loadNotifications(),
       this.loadRecommendations(),
       this.loadTodoItems(),
-      this.loadRecentActivities(),
     ]);
   },
 
@@ -806,84 +803,6 @@ Page({
   },
 
   /**
-   * 加载最近活动
-   */
-  async loadRecentActivities() {
-    try {
-      const { role } = this.data;
-      let recentActivities = [];
-
-      switch (role) {
-        case 'student':
-          recentActivities = [
-            {
-              id: 'submit_homework',
-              type: 'homework',
-              title: '提交了英语作业',
-              time: '2小时前',
-              icon: 'completed',
-            },
-            {
-              id: 'ask_question',
-              type: 'chat',
-              title: '向AI助手提问了3个问题',
-              time: '4小时前',
-              icon: 'chat',
-            },
-            {
-              id: 'view_report',
-              type: 'analysis',
-              title: '查看了学习报告',
-              time: '昨天',
-              icon: 'chart',
-            },
-          ];
-          break;
-        case 'parent':
-          recentActivities = [
-            {
-              id: 'check_progress',
-              type: 'monitoring',
-              title: '查看了孩子的学习进度',
-              time: '1小时前',
-              icon: 'chart',
-            },
-            {
-              id: 'review_grades',
-              type: 'grades',
-              title: '查看了最新成绩',
-              time: '昨天',
-              icon: 'star',
-            },
-          ];
-          break;
-        case 'teacher':
-          recentActivities = [
-            {
-              id: 'grade_assignments',
-              type: 'grading',
-              title: '批改了15份作业',
-              time: '3小时前',
-              icon: 'edit',
-            },
-            {
-              id: 'analyze_class',
-              type: 'analysis',
-              title: '分析了班级表现',
-              time: '昨天',
-              icon: 'chart',
-            },
-          ];
-          break;
-      }
-
-      this.setData({ recentActivities });
-    } catch (error) {
-      console.error('加载最近活动失败:', error);
-    }
-  },
-
-  /**
    * 点击快捷操作
    */
   onQuickActionTap(e) {
@@ -1130,49 +1049,6 @@ Page({
       title: '任务完成',
       icon: 'success',
       duration: 1500,
-    });
-  },
-
-  /**
-   * 查看最近活动详情
-   */
-  onActivityTap(e) {
-    const { activity } = e.currentTarget.dataset;
-    if (!activity) return;
-
-    console.log('点击最近活动:', activity);
-
-    // 根据活动类型跳转到相应页面
-    let url = '';
-    switch (activity.type) {
-      case 'homework':
-        url = '/pages/homework/list/index';
-        break;
-      case 'chat':
-        url = '/pages/chat/index/index';
-        break;
-      case 'analysis':
-        url = '/pages/analysis/report/index';
-        break;
-      case 'monitoring':
-        url = '/pages/analysis/progress/index';
-        break;
-      case 'grades':
-        url = '/pages/grades/list/index';
-        break;
-      case 'grading':
-        url = '/pages/homework/correction/index';
-        break;
-      default:
-        console.warn('未知的活动类型:', activity.type);
-        return;
-    }
-
-    wx.navigateTo({
-      url,
-      fail: () => {
-        wx.switchTab({ url });
-      },
     });
   },
 

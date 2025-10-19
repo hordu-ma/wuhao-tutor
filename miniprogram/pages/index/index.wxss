@@ -672,64 +672,6 @@
   margin-left: 16rpx;
 }
 
-/* 最近活动区域 */
-.activities-section {
-  margin: 32rpx 32rpx 0;
-}
-
-.activities-list {
-  margin-top: 16rpx;
-}
-
-.activity-item {
-  display: flex;
-  align-items: center;
-  padding: 24rpx;
-  background-color: #ffffff;
-  border-radius: 16rpx;
-  margin-bottom: 12rpx;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.activity-item:hover {
-  background-color: #f8f9fa;
-  transform: translateY(-1rpx);
-}
-
-.activity-item:last-child {
-  margin-bottom: 0;
-}
-
-.activity-icon {
-  width: 48rpx;
-  height: 48rpx;
-  border-radius: 50%;
-  background-color: #e6f7ff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 24rpx;
-  flex-shrink: 0;
-}
-
-.activity-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.activity-title {
-  font-size: 26rpx;
-  color: #333333;
-  margin-bottom: 4rpx;
-  display: block;
-}
-
-.activity-time {
-  font-size: 20rpx;
-  color: #999999;
-}
-
 /* 夜间模式支持 */
 @media (prefers-color-scheme: dark) {
   .container {

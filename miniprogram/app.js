@@ -11,7 +11,7 @@ App({
   globalData: {
     userInfo: undefined,
     token: undefined,
-    role: undefined,
+    // role: 'student', // 简化：固定为学生角色
     systemInfo: undefined,
     isInitialized: false,
     networkStatus: 'unknown',
@@ -312,19 +312,17 @@ App({
       const isLoggedIn = await authManager.isLoggedIn();
 
       if (isLoggedIn) {
-        // 获取并更新全局状态
-        const [userInfo, token, role] = await Promise.all([
+        // 获取并更新全局状态 - 简化版，不需要角色判断
+        const [userInfo, token] = await Promise.all([
           authManager.getUserInfo(),
           authManager.getToken(),
-          authManager.getUserRole(),
         ]);
 
         if (userInfo && token) {
           this.globalData.userInfo = userInfo;
           this.globalData.token = token;
-          this.globalData.role = role;
 
-          console.log('用户会话有效:', { userId: userInfo.id, role });
+          console.log('用户会话有效:', { userId: userInfo.id, role: 'student' });
 
           // 检查Token是否有效
           const isTokenValid = await authManager.isTokenValid();
@@ -422,23 +420,18 @@ App({
   },
 
   /**
-   * 设置用户信息
+   * 设置用户信息 - 简化版
    */
-  async setUserInfo(userInfo, token, role) {
+  async setUserInfo(userInfo, token) {
     try {
-      const oldRole = this.globalData.role;
-
       this.globalData.userInfo = userInfo;
       this.globalData.token = token;
-      this.globalData.role = role || userInfo.role;
 
       console.log('全局用户信息已更新');
 
-      // 如果角色变化，更新TabBar
-      if (oldRole !== this.globalData.role) {
-        console.log('用户角色变化，更新TabBar');
-        await tabBarManager.onRoleSwitch(this.globalData.role, oldRole);
-      }
+      // 登录状态变化，更新TabBar
+      console.log('用户登录状态变化，更新TabBar');
+      await tabBarManager.onLoginStatusChange(true);
 
       // 执行回调
       if (this.userInfoReadyCallback) {
@@ -455,13 +448,13 @@ App({
   async clearUserInfo() {
     this.globalData.userInfo = undefined;
     this.globalData.token = undefined;
-    this.globalData.role = undefined;
+    // this.globalData.role = undefined; // 不再需要role字段
     console.log('全局用户信息已清除');
 
-    // 重置TabBar到默认状态
+    // 重置TabBar到访客状态
     try {
-      await tabBarManager.resetTabBar();
-      console.log('TabBar已重置到默认状态');
+      await tabBarManager.onLoginStatusChange(false);
+      console.log('TabBar已重置到访客状态');
     } catch (error) {
       console.error('重置TabBar失败:', error);
     }
@@ -510,24 +503,10 @@ App({
   },
 
   /**
-   * 获取用户角色
+   * 获取用户角色 - 简化版，固定返回student
    */
   async getUserRole() {
-    if (this.globalData.role) {
-      return this.globalData.role;
-    }
-
-    // 尝试从认证管理器获取
-    try {
-      const role = await authManager.getUserRole();
-      if (role) {
-        this.globalData.role = role;
-      }
-      return role;
-    } catch (error) {
-      console.error('获取用户角色失败:', error);
-      return 'student';
-    }
+    return 'student';
   },
 
   /**

@@ -42,12 +42,12 @@ class GradeLevel(enum.Enum):
 
 
 class UserRole(enum.Enum):
-    """用户角色枚举"""
+    """用户角色枚举 - 简化版，只支持学生角色"""
 
     STUDENT = "student"  # 学生
-    TEACHER = "teacher"  # 教师
-    PARENT = "parent"  # 家长
-    ADMIN = "admin"  # 管理员
+    # 为了保持数据库兼容性，可以添加别名
+    # TEACHER = "student"  # 教师账户也作为学生处理
+    # PARENT = "student"   # 家长账户也作为学生处理
 
 
 class User(BaseModel):

@@ -107,7 +107,7 @@ async def register(
     - **password_confirm**: 确认密码
     - **verification_code**: 短信验证码
     - **name**: 真实姓名
-    - **role**: 用户角色 (student/teacher/parent)
+    - **role**: 用户角色 (固定为student)
 
     **注意**: 生产环境不允许自主注册，需要助教老师开通账户
     """
@@ -117,7 +117,9 @@ async def register(
             "生产环境注册尝试被阻止",
             extra={
                 "phone": request.phone,
-                "ip_address": client_request.client.host if client_request.client else None,
+                "ip_address": (
+                    client_request.client.host if client_request.client else None
+                ),
             },
         )
         raise HTTPException(

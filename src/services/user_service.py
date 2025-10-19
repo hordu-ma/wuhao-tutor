@@ -91,7 +91,7 @@ class UserService:
                 "institution": request.institution,
                 "parent_contact": request.parent_contact,
                 "parent_name": request.parent_name,
-                "role": request.role.value,
+                "role": "student",  # 简化：固定为学生角色
                 "is_active": True,
                 "is_verified": True,  # 注册时假设已验证
                 "login_count": 0,
@@ -169,7 +169,7 @@ class UserService:
         avatar_url: str = "",
         name: Optional[str] = None,
         phone: Optional[str] = None,
-        role: str = "student",
+        # role: str = "student",  # 简化：不再需要role参数，固定为student
     ) -> User:
         """创建微信用户"""
         try:
@@ -205,7 +205,7 @@ class UserService:
                 "avatar_url": avatar_url,
                 "wechat_openid": openid,
                 "wechat_unionid": unionid,
-                "role": role,
+                "role": "student",  # 简化：固定为学生角色
                 "is_active": True,
                 "is_verified": True,  # 微信登录默认已验证
                 "login_count": 0,
@@ -374,12 +374,13 @@ class UserService:
     # ========== 用户查询和统计 ==========
 
     async def get_user_list(self, query: UserListQuery) -> Dict[str, Any]:
-        """获取用户列表"""
+        """获取用户列表 - 简化版，不再按角色过滤"""
         # 构建查询条件
         conditions = []
 
-        if query.role:
-            conditions.append(User.role == query.role.value)
+        # 移除角色过滤，所有用户都是学生
+        # if query.role:
+        #     conditions.append(User.role == query.role.value)
 
         if query.is_active is not None:
             conditions.append(User.is_active == query.is_active)
@@ -487,10 +488,10 @@ class UserService:
         verified_result = await self.db.execute(verified_users_stmt)
         verified_users = verified_result.scalar()
 
-        # 角色分布
-        role_dist_stmt = select(User.role, func.count(User.id)).group_by(User.role)
-        role_dist_result = await self.db.execute(role_dist_stmt)
-        role_distribution = {row[0]: row[1] for row in role_dist_result}
+        # 简化：不再统计角色分布，所有用户都是学生
+        # role_dist_stmt = select(User.role, func.count(User.id)).group_by(User.role)
+        # role_dist_result = await self.db.execute(role_dist_stmt)
+        # role_distribution = {row[0]: row[1] for row in role_dist_result}
 
         # 年级分布
         grade_dist_stmt = (
@@ -519,10 +520,10 @@ class UserService:
             "new_users_week": new_users_week,
             "new_users_month": new_users_month,
             "verified_users": verified_users,
-            "student_count": role_distribution.get("student", 0),
-            "teacher_count": role_distribution.get("teacher", 0),
-            "parent_count": role_distribution.get("parent", 0),
-            "role_distribution": role_distribution,
+            "student_count": total_users,  # 简化：所有用户都是学生
+            # "teacher_count": 0,  # 不再支持
+            # "parent_count": 0,   # 不再支持
+            # "role_distribution": {"student": total_users},  # 简化版
             "grade_distribution": grade_distribution,
             "school_distribution": school_distribution,
         }

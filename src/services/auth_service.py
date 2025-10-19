@@ -528,34 +528,20 @@ class AuthService:
             if not user:
                 return False
 
-            # 简化的权限检查逻辑
+            # 简化的权限检查逻辑 - 所有用户都是学生角色
             if user.role == "admin":
                 return True
 
-            # 基于角色的基础权限检查
-            role_permissions = {
-                "student": {
-                    "learning": ["ask", "view"],
-                    "homework": ["submit", "view"],
-                    "profile": ["view", "update"],
-                },
-                "teacher": {
-                    "learning": ["ask", "view", "manage"],
-                    "homework": ["submit", "view", "review"],
-                    "profile": ["view", "update"],
-                    "students": ["view"],
-                },
-                "parent": {
-                    "learning": ["view"],
-                    "homework": ["view"],
-                    "profile": ["view", "update"],
-                    "children": ["view"],
-                },
+            # 学生角色的基础权限（所有用户都是学生）
+            student_permissions = {
+                "learning": ["ask", "view"],
+                "homework": ["submit", "view"],
+                "profile": ["view", "update"],
+                "mistakes": ["view", "create", "update", "delete"],  # 错题本权限
+                "analytics": ["view"],  # 查看学习报告
             }
 
-            user_perms = role_permissions.get(user.role, {})
-            resource_perms = user_perms.get(resource, [])
-
+            resource_perms = student_permissions.get(resource, [])
             return action in resource_perms
 
         except Exception as e:

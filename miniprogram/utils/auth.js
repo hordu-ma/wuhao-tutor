@@ -462,21 +462,11 @@ class AuthManager {
   }
 
   /**
-   * 获取当前用户角色
+   * 获取当前用户角色 - 简化版，固定返回student
    */
   async getUserRole() {
-    if (this.currentRole) {
-      return this.currentRole;
-    }
-
-    try {
-      const role = await storage.get(this.roleKey);
-      this.currentRole = role || 'student';
-      return this.currentRole;
-    } catch (error) {
-      console.error('获取用户角色失败', error);
-      return 'student';
-    }
+    // 简化逻辑：所有用户都是学生角色
+    return 'student';
   }
 
   /**

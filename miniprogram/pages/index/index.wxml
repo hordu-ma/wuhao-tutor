@@ -204,30 +204,6 @@
       </view>
     </view>
 
-    <!-- 最近活动区域 -->
-    <view class="activities-section" wx:if="{{recentActivities.length > 0}}">
-      <view class="section-header">
-        <text class="section-title font-bold">最近活动</text>
-      </view>
-      <view class="activities-list">
-        <view
-          class="activity-item"
-          wx:for="{{recentActivities}}"
-          wx:key="id"
-          data-activity="{{item}}"
-          bind:tap="onActivityTap"
-        >
-          <view class="activity-icon">
-            <van-icon name="{{item.icon}}" size="16px" color="#1890ff" />
-          </view>
-          <view class="activity-content">
-            <text class="activity-title">{{item.title}}</text>
-            <text class="activity-time text-secondary text-sm">{{item.time}}</text>
-          </view>
-        </view>
-      </view>
-    </view>
-
     <!-- 学习建议区域 (仅学生可见) - 保留原有功能但简化 -->
     <view class="suggestions-section" wx:if="{{role === 'student' && recommendations.length === 0}}">
       <view class="section-header">
