@@ -217,32 +217,38 @@ class LearningService:
     ) -> ChatSession:
         """获取或创建会话"""
         if request.session_id:
-            # 获取现有会话
-            session = await self.session_repo.get_by_id(request.session_id)
-            if not session or extract_orm_uuid_str(session, "user_id") != user_id:
-                raise NotFoundError("会话不存在或无权限访问")
-
-            # 更新最后活跃时间
-            if extract_orm_bool(session, "status") == SessionStatus.ACTIVE.value:
-                # 会话活跃，更新最后活跃时间
-                await self.session_repo.update(
-                    extract_orm_uuid_str(session, "id"),
-                    {"last_active_at": datetime.now().isoformat()},
+            # 尝试获取现有会话
+            try:
+                session = await self.session_repo.get_by_id(request.session_id)
+                if session and extract_orm_uuid_str(session, "user_id") == user_id:
+                    # 会话存在且属于当前用户
+                    if (
+                        extract_orm_bool(session, "status")
+                        == SessionStatus.ACTIVE.value
+                    ):
+                        # 更新最后活跃时间
+                        await self.session_repo.update(
+                            extract_orm_uuid_str(session, "id"),
+                            {"last_active_at": datetime.now().isoformat()},
+                        )
+                    return session
+            except Exception as e:
+                # 获取会话失败，记录日志但不中断，继续创建新会话
+                print(
+                    f"获取会话失败，将创建新会话: session_id={request.session_id}, error={str(e)}"
                 )
 
-            return session
-        else:
-            # 创建新会话
-            session_title = await self._generate_session_title(request.content)
-            session_data = {
-                "user_id": user_id,
-                "title": session_title,
-                "subject": request.subject.value if request.subject else None,
-                "status": SessionStatus.ACTIVE.value,
-                "context_enabled": request.use_context,
-                "last_active_at": datetime.utcnow().isoformat(),
-            }
-            return await self.session_repo.create(session_data)
+        # 创建新会话（原来的session_id不存在或获取失败）
+        session_title = await self._generate_session_title(request.content)
+        session_data = {
+            "user_id": user_id,
+            "title": session_title,
+            "subject": request.subject.value if request.subject else None,
+            "status": SessionStatus.ACTIVE.value,
+            "context_enabled": request.use_context,
+            "last_active_at": datetime.utcnow().isoformat(),
+        }
+        return await self.session_repo.create(session_data)
 
     async def _generate_session_title(self, first_question: str) -> str:
         """生成会话标题"""
