@@ -87,7 +87,20 @@
             <!-- 文本消息 -->
             <text wx:if="{{item.type === 'text'}}" class="bubble-text" selectable="{{true}}">{{item.content}}</text>
 
-            <!-- 图片消息 -->
+            <!-- 用户消息中的图片（如果有） -->
+            <view wx:if="{{item.sender === 'user' && item.images && item.images.length > 0}}" 
+                  class="message-images">
+              <image wx:for="{{item.images}}" 
+                     wx:for-item="img" 
+                     wx:key="tempFilePath"
+                     class="message-image"
+                     src="{{img.tempFilePath}}"
+                     mode="aspectFill"
+                     bindtap="previewImage"
+                     data-url="{{img.tempFilePath}}" />
+            </view>
+
+            <!-- 图片消息 (旧格式保留兼容) -->
             <image wx:elif="{{item.type === 'image'}}"
                    class="bubble-image"
                    src="{{item.content}}"
@@ -156,6 +169,34 @@
 
   <!-- 输入区域 -->
   <view class="chat-input-container">
+    <!-- 图片预览区域 -->
+    <view class="image-preview-area" wx:if="{{uploadedImages.length > 0}}">
+      <scroll-view scroll-x="{{true}}" class="image-preview-scroll">
+        <view class="image-preview-list">
+          <view class="image-preview-item" 
+                wx:for="{{uploadedImages}}" 
+                wx:key="index">
+            <image src="{{item.tempFilePath}}" 
+                   mode="aspectFill" 
+                   class="preview-image"
+                   lazy-load="{{true}}"
+                   binderror="onImageLoadError"
+                   bindload="onImageLoad" />
+            <!-- 删除按钮 -->
+            <view class="remove-image-btn" 
+                  bindtap="removeImage" 
+                  data-index="{{index}}">
+              <van-icon name="cross" size="12" color="#fff" />
+            </view>
+            <!-- 上传状态指示器 -->
+            <view class="upload-status" wx:if="{{!item.aiUrl}}">
+              <text class="upload-text">未上传</text>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+
     <!-- 输入框区域 -->
     <view class="input-area">
       <view class="input-wrapper">
@@ -208,9 +249,9 @@
           </view>
 
           <!-- 发送按钮 -->
-          <view class="send-btn {{inputText.trim() || recordStatus === 'recorded' ? 'active' : ''}}"
+          <view class="send-btn {{inputText.trim() || uploadedImages.length > 0 || recordStatus === 'recorded' ? 'active' : ''}}"
                 bindtap="sendMessage">
-            <van-icon name="send" size="20" color="{{inputText.trim() || recordStatus === 'recorded' ? '#fff' : '#999'}}" />
+            <van-icon name="send" size="20" color="{{inputText.trim() || uploadedImages.length > 0 || recordStatus === 'recorded' ? '#fff' : '#999'}}" />
           </view>
         </view>
       </view>

@@ -6,6 +6,7 @@ const { permissionManager } = require('../../../utils/permission-manager.js');
 const { roleManager } = require('../../../utils/role-manager.js');
 const { mcpService } = require('../../../utils/mcp-service.js');
 const api = require('../../../api/index.js');
+const config = require('../../../config/index.js');
 const utils = require('../../../utils/utils.js');
 
 Page({
@@ -110,6 +111,11 @@ Page({
 
     // 错误状态
     error: null,
+
+    // 图片上传
+    uploadedImages: [], // 待发送的图片列表 [{tempFilePath, aiUrl}]
+    uploadingCount: 0, // 正在上传的图片数量
+    maxImageCount: 5, // 最大图片数量（与 Web 前端保持一致）
   },
 
   /**
@@ -605,11 +611,13 @@ Page({
       去空格后: inputText,
       长度: inputText.length,
       字符码: inputText.split('').map(c => c.charCodeAt(0)),
+      图片数量: this.data.uploadedImages.length,
     });
 
-    if (!inputText) {
+    // 检查是否有输入或图片
+    if (!inputText && this.data.uploadedImages.length === 0) {
       wx.showToast({
-        title: '输入不能为空，请输入问题',
+        title: '请输入问题或选择图片',
         icon: 'none',
       });
       return;
@@ -632,20 +640,41 @@ Page({
     }
 
     try {
-      // 创建用户消息
+      // 1. 先上传所有图片（如果有的话）
+      let imageUrls = [];
+      if (this.data.uploadedImages.length > 0) {
+        try {
+          imageUrls = await this.uploadAllImages();
+          console.log('图片上传完成，AI URLs:', imageUrls);
+        } catch (uploadError) {
+          console.error('图片上传失败:', uploadError);
+          wx.showToast({
+            title: '图片上传失败，请重试',
+            icon: 'error',
+          });
+          return; // 上传失败则不发送消息
+        }
+      }
+
+      // 2. 创建用户消息（包含文本和图片引用）
       const userMessage = {
         id: this.generateMessageId(),
-        content: inputText,
+        content: inputText || '[图片]', // 如果没有文本，显示 [图片]
         type: 'text',
         sender: 'user',
         timestamp: new Date().toISOString(),
         status: 'sending',
+        images: this.data.uploadedImages.map(img => ({
+          tempFilePath: img.tempFilePath,
+          aiUrl: img.aiUrl,
+        })), // 保存图片信息用于显示
       };
 
-      // 添加到消息列表
+      // 3. 清空输入和图片列表
       this.setData({
         messageList: [...this.data.messageList, userMessage],
         inputText: '',
+        uploadedImages: [], // 清空已上传的图片
         sending: true,
         isAITyping: true,
       });
@@ -653,15 +682,24 @@ Page({
       // 滚动到底部
       this.scrollToBottom();
 
-      // 直接调用API - 简化版本，对齐网页端
-      const response = await api.learning.askQuestion({
-        content: inputText,
+      // 4. 调用API - 包含图片 URLs（与 Web 前端对齐）
+      const requestParams = {
+        content: inputText || '请分析这张图片中的内容，如果是学习相关的题目，请详细解答。',
         session_id: this.data.sessionId,
         subject: this.data.currentSubject !== 'all' ? this.data.currentSubject : undefined,
         use_context: true,
         include_history: true,
         max_history: 10,
-      });
+      };
+
+      // 只有在有图片时才添加 image_urls 参数
+      if (imageUrls.length > 0) {
+        requestParams.image_urls = imageUrls;
+      }
+
+      console.log('发送请求参数:', requestParams);
+
+      const response = await api.learning.askQuestion(requestParams);
 
       // 后端返回格式: { question: {...}, answer: {...}, session: {...} }
       console.log('API响应:', response);
@@ -1183,7 +1221,11 @@ Page({
    * 显示图片上传选择菜单
    */
   onShowImageActions() {
+    console.log('===== 点击加号按钮 =====');
+    console.log('当前 uploadedImages:', this.data.uploadedImages);
+    console.log('showImageActions 设置为 true');
     this.setData({ showImageActions: true });
+    console.log('showImageActions 当前值:', this.data.showImageActions);
   },
 
   /**
@@ -1197,7 +1239,9 @@ Page({
    * 拍照
    */
   onTakePhoto() {
+    console.log('===== 点击"拍照" =====');
     this.setData({ showImageActions: false });
+    console.log('即将调用 chooseImage("camera")');
     this.chooseImage('camera');
   },
 
@@ -1205,7 +1249,9 @@ Page({
    * 从相册选择图片
    */
   onChooseImage() {
+    console.log('===== 点击"从相册选择" =====');
     this.setData({ showImageActions: false });
+    console.log('即将调用 chooseImage("album")');
     this.chooseImage('album');
   },
 
@@ -1243,18 +1289,71 @@ Page({
    * 选择图片
    */
   chooseImage(sourceType) {
+    console.log('===== chooseImage 开始 =====');
+    console.log('sourceType:', sourceType);
+    console.log('当前已选图片数量:', this.data.uploadedImages.length);
+    console.log('maxImageCount:', this.data.maxImageCount);
+
+    // 检查图片数量限制
+    if (this.data.uploadedImages.length >= this.data.maxImageCount) {
+      console.log('已达到图片数量上限');
+      wx.showToast({
+        title: `最多只能上传${this.data.maxImageCount}张图片`,
+        icon: 'none',
+      });
+      return;
+    }
+
+    console.log('调用 wx.chooseMedia...');
     wx.chooseMedia({
-      count: 1,
+      count: this.data.maxImageCount - this.data.uploadedImages.length, // 剩余可选数量
       mediaType: ['image'],
       sourceType: [sourceType],
       camera: 'back',
       success: res => {
-        const tempFilePath = res.tempFiles[0].tempFilePath;
-        this.uploadImage(tempFilePath);
+        console.log('===== wx.chooseMedia SUCCESS =====');
+        console.log('选择的文件数量:', res.tempFiles.length);
+        console.log('文件信息:', res.tempFiles);
+
+        // 关闭图片选择菜单
+        this.setData({ showImageActions: false });
+
+        // 添加选中的图片到列表
+        const newImages = res.tempFiles.map(file => ({
+          tempFilePath: file.tempFilePath,
+          size: file.size,
+          aiUrl: null, // 上传后填充
+        }));
+
+        console.log('准备添加的图片:', newImages);
+
+        this.setData(
+          {
+            uploadedImages: [...this.data.uploadedImages, ...newImages],
+          },
+          () => {
+            // setData 完成后的回调
+            console.log('setData 完成，当前图片数量:', this.data.uploadedImages.length);
+
+            // 给用户明确的反馈
+            wx.showToast({
+              title: `已选择 ${this.data.uploadedImages.length} 张图片`,
+              icon: 'success',
+              duration: 1500,
+            });
+          },
+        );
+
+        console.log('已选择图片总数:', this.data.uploadedImages.length);
+        console.log('===== chooseImage 完成 =====');
       },
       fail: error => {
+        console.error('===== wx.chooseMedia FAIL =====');
         console.error('选择图片失败:', error);
-        if (error.errMsg.includes('cancel')) return;
+        if (error.errMsg.includes('cancel')) {
+          console.log('用户取消选择');
+          return;
+        }
 
         wx.showToast({
           title: '选择图片失败',
@@ -1265,109 +1364,180 @@ Page({
   },
 
   /**
-   * 上传图片
+   * 移除已选图片
    */
-  async uploadImage(filePath) {
-    try {
-      wx.showLoading({
-        title: '上传中...',
-        mask: true,
-      });
+  removeImage(e) {
+    const { index } = e.currentTarget.dataset;
+    console.log('===== 删除图片 =====');
+    console.log('删除索引:', index);
 
+    const images = [...this.data.uploadedImages];
+    images.splice(index, 1);
+
+    this.setData({ uploadedImages: images });
+    console.log('删除后剩余图片数量:', this.data.uploadedImages.length);
+  },
+
+  /**
+   * 图片加载成功回调
+   */
+  onImageLoad(e) {
+    console.log('图片加载成功:', e.detail);
+  },
+
+  /**
+   * 图片加载失败回调
+   */
+  onImageLoadError(e) {
+    console.error('图片加载失败:', e.detail);
+    wx.showToast({
+      title: '图片加载失败',
+      icon: 'none',
+    });
+  },
+
+  /**
+   * 上传单张图片到 AI 服务
+   * 返回 AI 可访问的公开 URL
+   */
+  async uploadImageToAI(filePath) {
+    try {
       const token = await authManager.getToken();
 
+      console.log('===== 开始上传图片 =====');
+      console.log('文件路径:', filePath);
+      console.log('上传 URL:', `${config.api.baseUrl}/api/v1/files/upload-for-ai`);
+      console.log('Token:', token ? '已获取' : '未获取');
+
       const uploadResult = await new Promise((resolve, reject) => {
-        wx.uploadFile({
-          url: `${api.baseUrl}/files/upload-image-for-learning`,
+        const uploadTask = wx.uploadFile({
+          url: `${config.api.baseUrl}/api/v1/files/upload-for-ai`,
           filePath: filePath,
-          name: 'file', // 注意：后端期望的字段名是 'file'
+          name: 'file',
+          timeout: 60000, // 设置 60 秒超时（重要！）
           header: {
             Authorization: `Bearer ${token}`,
           },
           success: res => {
+            console.log('===== 上传成功响应 =====');
+            console.log('HTTP 状态码:', res.statusCode);
+            console.log('响应数据:', res.data);
+
             try {
-              const data = JSON.parse(res.data);
-              if (data.success) {
-                resolve(data.data);
+              const result = JSON.parse(res.data);
+              if (result.success && result.data) {
+                console.log('AI URL:', result.data.ai_accessible_url);
+                resolve(result.data.ai_accessible_url);
               } else {
-                reject(new Error(data.message || '图片上传失败'));
+                console.error('上传失败:', result.message);
+                reject(new Error(result.message || '图片上传失败'));
               }
             } catch (error) {
+              console.error('响应解析失败:', error);
+              console.error('原始响应:', res.data);
               reject(new Error('响应解析失败'));
             }
           },
-          fail: reject,
+          fail: error => {
+            console.error('===== 上传失败 =====');
+            console.error('错误类型:', error.errMsg);
+            console.error('完整错误:', error);
+
+            // 根据错误类型给出更友好的提示
+            let errorMessage = '图片上传失败';
+            if (error.errMsg.includes('timeout')) {
+              errorMessage = '上传超时，请检查网络连接';
+            } else if (error.errMsg.includes('fail')) {
+              errorMessage = '网络连接失败，请重试';
+            }
+
+            reject(new Error(errorMessage));
+          },
+        });
+
+        // 监听上传进度
+        uploadTask.onProgressUpdate(res => {
+          console.log('上传进度:', res.progress + '%');
+          console.log('已上传:', res.totalBytesSent);
+          console.log('总大小:', res.totalBytesExpectedToSend);
         });
       });
 
-      wx.hideLoading();
-
-      // 创建包含图片的消息
-      const message = {
-        id: utils.generateId(),
-        type: 'user',
-        content: '[图片]',
-        imageUrl: uploadResult.url,
-        timestamp: Date.now(),
-        status: 'success',
-      };
-
-      // 添加到消息列表
-      this.addMessage(message);
-
-      // 发送图片分析请求
-      this.sendImageAnalysis(uploadResult.url);
+      console.log('===== 上传完成 =====');
+      return uploadResult;
     } catch (error) {
-      wx.hideLoading();
       console.error('图片上传失败:', error);
-      wx.showToast({
-        title: error.message || '图片上传失败',
-        icon: 'error',
-      });
+      throw error;
     }
   },
 
   /**
-   * 发送图片分析请求
-   * 使用Qwen VL多模态模型进行图片理解
+   * 批量上传所有待发送的图片
    */
-  async sendImageAnalysis(imageUrl) {
-    try {
-      this.setData({ isAITyping: true });
+  async uploadAllImages() {
+    const imagesToUpload = this.data.uploadedImages.filter(img => !img.aiUrl);
+    if (imagesToUpload.length === 0) {
+      return []; // 没有需要上传的图片
+    }
 
-      // 构建包含图片的消息，通过现有的askQuestion接口发送
-      const response = await api.learning.askQuestion({
-        content: '请分析这张图片中的内容，如果是学习相关的题目，请详细解答。',
-        session_id: this.data.sessionId,
-        image_urls: [imageUrl], // 传递图片URL给Qwen VL模型
-        subject: this.data.currentSubject !== 'all' ? this.data.currentSubject : undefined,
+    console.log(`开始上传 ${imagesToUpload.length} 张图片...`);
+
+    // 显示上传进度
+    wx.showLoading({
+      title: `上传图片 0/${imagesToUpload.length}`,
+      mask: true,
+    });
+
+    this.setData({ uploadingCount: imagesToUpload.length });
+
+    try {
+      const aiUrls = [];
+
+      // 顺序上传图片（避免并发导致的问题）
+      for (let i = 0; i < imagesToUpload.length; i++) {
+        const img = imagesToUpload[i];
+
+        // 更新上传进度
+        wx.showLoading({
+          title: `上传图片 ${i + 1}/${imagesToUpload.length}`,
+          mask: true,
+        });
+
+        try {
+          const aiUrl = await this.uploadImageToAI(img.tempFilePath);
+
+          // 更新图片列表中的 aiUrl
+          const allImages = [...this.data.uploadedImages];
+          const imgIndex = allImages.findIndex(item => item.tempFilePath === img.tempFilePath);
+          if (imgIndex !== -1) {
+            allImages[imgIndex].aiUrl = aiUrl;
+          }
+
+          this.setData({ uploadedImages: allImages });
+
+          aiUrls.push(aiUrl);
+        } catch (error) {
+          console.error(`图片 ${i + 1} 上传失败:`, error);
+          throw error;
+        }
+      }
+
+      wx.hideLoading();
+      this.setData({ uploadingCount: 0 });
+
+      console.log('所有图片上传成功:', aiUrls);
+      return aiUrls;
+    } catch (error) {
+      wx.hideLoading();
+      this.setData({ uploadingCount: 0 });
+
+      wx.showToast({
+        title: '图片上传失败',
+        icon: 'error',
+        duration: 2000,
       });
 
-      if (response.success) {
-        const aiMessage = {
-          id: utils.generateId(),
-          type: 'ai',
-          content: response.data.answer || response.data.analysis || '图片分析完成',
-          timestamp: Date.now(),
-          status: 'success',
-        };
-
-        this.addMessage(aiMessage);
-      } else {
-        throw new Error(response.message || '图片分析失败');
-      }
-    } catch (error) {
-      console.error('图片分析失败:', error);
-      const errorMessage = {
-        id: utils.generateId(),
-        type: 'ai',
-        content: '抱歉，图片分析失败，请稍后重试',
-        timestamp: Date.now(),
-        status: 'error',
-      };
-      this.addMessage(errorMessage);
-    } finally {
-      this.setData({ isAITyping: false });
+      throw error;
     }
   },
 
