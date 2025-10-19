@@ -33,7 +33,7 @@ const mistakesAPI = {
     if (params.difficulty_level) queryParams.difficulty_level = params.difficulty_level;
     if (params.keyword) queryParams.keyword = params.keyword;
 
-    return request.get('api/v1/mistakes', queryParams, {
+    return request.get('mistakes', queryParams, {
       showLoading: false,
       ...config,
     });
@@ -54,7 +54,7 @@ const mistakesAPI = {
     }
 
     return request.get(
-      `api/v1/mistakes/${mistakeId}`,
+      `mistakes/${mistakeId}`,
       {},
       {
         showLoading: false,
@@ -85,7 +85,7 @@ const mistakesAPI = {
       });
     }
 
-    return request.post('api/v1/mistakes', params, {
+    return request.post('mistakes', params, {
       showLoading: true,
       loadingText: '添加中...',
       showError: true,
@@ -116,7 +116,7 @@ const mistakesAPI = {
       });
     }
 
-    return request.put(`api/v1/mistakes/${mistakeId}`, params, {
+    return request.put(`mistakes/${mistakeId}`, params, {
       showLoading: true,
       loadingText: '更新中...',
       showError: true,
@@ -139,7 +139,7 @@ const mistakesAPI = {
     }
 
     return request.delete(
-      `api/v1/mistakes/${mistakeId}`,
+      `mistakes/${mistakeId}`,
       {},
       {
         showLoading: true,
@@ -157,7 +157,7 @@ const mistakesAPI = {
    */
   getTodayReview(config = {}) {
     return request.get(
-      'api/v1/mistakes/today-review',
+      'mistakes/today-review',
       {},
       {
         showLoading: false,
@@ -190,7 +190,7 @@ const mistakesAPI = {
       });
     }
 
-    return request.post(`api/v1/mistakes/${mistakeId}/complete-review`, params, {
+    return request.post(`mistakes/${mistakeId}/complete-review`, params, {
       showLoading: true,
       loadingText: '提交中...',
       showError: true,
@@ -214,7 +214,7 @@ const mistakesAPI = {
     if (params.end_date) queryParams.end_date = params.end_date;
     if (params.subject) queryParams.subject = params.subject;
 
-    return request.get('api/v1/mistakes/statistics', queryParams, {
+    return request.get('mistakes/statistics', queryParams, {
       showLoading: false,
       ...config,
     });
@@ -234,7 +234,7 @@ const mistakesAPI = {
     if (params.year) queryParams.year = params.year;
     if (params.month) queryParams.month = params.month;
 
-    return request.get('api/v1/mistakes/review-calendar', queryParams, {
+    return request.get('mistakes/review-calendar', queryParams, {
       showLoading: false,
       ...config,
     });
@@ -255,7 +255,7 @@ const mistakesAPI = {
       });
     }
 
-    return request.post('api/v1/mistakes/batch-import', params, {
+    return request.post('mistakes/batch-import', params, {
       showLoading: true,
       loadingText: '导入中...',
       showError: true,
@@ -281,7 +281,7 @@ const mistakesAPI = {
     if (params.mastery_status) queryParams.mastery_status = params.mastery_status;
     if (params.subject) queryParams.subject = params.subject;
 
-    return request.get('api/v1/mistakes/export', queryParams, {
+    return request.get('mistakes/export', queryParams, {
       showLoading: true,
       loadingText: '导出中...',
       showError: true,
@@ -307,16 +307,12 @@ const mistakesAPI = {
       });
     }
 
-    return request.post(
-      `api/v1/mistakes/from-question/${questionId}`,
-      params,
-      {
-        showLoading: true,
-        loadingText: '添加中...',
-        showError: true,
-        ...config,
-      },
-    );
+    return request.post(`mistakes/from-question/${questionId}`, params, {
+      showLoading: true,
+      loadingText: '添加中...',
+      showError: true,
+      ...config,
+    });
   },
 };
 

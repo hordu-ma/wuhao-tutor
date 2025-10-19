@@ -54,8 +54,8 @@
 
     <!-- 空状态 -->
     <empty-state wx:if="{{!loading && !mistakesList.length}}"
-                 type="mistakes"
-                 title="暂无错题"
+                 type="default"
+                 text="暂无错题"
                  description="{{getEmptyDescription(activeTab)}}" />
 
     <!-- 错题列表 -->

@@ -44,13 +44,30 @@ App({
   },
 
   onError(error) {
+    const errorStr = typeof error === 'string' ? error : JSON.stringify(error);
+
+    // 过滤微信系统的 unbind download 警告
+    if (errorStr.includes('6000100') || errorStr.includes('unbind download')) {
+      console.warn('[Vant 系统警告] 已忽略字体资源加载警告:', errorStr);
+      return;
+    }
+
+    // 过滤字体加载错误（不影响功能）
+    if (
+      errorStr.includes('Failed to load font') ||
+      errorStr.includes('webfont') ||
+      errorStr.includes('ERR_CACHE_MISS')
+    ) {
+      console.warn('[Vant 字体警告] 已忽略外部字体加载失败:', errorStr);
+      return;
+    }
+
+    // 真正的错误才记录
     console.error('小程序错误:', error);
-    // 使用错误处理器处理全局错误
     errorHandler.handleError(error, {
       type: 'app',
       context: 'global',
     });
-    // 错误计数
     this.globalData.performanceData.errorCount++;
   },
 

@@ -964,9 +964,11 @@ class EnhancedApiClient {
           },
         };
 
-        // 下载进度回调
+        // 无论是否有进度回调，都保存 downloadTask 引用，防止任务被 unbind
+        const downloadTask = wx.downloadFile(downloadConfig);
+
+        // 如果有进度回调，注册监听器
         if (options.onProgress) {
-          const downloadTask = wx.downloadFile(downloadConfig);
           downloadTask.onProgressUpdate(res => {
             options.onProgress({
               loaded: res.totalBytesWritten,
@@ -976,8 +978,6 @@ class EnhancedApiClient {
               timeRemaining: 0,
             });
           });
-        } else {
-          wx.downloadFile(downloadConfig);
         }
       } catch (error) {
         reject(this.normalizeError(error));

@@ -35,19 +35,30 @@ const pageObject = {
     showSearch: false,
     selectedSubject: '',
     selectedDifficulty: '',
-    subjectOptions: ['全部', '语文', '数学', '英语', '物理', '化学', '生物', '历史', '地理', '政治'],
+    subjectOptions: [
+      '全部',
+      '语文',
+      '数学',
+      '英语',
+      '物理',
+      '化学',
+      '生物',
+      '历史',
+      '地理',
+      '政治',
+    ],
     difficultyOptions: [
       { label: '全部', value: '' },
       { label: '简单', value: 1 },
       { label: '中等', value: 2 },
-      { label: '困难', value: 3 }
+      { label: '困难', value: 3 },
     ],
 
     // 搜索关键词
     searchKeyword: '',
 
     // 错误状态
-    error: null
+    error: null,
   },
 
   /**
@@ -59,13 +70,13 @@ const pageObject = {
     // 处理页面参数
     if (options.tab) {
       this.setData({
-        activeTab: options.tab
+        activeTab: options.tab,
       });
     }
 
     if (options.subject) {
       this.setData({
-        selectedSubject: options.subject
+        selectedSubject: options.subject,
       });
     }
 
@@ -86,7 +97,7 @@ const pageObject = {
     if (currentPage.data.needRefresh) {
       this.loadMistakesList(true);
       this.setData({
-        needRefresh: false
+        needRefresh: false,
       });
     }
   },
@@ -114,7 +125,7 @@ const pageObject = {
     return {
       title: '五好伴学 - 错题手册',
       path: '/pages/mistakes/list/index',
-      imageUrl: config.miniprogram?.share?.imageUrl
+      imageUrl: config.miniprogram?.share?.imageUrl,
     };
   },
 
@@ -133,12 +144,12 @@ const pageObject = {
           currentPage: 1,
           mistakesList: [],
           hasMore: true,
-          error: null
+          error: null,
         });
       }
 
       this.setData({
-        loading: true
+        loading: true,
       });
 
       // 构建请求参数
@@ -146,10 +157,12 @@ const pageObject = {
         page: this.data.currentPage,
         page_size: this.data.pageSize,
         mastery_status: this.getStatusFromTab(this.data.activeTab),
-        subject: this.data.selectedSubject && this.data.selectedSubject !== '全部'
-          ? this.data.selectedSubject : undefined,
+        subject:
+          this.data.selectedSubject && this.data.selectedSubject !== '全部'
+            ? this.data.selectedSubject
+            : undefined,
         difficulty_level: this.data.selectedDifficulty || undefined,
-        keyword: this.data.searchKeyword || undefined
+        keyword: this.data.searchKeyword || undefined,
       };
 
       console.log('加载错题列表请求参数', params);
@@ -157,8 +170,32 @@ const pageObject = {
       // 调用API
       const response = await mistakesApi.getMistakeList(params);
 
-      if (response.success) {
-        const { items, total, page, page_size } = response.data;
+      console.log('错题列表API响应', response);
+
+      if (response && response.success !== false) {
+        // 处理响应数据，兼容多种格式
+        let items, total, page, page_size;
+
+        if (response.data) {
+          // 格式 1: { success: true, data: { items, total, page, page_size } }
+          items = response.data.items || [];
+          total = response.data.total || 0;
+          page = response.data.page || this.data.currentPage;
+          page_size = response.data.page_size || this.data.pageSize;
+        } else if (response.items) {
+          // 格式 2: { items, total, page, page_size }
+          items = response.items || [];
+          total = response.total || 0;
+          page = response.page || this.data.currentPage;
+          page_size = response.page_size || this.data.pageSize;
+        } else {
+          // 其他格式，尝试直接使用 response
+          items = Array.isArray(response) ? response : [];
+          total = items.length;
+          page = this.data.currentPage;
+          page_size = this.data.pageSize;
+        }
+
         const hasMore = items.length >= page_size;
 
         // 更新数据
@@ -168,34 +205,36 @@ const pageObject = {
           mistakesList: newMistakesList,
           total,
           hasMore,
-          currentPage: this.data.currentPage + (items.length > 0 ? 1 : 0)
+          currentPage: this.data.currentPage + (items.length > 0 ? 1 : 0),
         });
 
         console.log('错题列表加载成功', {
           total: newMistakesList.length,
-          hasMore
+          hasMore,
         });
       } else {
-        throw new Error(response.message || '加载错题列表失败');
+        throw new Error(response.message || response.error?.message || '加载错题列表失败');
       }
     } catch (error) {
       console.error('加载错题列表失败', error);
 
+      const errorMessage = error.message || error.errMsg || '加载失败';
+
       this.setData({
-        error: error.message
+        error: errorMessage,
       });
 
       // 显示错误提示
       wx.showToast({
-        title: error.message || '加载失败',
-        icon: 'error',
-        duration: 2000
+        title: errorMessage,
+        icon: 'none',
+        duration: 2000,
       });
     } finally {
       this.setData({
         loading: false,
         refreshing: false,
-        loadingMore: false
+        loadingMore: false,
       });
 
       // 停止下拉刷新
@@ -208,10 +247,10 @@ const pageObject = {
    */
   getStatusFromTab(tab) {
     const statusMap = {
-      'all': undefined,
-      'not_mastered': 'not_mastered',
-      'reviewing': 'reviewing',
-      'mastered': 'mastered'
+      all: undefined,
+      not_mastered: 'not_mastered',
+      reviewing: 'reviewing',
+      mastered: 'mastered',
     };
     return statusMap[tab];
   },
@@ -221,10 +260,10 @@ const pageObject = {
    */
   getEmptyDescription(tab) {
     const descriptions = {
-      'all': '还没有错题，继续加油哦',
-      'not_mastered': '太棒了！没有未掌握的错题',
-      'reviewing': '暂无正在复习的错题',
-      'mastered': '还没有完全掌握的错题，继续努力'
+      all: '还没有错题，继续加油哦',
+      not_mastered: '太棒了！没有未掌握的错题',
+      reviewing: '暂无正在复习的错题',
+      mastered: '还没有完全掌握的错题，继续努力',
     };
     return descriptions[tab] || '暂无数据';
   },
@@ -242,7 +281,7 @@ const pageObject = {
     console.log('切换标签页', tab);
 
     this.setData({
-      activeTab: tab
+      activeTab: tab,
     });
 
     // 重新加载数据
@@ -256,7 +295,7 @@ const pageObject = {
     console.log('下拉刷新');
 
     this.setData({
-      refreshing: true
+      refreshing: true,
     });
 
     this.loadMistakesList(true);
@@ -273,7 +312,7 @@ const pageObject = {
     console.log('加载更多');
 
     this.setData({
-      loadingMore: true
+      loadingMore: true,
     });
 
     this.loadMistakesList(false);
@@ -289,7 +328,7 @@ const pageObject = {
 
     // 跳转到错题详情页面
     wx.navigateTo({
-      url: `/pages/mistakes/detail/index?id=${mistake.id}`
+      url: `/pages/mistakes/detail/index?id=${mistake.id}`,
     });
   },
 
@@ -306,7 +345,7 @@ const pageObject = {
       title: '确认删除',
       content: '确定要删除这道错题吗？',
       confirmText: '删除',
-      confirmColor: '#f5222d'
+      confirmColor: '#f5222d',
     });
 
     if (!res.confirm) {
@@ -316,7 +355,7 @@ const pageObject = {
     try {
       wx.showLoading({
         title: '删除中...',
-        mask: true
+        mask: true,
       });
 
       const response = await mistakesApi.deleteMistake(mistake.id);
@@ -324,7 +363,7 @@ const pageObject = {
       if (response.success) {
         wx.showToast({
           title: '删除成功',
-          icon: 'success'
+          icon: 'success',
         });
 
         // 刷新列表
@@ -337,7 +376,7 @@ const pageObject = {
 
       wx.showToast({
         title: error.message || '删除失败',
-        icon: 'error'
+        icon: 'error',
       });
     } finally {
       wx.hideLoading();
@@ -354,7 +393,7 @@ const pageObject = {
 
     // 跳转到错题详情页面（复习模式）
     wx.navigateTo({
-      url: `/pages/mistakes/detail/index?id=${mistake.id}&mode=review`
+      url: `/pages/mistakes/detail/index?id=${mistake.id}&mode=review`,
     });
   },
 
@@ -366,7 +405,7 @@ const pageObject = {
 
     // 跳转到添加错题页面
     wx.navigateTo({
-      url: '/pages/mistakes/add/index'
+      url: '/pages/mistakes/add/index',
     });
   },
 
@@ -375,7 +414,7 @@ const pageObject = {
    */
   onOpenFilter() {
     this.setData({
-      showFilterPopup: true
+      showFilterPopup: true,
     });
   },
 
@@ -384,7 +423,7 @@ const pageObject = {
    */
   onCloseFilter() {
     this.setData({
-      showFilterPopup: false
+      showFilterPopup: false,
     });
   },
 
@@ -393,7 +432,7 @@ const pageObject = {
    */
   onOpenSearch() {
     this.setData({
-      showSearch: true
+      showSearch: true,
     });
   },
 
@@ -403,7 +442,7 @@ const pageObject = {
   onCloseSearch() {
     this.setData({
       showSearch: false,
-      searchKeyword: ''
+      searchKeyword: '',
     });
 
     // 重新加载数据
@@ -415,7 +454,7 @@ const pageObject = {
    */
   onSearchChange(e) {
     this.setData({
-      searchKeyword: e.detail
+      searchKeyword: e.detail,
     });
   },
 
@@ -432,7 +471,7 @@ const pageObject = {
    */
   onSearchClear() {
     this.setData({
-      searchKeyword: ''
+      searchKeyword: '',
     });
     this.loadMistakesList(true);
   },
@@ -444,7 +483,7 @@ const pageObject = {
     const { subject } = e.currentTarget.dataset;
 
     this.setData({
-      selectedSubject: subject
+      selectedSubject: subject,
     });
   },
 
@@ -455,7 +494,7 @@ const pageObject = {
     const { difficulty } = e.currentTarget.dataset;
 
     this.setData({
-      selectedDifficulty: difficulty
+      selectedDifficulty: difficulty,
     });
   },
 
@@ -465,7 +504,7 @@ const pageObject = {
   onResetFilter() {
     this.setData({
       selectedSubject: '',
-      selectedDifficulty: ''
+      selectedDifficulty: '',
     });
   },
 
@@ -475,17 +514,17 @@ const pageObject = {
   onConfirmFilter() {
     console.log('应用筛选条件', {
       subject: this.data.selectedSubject,
-      difficulty: this.data.selectedDifficulty
+      difficulty: this.data.selectedDifficulty,
     });
 
     // 关闭弹窗
     this.setData({
-      showFilterPopup: false
+      showFilterPopup: false,
     });
 
     // 重新加载数据
     this.loadMistakesList(true);
-  }
+  },
 };
 
 // 应用增强的页面守卫
