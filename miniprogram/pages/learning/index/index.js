@@ -36,7 +36,8 @@ Page({
     inputBottom: 0, // 输入框底部距离
     maxInputLength: 500, // 最大输入长度
     inputMode: 'text', // 输入模式: text | voice
-    showImageActionSheet: false, // 显示图片操作选择
+    showImageActionSheet: false, // 显示图片操作选择（旧变量，保留兼容）
+    showImageActions: false, // 显示图片上传选择菜单
 
     // AI回复状态
     isAITyping: false, // AI正在回复
@@ -1176,6 +1177,36 @@ Page({
     if (this.data.inputMode === 'voice') {
       this.stopVoiceRecord();
     }
+  },
+
+  /**
+   * 显示图片上传选择菜单
+   */
+  onShowImageActions() {
+    this.setData({ showImageActions: true });
+  },
+
+  /**
+   * 关闭图片选择菜单
+   */
+  onCloseImageActions() {
+    this.setData({ showImageActions: false });
+  },
+
+  /**
+   * 拍照
+   */
+  onTakePhoto() {
+    this.setData({ showImageActions: false });
+    this.chooseImage('camera');
+  },
+
+  /**
+   * 从相册选择图片
+   */
+  onChooseImage() {
+    this.setData({ showImageActions: false });
+    this.chooseImage('album');
   },
 
   /**
