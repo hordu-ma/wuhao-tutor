@@ -24,7 +24,9 @@
             mode="aspectFill"
           />
           <view class="user-text">
-            <text class="user-name text-white font-bold">{{userInfo.nickName || '未登录'}}</text>
+            <text class="user-name text-white font-bold">
+              {{isLoggedIn ? (userInfo.nickName || userInfo.name || '学生') : '未登录'}}
+            </text>
             <text class="user-role text-white opacity-75">
               {{role === 'student' ? '学生' : role === 'parent' ? '家长' : '教师'}}
             </text>

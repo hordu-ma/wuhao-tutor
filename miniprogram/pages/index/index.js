@@ -52,11 +52,24 @@ Page({
 
     // 每次显示时检查登录状态
     const isLoggedIn = await authManager.isLoggedIn();
+    console.log('onShow检查登录状态:', isLoggedIn, '当前状态:', this.data.isLoggedIn);
+
     if (isLoggedIn !== this.data.isLoggedIn) {
+      console.log('登录状态变化，重新初始化页面');
       this.setData({ isLoggedIn });
       await this.initPage(); // 登录状态变化时重新初始化
     } else if (isLoggedIn) {
+      console.log('用户已登录，刷新数据');
       await this.refreshData();
+    }
+
+    // 添加调试：直接检查用户信息
+    if (isLoggedIn) {
+      const userInfo = await authManager.getUserInfo();
+      const role = await authManager.getUserRole();
+      console.log('调试用户信息:', userInfo);
+      console.log('调试用户角色:', role);
+      console.log('当前页面数据:', this.data.userInfo, this.data.role);
     }
   },
 
@@ -129,11 +142,16 @@ Page({
    */
   async initLoggedInUser() {
     try {
+      console.log('开始初始化已登录用户信息...');
+
       // 获取用户信息
       const [userInfo, role] = await Promise.all([
         authManager.getUserInfo(),
         authManager.getUserRole(),
       ]);
+
+      console.log('获取到的用户信息:', userInfo);
+      console.log('获取到的用户角色:', role);
 
       if (userInfo && role) {
         this.setData({
@@ -142,22 +160,38 @@ Page({
           role,
         });
 
+        console.log('✅ 用户信息设置成功');
+
         // 初始化快捷操作
         this.initQuickActions(role);
 
         // 加载用户数据
         await this.loadUserData();
       } else {
-        console.warn('获取用户信息失败，清理登录状态');
-        await authManager.clearUserSession();
-        this.setData({ isLoggedIn: false });
-        this.initGuestUser();
+        console.warn('⚠️ 获取用户信息失败，但保持登录状态:', { userInfo, role });
+
+        // 设置默认的用户信息，而不是清除登录状态
+        this.setData({
+          userInfo: userInfo || { nickName: '学生', id: 'unknown' },
+          hasUserInfo: !!userInfo,
+          role: role || 'student',
+        });
+
+        // 初始化默认快捷操作
+        this.initQuickActions(role || 'student');
       }
     } catch (error) {
-      console.error('初始化已登录用户失败:', error);
-      // 出错时回退到游客模式
-      this.setData({ isLoggedIn: false });
-      this.initGuestUser();
+      console.error('❌ 初始化已登录用户失败:', error);
+
+      // 只有在严重错误时才回退到游客模式
+      // 先尝试设置默认用户信息
+      this.setData({
+        userInfo: { nickName: '学生', id: 'unknown' },
+        hasUserInfo: false,
+        role: 'student',
+      });
+
+      this.initQuickActions('student');
     }
   },
 
