@@ -23,8 +23,8 @@ ROOT_DOMAIN="horsduroot.com"
 NEW_IP="121.199.173.244"
 OLD_IP="60.205.124.67"
 APP_NAME="wuhao-tutor"
-NGINX_CONF="/etc/nginx/sites-available/${APP_NAME}.conf"
-APP_DIR="/opt/wuhao-tutor"  # 根据实际路径修改
+NGINX_CONF="/etc/nginx/conf.d/${APP_NAME}.conf"  # ✅ 修正：实际路径是 conf.d
+APP_DIR="/opt/wuhao-tutor"  # ✅ 已确认实际路径
 EMAIL="your-email@example.com"  # 修改为你的邮箱
 
 # 日志函数
@@ -97,63 +97,28 @@ backup_config() {
 update_nginx_config() {
     log_info "步骤 3: 更新 Nginx 配置..."
     
-    cat > "$NGINX_CONF" << 'EOF'
-# HTTP 配置 (用于 Let's Encrypt 验证和临时访问)
-server {
-    listen 80;
-    server_name www.horsduroot.com horsduroot.com;
-
-    # Let's Encrypt 证书验证路径
-    location /.well-known/acme-challenge/ {
-        root /var/www/certbot;
-    }
-
-    # 应用代理
-    location / {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        
-        # WebSocket 支持
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        
-        # 超时设置
-        proxy_connect_timeout 60s;
-        proxy_send_timeout 60s;
-        proxy_read_timeout 60s;
-    }
-
-    # 静态文件
-    location /static/ {
-        alias /var/www/wuhao-tutor/static/;
-        expires 30d;
-        add_header Cache-Control "public, immutable";
-    }
-
-    location /uploads/ {
-        alias /var/www/wuhao-tutor/uploads/;
-        expires 7d;
-        add_header Cache-Control "public";
-    }
-
-    # API 文档
-    location /docs {
-        proxy_pass http://127.0.0.1:8000/docs;
-        proxy_set_header Host $host;
-    }
-
-    location /openapi.json {
-        proxy_pass http://127.0.0.1:8000/openapi.json;
-        proxy_set_header Host $host;
-    }
-}
-EOF
-
-    log_info "✓ Nginx 配置已更新"
+    log_warn "⚠️  注意: 此脚本会在现有配置基础上添加域名支持"
+    log_warn "⚠️  不会完全覆盖现有配置（保留限流、安全头等）"
+    
+    # 备份当前配置（再次确认）
+    if [[ -f "$NGINX_CONF" ]]; then
+        cp "$NGINX_CONF" "${NGINX_CONF}.pre-domain-migration"
+        log_info "✓ 配置已备份到 ${NGINX_CONF}.pre-domain-migration"
+    fi
+    
+    # 检查当前配置中是否已包含域名
+    if grep -q "server_name.*${DOMAIN}" "$NGINX_CONF"; then
+        log_info "✓ 配置中已包含域名 ${DOMAIN}，跳过修改"
+        return
+    fi
+    
+    # 使用 sed 在现有配置中添加域名
+    log_info "正在更新 server_name..."
+    
+    # 更新 HTTP server 块的 server_name（添加域名）
+    sed -i "s/server_name 121.199.173.244 localhost;/server_name ${DOMAIN} ${ROOT_DOMAIN} 121.199.173.244 localhost;/g" "$NGINX_CONF"
+    
+    log_info "✓ Nginx 配置已更新（添加域名到 server_name）"
     
     # 测试配置
     if nginx -t 2>&1 | grep -q "successful"; then
@@ -211,6 +176,13 @@ wait_for_dns() {
 setup_ssl() {
     log_info "步骤 5: 配置 SSL 证书..."
     
+    # 检查是否已有 Let's Encrypt 证书
+    if [[ -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]]; then
+        log_info "✓ Let's Encrypt 证书已存在，跳过申请"
+        log_info "如需重新申请，请先删除: rm -rf /etc/letsencrypt/live/${DOMAIN}"
+        return
+    fi
+    
     # 创建 certbot 目录
     mkdir -p /var/www/certbot
     
@@ -222,9 +194,17 @@ setup_ssl() {
     fi
     
     log_info "正在申请 SSL 证书..."
-    log_warn "请输入你的邮箱 (用于证书到期提醒): "
+    log_warn "请输入你的邮箱 (用于证书到期提醒，直接回车使用默认): "
     read -p "邮箱: " USER_EMAIL
     EMAIL=${USER_EMAIL:-$EMAIL}
+    
+    # 验证邮箱格式
+    if [[ ! "$EMAIL" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
+        log_warn "邮箱格式无效，使用默认邮箱: admin@${ROOT_DOMAIN}"
+        EMAIL="admin@${ROOT_DOMAIN}"
+    fi
+    
+    log_info "使用邮箱: $EMAIL"
     
     # 申请证书
     certbot --nginx \
@@ -238,15 +218,31 @@ setup_ssl() {
     
     if [[ $? -eq 0 ]]; then
         log_info "✓ SSL 证书申请成功"
+        
+        # 更新 Nginx 配置，移除自签名证书配置（Certbot 会自动更新）
+        log_info "✓ Certbot 已自动更新 Nginx 配置使用 Let's Encrypt 证书"
     else
         log_error "✗ SSL 证书申请失败"
-        log_warn "你可以稍后手动执行: certbot --nginx -d $DOMAIN -d $ROOT_DOMAIN"
-        exit 1
+        log_warn "可能的原因："
+        log_warn "  1. DNS 尚未完全生效，请等待后重试"
+        log_warn "  2. 80 端口未开放或被占用"
+        log_warn "  3. Nginx 配置有误"
+        log_warn ""
+        log_warn "手动申请命令: certbot --nginx -d $DOMAIN -d $ROOT_DOMAIN --email $EMAIL"
+        read -p "是否继续（跳过 SSL 配置）？[y/N] " CONTINUE
+        if [[ ! "$CONTINUE" =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
+        return
     fi
     
     # 测试自动续期
     log_info "测试证书自动续期..."
-    certbot renew --dry-run
+    if certbot renew --dry-run &>/dev/null; then
+        log_info "✓ 自动续期配置正常"
+    else
+        log_warn "⚠ 自动续期测试失败，请手动检查"
+    fi
     
     log_info "✓ SSL 证书配置完成"
 }
@@ -256,9 +252,33 @@ update_app_config() {
     log_info "步骤 6: 更新应用配置..."
     
     if [[ -f "${APP_DIR}/.env.production" ]]; then
-        # 更新 API_BASE_URL
-        sed -i "s|API_BASE_URL=.*|API_BASE_URL=https://${DOMAIN}|g" "${APP_DIR}/.env.production"
-        sed -i "s|FRONTEND_URL=.*|FRONTEND_URL=https://${DOMAIN}|g" "${APP_DIR}/.env.production"
+        # 备份环境变量文件
+        cp "${APP_DIR}/.env.production" "${APP_DIR}/.env.production.backup-$(date +%Y%m%d_%H%M%S)"
+        
+        # 更新 BASE_URL
+        if grep -q "^BASE_URL=" "${APP_DIR}/.env.production"; then
+            sed -i "s|^BASE_URL=.*|BASE_URL=https://${DOMAIN}|g" "${APP_DIR}/.env.production"
+            log_info "✓ BASE_URL 已更新为: https://${DOMAIN}"
+        else
+            echo "BASE_URL=https://${DOMAIN}" >> "${APP_DIR}/.env.production"
+            log_info "✓ 已添加 BASE_URL=https://${DOMAIN}"
+        fi
+        
+        # 更新 CORS 配置（添加域名到现有列表）
+        if grep -q "^BACKEND_CORS_ORIGINS=" "${APP_DIR}/.env.production"; then
+            # 读取当前的 CORS 配置
+            CURRENT_CORS=$(grep "^BACKEND_CORS_ORIGINS=" "${APP_DIR}/.env.production" | cut -d= -f2-)
+            
+            # 如果不包含新域名，则添加
+            if ! echo "$CURRENT_CORS" | grep -q "${DOMAIN}"; then
+                # 构建新的 CORS 列表（添加域名）
+                NEW_CORS="'[\"https://${DOMAIN}\",\"http://${DOMAIN}\",\"https://${ROOT_DOMAIN}\",\"http://${ROOT_DOMAIN}\",\"https://121.199.173.244\",\"http://121.199.173.244\"]'"
+                sed -i "s|^BACKEND_CORS_ORIGINS=.*|BACKEND_CORS_ORIGINS=${NEW_CORS}|g" "${APP_DIR}/.env.production"
+                log_info "✓ CORS 配置已更新，添加域名支持"
+            else
+                log_info "✓ CORS 配置已包含域名，无需修改"
+            fi
+        fi
         
         log_info "✓ 应用配置已更新"
         

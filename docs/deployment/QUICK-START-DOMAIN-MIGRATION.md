@@ -80,26 +80,60 @@ bash scripts/deploy/verify-domain-migration.sh
 
 ### Step 5: 更新前端和小程序配置
 
-#### 5.1 前端配置
+#### 5.1 后端配置
 
 ```bash
+# SSH 登录服务器
+ssh root@121.199.173.244
+
 # 编辑配置
-vim frontend/.env.production
-# 改为: VITE_API_BASE_URL=https://www.horsduroot.com
+vim /opt/wuhao-tutor/.env.production
 
-# 重新构建
-cd frontend && npm run build
+# 修改这两行：
+# BASE_URL=https://www.horsduroot.com
+# BACKEND_CORS_ORIGINS='["https://www.horsduroot.com","http://www.horsduroot.com","https://horsduroot.com","http://horsduroot.com","https://121.199.173.244","http://121.199.173.244"]'
 
-# 部署到服务器
-scp -r dist/* root@121.199.173.244:/var/www/wuhao-tutor/frontend/
+# 重启服务
+systemctl restart wuhao-tutor.service
 ```
 
-#### 5.2 小程序配置
+#### 5.2 前端配置（无需修改）
+
+前端已使用相对路径 `/api/v1`，自动适配域名和 IP 访问。
+
+#### 5.3 小程序配置
 
 ```bash
-# 编辑配置
+# 本地编辑小程序配置
 vim miniprogram/config/index.js
+# 修改: baseUrl: 'https://www.horsduroot.com'
+```
+
+**微信小程序后台配置**：
+
+1. 登录：https://mp.weixin.qq.com/
+2. 开发 → 开发管理 → 开发设置 → 服务器域名
+3. 添加域名：`https://www.horsduroot.com`
+
+---
+
+## ✅ 完成检查
+
+- [ ] DNS 解析正确（nslookup 显示新 IP）
+- [ ] HTTPS 访问正常（绿锁标志）
+- [ ] API 接口正常（/api/v1/health 返回 200）
+- [ ] 前端页面正常加载
+- [ ] 小程序域名已配置
+- [ ] 旧服务器可以下线（建议保留 7 天观察期）
+
+---
+
+**问题排查**：详见 [`domain-migration-guide.md`](./domain-migration-guide.md) 第 7 步
+
+vim miniprogram/config/index.js
+
 # 改为: baseUrl: 'https://www.horsduroot.com'
+
 ```
 
 #### 5.3 微信小程序后台
@@ -130,9 +164,11 @@ vim miniprogram/config/index.js
 如果出现严重问题，立即在阿里云控制台回滚 DNS：
 
 ```
-www.horsduroot.com  →  60.205.124.67
-horsduroot.com      →  60.205.124.67
+
+www.horsduroot.com → 60.205.124.67
+horsduroot.com → 60.205.124.67
 TTL 改为 60 秒
+
 ```
 
 ---
@@ -145,6 +181,7 @@ TTL 改为 60 秒
 
 ---
 
-**执行时间**: 2025-10-19  
-**操作者**: liguoma  
+**执行时间**: 2025-10-19
+**操作者**: liguoma
 **预计时长**: 30-60 分钟
+```

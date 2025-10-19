@@ -4,6 +4,7 @@
 > **目标服务器**: 121.199.173.244 (i-bp17y72dzkqcsby31sy3)  
 > **旧服务器**: 60.205.124.67 (i-2ze7ncpvr0pvja23beht)  
 > **文档创建时间**: 2025-10-19  
+> **文档修正时间**: 2025-10-19 (基于实际服务器检查)  
 > **状态**: 📝 待执行
 
 ---
@@ -12,11 +13,14 @@
 
 ### 核心操作文档
 
-| 文档                | 说明                              | 路径                                                                               | 推荐阅读顺序  |
-| ------------------- | --------------------------------- | ---------------------------------------------------------------------------------- | ------------- |
-| **快速开始指南** ⭐ | 一页纸快速版本，5 步完成切换      | [`QUICK-START-DOMAIN-MIGRATION.md`](./QUICK-START-DOMAIN-MIGRATION.md)             | 1️⃣ 优先阅读   |
-| **完整操作指南**    | 详细的 7 步操作流程，包含所有细节 | [`domain-migration-guide.md`](./domain-migration-guide.md)                         | 2️⃣ 执行参考   |
-| **前端配置更新**    | 前端和小程序配置修改指南          | [`frontend-miniprogram-config-update.md`](./frontend-miniprogram-config-update.md) | 3️⃣ 切换后执行 |
+| 文档                | 说明                              | 路径                                                                               | 推荐阅读顺序    |
+| ------------------- | --------------------------------- | ---------------------------------------------------------------------------------- | --------------- |
+| **修正总结** 📋     | 文档修正说明和对照表              | [`DOMAIN_MIGRATION_CORRECTIONS.md`](./DOMAIN_MIGRATION_CORRECTIONS.md)             | ⚠️ **优先阅读** |
+| **服务器现状** 🔍   | 新服务器实际配置情况说明          | [`CURRENT_SERVER_STATUS.md`](./CURRENT_SERVER_STATUS.md)                           | 0️⃣ **必读**     |
+| **快速开始指南** ⭐ | 一页纸快速版本，5 步完成切换      | [`QUICK-START-DOMAIN-MIGRATION.md`](./QUICK-START-DOMAIN-MIGRATION.md)             | 1️⃣ 优先阅读     |
+| **完整操作指南**    | 详细的 7 步操作流程，包含所有细节 | [`domain-migration-guide.md`](./domain-migration-guide.md)                         | 2️⃣ 执行参考     |
+| **执行检查清单**    | 逐项检查确保不遗漏                | [`DOMAIN_MIGRATION_CHECKLIST.md`](./DOMAIN_MIGRATION_CHECKLIST.md)                 | 3️⃣ 执行时用     |
+| **前端配置更新**    | 前端和小程序配置修改指南          | [`frontend-miniprogram-config-update.md`](./frontend-miniprogram-config-update.md) | 4️⃣ 切换后执行   |
 
 ### 自动化脚本
 
@@ -101,29 +105,23 @@ sudo bash /tmp/domain-migration.sh
 bash scripts/deploy/verify-domain-migration.sh
 ```
 
-### 4. 更新前端配置
+### 4. 更新后端和小程序配置
 
 ```bash
-# 编辑配置
-vim frontend/.env.production
-# 改为: VITE_API_BASE_URL=https://www.horsduroot.com
+# 后端配置（服务器上）
+ssh root@121.199.173.244
+vim /opt/wuhao-tutor/.env.production
+# 修改 BASE_URL 和 CORS
+systemctl restart wuhao-tutor.service
 
-# 重新构建
-cd frontend && npm run build
+# 前端无需修改（已使用相对路径）
 
-# 部署
-scp -r dist/* root@121.199.173.244:/var/www/wuhao-tutor/frontend/
-```
-
-### 5. 更新小程序配置
-
-```bash
-# 编辑配置
+# 小程序配置（本地）
 vim miniprogram/config/index.js
 # 改为: baseUrl: 'https://www.horsduroot.com'
 ```
 
-### 6. 微信小程序后台配置
+### 5. 微信小程序后台配置
 
 **登录**: https://mp.weixin.qq.com/
 
@@ -133,7 +131,30 @@ vim miniprogram/config/index.js
 
 ---
 
+## 🔍 关键路径说明
+
+根据实际服务器检查，以下是正确的路径：
+
+| 项目           | 文档中常见错误路径                                     | ✅ 实际正确路径                             |
+| -------------- | ------------------------------------------------------ | ------------------------------------------- |
+| Nginx 配置文件 | `/etc/nginx/sites-available/`                          | `/etc/nginx/conf.d/`                        |
+| 前端部署目录   | `/var/www/wuhao-tutor/frontend/`                       | `/var/www/html/`                            |
+| 上传文件目录   | `/var/www/uploads/` 或 `/var/www/wuhao-tutor/uploads/` | `/opt/wuhao-tutor/uploads/`                 |
+| 后端 .env      | `/path/to/wuhao-tutor/`                                | `/opt/wuhao-tutor/.env.production`          |
+| 前端 .env      | `frontend/.env.production`                             | `/opt/wuhao-tutor/frontend/.env.production` |
+
+---
+
 ## ⚠️ 重要提醒
+
+### 当前服务器状态
+
+- ❌ **未配置域名**: Nginx 当前只配置了 `121.199.173.244` 和 `localhost`
+- ❌ **自签名证书**: 当前使用自签名 SSL 证书，需要替换为 Let's Encrypt
+- ✅ **服务运行正常**: 后端和前端服务都正常运行
+- ✅ **数据库已连接**: RDS 和 Redis 连接正常
+
+详见：[`CURRENT_SERVER_STATUS.md`](./CURRENT_SERVER_STATUS.md)
 
 ### DNS 生效时间
 

@@ -59,54 +59,88 @@ systemctl start nginx
 
 ### Step 2: 修改 Nginx 配置支持域名
 
-**配置文件位置**: `/etc/nginx/sites-available/wuhao-tutor.conf`
+**配置文件位置**: `/etc/nginx/conf.d/wuhao-tutor.conf`
 
 #### 2.1 备份当前配置
 
 ```bash
-cp /etc/nginx/sites-available/wuhao-tutor.conf /etc/nginx/sites-available/wuhao-tutor.conf.backup.$(date +%Y%m%d)
+cp /etc/nginx/conf.d/wuhao-tutor.conf /etc/nginx/conf.d/wuhao-tutor.conf.backup.$(date +%Y%m%d)
 ```
 
 #### 2.2 编辑配置文件
 
 ```bash
-vim /etc/nginx/sites-available/wuhao-tutor.conf
+vim /etc/nginx/conf.d/wuhao-tutor.conf
 ```
 
 **修改内容**:
+
+**关键修改点**：
+
+1. 在 HTTP server 块中添加域名 `www.horsduroot.com horsduroot.com`
+2. 在 HTTPS server 块中添加域名（SSL 证书配置后）
+3. 更新 uploads 路径为实际路径 `/opt/wuhao-tutor/uploads/`
 
 ```nginx
 # HTTP 配置 (临时支持 HTTP，用于 SSL 证书申请)
 server {
     listen 80;
-    server_name www.horsduroot.com horsduroot.com 121.199.173.244;
+    server_name www.horsduroot.com horsduroot.com 121.199.173.244 localhost;
 
     # Let's Encrypt 证书验证路径
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;
+        allow all;
     }
 
     # 其他请求暂时允许 HTTP (SSL 配置完成后会改为强制跳转 HTTPS)
     location / {
-        proxy_pass http://127.0.0.1:8000;
+        return 301 https://$server_name$request_uri;
+    }
+}
+
+# HTTPS 主站 - 需要先申请 SSL 证书
+server {
+    listen 443 ssl http2;
+    server_name www.horsduroot.com horsduroot.com 121.199.173.244 localhost;
+
+    # SSL证书配置 (先使用自签名证书，后续用 Let's Encrypt 替换)
+    ssl_certificate /etc/nginx/ssl/wuhao-tutor.crt;
+    ssl_certificate_key /etc/nginx/ssl/wuhao-tutor.key;
+
+    # 根目录（前端静态文件）
+    root /var/www/html;
+    index index.html index.htm;
+
+    # API代理到后端
+    location /api/ {
+        proxy_pass http://wuhao_backend;
+        proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # 静态文件
-    location /static/ {
-        alias /var/www/wuhao-tutor/static/;
-        expires 30d;
+    # 文件上传/下载 - 实际路径
+    location /uploads/ {
+        alias /opt/wuhao-tutor/uploads/;
+        expires 7d;
+
+        location ~* \.(jpg|jpeg|png|gif|ico|pdf|webp)$ {
+            expires 30d;
+            add_header Cache-Control "public, immutable";
+        }
     }
 
-    location /uploads/ {
-        alias /var/www/wuhao-tutor/uploads/;
-        expires 7d;
+    # 前端路由支持（SPA）
+    location / {
+        try_files $uri $uri/ /index.html;
     }
 }
 ```
+
+**注意**：以上配置只显示了关键修改部分。完整配置请保留现有的其他配置项（限流、安全头、日志等）。
 
 #### 2.3 测试配置并重载
 
@@ -250,24 +284,29 @@ server {
     include /etc/letsencrypt/options-ssl-nginx.conf;
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
-    # 应用配置
-    location / {
-        proxy_pass http://127.0.0.1:8000;
+    # 前端根目录
+    root /var/www/html;
+    index index.html index.htm;
+
+    # API 代理到后端
+    location /api/ {
+        proxy_pass http://wuhao_backend;
+        proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # 静态文件
-    location /static/ {
-        alias /var/www/wuhao-tutor/static/;
-        expires 30d;
+    # 文件上传/下载 - 实际路径
+    location /uploads/ {
+        alias /opt/wuhao-tutor/uploads/;
+        expires 7d;
     }
 
-    location /uploads/ {
-        alias /var/www/wuhao-tutor/uploads/;
-        expires 7d;
+    # 前端路由支持（SPA）
+    location / {
+        try_files $uri $uri/ /index.html;
     }
 }
 
@@ -286,6 +325,8 @@ server {
 }
 ```
 
+**注意**：以上是简化版配置，实际配置应保留现有的限流、安全头、日志等配置项。
+
 ---
 
 ### Step 5: 更新项目配置文件
@@ -294,7 +335,7 @@ server {
 
 ```bash
 # 在新服务器上编辑 .env.production
-vim /path/to/wuhao-tutor/.env.production
+vim /opt/wuhao-tutor/.env.production
 ```
 
 **修改内容**:
@@ -308,36 +349,44 @@ FRONTEND_URL=https://www.horsduroot.com
 CORS_ORIGINS=["https://www.horsduroot.com", "https://horsduroot.com"]
 ```
 
+**修改内容**:
+
+```bash
+# CORS 配置 - 添加新域名
+BACKEND_CORS_ORIGINS='["https://www.horsduroot.com","http://www.horsduroot.com","https://horsduroot.com","http://horsduroot.com","https://121.199.173.244","http://121.199.173.244"]'
+
+# 基础 URL 配置 - 更新为域名
+BASE_URL=https://www.horsduroot.com
+```
+
 **重启后端服务**:
 
 ```bash
 systemctl restart wuhao-tutor.service
 ```
 
-#### 5.2 前端配置 (本地构建)
+#### 5.2 前端配置
 
-**在本地 Mac 执行**:
+**前端使用相对路径，无需修改**
+
+当前前端配置 (`/opt/wuhao-tutor/frontend/.env.production`) 已经正确使用相对路径：
+
+```bash
+VITE_API_BASE_URL=/api/v1
+```
+
+这样前端会自动使用当前域名访问 API，支持 IP 和域名两种方式。
+
+**如需重新部署前端** (在本地 Mac 执行):
 
 ```bash
 cd /Users/liguoma/my-devs/python/wuhao-tutor/frontend
 
-# 编辑生产环境配置
-vim .env.production
-```
-
-**修改内容**:
-
-```bash
-VITE_API_BASE_URL=https://www.horsduroot.com
-```
-
-**重新构建前端**:
-
-```bash
+# 重新构建
 npm run build
 
-# 部署到服务器
-scp -r dist/* root@121.199.173.244:/var/www/wuhao-tutor/frontend/
+# 部署到服务器 (实际路径)
+scp -r dist/* root@121.199.173.244:/var/www/html/
 ```
 
 #### 5.3 小程序配置 (本地修改)
@@ -356,9 +405,12 @@ const production = {
   api: {
     baseUrl: 'https://www.horsduroot.com',
   },
-  appId: 'your-wechat-appid',
-}
+  appId: 'wx2a8b340606664785',  // 实际小程序 AppID
 ```
+
+}
+
+````
 
 #### 5.4 微信小程序服务器域名配置
 
@@ -386,7 +438,7 @@ nslookup www.horsduroot.com
 dig www.horsduroot.com
 
 # 预期: 返回 121.199.173.244
-```
+````
 
 #### 6.2 HTTP/HTTPS 访问验证
 
