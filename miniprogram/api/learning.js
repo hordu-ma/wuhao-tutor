@@ -105,19 +105,18 @@ const learningAPI = {
   },
 
   /**
-   * 向 AI 提问
+   * 向 AI 提问 - 对齐网页端实现
    * @param {Object} params - 提问参数
-   * @param {string} params.question - 问题内容
-   * @param {string} [params.session_id] - 会话 ID（不提供则自动创建新会话）
+   * @param {string} params.content - 问题内容（对齐网页端字段名）
+   * @param {string} [params.session_id] - 会话 ID
    * @param {string} [params.subject] - 学科
-   * @param {string} [params.grade] - 年级
-   * @param {string} [params.difficulty] - 难度等级
+   * @param {string} [params.question_type] - 问题类型
    * @param {Array<string>} [params.image_urls] - 图片 URL 列表
    * @param {Object} [config] - 请求配置
    * @returns {Promise<Object>} AI 回答
    */
   askQuestion(params, config = {}) {
-    if (!params || !params.question) {
+    if (!params || !params.content) {
       return Promise.reject({
         code: 'VALIDATION_ERROR',
         message: '问题内容不能为空',
@@ -542,6 +541,24 @@ const learningAPI = {
       success: true,
       message: '功能开发中，敬请期待',
     });
+  },
+
+  /**
+   * 获取推荐问题
+   * @param {Object} [config] - 请求配置
+   * @returns {Promise<Object>} 推荐问题列表
+   */
+  getRecommendations(config = {}) {
+    return request.get('api/v1/learning/recommendations', {}, config);
+  },
+
+  /**
+   * 获取系统统计 - 使用日统计接口
+   * @param {Object} [config] - 请求配置
+   * @returns {Promise<Object>} 系统统计信息
+   */
+  getSystemStats(config = {}) {
+    return request.get('api/v1/learning/stats/daily', {}, config);
   },
 };
 

@@ -180,3 +180,77 @@ async def get_user_stats(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"获取用户统计失败: {str(e)}",
         )
+
+
+@router.get(
+    "/preferences",
+    summary="获取用户偏好设置",
+    description="获取当前用户的学习偏好配置",
+    response_model=DataResponse[Dict[str, Any]],
+)
+async def get_user_preferences(
+    current_user_id: UUID = Depends(get_current_user_id),
+):
+    """
+    获取用户偏好设置
+
+    **返回数据:**
+    - **preferred_subjects**: 偏好学科列表
+    - **preferred_input**: 偏好输入方式 (text/image/voice)
+    - **difficulty_level**: 偏好难度 (easy/medium/hard)
+    """
+    try:
+        # TODO: 从数据库获取用户偏好，当前返回默认值
+        default_preferences = {
+            "preferred_subjects": ["math", "chinese", "english"],
+            "preferred_input": "text",
+            "difficulty_level": "medium",
+            "learning_style": "balanced",
+        }
+
+        return DataResponse[Dict[str, Any]](
+            success=True, data=default_preferences, message="获取用户偏好成功"
+        )
+
+    except Exception as e:
+        logger.error(f"获取用户偏好失败 - user_id: {current_user_id}, error: {e}")
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取用户偏好失败: {str(e)}",
+        )
+
+
+@router.put(
+    "/preferences",
+    summary="更新用户偏好设置",
+    description="更新当前用户的学习偏好配置",
+    response_model=DataResponse[Dict[str, Any]],
+)
+async def update_user_preferences(
+    preferences: Dict[str, Any],
+    current_user_id: UUID = Depends(get_current_user_id),
+):
+    """
+    更新用户偏好设置
+
+    **请求参数:**
+    - **preferred_subjects**: 偏好学科列表
+    - **preferred_input**: 偏好输入方式
+    - **difficulty_level**: 偏好难度
+    """
+    try:
+        # TODO: 保存用户偏好到数据库
+        logger.info(
+            f"用户偏好更新 - user_id: {current_user_id}, preferences: {preferences}"
+        )
+
+        return DataResponse[Dict[str, Any]](
+            success=True, data=preferences, message="更新用户偏好成功"
+        )
+
+    except Exception as e:
+        logger.error(f"更新用户偏好失败 - user_id: {current_user_id}, error: {e}")
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"更新用户偏好失败: {str(e)}",
+        )

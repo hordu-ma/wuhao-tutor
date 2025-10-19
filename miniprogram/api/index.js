@@ -6,6 +6,7 @@ const learningAPI = require('./learning.js');
 const analysisAPI = require('./analysis.js');
 const userAPI = require('./user.js');
 const mistakesAPI = require('./mistakes.js');
+const fileAPI = require('./file.js');
 
 /**
  * API 模块集合
@@ -29,6 +30,9 @@ const api = {
 
   // 错题手册模块（新增核心模块）
   mistakes: mistakesAPI,
+
+  // 文件上传模块
+  file: fileAPI,
 };
 
 module.exports = api;

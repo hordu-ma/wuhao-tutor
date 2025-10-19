@@ -34,13 +34,14 @@ class MCPService {
       ]);
 
       // 合并上下文数据
+      const preferencesValue = preferences.status === 'fulfilled' ? preferences.value : {};
       const context = {
         timestamp: Date.now(),
-        preferences: preferences.status === 'fulfilled' ? preferences.value : {},
+        preferences: preferencesValue,
         weaknessPoints: weaknessAnalysis.status === 'fulfilled' ? weaknessAnalysis.value : [],
         recentErrors: errorHistory.status === 'fulfilled' ? errorHistory.value : [],
         progress: progressData.status === 'fulfilled' ? progressData.value : {},
-        learningStyle: this.inferLearningStyle(preferences.value),
+        learningStyle: this.inferLearningStyle(preferencesValue),
       };
 
       // 更新缓存
@@ -53,7 +54,7 @@ class MCPService {
       return context;
     } catch (error) {
       console.error('获取个性化上下文失败:', error);
-      
+
       // 尝试使用本地缓存
       const localContext = await storage.get('mcp_context');
       if (localContext) {
@@ -84,7 +85,7 @@ class MCPService {
   async getWeaknessAnalysis(userId) {
     try {
       const response = await api.analysis.getMastery({ subject: 'all' });
-      
+
       if (response.success && response.data.knowledge_points) {
         // 找出掌握度低于70%的知识点
         const weakPoints = response.data.knowledge_points
@@ -114,7 +115,7 @@ class MCPService {
     try {
       // 这里可以调用错题分析API（当后端实现后）
       // const response = await api.analysis.getErrorAnalysis({ days: 30 });
-      
+
       // 暂时返回模拟数据
       return [];
     } catch (error) {
@@ -146,13 +147,13 @@ class MCPService {
 
     // 基于偏好推断学习风格
     const styles = ['visual', 'auditory', 'kinesthetic', 'reading', 'balanced'];
-    
+
     // 简单的推断逻辑，可以根据实际数据优化
     if (preferences.preferred_input === 'image') return 'visual';
     if (preferences.preferred_input === 'voice') return 'auditory';
     if (preferences.learning_pace === 'fast') return 'kinesthetic';
     if (preferences.preferred_subjects?.includes('chinese')) return 'reading';
-    
+
     return 'balanced';
   }
 
@@ -161,11 +162,11 @@ class MCPService {
    */
   calculateTimeDecay(lastStudied) {
     if (!lastStudied) return 1.0;
-    
+
     const now = Date.now();
     const studiedTime = new Date(lastStudied).getTime();
     const daysPassed = (now - studiedTime) / (1000 * 60 * 60 * 24);
-    
+
     // 指数衰减函数，30天后权重降到原来的50%
     return Math.exp(-daysPassed / 30) * 0.5 + 0.5;
   }
@@ -174,7 +175,7 @@ class MCPService {
    * 缓存是否有效
    */
   isCacheValid() {
-    return (Date.now() - this.lastUpdateTime) < this.cacheExpiry;
+    return Date.now() - this.lastUpdateTime < this.cacheExpiry;
   }
 
   /**
@@ -211,13 +212,18 @@ class MCPService {
 
     // 薄弱知识点关注
     if (context.weaknessPoints && context.weaknessPoints.length > 0) {
-      const weakPoints = context.weaknessPoints.slice(0, 3).map(p => p.name).join('、');
+      const weakPoints = context.weaknessPoints
+        .slice(0, 3)
+        .map(p => p.name)
+        .join('、');
       prompts.push(`用户在${weakPoints}等知识点相对薄弱，请在相关回答中给予更多关注和解释`);
     }
 
     // 学习进度考虑
     if (context.progress && context.progress.total_study_days > 0) {
-      prompts.push(`用户已学习${context.progress.total_study_days}天，请根据其学习阶段给出适当难度的内容`);
+      prompts.push(
+        `用户已学习${context.progress.total_study_days}天，请根据其学习阶段给出适当难度的内容`,
+      );
     }
 
     return prompts.length > 0 ? `\n\n个性化提示：${prompts.join('；')}` : '';
@@ -261,12 +267,12 @@ class MCPService {
       // 本地存储行为记录
       const behaviors = await storage.get('learning_behaviors', []);
       behaviors.push(behaviorData);
-      
+
       // 保留最近100条记录
       if (behaviors.length > 100) {
         behaviors.splice(0, behaviors.length - 100);
       }
-      
+
       await storage.set('learning_behaviors', behaviors);
 
       // 如果有后端接口，可以异步上报

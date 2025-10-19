@@ -38,7 +38,7 @@ async function getWeakKnowledgePoints(params = {}) {
       .map(item => ({
         knowledge_point: item.knowledge_point,
         error_count: item.error_count,
-        difficulty_level: item.difficulty_level
+        difficulty_level: item.difficulty_level,
       }));
   } catch (error) {
     console.error('获取薄弱知识点失败:', error);
@@ -55,7 +55,7 @@ async function getLearningPreferences() {
     // 获取问答历史统计
     const questionsResponse = await learningAPI.getQuestions({
       page: 1,
-      size: 100 // 获取最近100条问答记录
+      size: 100, // 获取最近100条问答记录
     });
 
     if (!questionsResponse.success || !questionsResponse.data) {
@@ -88,24 +88,22 @@ async function getLearningPreferences() {
     });
 
     // 找出最常用的学科
-    const favoriteSubject = Object.entries(subjectCount)
-      .sort((a, b) => b[1] - a[1])[0]?.[0] || '';
+    const favoriteSubject = Object.entries(subjectCount).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
 
     // 找出常见难度
-    const commonDifficulty = Object.entries(difficultyCount)
-      .sort((a, b) => b[1] - a[1])[0]?.[0] || 'medium';
+    const commonDifficulty =
+      Object.entries(difficultyCount).sort((a, b) => b[1] - a[1])[0]?.[0] || 'medium';
 
     // 找出活跃时段
     const activeTimePeriod = getTimePeriod(
-      Object.entries(activeHours)
-        .sort((a, b) => b[1] - a[1])[0]?.[0] || 14
+      Object.entries(activeHours).sort((a, b) => b[1] - a[1])[0]?.[0] || 14,
     );
 
     return {
       favoriteSubject,
       commonDifficulty,
       activeTimePeriod,
-      totalQuestions: questions.length
+      totalQuestions: questions.length,
     };
   } catch (error) {
     console.error('获取学习偏好失败:', error);
@@ -122,7 +120,7 @@ function getDefaultPreferences() {
     favoriteSubject: '',
     commonDifficulty: 'medium',
     activeTimePeriod: 'afternoon',
-    totalQuestions: 0
+    totalQuestions: 0,
   };
 }
 
@@ -152,7 +150,7 @@ async function buildMCPContext(params = {}) {
     // 并行获取数据
     const [weakPoints, preferences] = await Promise.all([
       getWeakKnowledgePoints({ subject, limit: 5 }),
-      getLearningPreferences()
+      getLearningPreferences(),
     ]);
 
     return {
@@ -163,21 +161,21 @@ async function buildMCPContext(params = {}) {
       preferences: {
         favorite_subject: preferences.favoriteSubject,
         common_difficulty: preferences.commonDifficulty,
-        active_time_period: preferences.activeTimePeriod
+        active_time_period: preferences.activeTimePeriod,
       },
 
       // 当前上下文
       current_context: {
         subject: subject || preferences.favoriteSubject,
-        grade: grade || ''
+        grade: grade || '',
       },
 
       // 元数据
       metadata: {
         total_questions: preferences.totalQuestions,
         weak_points_count: weakPoints.length,
-        generated_at: new Date().toISOString()
-      }
+        generated_at: new Date().toISOString(),
+      },
     };
   } catch (error) {
     console.error('构建 MCP 上下文失败:', error);
@@ -188,8 +186,8 @@ async function buildMCPContext(params = {}) {
       metadata: {
         total_questions: 0,
         weak_points_count: 0,
-        generated_at: new Date().toISOString()
-      }
+        generated_at: new Date().toISOString(),
+      },
     };
   }
 }
@@ -217,11 +215,9 @@ function formatMCPContextToPrompt(context) {
     const difficultyMap = {
       easy: '简单',
       medium: '中等',
-      hard: '困难'
+      hard: '困难',
     };
-    parts.push(
-      `学生偏好的难度: ${difficultyMap[context.preferences.common_difficulty] || '中等'}`
-    );
+    parts.push(`学生偏好的难度: ${difficultyMap[context.preferences.common_difficulty] || '中等'}`);
   }
 
   // 当前上下文
@@ -229,13 +225,7 @@ function formatMCPContextToPrompt(context) {
     parts.push(`当前学科: ${context.current_context.subject}`);
   }
 
-  return parts.length > 0 
-    ? `
-【学生个性化信息】
-${parts.join('
-')}
-` 
-    : '';
+  return parts.length > 0 ? `【学生个性化信息】\n${parts.join('\n')}\n` : '';
 }
 
 /**
@@ -247,7 +237,7 @@ function cacheMCPContext(context, expireMinutes = 60) {
   try {
     const cacheData = {
       context,
-      expireAt: Date.now() + expireMinutes * 60 * 1000
+      expireAt: Date.now() + expireMinutes * 60 * 1000,
     };
 
     wx.setStorageSync('mcp_context_cache', cacheData);
@@ -317,5 +307,5 @@ module.exports = {
   formatMCPContextToPrompt,
   cacheMCPContext,
   getCachedMCPContext,
-  getMCPContext
+  getMCPContext,
 };

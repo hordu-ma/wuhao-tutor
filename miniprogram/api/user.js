@@ -30,16 +30,20 @@ const userAPI = {
       });
     }
 
-    return request.post('api/v1/auth/wechat-login', {
-      device_type: 'mini_program',
-      ...params,
-    }, {
-      skipAuth: true, // 登录请求不需要认证
-      showLoading: true,
-      loadingText: '登录中...',
-      timeout: 15000, // 15秒超时
-      ...config,
-    });
+    return request.post(
+      'api/v1/auth/wechat-login',
+      {
+        device_type: 'mini_program',
+        ...params,
+      },
+      {
+        skipAuth: true, // 登录请求不需要认证
+        showLoading: true,
+        loadingText: '登录中...',
+        timeout: 15000, // 15秒超时
+        ...config,
+      },
+    );
   },
 
   /**
@@ -58,15 +62,19 @@ const userAPI = {
       });
     }
 
-    return request.post('api/v1/auth/refresh-token', {
-      device_type: 'mini_program',
-      ...params,
-    }, {
-      skipAuth: true, // 刷新请求不需要access token
-      showLoading: false,
-      timeout: 10000,
-      ...config,
-    });
+    return request.post(
+      'api/v1/auth/refresh-token',
+      {
+        device_type: 'mini_program',
+        ...params,
+      },
+      {
+        skipAuth: true, // 刷新请求不需要access token
+        showLoading: false,
+        timeout: 10000,
+        ...config,
+      },
+    );
   },
 
   /**
@@ -77,15 +85,19 @@ const userAPI = {
    * @returns {Promise<Object>} 登出结果
    */
   logout(params = {}, config = {}) {
-    return request.post('api/v1/auth/logout', {
-      device_type: 'mini_program',
-      ...params,
-    }, {
-      showLoading: false,
-      showError: false, // 登出失败不显示错误，本地清理即可
-      timeout: 5000,
-      ...config,
-    });
+    return request.post(
+      'api/v1/auth/logout',
+      {
+        device_type: 'mini_program',
+        ...params,
+      },
+      {
+        showLoading: false,
+        showError: false, // 登出失败不显示错误，本地清理即可
+        timeout: 5000,
+        ...config,
+      },
+    );
   },
 
   /**
@@ -94,10 +106,14 @@ const userAPI = {
    * @returns {Promise<Object>} 用户信息
    */
   getCurrentUser(config = {}) {
-    return request.get('api/v1/auth/me', {}, {
-      showLoading: false,
-      ...config,
-    });
+    return request.get(
+      'api/v1/auth/me',
+      {},
+      {
+        showLoading: false,
+        ...config,
+      },
+    );
   },
 
   /**
@@ -134,13 +150,17 @@ const userAPI = {
   getActivities(params = {}, config = {}) {
     const { limit = 10, offset = 0 } = params;
 
-    return request.get('api/v1/users/activities', {
-      limit,
-      offset,
-    }, {
-      showLoading: false,
-      ...config,
-    });
+    return request.get(
+      'api/v1/users/activities',
+      {
+        limit,
+        offset,
+      },
+      {
+        showLoading: false,
+        ...config,
+      },
+    );
   },
 
   /**
@@ -153,12 +173,16 @@ const userAPI = {
   getStats(params = {}, config = {}) {
     const { time_range = '30d' } = params;
 
-    return request.get('api/v1/users/stats', {
-      time_range,
-    }, {
-      showLoading: false,
-      ...config,
-    });
+    return request.get(
+      'api/v1/users/stats',
+      {
+        time_range,
+      },
+      {
+        showLoading: false,
+        ...config,
+      },
+    );
   },
 
   /**
@@ -178,7 +202,7 @@ const userAPI = {
         loadingText: '上传头像中...',
         showError: true,
         ...config,
-      }
+      },
     );
   },
 
@@ -232,10 +256,14 @@ const userAPI = {
    * @returns {Promise<Object>} 用户设置
    */
   getSettings(config = {}) {
-    return request.get('api/v1/users/settings', {}, {
-      showLoading: false,
-      ...config,
-    });
+    return request.get(
+      'api/v1/users/settings',
+      {},
+      {
+        showLoading: false,
+        ...config,
+      },
+    );
   },
 
   /**
@@ -284,10 +312,14 @@ const userAPI = {
    * @returns {Promise<Object>} 偏好设置
    */
   getPreferences(config = {}) {
-    return request.get('api/v1/users/preferences', {}, {
-      showLoading: false,
-      ...config,
-    });
+    return request.get(
+      'api/v1/user/preferences',
+      {},
+      {
+        showLoading: false,
+        ...config,
+      },
+    );
   },
 
   /**
@@ -300,7 +332,7 @@ const userAPI = {
    * @returns {Promise<Object>} 更新结果
    */
   updatePreferences(params, config = {}) {
-    return request.put('api/v1/users/preferences', params, {
+    return request.put('api/v1/user/preferences', params, {
       showLoading: true,
       loadingText: '保存偏好中...',
       showError: true,
