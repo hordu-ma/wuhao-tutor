@@ -292,6 +292,14 @@ Page({
       // 尝试获取本地存储的会话ID
       let sessionId = wx.getStorageSync('chat_session_id');
 
+      // 检查是否为有效的UUID格式，如果不是则清除旧格式的ID
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (sessionId && !uuidRegex.test(sessionId)) {
+        console.log('清除旧格式的session ID:', sessionId);
+        wx.removeStorageSync('chat_session_id');
+        sessionId = '';
+      }
+
       if (!sessionId) {
         // 如果没有会话ID，创建新会话
         const sessionResponse = await api.learning.createSession({
@@ -398,7 +406,7 @@ Page({
    * 生成会话ID
    */
   generateSessionId() {
-    return `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return utils.uuid();
   },
 
   /**
