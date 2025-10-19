@@ -1,6 +1,6 @@
 // pages/chat/index/index.js - AI问答对话页面
 
-const { routeGuard } = require('../../../utils/route-guard.js');
+const { createGuardedPage } = require('../../../utils/enhanced-page-guard.js');
 const { authManager } = require('../../../utils/auth.js');
 const { permissionManager } = require('../../../utils/permission-manager.js');
 const { roleManager } = require('../../../utils/role-manager.js');
@@ -9,7 +9,7 @@ const api = require('../../../api/index.js');
 const config = require('../../../config/index.js');
 const utils = require('../../../utils/utils.js');
 
-Page({
+const pageObject = {
   data: {
     // API状态管理
     apiStatus: 'success', // loading | error | empty | success
@@ -1850,4 +1850,7 @@ Page({
       duration: 2000,
     });
   },
-});
+};
+
+// 使用守卫包装页面
+Page(createGuardedPage(pageObject, 'pages/learning/index/index'));

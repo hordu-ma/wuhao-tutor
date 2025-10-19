@@ -420,19 +420,55 @@ class EnhancedPageGuard {
   }
 
   /**
-   * 处理登录要求
+   * 处理登录要求 - 统一跳转逻辑
    */
   handleLoginRequired(pagePath) {
     console.log(`页面 ${pagePath} 需要登录，跳转到登录页`);
 
-    friendlyPermissionDialog.showPermissionError('not_logged_in', {
-      pagePath,
-      retryCallback: () => {
-        wx.redirectTo({
-          url: `/pages/login/index?redirect=${encodeURIComponent(pagePath)}`,
-        });
+    // 判断是否是 TabBar 页面
+    const isTabBarPage = this.isTabBarPage(pagePath);
+
+    wx.showModal({
+      title: '需要登录',
+      content: '此功能需要登录后才能使用，是否前往登录？',
+      confirmText: '去登录',
+      cancelText: '取消',
+      success: res => {
+        if (res.confirm) {
+          // TabBar页面登录后返回首页,其他页面返回原页面
+          const returnPath = isTabBarPage ? '/pages/index/index' : pagePath;
+
+          wx.redirectTo({
+            url: `/pages/login/index?returnPath=${encodeURIComponent(returnPath)}`,
+            fail: () => {
+              wx.reLaunch({
+                url: '/pages/login/index',
+              });
+            },
+          });
+        } else {
+          // 用户取消,返回首页
+          wx.switchTab({
+            url: '/pages/index/index',
+          });
+        }
       },
     });
+  }
+
+  /**
+   * 判断是否是 TabBar 页面
+   */
+  isTabBarPage(pagePath) {
+    const tabBarPages = [
+      'pages/index/index',
+      'pages/mistakes/list/index',
+      'pages/learning/index/index',
+      'pages/analysis/report/index',
+      'pages/profile/index/index',
+    ];
+
+    return tabBarPages.some(tabPath => pagePath.includes(tabPath));
   }
 
   /**

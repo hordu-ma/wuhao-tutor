@@ -1,4 +1,5 @@
 // 学习报告页面逻辑
+const { createGuardedPage } = require('../../../utils/enhanced-page-guard.js');
 const api = require('../../../api/index.js');
 const { authManager } = require('../../../utils/auth.js');
 
@@ -27,7 +28,7 @@ const SUBJECT_MAP = {
   other: '其他',
 };
 
-Page({
+const pageObject = {
   data: {
     // API状态管理
     apiStatus: 'loading', // loading | error | empty | success
@@ -84,29 +85,7 @@ Page({
   async onLoad(options) {
     console.log('学习报告页面加载');
 
-    // 检查登录状态
-    const isLoggedIn = await authManager.isLoggedIn();
-    if (!isLoggedIn) {
-      console.log('用户未登录，跳转到登录页面');
-      wx.showModal({
-        title: '需要登录',
-        content: '查看学习报告需要先登录账户',
-        success(res) {
-          if (res.confirm) {
-            wx.navigateTo({
-              url: '/pages/login/index',
-            });
-          } else {
-            // 用户取消，返回首页
-            wx.switchTab({
-              url: '/pages/index/index',
-            });
-          }
-        },
-      });
-      return;
-    }
-
+    // 移除手动的登录检查,由 createGuardedPage 统一处理
     this.loadAnalyticsData();
   },
 
@@ -485,4 +464,7 @@ Page({
       imageUrl: '', // TODO: 设置分享图片
     };
   },
-});
+};
+
+// 使用守卫包装页面
+Page(createGuardedPage(pageObject, 'pages/analysis/report/index'));

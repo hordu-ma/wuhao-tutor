@@ -1,13 +1,13 @@
 // pages/profile/index/index.js - 用户信息展示页面
 
-const { routeGuard } = require('../../../utils/route-guard.js');
+const { createGuardedPage } = require('../../../utils/enhanced-page-guard.js');
 const { authManager } = require('../../../utils/auth.js');
 const { api, apiClient } = require('../../../utils/api.js');
 const { errorToast } = require('../../../utils/error-toast.js');
 const { avatarUploadManager } = require('../../../utils/avatar-upload.js');
 const { syncManager } = require('../../../utils/sync-manager.js');
 
-Page({
+const pageObject = {
   data: {
     userInfo: null,
     userRole: '',
@@ -42,12 +42,7 @@ Page({
   async onLoad(options) {
     console.log('个人信息页面加载', options);
 
-    // 执行路由守卫检查
-    const guardResult = await routeGuard.checkPageAuth();
-    if (!guardResult.success) {
-      return;
-    }
-
+    // 移除手动的守卫检查,由 createGuardedPage 统一处理
     await this.initPage();
   },
 
@@ -476,4 +471,7 @@ Page({
       imageUrl: '/assets/images/share-profile.png',
     };
   },
-});
+};
+
+// 使用守卫包装页面
+Page(createGuardedPage(pageObject, 'pages/profile/index/index'));
