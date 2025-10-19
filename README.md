@@ -29,12 +29,25 @@
 | **个人中心**   | ✅ 生产可用 | 用户信息管理、头像上传、学习统计展示                 |
 | **微信小程序** | ✅ 已完成   | 完整的小程序端,支持所有核心功能,已上线使用           |
 
-### 关键文档
+### 📚 关键文档
 
-- **[更新日志](CHANGELOG.md)** ⭐ - 版本更新和功能变更记录
-- **[开发计划](DEVELOPMENT_ROADMAP.md)** - 下一步开发规划与路线图
-- **[文档中心](docs/DOCS-README.md)** - 完整的项目文档导航
-- **[Copilot 指令](.github/copilot-instructions.md)** - GitHub Copilot 使用规范
+| 文档                                                | 说明                                 |
+| --------------------------------------------------- | ------------------------------------ |
+| **[开发进度](DEVELOPMENT_STATUS.md)** ⭐            | 当前开发状态、已完成功能、下阶段计划 |
+| **[更新日志](CHANGELOG.md)**                        | 版本更新和功能变更记录               |
+| **[开发路线图](DEVELOPMENT_ROADMAP.md)**            | 长期开发规划（12 个月路线图）        |
+| **[文档中心](docs/DOCS-README.md)**                 | 完整的项目文档导航                   |
+| **[Copilot 指令](.github/copilot-instructions.md)** | AI 辅助开发规范                      |
+
+**按类别浏览**:
+
+- 📐 [架构设计](docs/architecture/) - 系统架构、数据模型、API 设计
+- 🔌 [API 文档](docs/api/) - 接口文档、模型定义
+- 💾 [数据库](docs/database/) - 表结构、迁移脚本
+- 📱 [小程序](docs/miniprogram/) - 微信小程序开发文档
+- 🌐 [前端](docs/frontend/) - Web 前端开发指南
+- 🔧 [解决方案](docs/solutions/) - 常见问题修复方案
+- 📖 [使用指南](docs/guide/) - 功能使用说明
 
 ### 🎯 近期更新 (2025-10-12)
 

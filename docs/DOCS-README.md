@@ -33,9 +33,10 @@ docs/
 ### 📌 核心文档（项目根目录）
 
 - **[README.md](../README.md)** ⭐ - 项目概览、快速开始、核心特性
-- **[DEVELOPMENT_ROADMAP.md](../DEVELOPMENT_ROADMAP.md)** ⭐ - 开发路线图和版本规划
-- **[CHANGELOG.md](../CHANGELOG.md)** ⭐ - 版本更新日志和修复记录
-- **[.github/copilot-instructions.md](../.github/copilot-instructions.md)** - GitHub Copilot 开发指令
+- **[DEVELOPMENT_STATUS.md](../DEVELOPMENT_STATUS.md)** ⭐ - 当前开发状态、已完成功能、下阶段计划
+- **[DEVELOPMENT_ROADMAP.md](../DEVELOPMENT_ROADMAP.md)** - 长期开发路线图（12 个月规划）
+- **[CHANGELOG.md](../CHANGELOG.md)** - 版本更新日志和修复记录
+- **[.github/copilot-instructions.md](../.github/copilot-instructions.md)** - GitHub Copilot 开发规范
 
 ---
 
@@ -132,15 +133,18 @@ docs/
 | [小程序 README](../miniprogram/README.md)       | 小程序项目说明和快速开始 | ✅ 已更新 |
 | [API 集成](miniprogram/api-integration.md)      | 后端 API 对接和数据交互  | ✅ 已实现 |
 | [网络架构](miniprogram/network-architecture.md) | 请求层、缓存、错误处理   | ✅ 已实现 |
-| [用户角色系统](miniprogram/user-role-system.md) | 权限管理和角色设计       | 🔜 规划中 |
+| [用户角色系统](miniprogram/user-role-system.md) | 权限管理和角色设计       | ✅ 已实现 |
 | [故障排查](../miniprogram/TROUBLESHOOTING.md)   | 常见问题和解决方案       | ✅ 已更新 |
 
-**当前状态**: ✅ 小程序已完成基础功能开发，包含：
+**当前状态**: ✅ 小程序已完成基础功能开发和关键修复
+
+**已实现功能**:
 
 - TabBar 导航（首页、错题、作业、学习、分析、我的）
 - 错题手册列表和详情页
 - 学习记录和问答
 - 个人中心
+- ✅ **图片上传修复** (2025-10-19): 超时问题、进度监听、顺序上传
 
 ---
 
@@ -176,10 +180,18 @@ docs/
 
 ### 💡 解决方案 (solutions/)
 
-| 文档                                                                   | 说明               | 状态      |
-| ---------------------------------------------------------------------- | ------------------ | --------- |
-| [移动浏览器兼容性实现](mobile-browser-compatibility-implementation.md) | 移动端适配详细方案 | ✅ 已更新 |
-| [移动浏览器兼容性快速参考](mobile-browser-compatibility-quickref.md)   | 快速参考指南       | ✅ 已更新 |
+| 文档                                                        | 说明                           | 状态      |
+| ----------------------------------------------------------- | ------------------------------ | --------- |
+| [图片识别方案](solutions/IMAGE_RECOGNITION_SOLUTION.md)     | AI 图片识别服务集成            | ✅ 已实现 |
+| [图片上传修复](solutions/image-upload-fix.md)               | 小程序图片上传功能完整修复方案 | ✅ 已修复 |
+| [图片上传超时修复](solutions/fix-upload-timeout.md)         | 超时问题诊断和解决方案         | ✅ 已修复 |
+| [AI 图片访问方案](solutions/ai_image_access_solution.py) ⭐ | 图片上传服务实现代码           | ✅ 已实现 |
+
+**最新修复** (2025-10-19):
+
+- ✅ 小程序图片上传超时问题 - 添加 60 秒 timeout、进度监听、顺序上传
+- ✅ 详细错误处理 - 区分超时、网络故障、服务器错误
+- ✅ 完整日志追踪 - 上传 URL、Token、HTTP 状态、响应数据
 
 ---
 
