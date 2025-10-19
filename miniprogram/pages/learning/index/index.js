@@ -219,8 +219,8 @@ Page({
       this.setData({ userInfo });
 
       // 获取用户角色信息
-      const userRole = await roleManager.getUserRole();
-      this.setData({ userRole: userRole.role });
+      const userRole = await authManager.getUserRole();
+      this.setData({ userRole: userRole });
     } catch (error) {
       console.error('获取用户信息失败:', error);
       throw error;

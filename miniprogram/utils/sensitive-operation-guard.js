@@ -5,6 +5,7 @@
 
 const { permissionManager } = require('./permission-manager.js');
 const { roleManager } = require('./role-manager.js');
+const { authManager } = require('./auth.js');
 
 /**
  * 敏感操作配置
@@ -19,7 +20,7 @@ const SENSITIVE_OPERATION_CONFIG = {
     requirePassword: false,
     requireReason: false,
     type: 'warning',
-    icon: 'delete'
+    icon: 'delete',
   },
   'homework.batch_delete': {
     title: '批量删除作业',
@@ -29,7 +30,7 @@ const SENSITIVE_OPERATION_CONFIG = {
     requirePassword: true,
     requireReason: true,
     type: 'danger',
-    icon: 'delete'
+    icon: 'delete',
   },
   'homework.submit_final': {
     title: '提交作业',
@@ -39,7 +40,7 @@ const SENSITIVE_OPERATION_CONFIG = {
     requirePassword: false,
     requireReason: false,
     type: 'warning',
-    icon: 'submit'
+    icon: 'submit',
   },
 
   // 用户管理敏感操作
@@ -51,7 +52,7 @@ const SENSITIVE_OPERATION_CONFIG = {
     requirePassword: false,
     requireReason: false,
     type: 'warning',
-    icon: 'delete'
+    icon: 'delete',
   },
   'profile.reset_password': {
     title: '重置密码',
@@ -61,7 +62,7 @@ const SENSITIVE_OPERATION_CONFIG = {
     requirePassword: true,
     requireReason: false,
     type: 'warning',
-    icon: 'reset'
+    icon: 'reset',
   },
 
   // 数据管理敏感操作
@@ -73,7 +74,7 @@ const SENSITIVE_OPERATION_CONFIG = {
     requirePassword: false,
     requireReason: true,
     type: 'info',
-    icon: 'export'
+    icon: 'export',
   },
   'data.clear_history': {
     title: '清空历史记录',
@@ -83,7 +84,7 @@ const SENSITIVE_OPERATION_CONFIG = {
     requirePassword: true,
     requireReason: true,
     type: 'danger',
-    icon: 'clear'
+    icon: 'clear',
   },
 
   // 文件管理敏感操作
@@ -95,7 +96,7 @@ const SENSITIVE_OPERATION_CONFIG = {
     requirePassword: false,
     requireReason: false,
     type: 'warning',
-    icon: 'delete'
+    icon: 'delete',
   },
   'file.batch_delete': {
     title: '批量删除文件',
@@ -105,7 +106,7 @@ const SENSITIVE_OPERATION_CONFIG = {
     requirePassword: true,
     requireReason: true,
     type: 'danger',
-    icon: 'delete'
+    icon: 'delete',
   },
 
   // 会话管理敏感操作
@@ -117,7 +118,7 @@ const SENSITIVE_OPERATION_CONFIG = {
     requirePassword: false,
     requireReason: false,
     type: 'warning',
-    icon: 'delete'
+    icon: 'delete',
   },
   'chat.clear_all': {
     title: '清空所有对话',
@@ -127,7 +128,7 @@ const SENSITIVE_OPERATION_CONFIG = {
     requirePassword: true,
     requireReason: true,
     type: 'danger',
-    icon: 'clear'
+    icon: 'clear',
   },
 
   // 学生管理敏感操作
@@ -139,7 +140,7 @@ const SENSITIVE_OPERATION_CONFIG = {
     requirePassword: false,
     requireReason: true,
     type: 'warning',
-    icon: 'remove'
+    icon: 'remove',
   },
   'student.batch_remove': {
     title: '批量移除学生',
@@ -149,7 +150,7 @@ const SENSITIVE_OPERATION_CONFIG = {
     requirePassword: true,
     requireReason: true,
     type: 'danger',
-    icon: 'remove'
+    icon: 'remove',
   },
 
   // 系统管理敏感操作
@@ -161,8 +162,8 @@ const SENSITIVE_OPERATION_CONFIG = {
     requirePassword: true,
     requireReason: true,
     type: 'danger',
-    icon: 'reset'
-  }
+    icon: 'reset',
+  },
 };
 
 /**
@@ -191,10 +192,10 @@ class SensitiveOperationGuard {
       const operationConfig = this.getOperationConfig(operationKey, context);
       if (!operationConfig) {
         console.warn(`[SensitiveOperation] 未找到操作配置: ${operationKey}`);
-        return { 
-          success: true, 
+        return {
+          success: true,
           reason: 'no_config',
-          message: '操作未配置确认流程' 
+          message: '操作未配置确认流程',
         };
       }
 
@@ -205,19 +206,22 @@ class SensitiveOperationGuard {
       }
 
       // 3. 显示确认对话框
-      const confirmationResult = await this.showConfirmationDialog(operationConfig, context, options);
-      
+      const confirmationResult = await this.showConfirmationDialog(
+        operationConfig,
+        context,
+        options,
+      );
+
       // 4. 记录操作日志
       this.logOperation(operationKey, context, confirmationResult);
 
       return confirmationResult;
-
     } catch (error) {
       console.error(`[SensitiveOperation] 操作确认失败: ${operationKey}`, error);
       return {
         success: false,
         reason: 'confirmation_error',
-        message: '操作确认过程出现错误'
+        message: '操作确认过程出现错误',
       };
     }
   }
@@ -271,7 +275,7 @@ class SensitiveOperationGuard {
         return {
           success: false,
           reason: 'not_logged_in',
-          message: '请先登录'
+          message: '请先登录',
         };
       }
 
@@ -281,7 +285,7 @@ class SensitiveOperationGuard {
         return {
           success: false,
           reason: 'no_permission',
-          message: '您没有执行此操作的权限'
+          message: '您没有执行此操作的权限',
         };
       }
 
@@ -294,13 +298,12 @@ class SensitiveOperationGuard {
       }
 
       return { success: true };
-
     } catch (error) {
       console.error(`[SensitiveOperation] 权限检查失败: ${operationKey}`, error);
       return {
         success: false,
         reason: 'permission_check_error',
-        message: '权限检查过程出现错误'
+        message: '权限检查过程出现错误',
       };
     }
   }
@@ -314,7 +317,7 @@ class SensitiveOperationGuard {
   async checkResourceOwnership(operationKey, context) {
     try {
       const currentUser = authManager.getCurrentUser();
-      const userRole = roleManager.getCurrentRole();
+      const userRole = await authManager.getUserRole();
 
       // 教师角色通常有管理权限
       if (userRole === 'teacher') {
@@ -326,18 +329,17 @@ class SensitiveOperationGuard {
         return {
           success: false,
           reason: 'not_owner',
-          message: '您只能操作自己的内容'
+          message: '您只能操作自己的内容',
         };
       }
 
       return { success: true };
-
     } catch (error) {
       console.error(`[SensitiveOperation] 所有权检查失败`, error);
       return {
         success: false,
         reason: 'ownership_check_error',
-        message: '所有权检查过程出现错误'
+        message: '所有权检查过程出现错误',
       };
     }
   }
@@ -350,7 +352,7 @@ class SensitiveOperationGuard {
    * @returns {Promise<Object>} 确认结果
    */
   async showConfirmationDialog(config, context, options) {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       // 如果有其他确认对话框正在显示，加入队列
       if (this.activeConfirmation) {
         this.confirmationQueue.push({ config, context, options, resolve });
@@ -379,7 +381,7 @@ class SensitiveOperationGuard {
       icon: config.icon,
       requirePassword: config.requirePassword,
       requireReason: config.requireReason,
-      show: true
+      show: true,
     };
 
     // 使用小程序的模态对话框
@@ -404,12 +406,12 @@ class SensitiveOperationGuard {
       confirmText: modalData.confirmText,
       cancelText: modalData.cancelText,
       confirmColor: this._getConfirmColor(modalData.type),
-      success: (res) => {
+      success: res => {
         this._handleConfirmationResult(res.confirm, null, resolve);
       },
       fail: () => {
         this._handleConfirmationResult(false, null, resolve);
-      }
+      },
     });
   }
 
@@ -431,13 +433,13 @@ class SensitiveOperationGuard {
 
     // 设置页面数据
     currentPage.setData({
-      sensitiveConfirmModal: modalData
+      sensitiveConfirmModal: modalData,
     });
 
     // 设置确认回调
     currentPage.onSensitiveConfirm = (confirmed, extraData) => {
       currentPage.setData({
-        sensitiveConfirmModal: { show: false }
+        sensitiveConfirmModal: { show: false },
       });
       this._handleConfirmationResult(confirmed, extraData, resolve);
     };
@@ -454,7 +456,7 @@ class SensitiveOperationGuard {
       success: confirmed,
       reason: confirmed ? 'confirmed' : 'cancelled',
       message: confirmed ? '操作已确认' : '操作已取消',
-      extraData: extraData
+      extraData: extraData,
     };
 
     resolve(result);
@@ -481,10 +483,10 @@ class SensitiveOperationGuard {
    */
   _getConfirmColor(type) {
     const colors = {
-      'info': '#576B95',
-      'warning': '#FF9500',
-      'danger': '#FA5151',
-      'success': '#07C160'
+      info: '#576B95',
+      warning: '#FF9500',
+      danger: '#FA5151',
+      success: '#07C160',
     };
     return colors[type] || '#576B95';
   }
@@ -496,13 +498,14 @@ class SensitiveOperationGuard {
    * @param {Object} result - 结果
    */
   logOperation(operationKey, context, result) {
+    const currentUser = authManager.getCurrentUser();
     const logEntry = {
       operationKey,
       context,
       result,
       timestamp: new Date().toISOString(),
-      userId: authManager.getCurrentUser()?.id,
-      userRole: roleManager.getCurrentRole()
+      userId: currentUser?.id,
+      userRole: currentUser?.role || 'unknown',
     };
 
     this.operationLog.push(logEntry);
@@ -580,5 +583,5 @@ const sensitiveOperationGuard = new SensitiveOperationGuard();
 module.exports = {
   sensitiveOperationGuard,
   SensitiveOperationGuard,
-  SENSITIVE_OPERATION_CONFIG
+  SENSITIVE_OPERATION_CONFIG,
 };

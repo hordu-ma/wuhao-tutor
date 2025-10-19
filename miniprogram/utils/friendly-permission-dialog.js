@@ -11,41 +11,41 @@ const { authManager } = require('./auth.js');
  */
 const PERMISSION_ERROR_CONFIG = {
   // 未登录错误
-  'not_logged_in': {
+  not_logged_in: {
     title: '需要登录',
     icon: '🔐',
     message: '请先登录以使用此功能',
     primaryAction: {
       text: '立即登录',
       type: 'navigate',
-      url: '/pages/login/index'
+      url: '/pages/login/index',
     },
     secondaryAction: {
       text: '稍后再说',
-      type: 'close'
+      type: 'close',
     },
     showGuidance: true,
     guidanceSteps: [
       '点击"立即登录"按钮',
       '使用微信账号登录',
       '选择您的角色身份',
-      '即可开始使用所有功能'
-    ]
+      '即可开始使用所有功能',
+    ],
   },
 
   // 角色权限不足
-  'role_not_allowed': {
+  role_not_allowed: {
     title: '角色权限不足',
     icon: '👤',
     message: '当前角色无法使用此功能',
     primaryAction: {
       text: '切换角色',
       type: 'navigate',
-      url: '/pages/role-selection/index'
+      url: '/pages/role-selection/index',
     },
     secondaryAction: {
       text: '了解更多',
-      type: 'info'
+      type: 'info',
     },
     showGuidance: true,
     guidanceSteps: [
@@ -53,158 +53,158 @@ const PERMISSION_ERROR_CONFIG = {
       '学生：提交作业、查看成绩、问答互动',
       '家长：查看孩子学习情况、沟通老师',
       '教师：布置作业、批改作业、管理学生',
-      '点击"切换角色"来使用相应功能'
-    ]
+      '点击"切换角色"来使用相应功能',
+    ],
   },
 
   // 基础权限被拒绝
-  'permission_denied': {
+  permission_denied: {
     title: '权限不足',
     icon: '⚠️',
     message: '您没有执行此操作的权限',
     primaryAction: {
       text: '申请权限',
-      type: 'request'
+      type: 'request',
     },
     secondaryAction: {
       text: '返回',
-      type: 'close'
+      type: 'close',
     },
     showGuidance: true,
     guidanceSteps: [
       '此功能需要特定权限才能使用',
       '您可以联系管理员申请权限',
       '或检查您的角色是否正确',
-      '部分功能仅限特定角色使用'
-    ]
+      '部分功能仅限特定角色使用',
+    ],
   },
 
   // 条件不满足
-  'condition_failed': {
+  condition_failed: {
     title: '使用条件不满足',
     icon: '📋',
     message: '当前不满足使用条件',
     primaryAction: {
       text: '查看详情',
-      type: 'detail'
+      type: 'detail',
     },
     secondaryAction: {
       text: '知道了',
-      type: 'close'
+      type: 'close',
     },
-    showGuidance: false
+    showGuidance: false,
   },
 
   // 时间限制
-  'time_restriction': {
+  time_restriction: {
     title: '时间限制',
     icon: '⏰',
     message: '功能使用时间受限',
     primaryAction: {
       text: '设置提醒',
-      type: 'reminder'
+      type: 'reminder',
     },
     secondaryAction: {
       text: '知道了',
-      type: 'close'
+      type: 'close',
     },
     showGuidance: true,
     guidanceSteps: [
       '此功能仅在特定时间段开放',
       '这是为了保障学习作息规律',
       '您可以设置提醒在开放时间使用',
-      '合理安排学习时间更有效果'
-    ]
+      '合理安排学习时间更有效果',
+    ],
   },
 
   // 次数限制
-  'daily_limit': {
+  daily_limit: {
     title: '使用次数达到上限',
     icon: '📊',
     message: '今日使用次数已达上限',
     primaryAction: {
       text: '查看统计',
       type: 'navigate',
-      url: '/pages/statistics/index'
+      url: '/pages/statistics/index',
     },
     secondaryAction: {
       text: '明天再来',
-      type: 'close'
+      type: 'close',
     },
     showGuidance: true,
     guidanceSteps: [
       '设置使用限制是为了培养良好习惯',
       '适度使用功能更有助于学习效果',
       '明天重置后可以继续使用',
-      '您可以查看详细的使用统计'
-    ]
+      '您可以查看详细的使用统计',
+    ],
   },
 
   // 资源所有权
-  'not_owner': {
+  not_owner: {
     title: '无访问权限',
     icon: '🚫',
     message: '您只能操作自己的内容',
     primaryAction: {
       text: '查看我的',
-      type: 'navigate_back'
+      type: 'navigate_back',
     },
     secondaryAction: {
       text: '知道了',
-      type: 'close'
+      type: 'close',
     },
     showGuidance: true,
     guidanceSteps: [
       '为保护隐私安全，您只能访问自己的内容',
       '学生只能查看自己的作业和成绩',
       '家长只能查看自己孩子的信息',
-      '这样确保每个人的信息安全'
-    ]
+      '这样确保每个人的信息安全',
+    ],
   },
 
   // 网络错误
-  'network_error': {
+  network_error: {
     title: '网络连接异常',
     icon: '📡',
     message: '网络连接不稳定，请稍后重试',
     primaryAction: {
       text: '重新尝试',
-      type: 'retry'
+      type: 'retry',
     },
     secondaryAction: {
       text: '检查网络',
-      type: 'network_check'
+      type: 'network_check',
     },
     showGuidance: true,
     guidanceSteps: [
       '请检查您的网络连接',
       '确保wifi或数据网络正常',
       '可以尝试切换网络环境',
-      '或稍后再试'
-    ]
+      '或稍后再试',
+    ],
   },
 
   // 服务器错误
-  'server_error': {
+  server_error: {
     title: '服务暂时不可用',
     icon: '🔧',
     message: '服务器正在维护，请稍后重试',
     primaryAction: {
       text: '稍后重试',
-      type: 'close'
+      type: 'close',
     },
     secondaryAction: {
       text: '反馈问题',
-      type: 'feedback'
+      type: 'feedback',
     },
     showGuidance: true,
     guidanceSteps: [
       '服务器可能正在进行维护',
       '这是为了提供更好的服务体验',
       '请稍后再试或反馈问题',
-      '我们会尽快恢复正常服务'
-    ]
-  }
+      '我们会尽快恢复正常服务',
+    ],
+  },
 };
 
 /**
@@ -243,7 +243,6 @@ class FriendlyPermissionDialog {
 
       // 显示对话框
       await this.displayDialog(errorConfig, context, options);
-
     } catch (error) {
       console.error(`[FriendlyDialog] 显示错误提示失败:`, error);
       this.showFallbackError('系统错误，请稍后重试');
@@ -296,25 +295,25 @@ class FriendlyPermissionDialog {
     const dialogData = this.prepareDialogData(config, context, options);
 
     // 显示对话框
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       wx.showModal({
         title: dialogData.title,
         content: dialogData.content,
         confirmText: dialogData.confirmText,
         cancelText: dialogData.cancelText,
         showCancel: !!dialogData.cancelText,
-        success: async (res) => {
+        success: async res => {
           if (res.confirm) {
             await this.handlePrimaryAction(config.primaryAction, context);
           } else if (res.cancel) {
             await this.handleSecondaryAction(config.secondaryAction, context);
           }
-          
+
           this.completeDialog(resolve);
         },
         fail: () => {
           this.completeDialog(resolve);
-        }
+        },
       });
     });
   }
@@ -332,15 +331,15 @@ class FriendlyPermissionDialog {
     // 添加详细信息
     if (config.requiredRoles && config.userRole) {
       const roleNames = {
-        'student': '学生',
-        'parent': '家长', 
-        'teacher': '教师'
+        student: '学生',
+        parent: '家长',
+        teacher: '教师',
       };
-      
+
       const requiredRoleNames = config.requiredRoles
         .map(role => roleNames[role] || role)
         .join('、');
-      
+
       content += `\n\n此功能仅限${requiredRoleNames}使用`;
     }
 
@@ -353,7 +352,7 @@ class FriendlyPermissionDialog {
       title: `${config.icon} ${config.title}`,
       content: content,
       confirmText: config.primaryAction?.text || '确定',
-      cancelText: config.secondaryAction?.text || null
+      cancelText: config.secondaryAction?.text || null,
     };
   }
 
@@ -372,7 +371,7 @@ class FriendlyPermissionDialog {
             url: action.url,
             fail: () => {
               wx.switchTab({ url: action.url });
-            }
+            },
           });
           break;
 
@@ -381,7 +380,7 @@ class FriendlyPermissionDialog {
             delta: 1,
             fail: () => {
               wx.switchTab({ url: '/pages/index/index' });
-            }
+            },
           });
           break;
 
@@ -458,26 +457,26 @@ class FriendlyPermissionDialog {
    */
   async showPermissionRequestDialog(context) {
     const currentUser = authManager.getCurrentUser();
-    const userRole = roleManager.getCurrentRole();
+    const userRole = await authManager.getUserRole();
 
     wx.showModal({
       title: '权限申请',
       content: `如需使用此功能，请联系管理员申请权限。\n\n您的角色：${this.getRoleName(userRole)}\n用户ID：${currentUser?.id || '未知'}`,
       confirmText: '复制信息',
       cancelText: '知道了',
-      success: (res) => {
+      success: res => {
         if (res.confirm) {
           wx.setClipboardData({
             data: `权限申请\n角色：${userRole}\n用户ID：${currentUser?.id}\n功能：${context.feature || '未知'}`,
             success: () => {
               wx.showToast({
                 title: '信息已复制到剪贴板',
-                icon: 'success'
+                icon: 'success',
               });
-            }
+            },
           });
         }
-      }
+      },
     });
   }
 
@@ -486,11 +485,11 @@ class FriendlyPermissionDialog {
    */
   async showDetailDialog(context) {
     let detail = '详细信息：\n';
-    
+
     if (context.condition) {
       detail += `失败条件：${context.condition}\n`;
     }
-    
+
     if (context.requirement) {
       detail += `使用要求：${context.requirement}\n`;
     }
@@ -499,7 +498,7 @@ class FriendlyPermissionDialog {
       title: '详细信息',
       content: detail,
       showCancel: false,
-      confirmText: '知道了'
+      confirmText: '知道了',
     });
   }
 
@@ -512,15 +511,15 @@ class FriendlyPermissionDialog {
       content: '是否在功能开放时间段提醒您？',
       confirmText: '设置提醒',
       cancelText: '暂不设置',
-      success: (res) => {
+      success: res => {
         if (res.confirm) {
           // 这里可以实现提醒设置逻辑
           wx.showToast({
             title: '提醒设置功能开发中',
-            icon: 'none'
+            icon: 'none',
           });
         }
-      }
+      },
     });
   }
 
@@ -530,9 +529,10 @@ class FriendlyPermissionDialog {
   async showNetworkCheckDialog() {
     wx.showModal({
       title: '网络检查',
-      content: '网络检查步骤：\n1. 检查WiFi连接\n2. 检查数据网络\n3. 尝试访问其他网站\n4. 重启网络连接',
+      content:
+        '网络检查步骤：\n1. 检查WiFi连接\n2. 检查数据网络\n3. 尝试访问其他网站\n4. 重启网络连接',
       showCancel: false,
-      confirmText: '知道了'
+      confirmText: '知道了',
     });
   }
 
@@ -545,19 +545,19 @@ class FriendlyPermissionDialog {
       content: '如需反馈问题，请前往设置页面的"意见反馈"功能。',
       confirmText: '前往反馈',
       cancelText: '知道了',
-      success: (res) => {
+      success: res => {
         if (res.confirm) {
           wx.navigateTo({
             url: '/pages/feedback/index',
             fail: () => {
               wx.showToast({
                 title: '反馈页面开发中',
-                icon: 'none'
+                icon: 'none',
               });
-            }
+            },
           });
         }
-      }
+      },
     });
   }
 
@@ -566,12 +566,12 @@ class FriendlyPermissionDialog {
    */
   async showInfoDialog(context) {
     const roleInfo = this.getRolePermissionInfo();
-    
+
     wx.showModal({
       title: '角色权限说明',
       content: roleInfo,
       showCancel: false,
-      confirmText: '知道了'
+      confirmText: '知道了',
     });
   }
 
@@ -581,7 +581,7 @@ class FriendlyPermissionDialog {
   completeDialog(resolve) {
     this.isShowing = false;
     this.currentDialog = null;
-    
+
     if (resolve) {
       resolve();
     }
@@ -602,7 +602,7 @@ class FriendlyPermissionDialog {
     wx.showToast({
       title: message || '操作失败',
       icon: 'none',
-      duration: 3000
+      duration: 3000,
     });
   }
 
@@ -611,9 +611,9 @@ class FriendlyPermissionDialog {
    */
   getRoleName(role) {
     const roleNames = {
-      'student': '学生',
-      'parent': '家长',
-      'teacher': '教师'
+      student: '学生',
+      parent: '家长',
+      teacher: '教师',
     };
     return roleNames[role] || role;
   }
@@ -660,10 +660,12 @@ class FriendlyPermissionDialog {
     return {
       isShowing: this.isShowing,
       queueLength: this.dialogQueue.length,
-      currentDialog: this.currentDialog ? {
-        errorType: this.currentDialog.config.title,
-        message: this.currentDialog.config.message
-      } : null
+      currentDialog: this.currentDialog
+        ? {
+            errorType: this.currentDialog.config.title,
+            message: this.currentDialog.config.message,
+          }
+        : null,
     };
   }
 }
@@ -674,5 +676,5 @@ const friendlyPermissionDialog = new FriendlyPermissionDialog();
 module.exports = {
   friendlyPermissionDialog,
   FriendlyPermissionDialog,
-  PERMISSION_ERROR_CONFIG
+  PERMISSION_ERROR_CONFIG,
 };

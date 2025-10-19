@@ -4,6 +4,7 @@
 const { routeGuard } = require('./route-guard.js');
 const { permissionManager } = require('./permission-manager.js');
 const { roleManager } = require('./role-manager.js');
+const { authManager } = require('./auth.js');
 
 /**
  * 页面权限守卫管理器
@@ -16,27 +17,27 @@ class PageGuardManager {
       'pages/homework/list/index': {
         permissions: ['homework.view'],
         roles: ['student', 'parent', 'teacher'],
-        description: '作业列表页面'
+        description: '作业列表页面',
       },
       'pages/homework/detail/index': {
         permissions: ['homework.view'],
         roles: ['student', 'parent', 'teacher'],
-        description: '作业详情页面'
+        description: '作业详情页面',
       },
       'pages/homework/submit/index': {
         permissions: ['homework.submit'],
         roles: ['student'],
-        description: '作业提交页面'
+        description: '作业提交页面',
       },
       'pages/homework/correct/index': {
         permissions: ['homework.correct'],
         roles: ['teacher'],
-        description: '作业批改页面'
+        description: '作业批改页面',
       },
       'pages/homework/create/index': {
         permissions: ['homework.create'],
         roles: ['teacher'],
-        description: '作业创建页面'
+        description: '作业创建页面',
       },
 
       // 聊天问答页面
@@ -44,12 +45,12 @@ class PageGuardManager {
         permissions: ['chat.ask'],
         roles: ['student'],
         description: 'AI问答主页',
-        timeRestriction: '06:00-23:00'
+        timeRestriction: '06:00-23:00',
       },
       'pages/chat/detail/index': {
         permissions: ['chat.view'],
         roles: ['student', 'parent', 'teacher'],
-        description: '对话详情页面'
+        description: '对话详情页面',
       },
 
       // 分析报告页面
@@ -57,40 +58,36 @@ class PageGuardManager {
         permissions: ['analysis.view_self'],
         roles: ['student'],
         description: '个人学习报告',
-        dynamicPermission: true
+        dynamicPermission: true,
       },
       'pages/analysis/progress/index': {
         permissions: ['analysis.view_child'],
         roles: ['parent', 'teacher'],
-        description: '学习进度分析'
+        description: '学习进度分析',
       },
 
       // 个人中心页面
       'pages/profile/index/index': {
         permissions: ['profile.view_self'],
         roles: ['student', 'parent', 'teacher'],
-        description: '个人中心主页'
+        description: '个人中心主页',
       },
       'pages/profile/settings/index': {
         permissions: ['settings.view'],
         roles: ['student', 'parent', 'teacher'],
-        description: '设置页面'
+        description: '设置页面',
       },
 
       // 角色选择页面
       'pages/role-selection/index': {
         permissions: ['settings.role_switch'],
         roles: ['student', 'parent', 'teacher'],
-        description: '角色选择页面'
-      }
+        description: '角色选择页面',
+      },
     };
 
     // 无需权限检查的公开页面
-    this.publicPages = [
-      'pages/index/index',
-      'pages/login/index',
-      'pages/profile/help/index'
-    ];
+    this.publicPages = ['pages/index/index', 'pages/login/index', 'pages/profile/help/index'];
   }
 
   /**
@@ -107,8 +104,8 @@ class PageGuardManager {
    */
   isPublicPage(pagePath) {
     const normalizedPath = this.normalizePath(pagePath);
-    return this.publicPages.some(publicPath => 
-      normalizedPath.includes(publicPath) || publicPath.includes(normalizedPath)
+    return this.publicPages.some(
+      publicPath => normalizedPath.includes(publicPath) || publicPath.includes(normalizedPath),
     );
   }
 
@@ -117,13 +114,13 @@ class PageGuardManager {
    */
   normalizePath(pagePath) {
     if (!pagePath) return '';
-    
+
     // 移除前导斜杠
     let path = pagePath.startsWith('/') ? pagePath.slice(1) : pagePath;
-    
+
     // 移除查询参数
     path = path.split('?')[0];
-    
+
     return path;
   }
 
@@ -132,7 +129,7 @@ class PageGuardManager {
    */
   createPageGuard(pageConfig, customOptions = {}) {
     const guardConfig = this.getPageConfig(pageConfig.pagePath || '');
-    
+
     if (!guardConfig && !this.isPublicPage(pageConfig.pagePath || '')) {
       console.warn('页面权限配置缺失:', pageConfig.pagePath);
     }
@@ -144,9 +141,9 @@ class PageGuardManager {
 
       // 增强的onLoad方法
       onLoad: this.enhanceOnLoad(pageConfig.onLoad, guardConfig, customOptions),
-      
+
       // 增强的onShow方法
-      onShow: this.enhanceOnShow(pageConfig.onShow, guardConfig, customOptions)
+      onShow: this.enhanceOnShow(pageConfig.onShow, guardConfig, customOptions),
     });
   }
 
@@ -154,7 +151,7 @@ class PageGuardManager {
    * 增强页面的onLoad方法
    */
   enhanceOnLoad(originalOnLoad, guardConfig, customOptions) {
-    return async function(options) {
+    return async function (options) {
       try {
         // 1. 基础路由守卫检查
         const guardResult = await routeGuard.checkPageAuth();
@@ -185,16 +182,18 @@ class PageGuardManager {
         }
       } catch (error) {
         console.error('页面权限守卫执行失败:', error);
-        
+
         // 安全处理：权限检查失败时重定向到安全页面
-        if (!pageGuardManager.isPublicPage(getCurrentPages()[getCurrentPages().length - 1]?.route)) {
+        if (
+          !pageGuardManager.isPublicPage(getCurrentPages()[getCurrentPages().length - 1]?.route)
+        ) {
           wx.switchTab({
             url: '/pages/index/index',
             fail: () => {
               wx.redirectTo({
-                url: '/pages/login/index'
+                url: '/pages/login/index',
               });
-            }
+            },
           });
         }
       }
@@ -205,11 +204,14 @@ class PageGuardManager {
    * 增强页面的onShow方法
    */
   enhanceOnShow(originalOnShow, guardConfig, customOptions) {
-    return async function() {
+    return async function () {
       try {
         // 重新检查登录状态
         const isLoggedIn = await routeGuard.checkAuth({ skipRedirect: true });
-        if (!isLoggedIn.success && !pageGuardManager.isPublicPage(getCurrentPages()[getCurrentPages().length - 1]?.route)) {
+        if (
+          !isLoggedIn.success &&
+          !pageGuardManager.isPublicPage(getCurrentPages()[getCurrentPages().length - 1]?.route)
+        ) {
           routeGuard.redirectToLogin();
           return;
         }
@@ -231,18 +233,18 @@ class PageGuardManager {
     try {
       const results = {
         success: true,
-        failedChecks: []
+        failedChecks: [],
       };
 
       // 检查角色权限
       if (guardConfig.roles && guardConfig.roles.length > 0) {
-        const userRole = await roleManager.getCurrentUserRole();
+        const userRole = await authManager.getUserRole();
         if (!guardConfig.roles.includes(userRole)) {
           results.success = false;
           results.failedChecks.push({
             type: 'role',
             required: guardConfig.roles,
-            actual: userRole
+            actual: userRole,
           });
         }
       }
@@ -255,7 +257,7 @@ class PageGuardManager {
             results.success = false;
             results.failedChecks.push({
               type: 'permission',
-              permission: permission
+              permission: permission,
             });
           }
         }
@@ -268,7 +270,7 @@ class PageGuardManager {
           results.success = false;
           results.failedChecks.push({
             type: 'time',
-            restriction: guardConfig.timeRestriction
+            restriction: guardConfig.timeRestriction,
           });
         }
       }
@@ -280,7 +282,7 @@ class PageGuardManager {
           results.success = false;
           results.failedChecks.push({
             type: 'dynamic',
-            reason: dynamicResult.reason
+            reason: dynamicResult.reason,
           });
         }
       }
@@ -290,7 +292,7 @@ class PageGuardManager {
       console.error('权限检查失败:', error);
       return {
         success: false,
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -303,18 +305,18 @@ class PageGuardManager {
     // 比如检查用户是否有权访问特定资源
     try {
       // 示例：检查家长是否只能访问自己孩子的数据
-      const userRole = await roleManager.getCurrentUserRole();
-      
+      const userRole = await authManager.getUserRole();
+
       if (userRole === 'parent' && guardConfig.permissions.some(p => p.includes('view_child'))) {
         // 实际应用中需要根据页面参数检查资源所有权
         return { success: true };
       }
-      
+
       return { success: true };
     } catch (error) {
-      return { 
-        success: false, 
-        reason: error.message 
+      return {
+        success: false,
+        reason: error.message,
       };
     }
   }
@@ -324,15 +326,15 @@ class PageGuardManager {
    */
   async handlePermissionDenied(permissionResult, guardConfig) {
     const failedChecks = permissionResult.failedChecks || [];
-    
+
     // 根据失败类型给出不同的提示
     let title = '访问受限';
     let content = '您没有访问此页面的权限';
-    
+
     const roleFailure = failedChecks.find(check => check.type === 'role');
     const timeFailure = failedChecks.find(check => check.type === 'time');
     const permissionFailure = failedChecks.find(check => check.type === 'permission');
-    
+
     if (roleFailure) {
       content = `此页面仅限${roleFailure.required.join('、')}访问`;
     } else if (timeFailure) {
@@ -349,18 +351,18 @@ class PageGuardManager {
       confirmText: '返回',
       success: async () => {
         // 根据用户角色跳转到合适的页面
-        const userRole = await roleManager.getCurrentUserRole();
+        const userRole = await authManager.getUserRole();
         const roleConfig = roleManager.getRoleConfig(userRole);
-        
+
         wx.redirectTo({
           url: roleConfig.homePage,
           fail: () => {
             wx.switchTab({
-              url: '/pages/index/index'
+              url: '/pages/index/index',
             });
-          }
+          },
         });
-      }
+      },
     });
   }
 
@@ -369,10 +371,10 @@ class PageGuardManager {
    */
   setupPageGuards() {
     console.log('🛡️ 初始化页面权限守卫系统');
-    
+
     // 在这里可以为全局页面设置默认守卫
     // 实际使用时，每个页面在其Page()调用中使用createPageGuard
-    
+
     console.log('📋 已配置权限守卫的页面:');
     Object.keys(this.pageGuardConfigs).forEach(pagePath => {
       const config = this.pageGuardConfigs[pagePath];
@@ -404,16 +406,14 @@ const pageGuardManager = new PageGuardManager();
 module.exports = {
   PageGuardManager,
   pageGuardManager,
-  
+
   // 便捷方法
-  createGuardedPage: (pageConfig, customOptions) => 
+  createGuardedPage: (pageConfig, customOptions) =>
     pageGuardManager.createPageGuard(pageConfig, customOptions),
-    
+
   setupGlobalGuards: () => pageGuardManager.setupPageGuards(),
-  
-  addPageConfig: (pagePath, config) => 
-    pageGuardManager.addPageConfig(pagePath, config),
-    
-  removePageConfig: (pagePath) => 
-    pageGuardManager.removePageConfig(pagePath)
+
+  addPageConfig: (pagePath, config) => pageGuardManager.addPageConfig(pagePath, config),
+
+  removePageConfig: pagePath => pageGuardManager.removePageConfig(pagePath),
 };

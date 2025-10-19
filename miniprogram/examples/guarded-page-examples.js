@@ -9,9 +9,9 @@ const { permissionManager } = require('../utils/permission-manager.js');
  */
 const simpleProtectedPage = createGuardedPage({
   pagePath: 'pages/homework/list/index',
-  
+
   data: {
-    homeworkList: []
+    homeworkList: [],
   },
 
   async onLoad(options) {
@@ -23,53 +23,56 @@ const simpleProtectedPage = createGuardedPage({
   async loadHomeworkList() {
     // 加载作业列表的业务逻辑
     console.log('加载作业列表');
-  }
+  },
 });
 
 /**
  * 示例2：自定义权限检查的页面
  */
-const customPermissionPage = createGuardedPage({
-  pagePath: 'pages/homework/detail/index',
-  
-  data: {
-    homeworkDetail: null,
-    canEdit: false
-  },
+const customPermissionPage = createGuardedPage(
+  {
+    pagePath: 'pages/homework/detail/index',
 
-  async onLoad(options) {
-    console.log('作业详情页面加载');
-    
-    const homeworkId = options.id;
-    await this.loadHomeworkDetail(homeworkId);
-    await this.checkEditPermission(homeworkId);
-  },
+    data: {
+      homeworkDetail: null,
+      canEdit: false,
+    },
 
-  async loadHomeworkDetail(homeworkId) {
-    // 加载作业详情
-    console.log('加载作业详情:', homeworkId);
-  },
+    async onLoad(options) {
+      console.log('作业详情页面加载');
 
-  async checkEditPermission(homeworkId) {
-    // 检查是否有编辑权限
-    const canEdit = await permissionManager.hasPermission('homework.edit');
-    this.setData({ canEdit });
-  }
-}, {
-  // 自定义权限检查
-  customPermissionCheck: async function() {
-    // 这里可以添加页面特定的权限检查逻辑
-    const hasSpecialAccess = await permissionManager.hasPermission('homework.view');
-    if (!hasSpecialAccess) {
-      wx.showToast({
-        title: '权限不足',
-        icon: 'none'
-      });
-      return false;
-    }
-    return true;
-  }
-});
+      const homeworkId = options.id;
+      await this.loadHomeworkDetail(homeworkId);
+      await this.checkEditPermission(homeworkId);
+    },
+
+    async loadHomeworkDetail(homeworkId) {
+      // 加载作业详情
+      console.log('加载作业详情:', homeworkId);
+    },
+
+    async checkEditPermission(homeworkId) {
+      // 检查是否有编辑权限
+      const canEdit = await permissionManager.hasPermission('homework.edit');
+      this.setData({ canEdit });
+    },
+  },
+  {
+    // 自定义权限检查
+    customPermissionCheck: async function () {
+      // 这里可以添加页面特定的权限检查逻辑
+      const hasSpecialAccess = await permissionManager.hasPermission('homework.view');
+      if (!hasSpecialAccess) {
+        wx.showToast({
+          title: '权限不足',
+          icon: 'none',
+        });
+        return false;
+      }
+      return true;
+    },
+  },
+);
 
 /**
  * 示例3：需要动态权限检查的页面
@@ -77,19 +80,19 @@ const customPermissionPage = createGuardedPage({
  */
 const dynamicPermissionPage = createGuardedPage({
   pagePath: 'pages/analysis/report/index',
-  
+
   data: {
     studentId: '',
     reportData: null,
-    canViewDetail: false
+    canViewDetail: false,
   },
 
   async onLoad(options) {
     console.log('分析报告页面加载');
-    
+
     const studentId = options.studentId;
     this.setData({ studentId });
-    
+
     // 检查是否能查看特定学生的报告
     const canView = await this.checkStudentAccess(studentId);
     if (!canView) {
@@ -99,26 +102,23 @@ const dynamicPermissionPage = createGuardedPage({
         showCancel: false,
         success: () => {
           wx.navigateBack();
-        }
+        },
       });
       return;
     }
-    
+
     await this.loadReportData(studentId);
   },
 
   async checkStudentAccess(studentId) {
     // 动态检查是否有权访问特定学生的数据
-    return await permissionManager.checkDynamicPermission(
-      'analysis.view_child',
-      { studentId }
-    );
+    return await permissionManager.checkDynamicPermission('analysis.view_child', { studentId });
   },
 
   async loadReportData(studentId) {
     console.log('加载学生报告:', studentId);
     // 加载报告数据的业务逻辑
-  }
+  },
 });
 
 /**
@@ -127,41 +127,44 @@ const dynamicPermissionPage = createGuardedPage({
  */
 const multiRolePage = createGuardedPage({
   pagePath: 'pages/homework/list/index',
-  
+
   data: {
     userRole: '',
     homeworkList: [],
     canSubmit: false,
     canCorrect: false,
-    canCreate: false
+    canCreate: false,
   },
 
   async onLoad(options) {
     console.log('多角色作业页面加载');
-    
+
     await this.initRoleBasedFeatures();
     await this.loadHomeworkList();
   },
 
   async initRoleBasedFeatures() {
-    const userRole = await roleManager.getCurrentUserRole();
-    
+    const userRole = await authManager.getUserRole();
+
     // 根据角色检查不同权限
     const [canSubmit, canCorrect, canCreate] = await Promise.all([
       permissionManager.hasPermission('homework.submit'),
       permissionManager.hasPermission('homework.correct'),
-      permissionManager.hasPermission('homework.create')
+      permissionManager.hasPermission('homework.create'),
     ]);
 
     this.setData({
       userRole,
       canSubmit,
       canCorrect,
-      canCreate
+      canCreate,
     });
 
     console.log('角色权限检查结果:', {
-      userRole, canSubmit, canCorrect, canCreate
+      userRole,
+      canSubmit,
+      canCorrect,
+      canCreate,
     });
   },
 
@@ -169,7 +172,7 @@ const multiRolePage = createGuardedPage({
     // 根据角色加载不同的作业数据
     const userRole = this.data.userRole;
     let apiMethod;
-    
+
     switch (userRole) {
       case 'student':
         apiMethod = 'getStudentHomework';
@@ -184,7 +187,7 @@ const multiRolePage = createGuardedPage({
         console.warn('未知角色:', userRole);
         return;
     }
-    
+
     console.log('使用API方法:', apiMethod);
     // 调用相应的API加载数据
   },
@@ -194,11 +197,11 @@ const multiRolePage = createGuardedPage({
     if (!this.data.canSubmit) {
       wx.showToast({
         title: '无权限提交作业',
-        icon: 'none'
+        icon: 'none',
       });
       return;
     }
-    
+
     console.log('提交作业:', homeworkId);
     // 提交作业的业务逻辑
   },
@@ -208,11 +211,11 @@ const multiRolePage = createGuardedPage({
     if (!this.data.canCorrect) {
       wx.showToast({
         title: '无权限批改作业',
-        icon: 'none'
+        icon: 'none',
       });
       return;
     }
-    
+
     console.log('批改作业:', homeworkId);
     // 批改作业的业务逻辑
   },
@@ -222,15 +225,15 @@ const multiRolePage = createGuardedPage({
     if (!this.data.canCreate) {
       wx.showToast({
         title: '无权限创建作业',
-        icon: 'none'
+        icon: 'none',
       });
       return;
     }
-    
+
     wx.navigateTo({
-      url: '/pages/homework/create/index'
+      url: '/pages/homework/create/index',
     });
-  }
+  },
 });
 
 /**
@@ -239,10 +242,10 @@ const multiRolePage = createGuardedPage({
  */
 const sensitiveOperationPage = createGuardedPage({
   pagePath: 'pages/admin/user-manage/index',
-  
+
   data: {
     userList: [],
-    selectedUsers: []
+    selectedUsers: [],
   },
 
   async onLoad(options) {
@@ -261,7 +264,7 @@ const sensitiveOperationPage = createGuardedPage({
     if (selectedUsers.length === 0) {
       wx.showToast({
         title: '请选择要删除的用户',
-        icon: 'none'
+        icon: 'none',
       });
       return;
     }
@@ -269,7 +272,7 @@ const sensitiveOperationPage = createGuardedPage({
     // 敏感操作确认
     const confirmed = await permissionManager.confirmSensitiveOperation(
       'user.manage_students',
-      `确定要删除 ${selectedUsers.length} 个用户吗？此操作不可撤销。`
+      `确定要删除 ${selectedUsers.length} 个用户吗？此操作不可撤销。`,
     );
 
     if (!confirmed) {
@@ -279,22 +282,22 @@ const sensitiveOperationPage = createGuardedPage({
     try {
       console.log('执行删除用户操作:', selectedUsers);
       // 执行删除逻辑
-      
+
       wx.showToast({
         title: '删除成功',
-        icon: 'success'
+        icon: 'success',
       });
-      
+
       // 重新加载列表
       await this.loadUserList();
     } catch (error) {
       console.error('删除用户失败:', error);
       wx.showToast({
         title: '删除失败',
-        icon: 'error'
+        icon: 'error',
       });
     }
-  }
+  },
 });
 
 /**
@@ -302,7 +305,7 @@ const sensitiveOperationPage = createGuardedPage({
  */
 const publicPage = {
   data: {
-    helpContent: ''
+    helpContent: '',
   },
 
   onLoad(options) {
@@ -313,7 +316,7 @@ const publicPage = {
   loadHelpContent() {
     console.log('加载帮助内容');
     // 加载帮助内容的业务逻辑
-  }
+  },
 };
 
 // 使用示例
@@ -323,7 +326,7 @@ module.exports = {
   dynamicPermissionPage,
   multiRolePage,
   sensitiveOperationPage,
-  publicPage
+  publicPage,
 };
 
 // 在实际页面文件中的使用方式：
