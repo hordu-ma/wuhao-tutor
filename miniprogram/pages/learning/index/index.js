@@ -217,6 +217,12 @@ Page({
   async initUserInfo() {
     try {
       const userInfo = await authManager.getUserInfo();
+
+      // 使用本地默认头像，避免服务器图片加载失败导致500错误
+      if (userInfo) {
+        userInfo.avatar_url = '/assets/images/default-avatar.png';
+      }
+
       this.setData({ userInfo });
 
       // 获取用户角色信息
@@ -1623,6 +1629,14 @@ Page({
   onLoadMore() {
     console.log('加载更多历史消息');
     // 这个方法在 loadMoreMessages 中已实现
+  },
+
+  /**
+   * 头像加载失败处理
+   */
+  onAvatarError(e) {
+    console.warn('头像加载失败，使用默认头像');
+    // 图片加载失败时，WXML中已经设置了默认头像作为fallback
   },
 
   /**

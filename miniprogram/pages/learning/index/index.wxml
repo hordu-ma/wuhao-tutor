@@ -66,9 +66,11 @@
         <view class="bubble-avatar">
           <image wx:if="{{item.sender === 'user'}}"
                  src="{{userInfo.avatar_url || '/assets/images/default-avatar.png'}}"
+                 binderror="onAvatarError"
                  mode="aspectFill" />
           <image wx:else
                  src="/assets/images/ai-avatar.png"
+                 binderror="onAvatarError"
                  mode="aspectFill" />
         </view>
 
