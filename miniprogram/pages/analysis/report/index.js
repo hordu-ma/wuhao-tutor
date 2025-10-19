@@ -161,11 +161,21 @@ Page({
         api.analysis.getProgress({ days: this.getTimeRangeDays() }),
       ]);
 
+      // 处理结果，兼容多种响应格式
+      const extractData = result => {
+        if (result.status !== 'fulfilled') return {};
+        const response = result.value;
+        // 处理多种响应格式
+        if (response.data) return response.data; // { success: true, data: {...} }
+        if (response.success !== false) return response; // 直接返回数据
+        return {}; // 其他情况
+      };
+
       // 处理结果
       const analyticsData = {
-        overview: overviewResult.status === 'fulfilled' ? overviewResult.value.data : {},
-        knowledge: knowledgeResult.status === 'fulfilled' ? knowledgeResult.value.data : {},
-        progress: progressResult.status === 'fulfilled' ? progressResult.value.data : {},
+        overview: extractData(overviewResult),
+        knowledge: extractData(knowledgeResult),
+        progress: extractData(progressResult),
         timestamp: Date.now(),
       };
 
@@ -518,41 +528,83 @@ Page({
 
     canvas.setChart(knowledgeChart);
 
-    // 设置知识点雷达图配置
-    const knowledgeData = this.data.knowledgePoints.map(point => ({
+    // 如果有数据，立即配置图表
+    if (this.data.knowledgePoints && this.data.knowledgePoints.length > 0) {
+      this.updateKnowledgeChartData();
+    }
+
+    return knowledgeChart;
+  },
+
+  /**
+   * 更新知识点雷达图数据
+   */
+  updateKnowledgeChartData() {
+    if (!knowledgeChart || !this.data.knowledgePoints || this.data.knowledgePoints.length === 0) {
+      console.log('知识点图表实例未初始化或无数据');
+      return;
+    }
+
+    const knowledgePoints = this.data.knowledgePoints;
+    const indicator = knowledgePoints.map(point => ({
       name: point.name,
-      value: point.mastery,
-      max: 1,
+      max: 100,
     }));
 
+    const radarData = knowledgePoints.map(point => point.mastery || point.value || 0);
+
     const option = {
+      color: ['#667eea'],
+      tooltip: {
+        trigger: 'item',
+        confine: true,
+        formatter: function (params) {
+          if (params.value) {
+            return `${params.name}: ${Math.round(params.value)}%`;
+          }
+          return params.name;
+        },
+      },
       radar: {
-        indicator: this.data.knowledgePoints.map(point => ({
-          name: point.name,
-          max: 1,
-        })),
+        indicator: indicator,
         shape: 'polygon',
+        splitNumber: 4,
         radius: '60%',
-        axisLabel: {
-          show: true,
-          fontSize: 10,
-          color: '#666',
+        name: {
+          textStyle: {
+            fontSize: 10,
+            color: '#666',
+          },
         },
         splitLine: {
           lineStyle: {
             color: '#e0e0e0',
           },
         },
+        splitArea: {
+          areaStyle: {
+            color: ['#ffffff', '#f5f7fa'],
+          },
+        },
+        axisLine: {
+          lineStyle: {
+            color: '#cccccc',
+          },
+        },
       },
       series: [
         {
+          name: '知识点掌握度',
           type: 'radar',
           data: [
             {
-              value: this.data.knowledgePoints.map(point => point.mastery),
-              name: '知识点掌握度',
+              value: radarData,
+              name: '掌握度',
               areaStyle: {
-                color: 'rgba(102, 126, 234, 0.3)',
+                color: new echarts.graphic.RadialGradient(0.5, 0.5, 1, [
+                  { offset: 0, color: 'rgba(102, 126, 234, 0.3)' },
+                  { offset: 1, color: 'rgba(102, 126, 234, 0.05)' },
+                ]),
               },
               lineStyle: {
                 color: '#667eea',
@@ -564,13 +616,6 @@ Page({
           ],
         },
       ],
-      tooltip: {
-        trigger: 'item',
-        formatter: function (params) {
-          const percent = Math.round(params.value * 100);
-          return `${params.name}: ${percent}%`;
-        },
-      },
     };
 
     knowledgeChart.setOption(option);
@@ -708,132 +753,7 @@ Page({
     return subjectChart;
   },
 
-  /**
-   * 生成知识点数据
-   */
-  generateKnowledgePoints() {
-    // TODO: 从后端API获取真实知识点数据
-    // 目前使用模拟数据
-    const knowledgePoints = [
-      { name: '函数与方程', mastery: 85 },
-      { name: '几何图形', mastery: 72 },
-      { name: '代数运算', mastery: 90 },
-      { name: '概率统计', mastery: 68 },
-      { name: '数列', mastery: 75 },
-    ];
-
-    this.setData({
-      knowledgePoints,
-    });
-
-    // 初始化雷达图
-    if (knowledgePoints.length > 0) {
-      this.initKnowledgeChart();
-    }
-  },
-
-  /**
-   * 初始化知识点图表组件
-   */
-  initKnowledgeChartComponent() {
-    this.setData({
-      knowledgeChartEc: {
-        onInit: this.initKnowledgeChartCanvas.bind(this),
-      },
-    });
-  },
-
-  /**
-   * 知识点雷达图初始化
-   */
-  initKnowledgeChartCanvas(canvas, width, height, dpr) {
-    knowledgeChart = echarts.init(canvas, null, {
-      width: width,
-      height: height,
-      devicePixelRatio: dpr,
-    });
-
-    canvas.setChart(knowledgeChart);
-
-    return knowledgeChart;
-  },
-
-  /**
-   * 初始化知识点雷达图
-   */
-  initKnowledgeChart() {
-    if (!knowledgeChart || !this.data.knowledgePoints || this.data.knowledgePoints.length === 0) {
-      console.log('知识点图表实例未初始化或无数据');
-      return;
-    }
-
-    console.log('初始化知识点雷达图');
-
-    const knowledgePoints = this.data.knowledgePoints;
-    const indicator = knowledgePoints.map(item => ({
-      name: item.name,
-      max: 100,
-    }));
-
-    const radarData = knowledgePoints.map(item => item.mastery);
-
-    const option = {
-      color: ['#667eea'],
-      tooltip: {
-        trigger: 'item',
-        confine: true,
-      },
-      radar: {
-        indicator: indicator,
-        shape: 'polygon',
-        splitNumber: 4,
-        name: {
-          textStyle: {
-            fontSize: 10,
-            color: '#666666',
-          },
-        },
-        splitLine: {
-          lineStyle: {
-            color: '#eeeeee',
-          },
-        },
-        splitArea: {
-          areaStyle: {
-            color: ['#ffffff', '#f5f7fa'],
-          },
-        },
-        axisLine: {
-          lineStyle: {
-            color: '#cccccc',
-          },
-        },
-      },
-      series: [
-        {
-          name: '知识点掌握度',
-          type: 'radar',
-          data: [
-            {
-              value: radarData,
-              name: '掌握度',
-              areaStyle: {
-                color: new echarts.graphic.RadialGradient(0.5, 0.5, 1, [
-                  { offset: 0, color: 'rgba(102, 126, 234, 0.3)' },
-                  { offset: 1, color: 'rgba(102, 126, 234, 0.05)' },
-                ]),
-              },
-              lineStyle: {
-                width: 2,
-              },
-            },
-          ],
-        },
-      ],
-    };
-
-    knowledgeChart.setOption(option);
-  },
+  // 注意：generateKnowledgePoints, initKnowledgeChartComponent, initKnowledgeChartCanvas, initKnowledgeChart 等方法已在前面定义，此处删除重复定义
 
   /**
    * 时间范围变化

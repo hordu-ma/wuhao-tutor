@@ -27,7 +27,7 @@ const analysisAPI = {
     else if (days <= 90) timeRange = '90d';
 
     return request.get(
-      'api/v1/analytics/learning-stats',
+      'analytics/learning-stats',
       { time_range: timeRange },
       {
         showLoading: false,
@@ -57,7 +57,7 @@ const analysisAPI = {
     // granularity参数暂时不支持，使用后端默认粒度
     return request
       .get(
-        'api/v1/analytics/learning-stats',
+        'analytics/learning-stats',
         { time_range: timeRange },
         {
           showLoading: false,
@@ -95,7 +95,7 @@ const analysisAPI = {
     const queryParams = {};
     if (subject) queryParams.subject = subject;
 
-    return request.get('api/v1/analytics/knowledge-map', queryParams, {
+    return request.get('analytics/knowledge-map', queryParams, {
       showLoading: false,
       ...config,
     });
