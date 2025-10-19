@@ -38,25 +38,25 @@ const config = {
     version: 'v1',
     timeout: 10000,
   },
-};
+}
 ```
 
 **注意事项**：
 
 - 开发环境使用 `http://localhost:8000`
-- 生产环境使用 `https://your-domain.com`
+- 生产环境使用 `https://www.horsduroot.com`
 - 微信小程序要求生产环境必须使用 HTTPS
 
 ### 2. 引入 API 模块
 
 ```javascript
 // 推荐：引入所有 API 模块
-const api = require('../../api/index.js');
+const api = require('../../api/index.js')
 
 // 使用时：
-api.homework.getTemplates(); // 作业批改
-api.learning.askQuestion(); // 学习问答
-api.analysis.getAnalytics(); // 学情分析
+api.homework.getTemplates() // 作业批改
+api.learning.askQuestion() // 学习问答
+api.analysis.getAnalytics() // 学情分析
 ```
 
 ### 3. 调用 API
@@ -66,12 +66,12 @@ api.analysis.getAnalytics(); // 学情分析
 const response = await api.homework.getTemplates({
   page: 1,
   size: 10,
-});
+})
 
 if (response.success) {
-  console.log('数据:', response.data);
+  console.log('数据:', response.data)
 } else {
-  console.error('错误:', response.error);
+  console.error('错误:', response.error)
 }
 ```
 
@@ -114,22 +114,22 @@ if (response.success) {
 #### 请求方法
 
 ```javascript
-const { request } = require('../utils/request.js');
+const { request } = require('../utils/request.js')
 
 // GET 请求
-request.get(url, params, config);
+request.get(url, params, config)
 
 // POST 请求
-request.post(url, data, config);
+request.post(url, data, config)
 
 // PUT 请求
-request.put(url, data, config);
+request.put(url, data, config)
 
 // DELETE 请求
-request.delete(url, params, config);
+request.delete(url, params, config)
 
 // 文件上传
-request.upload(url, filePath, name, formData, config);
+request.upload(url, filePath, name, formData, config)
 ```
 
 ---
@@ -153,7 +153,7 @@ homeworkAPI.getTemplates({
   page: 1,
   size: 10,
   subject: 'math', // 可选：学科筛选
-});
+})
 ```
 
 **返回数据**：
@@ -177,7 +177,7 @@ homeworkAPI.getTemplates({
 #### 2. 获取作业模板详情
 
 ```javascript
-homeworkAPI.getTemplateDetail(templateId);
+homeworkAPI.getTemplateDetail(templateId)
 ```
 
 #### 3. 提交作业（文本）
@@ -188,7 +188,7 @@ homeworkAPI.submitHomeworkText({
   student_name: '张小明',
   content: '作业内容...',
   additional_info: '备注信息', // 可选
-});
+})
 ```
 
 #### 4. 提交作业（图片）
@@ -199,10 +199,10 @@ homeworkAPI.submitHomeworkImage({
   student_name: '张小明',
   filePath: 'wxfile://temp/image.jpg',
   additional_info: '备注信息', // 可选
-  onProgress: progress => {
-    console.log('上传进度:', progress.progress);
+  onProgress: (progress) => {
+    console.log('上传进度:', progress.progress)
   },
-});
+})
 ```
 
 #### 5. 批量提交作业图片
@@ -212,11 +212,11 @@ homeworkAPI.submitHomeworkImages({
   template_id: 'uuid',
   student_name: '张小明',
   filePaths: ['path1.jpg', 'path2.jpg'],
-  onProgress: progress => {
-    console.log('总进度:', progress.totalProgress);
-    console.log('当前:', progress.current, '/', progress.total);
+  onProgress: (progress) => {
+    console.log('总进度:', progress.totalProgress)
+    console.log('当前:', progress.current, '/', progress.total)
   },
-});
+})
 ```
 
 #### 6. 获取提交列表
@@ -227,7 +227,7 @@ homeworkAPI.getSubmissions({
   size: 10,
   template_id: 'uuid', // 可选：按模板筛选
   status: 'completed', // 可选：按状态筛选
-});
+})
 ```
 
 **状态值**：
@@ -240,13 +240,13 @@ homeworkAPI.getSubmissions({
 #### 7. 获取提交详情
 
 ```javascript
-homeworkAPI.getSubmissionDetail(submissionId);
+homeworkAPI.getSubmissionDetail(submissionId)
 ```
 
 #### 8. 获取批改结果
 
 ```javascript
-homeworkAPI.getCorrectionResult(submissionId);
+homeworkAPI.getCorrectionResult(submissionId)
 ```
 
 **返回数据**：
@@ -279,11 +279,11 @@ homeworkAPI.getCorrectionResult(submissionId);
 homeworkAPI.pollCorrectionResult(submissionId, {
   interval: 3000, // 轮询间隔（毫秒）
   maxAttempts: 20, // 最大尝试次数
-  onProgress: info => {
-    console.log('轮询进度:', info.attempts, '/', info.maxAttempts);
-    console.log('当前状态:', info.status);
+  onProgress: (info) => {
+    console.log('轮询进度:', info.attempts, '/', info.maxAttempts)
+    console.log('当前状态:', info.status)
   },
-});
+})
 ```
 
 ---
@@ -298,7 +298,7 @@ api.learning.askQuestion({
   session_id: 'optional-session-id', // 可选：关联到已有会话
   subject: 'math', // 可选：学科
   grade: '初中', // 可选：年级
-});
+})
 ```
 
 **返回数据**：
@@ -325,26 +325,26 @@ const session = await api.learning.createSession({
   title: '数学学习',
   subject: 'math',
   grade: '初中',
-});
+})
 
 // 获取会话列表
 const sessions = await api.learning.getSessions({
   page: 1,
   size: 10,
   status: 'active', // active/archived
-});
+})
 
 // 获取会话详情
-const detail = await api.learning.getSessionDetail(sessionId);
+const detail = await api.learning.getSessionDetail(sessionId)
 
 // 更新会话
 await api.learning.updateSession(sessionId, {
   title: '新标题',
   status: 'archived',
-});
+})
 
 // 删除会话
-await api.learning.deleteSession(sessionId);
+await api.learning.deleteSession(sessionId)
 ```
 
 #### 3. 问题管理
@@ -356,17 +356,17 @@ const questions = await api.learning.getQuestions({
   size: 10,
   session_id: 'uuid', // 可选：按会话筛选
   subject: 'math', // 可选：按学科筛选
-});
+})
 
 // 获取问题详情
-const question = await api.learning.getQuestionDetail(questionId);
+const question = await api.learning.getQuestionDetail(questionId)
 
 // 搜索问题
 const results = await api.learning.searchQuestions({
   q: '二次函数',
   subject: 'math',
   limit: 20,
-});
+})
 ```
 
 #### 4. 答案评价和收藏
@@ -376,40 +376,36 @@ const results = await api.learning.searchQuestions({
 await api.learning.rateAnswer(questionId, {
   helpful: true,
   feedback: '回答很清楚',
-});
+})
 
 // 收藏问题
-await api.learning.favoriteQuestion(questionId);
+await api.learning.favoriteQuestion(questionId)
 
 // 取消收藏
-await api.learning.unfavoriteQuestion(questionId);
+await api.learning.unfavoriteQuestion(questionId)
 
 // 获取收藏列表
 const favorites = await api.learning.getFavorites({
   page: 1,
   size: 10,
-});
+})
 ```
 
 #### 5. 图片上传提问
 
 ```javascript
 // 单张图片上传
-const uploadResult = await api.learning.uploadQuestionImage('wxfile://temp/image.jpg');
+const uploadResult = await api.learning.uploadQuestionImage('wxfile://temp/image.jpg')
 
 // 批量上传
-const batchResult = await api.learning.uploadQuestionImages([
-  'path1.jpg',
-  'path2.jpg',
-  'path3.jpg',
-]);
+const batchResult = await api.learning.uploadQuestionImages(['path1.jpg', 'path2.jpg', 'path3.jpg'])
 
 // 使用上传的图片提问
 if (uploadResult.success) {
   await api.learning.askQuestion({
     question: '这道题怎么做？',
     image_urls: [uploadResult.data.url],
-  });
+  })
 }
 ```
 
@@ -421,19 +417,19 @@ const recommended = await api.learning.getRecommendedQuestions({
   subject: 'math',
   grade: '初中',
   limit: 5,
-});
+})
 
 // 获取热门问题
 const popular = await api.learning.getPopularQuestions({
   subject: 'math',
   days: 7,
   limit: 10,
-});
+})
 
 // 获取相似问题
 const similar = await api.learning.getSimilarQuestions(questionId, {
   limit: 5,
-});
+})
 ```
 
 ---
@@ -446,7 +442,7 @@ const similar = await api.learning.getSimilarQuestions(questionId, {
 // 获取综合分析数据（用于报告页面）
 const analytics = await api.analysis.getAnalytics({
   days: 30, // 最近 30 天
-});
+})
 ```
 
 **返回数据**：
@@ -482,7 +478,7 @@ const analytics = await api.analysis.getAnalytics({
 // 获取学习进度
 const progress = await api.analysis.getProgress({
   days: 7,
-});
+})
 
 // 获取学习历史记录
 const history = await api.analysis.getHistory({
@@ -490,7 +486,7 @@ const history = await api.analysis.getHistory({
   size: 20,
   type: 'homework', // homework/question/achievement
   days: 90,
-});
+})
 ```
 
 #### 3. 数据分析
@@ -500,29 +496,29 @@ const history = await api.analysis.getHistory({
 const activity = await api.analysis.getActivity({
   days: 30,
   granularity: 'day', // hour/day/week/month
-});
+})
 
 // 获取知识点掌握情况
 const mastery = await api.analysis.getMastery({
   subject: 'math',
-});
+})
 
 // 获取学习趋势
 const trends = await api.analysis.getTrends({
   metric: 'score', // score/frequency/duration/mastery
   days: 30,
   subject: 'math',
-});
+})
 
 // 获取学科统计
 const subjectStats = await api.analysis.getSubjectStats({
   days: 30,
-});
+})
 
 // 获取学习模式分析
 const patterns = await api.analysis.getLearningPatterns({
   days: 30,
-});
+})
 ```
 
 #### 4. 学习建议和改进
@@ -532,24 +528,24 @@ const patterns = await api.analysis.getLearningPatterns({
 const recommendations = await api.analysis.getRecommendations({
   subject: 'math',
   focus: 'weak', // weak/strong/balanced
-});
+})
 
 // 获取改进建议
 const improvements = await api.analysis.getImprovements({
   subject: 'math',
   priority: 'high', // high/medium/low
-});
+})
 
 // 获取知识缺口分析
 const gaps = await api.analysis.getKnowledgeGaps({
   subject: 'math',
   threshold: 0.6, // 掌握度低于 60% 视为缺口
-});
+})
 
 // 获取 AI 生成的学习洞察
 const insights = await api.analysis.getInsights({
   days: 30,
-});
+})
 ```
 
 #### 5. 学习目标管理
@@ -558,7 +554,7 @@ const insights = await api.analysis.getInsights({
 // 获取学习目标列表
 const goals = await api.analysis.getGoals({
   status: 'active', // active/completed/overdue
-});
+})
 
 // 创建学习目标
 const newGoal = await api.analysis.createGoal({
@@ -567,23 +563,23 @@ const newGoal = await api.analysis.createGoal({
   target_date: '2025-02-15',
   subject: 'math',
   target_value: 30,
-});
+})
 
 // 更新学习目标
 await api.analysis.updateGoal(goalId, {
   title: '新标题',
   progress: 50,
   status: 'active',
-});
+})
 
 // 更新目标进度
 await api.analysis.updateGoalProgress(goalId, {
   progress: 50, // 50%
   note: '已完成15天',
-});
+})
 
 // 删除学习目标
-await api.analysis.deleteGoal(goalId);
+await api.analysis.deleteGoal(goalId)
 ```
 
 #### 6. 高级功能
@@ -593,17 +589,17 @@ await api.analysis.deleteGoal(goalId);
 const report = await api.analysis.generateReport({
   days: 30,
   format: 'json', // json/pdf
-});
+})
 
 // 获取学习排名
 const ranking = await api.analysis.getRanking({
   scope: 'class', // class/grade/school
   metric: 'score', // score/frequency/improvement
   days: 30,
-});
+})
 
 // 获取成就徽章
-const achievements = await api.analysis.getAchievements();
+const achievements = await api.analysis.getAchievements()
 ```
 
 ---
@@ -621,7 +617,7 @@ Page({
 
   async onLoad() {
     // 1. 创建或加载会话
-    await this.initSession();
+    await this.initSession()
   },
 
   async initSession() {
@@ -631,26 +627,26 @@ Page({
         page: 1,
         size: 1,
         status: 'active',
-      });
+      })
 
       if (sessions.success && sessions.data.length > 0) {
-        this.setData({ sessionId: sessions.data[0].id });
+        this.setData({ sessionId: sessions.data[0].id })
       } else {
         // 创建新会话
         const newSession = await api.learning.createSession({
           title: '数学学习',
           subject: 'math',
-        });
-        this.setData({ sessionId: newSession.data.id });
+        })
+        this.setData({ sessionId: newSession.data.id })
       }
     } catch (error) {
-      console.error('会话初始化失败:', error);
+      console.error('会话初始化失败:', error)
     }
   },
 
   async askQuestion() {
-    const question = this.data.inputText.trim();
-    if (!question) return;
+    const question = this.data.inputText.trim()
+    if (!question) return
 
     try {
       // 2. 向 AI 提问
@@ -658,7 +654,7 @@ Page({
         question: question,
         session_id: this.data.sessionId,
         subject: 'math',
-      });
+      })
 
       if (response.success) {
         // 3. 显示答案
@@ -673,53 +669,53 @@ Page({
             content: response.data.answer,
             questionId: response.data.question_id,
           },
-        ];
+        ]
 
-        this.setData({ messages, inputText: '' });
+        this.setData({ messages, inputText: '' })
       }
     } catch (error) {
       wx.showToast({
         title: error.message || '提问失败',
         icon: 'error',
-      });
+      })
     }
   },
 
   async onLikeAnswer(e) {
-    const { questionId } = e.currentTarget.dataset;
+    const { questionId } = e.currentTarget.dataset
 
     try {
       // 4. 评价答案
       await api.learning.rateAnswer(questionId, {
         helpful: true,
         feedback: '回答很有帮助',
-      });
+      })
 
       wx.showToast({
         title: '感谢反馈',
         icon: 'success',
-      });
+      })
     } catch (error) {
-      console.error('评价失败:', error);
+      console.error('评价失败:', error)
     }
   },
 
   async onFavorite(e) {
-    const { questionId } = e.currentTarget.dataset;
+    const { questionId } = e.currentTarget.dataset
 
     try {
       // 5. 收藏问题
-      await api.learning.favoriteQuestion(questionId);
+      await api.learning.favoriteQuestion(questionId)
 
       wx.showToast({
         title: '已收藏',
         icon: 'success',
-      });
+      })
     } catch (error) {
-      console.error('收藏失败:', error);
+      console.error('收藏失败:', error)
     }
   },
-});
+})
 ```
 
 ### 示例 2: 提交作业完整流程
@@ -736,36 +732,36 @@ Page({
     const res = await wx.chooseMedia({
       count: 9,
       mediaType: ['image'],
-    });
+    })
 
     this.setData({
-      imageList: res.tempFiles.map(f => f.tempFilePath),
-    });
+      imageList: res.tempFiles.map((f) => f.tempFilePath),
+    })
   },
 
   // 提交作业
   async submitHomework() {
     try {
-      const { templateId, imageList } = this.data;
-      const userInfo = await auth.getUserInfo();
+      const { templateId, imageList } = this.data
+      const userInfo = await auth.getUserInfo()
 
       // 提交第一张图片
       const result = await homeworkAPI.submitHomeworkImage({
         template_id: templateId,
         student_name: userInfo.name,
         filePath: imageList[0],
-        onProgress: progress => {
-          console.log('上传进度:', progress.progress + '%');
+        onProgress: (progress) => {
+          console.log('上传进度:', progress.progress + '%')
         },
-      });
+      })
 
       if (result.success) {
-        const submissionId = result.data.id;
+        const submissionId = result.data.id
 
         // 跳转到详情页
         wx.navigateTo({
           url: `/pages/homework/detail/index?id=${submissionId}`,
-        });
+        })
 
         // 后台继续上传剩余图片
         if (imageList.length > 1) {
@@ -775,19 +771,19 @@ Page({
               student_name: userInfo.name,
               filePaths: imageList.slice(1),
             })
-            .catch(err => {
-              console.error('批量上传失败:', err);
-            });
+            .catch((err) => {
+              console.error('批量上传失败:', err)
+            })
         }
       }
     } catch (error) {
       wx.showToast({
         title: error.message || '提交失败',
         icon: 'error',
-      });
+      })
     }
   },
-});
+})
 ```
 
 ### 示例 3: 学情分析页面加载
@@ -800,25 +796,25 @@ Page({
   },
 
   async onLoad(options) {
-    this.setData({ submissionId: options.id });
-    await this.loadSubmission();
+    this.setData({ submissionId: options.id })
+    await this.loadSubmission()
   },
 
   async loadSubmission() {
     try {
       // 获取提交详情
-      const detail = await homeworkAPI.getSubmissionDetail(this.data.submissionId);
+      const detail = await homeworkAPI.getSubmissionDetail(this.data.submissionId)
 
       if (detail.data.status === 'completed') {
         // 批改已完成，直接获取结果
-        const correction = await homeworkAPI.getCorrectionResult(this.data.submissionId);
-        this.setData({ correction: correction.data });
+        const correction = await homeworkAPI.getCorrectionResult(this.data.submissionId)
+        this.setData({ correction: correction.data })
       } else if (detail.data.status === 'processing') {
         // 批改进行中，启动轮询
-        this.startPolling();
+        this.startPolling()
       }
     } catch (error) {
-      console.error('加载失败:', error);
+      console.error('加载失败:', error)
     }
   },
 
@@ -827,25 +823,25 @@ Page({
       const correction = await homeworkAPI.pollCorrectionResult(this.data.submissionId, {
         interval: 3000,
         maxAttempts: 20,
-        onProgress: info => {
-          console.log(`轮询中 ${info.attempts}/${info.maxAttempts}`);
+        onProgress: (info) => {
+          console.log(`轮询中 ${info.attempts}/${info.maxAttempts}`)
         },
-      });
+      })
 
-      this.setData({ correction: correction.data });
+      this.setData({ correction: correction.data })
 
       wx.showToast({
         title: '批改完成',
         icon: 'success',
-      });
+      })
     } catch (error) {
       wx.showToast({
         title: '获取批改结果失败',
         icon: 'error',
-      });
+      })
     }
   },
-});
+})
 ```
 
 ```javascript
@@ -857,55 +853,55 @@ Page({
   },
 
   async onLoad() {
-    await this.loadAnalytics();
+    await this.loadAnalytics()
   },
 
   async loadAnalytics() {
-    this.setData({ loading: true });
+    this.setData({ loading: true })
 
     try {
       // 1. 获取综合分析数据
       const analytics = await api.analysis.getAnalytics({
         days: this.data.timeRange,
-      });
+      })
 
       if (analytics.success) {
-        this.setData({ analytics: analytics.data });
+        this.setData({ analytics: analytics.data })
 
         // 2. 渲染图表
-        this.renderCharts(analytics.data);
+        this.renderCharts(analytics.data)
       }
     } catch (error) {
       // 尝试使用缓存数据
-      const cached = wx.getStorageSync('analytics_cache');
+      const cached = wx.getStorageSync('analytics_cache')
       if (cached) {
-        this.setData({ analytics: cached });
-        this.renderCharts(cached);
+        this.setData({ analytics: cached })
+        this.renderCharts(cached)
       } else {
         wx.showToast({
           title: '加载失败',
           icon: 'error',
-        });
+        })
       }
     } finally {
-      this.setData({ loading: false });
+      this.setData({ loading: false })
     }
   },
 
   renderCharts(data) {
     // 渲染学科统计图表
-    this.renderSubjectChart(data.subject_stats);
+    this.renderSubjectChart(data.subject_stats)
 
     // 渲染知识掌握雷达图
-    this.renderMasteryChart(data.knowledge_mastery);
+    this.renderMasteryChart(data.knowledge_mastery)
   },
 
   async onTimeRangeChange(e) {
-    const timeRange = e.detail.value;
-    this.setData({ timeRange });
-    await this.loadAnalytics();
+    const timeRange = e.detail.value
+    this.setData({ timeRange })
+    await this.loadAnalytics()
   },
-});
+})
 ```
 
 ### 示例 4: 学习目标管理
@@ -917,20 +913,20 @@ Page({
   },
 
   async onLoad() {
-    await this.loadGoals();
+    await this.loadGoals()
   },
 
   async loadGoals() {
     try {
       const response = await api.analysis.getGoals({
         status: 'active',
-      });
+      })
 
       if (response.success) {
-        this.setData({ goals: response.data });
+        this.setData({ goals: response.data })
       }
     } catch (error) {
-      console.error('加载目标失败:', error);
+      console.error('加载目标失败:', error)
     }
   },
 
@@ -942,44 +938,44 @@ Page({
         target_date: this.data.targetDate,
         subject: 'math',
         target_value: 30,
-      });
+      })
 
       if (newGoal.success) {
         wx.showToast({
           title: '目标创建成功',
           icon: 'success',
-        });
+        })
 
-        await this.loadGoals();
+        await this.loadGoals()
       }
     } catch (error) {
       wx.showToast({
         title: error.message || '创建失败',
         icon: 'error',
-      });
+      })
     }
   },
 
   async onUpdateProgress(e) {
-    const { goalId, progress } = e.currentTarget.dataset;
+    const { goalId, progress } = e.currentTarget.dataset
 
     try {
       await api.analysis.updateGoalProgress(goalId, {
         progress: progress,
         note: `更新进度到 ${progress}%`,
-      });
+      })
 
       wx.showToast({
         title: '进度已更新',
         icon: 'success',
-      });
+      })
 
-      await this.loadGoals();
+      await this.loadGoals()
     } catch (error) {
-      console.error('更新进度失败:', error);
+      console.error('更新进度失败:', error)
     }
   },
-});
+})
 ```
 
 ### 示例 5: 列表加载与分页
@@ -994,31 +990,31 @@ Page({
   },
 
   async loadSubmissions() {
-    if (this.data.loading || !this.data.hasMore) return;
+    if (this.data.loading || !this.data.hasMore) return
 
-    this.setData({ loading: true });
+    this.setData({ loading: true })
 
     try {
       const response = await homeworkAPI.getSubmissions({
         page: this.data.page,
         size: 10,
-      });
+      })
 
-      const newSubmissions = response.data || [];
-      const hasMore = newSubmissions.length >= 10;
+      const newSubmissions = response.data || []
+      const hasMore = newSubmissions.length >= 10
 
       this.setData({
         submissions: [...this.data.submissions, ...newSubmissions],
         page: this.data.page + 1,
         hasMore,
-      });
+      })
     } catch (error) {
       wx.showToast({
         title: '加载失败',
         icon: 'error',
-      });
+      })
     } finally {
-      this.setData({ loading: false });
+      this.setData({ loading: false })
     }
   },
 
@@ -1028,17 +1024,17 @@ Page({
       submissions: [],
       page: 1,
       hasMore: true,
-    });
+    })
 
-    await this.loadSubmissions();
-    wx.stopPullDownRefresh();
+    await this.loadSubmissions()
+    wx.stopPullDownRefresh()
   },
 
   // 触底加载更多
   onReachBottom() {
-    this.loadSubmissions();
+    this.loadSubmissions()
   },
-});
+})
 ```
 
 ---
@@ -1268,7 +1264,7 @@ const config = {
     version: 'v1',
     timeout: 10000,
   },
-};
+}
 ```
 
 ---

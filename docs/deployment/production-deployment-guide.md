@@ -460,7 +460,7 @@ echo "✅ 回滚完成"
 
 set -e
 
-SERVER="root@121.199.173.244"
+SERVER="root@121.199.173.244"  # 生产服务器 (www.horsduroot.com)
 REMOTE_DIR="/opt/wuhao-tutor"
 
 echo "🚀 开始部署到生产环境..."
@@ -555,8 +555,8 @@ echo "=" * 60
 echo "✅ 部署成功完成!"
 echo "=" * 60
 echo ""
-echo "🌐 访问地址: https://121.199.173.244"
-echo "📊 健康检查: https://121.199.173.244/api/health"
+echo "🌐 访问地址: https://www.horsduroot.com"
+echo "📊 健康检查: https://www.horsduroot.com/health"
 echo "📋 查看日志: ssh $SERVER 'journalctl -u wuhao-tutor -f'"
 echo ""
 echo "⏮️  如需回滚: ssh $SERVER 'bash $REMOTE_DIR/scripts/deploy/rollback.sh'"
@@ -652,7 +652,7 @@ tail -f /var/log/nginx/error.log
 
 ```
 🚀 开始部署到生产环境...
-服务器: root@121.199.173.244
+服务器: root@121.199.173.244 (www.horsduroot.com)
 目录: /opt/wuhao-tutor
 
 📍 阶段1: 本地准备
@@ -698,8 +698,8 @@ tail -f /var/log/nginx/error.log
 ✅ 部署成功完成!
 ============================================================
 
-🌐 访问地址: https://121.199.173.244
-📊 健康检查: https://121.199.173.244/api/health
+🌐 访问地址: https://www.horsduroot.com
+📊 健康检查: https://www.horsduroot.com/health
 ```
 
 ---

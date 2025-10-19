@@ -71,7 +71,7 @@
 ### 执行过程
 
 ```bash
-服务器: root@121.199.173.244
+服务器: root@121.199.173.244 (www.horsduroot.com)
 备份: /opt/backups/code_20251009_000406.tar.gz (241MB)
 脚本: /opt/wuhao-tutor/scripts/cleanup_production.sh
 执行时间: 2025-10-09 00:07
@@ -252,7 +252,7 @@ systemctl restart wuhao-tutor nginx
    ./scripts/cleanup_local.sh
 
    # 生产
-   ssh root@121.199.173.244 'bash /opt/wuhao-tutor/scripts/cleanup_production.sh'
+   ssh root@121.199.173.244 'bash /opt/wuhao-tutor/scripts/cleanup_production.sh'  # www.horsduroot.com
    ```
 
 2. **备份策略**:

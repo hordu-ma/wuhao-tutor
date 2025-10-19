@@ -230,10 +230,10 @@ systemctl status nginx --no-pager -l | head -10
 
 ```bash
 # 上传到服务器
-scp PRODUCTION_CLEANUP_PLAN.md root@121.199.173.244:/opt/
+scp PRODUCTION_CLEANUP_PLAN.md root@121.199.173.244:/opt/  # www.horsduroot.com
 
 # 创建并执行清理脚本
-ssh root@121.199.173.244 'bash -s' < cleanup_production.sh
+ssh root@121.199.173.244 'bash -s' < cleanup_production.sh  # www.horsduroot.com
 
 # 或手动执行
 ssh root@121.199.173.244
@@ -261,7 +261,7 @@ systemctl status wuhao-tutor nginx
 netstat -tlnp | grep -E ':(80|443|8000)'
 
 # 3. 验证应用可访问
-curl -k https://121.199.173.244/api/health
+curl -k https://www.horsduroot.com/health
 
 # 4. 检查磁盘空间
 df -h
@@ -277,7 +277,7 @@ ps aux | grep -E 'uvicorn|nginx' | grep -v grep
 **每周:**
 
 - 检查服务日志: `journalctl -u wuhao-tutor -n 100`
-- 验证应用健康: `curl https://121.199.173.244/api/health`
+- 验证应用健康: `curl https://www.horsduroot.com/health`
 
 **每月:**
 

@@ -1,7 +1,7 @@
 # 五好伴学微信小程序开发指南
 
 > **📱 微信小程序前端开发完整指南**
-> 本文档提供五好伴学K12 AI学情管理平台微信小程序端的详细开发流程
+> 本文档提供五好伴学 K12 AI 学情管理平台微信小程序端的详细开发流程
 
 **创建时间**: 2024-12-19
 **项目版本**: 0.1.0 (Alpha)
@@ -15,8 +15,8 @@
 
 - **名称**: 五好伴学
 - **类型**: 教育类微信小程序
-- **目标用户**: K12学生、家长、教师
-- **核心价值**: 随时随地的AI学习辅导与学情管理
+- **目标用户**: K12 学生、家长、教师
+- **核心价值**: 随时随地的 AI 学习辅导与学情管理
 
 ### 功能规划
 
@@ -27,25 +27,25 @@
 ### 技术选型
 
 - **框架**: 微信原生小程序 + TypeScript
-- **UI组件**: Vant Weapp
+- **UI 组件**: Vant Weapp
 - **状态管理**: MobX-miniprogram
-- **网络请求**: 封装wx.request + Promise
+- **网络请求**: 封装 wx.request + Promise
 - **构建工具**: miniprogram-ci
 
 ---
 
 ## 🏗️ 开发阶段规划
 
-## 第一阶段：项目初始化与架构搭建 (预计2-3天)
+## 第一阶段：项目初始化与架构搭建 (预计 2-3 天)
 
 ### TODO 1.1: 项目环境准备
 
-1. 注册微信小程序账号，获取AppID
+1. 注册微信小程序账号，获取 AppID
 2. 安装微信开发者工具
-3. 创建小程序项目，配置TypeScript支持
+3. 创建小程序项目，配置 TypeScript 支持
 4. 配置代码规范工具(ESLint + Prettier)
-5. 建立Git分支策略(feature/miniprogram-*)
-   *小程序的AppID: wx2a8b340606664785\*
+5. 建立 Git 分支策略(feature/miniprogram-*)
+   *小程序的 AppID: wx2a8b340606664785\*
 
 ### TODO 1.2: 目录结构设计
 
@@ -57,39 +57,39 @@
 
 ### TODO 1.3: 基础配置文件
 
-1. 配置app.json(页面路由、tabBar、权限等)
-2. 设置app.wxss(全局样式、主题色彩)
-3. 配置project.config.json(项目配置)
+1. 配置 app.json(页面路由、tabBar、权限等)
+2. 设置 app.wxss(全局样式、主题色彩)
+3. 配置 project.config.json(项目配置)
 4. 建立环境变量管理(config/)
-5. 创建TypeScript配置文件
+5. 创建 TypeScript 配置文件
 
-### TODO 1.4: UI组件库集成
+### TODO 1.4: UI 组件库集成
 
-1. 安装Vant Weapp组件库
+1. 安装 Vant Weapp 组件库
 2. 配置组件库的全局引用
-3. 创建项目专用UI组件规范
+3. 创建项目专用 UI 组件规范
 4. 设计响应式布局系统
 5. 建立图标字体库
 
 ### TODO 1.5: 网络层架构
 
-1. 封装wx.request为Promise形式
+1. 封装 wx.request 为 Promise 形式
 2. 配置请求/响应拦截器
-3. 实现API错误处理机制
+3. 实现 API 错误处理机制
 4. 设置接口地址管理
-5. 建立token管理机制
+5. 建立 token 管理机制
 
 **已完成第一阶段开发**
 
 ---
 
-## 第二阶段：用户认证与角色管理 (预计3-4天)
+## 第二阶段：用户认证与角色管理 (预计 3-4 天)
 
 ### TODO 2.1: 微信登录流程
 
 1. 实现微信授权登录(wx.login)
 2. 获取用户信息(wx.getUserProfile)
-3. 与后端API对接完成登录验证
+3. 与后端 API 对接完成登录验证
 4. 实现登录状态持久化
 5. 处理登录失败场景
 
@@ -99,7 +99,7 @@
 2. 实现角色切换功能
 3. 配置不同角色的权限控制
 4. 建立角色相关的路由守卫
-5. 设置角色专属的tabBar
+5. 设置角色专属的 tabBar
 
 ### TODO 2.3: 用户信息管理
 
@@ -113,7 +113,7 @@
 
 1. 实现页面级权限控制
 2. 设置功能模块权限验证
-3. 建立API调用权限管理
+3. 建立 API 调用权限管理
 4. 配置敏感操作二次确认
 5. 添加权限不足的友好提示
 
@@ -125,7 +125,7 @@
 4. 实现安全退出功能
 5. 配置隐私信息保护
 
-## 第三阶段：核心功能页面开发 (预计5-7天)
+## 第三阶段：核心功能页面开发 (预计 5-7 天)
 
 ### TODO 3.1: 首页与导航
 
@@ -146,7 +146,7 @@
 ### TODO 3.3: 问答互动模块
 
 1. 设计问答对话界面
-2. 实现AI问答功能对接
+2. 实现 AI 问答功能对接
 3. 添加问题类型分类
 4. 建立历史问答记录
 5. 实现问答收藏功能
@@ -167,7 +167,7 @@
 4. 建立关于我们页面
 5. 实现数据统计展示
 
-## 第四阶段：高级功能与优化 (预计4-5天)
+## 第四阶段：高级功能与优化 (预计 4-5 天)
 
 ### TODO 4.1: 数据缓存策略
 
@@ -209,13 +209,13 @@
 4. 添加崩溃恢复机制
 5. 建立错误日志管理
 
-## 第五阶段：测试与发布 (预计2-3天)
+## 第五阶段：测试与发布 (预计 2-3 天)
 
 ### TODO 5.1: 功能测试
 
 1. 编写核心功能测试用例
 2. 进行用户操作流程测试
-3. 验证API接口对接
+3. 验证 API 接口对接
 4. 测试异常场景处理
 5. 检查数据同步准确性
 
@@ -313,55 +313,55 @@ miniprogram/
 
 // 函数命名: camelCase
 function getUserInfo(): Promise<UserInfo> {
-    // 必须有类型注解和返回值类型
+  // 必须有类型注解和返回值类型
 }
 
 // 常量命名: UPPER_CASE
-const API_BASE_URL = "https://api.wuhao-tutor.com";
+const API_BASE_URL = 'https://www.horsduroot.com'
 
 // 组件命名: PascalCase
 Component({
-    properties: {
-        homework: {
-            type: Object as () => HomeworkInfo,
-            required: true,
-        },
+  properties: {
+    homework: {
+      type: Object as () => HomeworkInfo,
+      required: true,
     },
-});
+  },
+})
 ```
 
-### API对接规范
+### API 对接规范
 
 ```typescript
 // 统一的响应格式处理
 interface ApiResponse<T> {
-    success: boolean;
-    data?: T;
-    error?: {
-        code: string;
-        message: string;
-    };
+  success: boolean
+  data?: T
+  error?: {
+    code: string
+    message: string
+  }
 }
 
 // 错误处理
 try {
-    const result = await api.submitHomework(data);
-    if (result.success) {
-        // 处理成功逻辑
-    } else {
-        // 处理业务错误
-        wx.showToast({
-            title: result.error?.message || "操作失败",
-            icon: "error",
-        });
-    }
-} catch (error) {
-    // 处理网络错误
-    console.error("API调用失败:", error);
+  const result = await api.submitHomework(data)
+  if (result.success) {
+    // 处理成功逻辑
+  } else {
+    // 处理业务错误
     wx.showToast({
-        title: "网络异常，请稍后重试",
-        icon: "error",
-    });
+      title: result.error?.message || '操作失败',
+      icon: 'error',
+    })
+  }
+} catch (error) {
+  // 处理网络错误
+  console.error('API调用失败:', error)
+  wx.showToast({
+    title: '网络异常，请稍后重试',
+    icon: 'error',
+  })
 }
 ```
 
@@ -370,29 +370,29 @@ try {
 ```wxss
 /* 使用BEM命名规范 */
 .homework-card {
-    /* 块级元素 */
+  /* 块级元素 */
 }
 
 .homework-card__title {
-    /* 元素 */
+  /* 元素 */
 }
 
 .homework-card--pending {
-    /* 修饰符 */
+  /* 修饰符 */
 }
 
 /* 响应式设计 */
 .container {
-    padding: 32rpx;
-    box-sizing: border-box;
+  padding: 32rpx;
+  box-sizing: border-box;
 }
 
 /* 主题色彩变量 */
 :root {
-    --primary-color: #1890ff;
-    --success-color: #52c41a;
-    --warning-color: #faad14;
-    --error-color: #f5222d;
+  --primary-color: #1890ff;
+  --success-color: #52c41a;
+  --warning-color: #faad14;
+  --error-color: #f5222d;
 }
 ```
 
@@ -444,7 +444,7 @@ git push origin feature/miniprogram-auth
 ### 数据安全
 
 - 敏感信息不存储在小程序本地
-- 使用HTTPS协议进行API通信
+- 使用 HTTPS 协议进行 API 通信
 - 实现请求签名验证
 - 用户隐私信息加密传输
 
@@ -461,7 +461,7 @@ git push origin feature/miniprogram-auth
 
 ### 性能目标
 
-- 首屏加载时间: < 3秒
+- 首屏加载时间: < 3 秒
 - 页面切换响应: < 500ms
 - 图片加载优化: 懒加载 + 压缩
 - 代码包大小: < 2MB (主包 < 500KB)
@@ -478,7 +478,7 @@ git push origin feature/miniprogram-auth
 
 ## 🤝 团队协作
 
-### Git分支策略
+### Git 分支策略
 
 ```
 main                 # 主分支(发布版本)
@@ -528,7 +528,7 @@ style: 调整首页布局样式
 
 ## 🔄 迭代计划
 
-### V1.0.0 (MVP版本)
+### V1.0.0 (MVP 版本)
 
 - [ ] 基础用户认证
 - [ ] 作业提交与查看
@@ -556,8 +556,8 @@ style: 调整首页布局样式
 ### 开发资源
 
 - **微信小程序官方文档**: https://developers.weixin.qq.com/miniprogram/dev/
-- **Vant Weapp组件库**: https://youzan.github.io/vant-weapp/
-- **TypeScript官方文档**: https://www.typescriptlang.org/
+- **Vant Weapp 组件库**: https://youzan.github.io/vant-weapp/
+- **TypeScript 官方文档**: https://www.typescriptlang.org/
 
 ### 联系方式
 
@@ -567,7 +567,7 @@ style: 调整首页布局样式
 
 ---
 
-**🎯 开发目标**: 打造一个高质量、用户体验优秀的教育类微信小程序，为K12学生提供便捷的AI学习辅导服务。
+**🎯 开发目标**: 打造一个高质量、用户体验优秀的教育类微信小程序，为 K12 学生提供便捷的 AI 学习辅导服务。
 
 ---
 
