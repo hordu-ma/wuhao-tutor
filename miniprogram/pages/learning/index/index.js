@@ -656,26 +656,27 @@ Page({
         max_history: 10,
       });
 
-      // 后端直接返回 AskQuestionResponse 对象，不是包装格式
-      // response = { user_message_id, ai_message_id, reply, ... }
-      if (response && response.reply) {
+      // 后端返回格式: { question: {...}, answer: {...}, session: {...} }
+      console.log('API响应:', response);
+
+      if (response && response.answer && response.answer.content) {
         // 更新用户消息状态
         const updatedUserMessage = {
           ...userMessage,
           status: 'sent',
-          id: response.user_message_id,
+          id: response.question.id,
         };
 
         // 创建AI回复消息
         const aiMessage = {
-          id: response.ai_message_id,
-          content: response.reply,
+          id: response.answer.id,
+          content: response.answer.content,
           type: 'text',
           sender: 'ai',
-          timestamp: response.created_at,
+          timestamp: response.answer.created_at,
           status: 'received',
-          confidence: response.confidence,
-          sources: response.sources || [],
+          confidence: response.answer.confidence_score || 0,
+          sources: response.answer.sources || [],
         };
 
         // 更新消息列表
@@ -697,6 +698,7 @@ Page({
         // 更新统计
         this.updateQuestionStats();
       } else {
+        console.error('AI回复格式错误，响应数据:', response);
         throw new Error('AI回复格式错误');
       }
     } catch (error) {
