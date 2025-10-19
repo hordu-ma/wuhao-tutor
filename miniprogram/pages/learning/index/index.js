@@ -233,10 +233,16 @@ Page({
   async initPermissions() {
     try {
       const permissions = await permissionManager.getUserPermissions();
+      console.log('获取到的权限列表:', permissions);
       this.setData({
-        canAsk: permissions.includes('chat:ask'),
-        canView: permissions.includes('chat:view'),
-        canModerate: permissions.includes('chat:moderate'),
+        canAsk: permissions.includes('chat.ask'),
+        canView: permissions.includes('chat.view'),
+        canModerate: permissions.includes('chat.moderate'),
+      });
+      console.log('权限设置结果:', {
+        canAsk: this.data.canAsk,
+        canView: this.data.canView,
+        canModerate: this.data.canModerate,
       });
     } catch (error) {
       console.error('获取权限失败:', error);
