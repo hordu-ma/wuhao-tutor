@@ -1314,4 +1314,34 @@ Page({
       url: '/pages/login/index',
     });
   },
+
+  /**
+   * 点击设置按钮
+   */
+  onSettingsTap() {
+    console.log('点击设置按钮');
+
+    // 检查是否已登录
+    if (!this.data.isLoggedIn) {
+      wx.showToast({
+        title: '请先登录',
+        icon: 'none',
+        duration: 2000,
+      });
+      return;
+    }
+
+    // 导航到"我的"页面（更完整的用户中心）
+    wx.switchTab({
+      url: '/pages/profile/index/index',
+      fail: err => {
+        console.error('导航到我的页面失败:', err);
+        wx.showToast({
+          title: '导航失败',
+          icon: 'none',
+          duration: 2000,
+        });
+      },
+    });
+  },
 });
