@@ -102,6 +102,12 @@ class StorageManager {
       const finalTTL = ttl || this.cacheStrategy[strategy] || this.defaultTTL;
       const cacheData = this.createCacheData(value, finalTTL);
 
+      // 防御性检查：确保 memoryCache 已初始化
+      if (!this.memoryCache) {
+        console.warn('[Storage] memoryCache 未初始化，重新创建');
+        this.memoryCache = new Map();
+      }
+
       // 存储到内存缓存
       if (memory) {
         this.memoryCache.set(finalKey, cacheData);
@@ -139,6 +145,12 @@ class StorageManager {
       const { sync = false, memory = true, defaultValue = null } = options;
 
       const finalKey = this.getKey(key);
+
+      // 防御性检查：确保 memoryCache 已初始化
+      if (!this.memoryCache) {
+        console.warn('[Storage] memoryCache 未初始化，重新创建');
+        this.memoryCache = new Map();
+      }
 
       // 优先从内存缓存获取
       if (memory && this.memoryCache.has(finalKey)) {

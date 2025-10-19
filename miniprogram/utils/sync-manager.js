@@ -36,7 +36,7 @@ class SyncManager {
     this.syncQueue = [];
     this.conflictQueue = [];
     this.lastSyncTime = 0;
-    this.syncInterval = 5 * 60 * 1000; // 5分钟自动同步间隔
+    this.syncInterval = 30 * 60 * 1000; // 30分钟自动同步间隔（降低频率，减少失败）
     this.syncTimer = null;
     this.listeners = new Set();
 
@@ -157,14 +157,14 @@ class SyncManager {
   async triggerSync(options = {}) {
     if (this.syncStatus === SyncStatus.SYNCING) {
       console.log('同步正在进行中，跳过此次触发');
-      return;
+      return { success: false, reason: 'syncing' };
     }
 
     // 检查网络状态
     const networkStatus = networkMonitor.getCurrentStatus();
     if (!networkStatus.isConnected) {
       console.log('网络未连接，跳过同步');
-      return;
+      return { success: false, reason: 'no_network' };
     }
 
     try {
@@ -176,10 +176,12 @@ class SyncManager {
       this.lastSyncTime = Date.now();
 
       console.log('同步完成');
+      return { success: true };
     } catch (error) {
       console.error('同步失败:', error);
       this.setSyncStatus(SyncStatus.FAILED);
-      throw error;
+      // 静默失败，不抛出错误，避免影响页面加载
+      return { success: false, reason: 'sync_error', error };
     }
   }
 
@@ -215,15 +217,29 @@ class SyncManager {
     try {
       console.log('开始同步用户信息');
 
+      // 防御性检查：确保 authManager 可用
+      if (!authManager || typeof authManager.getUserInfo !== 'function') {
+        console.warn('[Sync] authManager 不可用，跳过用户信息同步');
+        return;
+      }
+
       // 获取本地用户信息
       const localUserInfo = await authManager.getUserInfo();
       const localTimestamp = authManager.getUserInfoCacheTime();
+
+      // 防御性检查：确保 apiClient 可用
+      if (!apiClient || typeof apiClient.get !== 'function') {
+        console.warn('[Sync] apiClient 不可用，使用本地缓存');
+        return;
+      }
 
       // 获取服务器用户信息
       const response = await apiClient.get('/auth/me');
 
       if (!response.success || !response.data) {
-        throw new Error('获取服务器用户信息失败');
+        // 静默失败，使用本地缓存
+        console.warn('[Sync] 服务器用户信息获取失败，继续使用本地缓存');
+        return;
       }
 
       const serverUserInfo = response.data;
@@ -241,50 +257,15 @@ class SyncManager {
 
       if (syncResult.needsUpdate) {
         await authManager.updateUserInfo(syncResult.mergedInfo);
-        console.log('用户信息同步完成');
+        console.log('[Sync] 用户信息同步完成');
       } else {
-        console.log('用户信息无需同步');
+        console.log('[Sync] 用户信息无需同步');
       }
     } catch (error) {
-      console.error('用户信息同步失败:', error);
-
-      // 使用专业的错误处理器
-      const errorResult = await profileErrorHandler.handleSyncError(error, {
-        syncType: 'userInfo',
-        silent: true, // 同步错误默认静默处理
-        retryFunction: async () => {
-          const response = await apiClient.get('/auth/me');
-          if (response.success && response.data) {
-            return response.data;
-          }
-          throw new Error('获取服务器用户信息失败');
-        },
-      });
-
-      if (errorResult.success) {
-        // 重试成功，处理同步逻辑
-        const serverUserInfo = errorResult.data;
-        const localUserInfo = await authManager.getUserInfo();
-        const localTimestamp = authManager.getUserInfoCacheTime();
-        const serverTimestamp = new Date(
-          serverUserInfo.updated_at || serverUserInfo.updatedAt,
-        ).getTime();
-
-        const syncResult = await this.resolveUserInfoConflict(
-          localUserInfo,
-          serverUserInfo,
-          localTimestamp,
-          serverTimestamp,
-        );
-
-        if (syncResult.needsUpdate) {
-          await authManager.updateUserInfo(syncResult.mergedInfo);
-          console.log('用户信息同步完成（重试后）');
-        }
-      }
-
-      // 同步失败不抛出错误，避免影响主流程
-      throw error;
+      // 完全静默失败，不调用复杂的错误处理器，避免二次错误
+      // 只输出简单的警告日志，不影响页面加载
+      console.warn('[Sync] 用户信息同步静默失败，使用本地缓存:', error.message || error);
+      // 不抛出错误，不影响页面加载
     }
   }
 
@@ -382,12 +363,13 @@ class SyncManager {
    */
   async syncUserSettings() {
     try {
-      console.log('开始同步用户设置');
+      console.log('[Sync] 开始同步用户设置');
 
       // TODO: 实现用户设置同步逻辑
       // 这里可以扩展同步用户偏好设置、应用配置等
     } catch (error) {
-      console.error('用户设置同步失败:', error);
+      // 静默失败
+      console.warn('[Sync] 用户设置同步静默失败:', error.message || error);
     }
   }
 
@@ -396,14 +378,21 @@ class SyncManager {
    */
   async syncCacheData() {
     try {
-      console.log('开始同步缓存数据');
+      console.log('[Sync] 开始同步缓存数据');
+
+      // 防御性检查：确保 storage 可用
+      if (!storage || typeof storage.get !== 'function') {
+        console.warn('[Sync] storage 不可用，跳过缓存同步');
+        return;
+      }
 
       // 清理过期缓存
       await this.cleanExpiredCache();
 
       // TODO: 同步其他缓存数据
     } catch (error) {
-      console.error('缓存数据同步失败:', error);
+      // 静默失败
+      console.warn('[Sync] 缓存数据同步静默失败:', error.message || error);
     }
   }
 

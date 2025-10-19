@@ -77,9 +77,10 @@ const pageObject = {
       // 设置同步监听器
       this.setupSyncListener();
 
+      // 加载本地数据
       await Promise.all([this.loadUserInfo(), this.loadUserStats()]);
 
-      // 检查是否需要同步
+      // 检查是否需要后台同步（不阻塞页面）
       if (authManager.needsUserInfoRefresh()) {
         this.triggerUserInfoSync();
       }
@@ -129,13 +130,19 @@ const pageObject = {
   /**
    * 触发用户信息同步
    */
-  async triggerUserInfoSync() {
-    try {
-      await syncManager.manualSyncUserInfo();
-    } catch (error) {
-      console.warn('用户信息同步失败:', error);
-      // 静默失败，不影响用户体验
-    }
+  triggerUserInfoSync() {
+    // 完全异步执行，不阻塞页面加载
+    syncManager
+      .manualSyncUserInfo()
+      .then(() => {
+        console.log('后台同步用户信息成功');
+        // 同步成功后刷新显示
+        this.refreshUserInfoFromCache();
+      })
+      .catch(error => {
+        console.warn('后台同步用户信息失败（静默）:', error);
+        // 完全静默失败，不影响用户体验
+      });
   },
 
   /**

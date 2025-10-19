@@ -441,24 +441,51 @@ class AuthManager {
    * 获取当前用户信息
    */
   async getUserInfo() {
+    // 从内存获取
     if (this.currentUser) {
-      console.log('从内存获取用户信息', { userId: this.currentUser?.id });
+      console.log('[Auth] 从内存获取用户信息', { userId: this.currentUser?.id });
       return this.currentUser;
     }
 
     try {
+      // 防御性检查：确保 storage 可用
+      if (!storage || typeof storage.get !== 'function') {
+        console.warn('[Auth] storage 不可用，返回默认用户信息');
+        return this.getDefaultUserInfo();
+      }
+
       const userInfo = await storage.get(this.userInfoKey);
-      console.log('从存储获取用户信息', {
+      console.log('[Auth] 从存储获取用户信息', {
         hasUserInfo: !!userInfo,
         userId: userInfo?.id,
         key: this.userInfoKey,
       });
+
+      // 如果没有用户信息，返回默认值而不是 null
+      if (!userInfo) {
+        console.warn('[Auth] 用户信息为空，返回默认值');
+        return this.getDefaultUserInfo();
+      }
+
       this.currentUser = userInfo;
       return userInfo;
     } catch (error) {
-      console.error('❌ 获取用户信息失败', error);
-      return null;
+      console.error('[Auth] 获取用户信息失败，返回默认值', error);
+      // 返回默认用户信息，而不是 null，确保不会导致后续调用出错
+      return this.getDefaultUserInfo();
     }
+  }
+
+  /**
+   * 获取默认用户信息
+   */
+  getDefaultUserInfo() {
+    return {
+      id: null,
+      nickName: '游客',
+      avatarUrl: '/assets/images/default-avatar.png',
+      role: 'student',
+    };
   }
 
   /**
@@ -894,10 +921,16 @@ class AuthManager {
    */
   getUserInfoCacheTime() {
     try {
+      // 防御性检查：确保 wx.getStorageSync 可用
+      if (!wx || typeof wx.getStorageSync !== 'function') {
+        console.warn('[Auth] wx.getStorageSync 不可用');
+        return 0;
+      }
+
       const userInfo = wx.getStorageSync('userInfo');
       return userInfo?.lastUpdated || 0;
     } catch (error) {
-      console.error('获取缓存时间失败', error);
+      console.error('[Auth] 获取缓存时间失败', error);
       return 0;
     }
   }
