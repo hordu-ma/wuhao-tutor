@@ -16,7 +16,7 @@ class TabBarManager {
    * 初始化TabBar管理器
    */
   async initTabBar() {
-    console.log('🚀 初始化TabBar管理器（简化版）');
+    console.log('🚀 初始化TabBar管理器');
 
     try {
       const isLoggedIn = await authManager.isLoggedIn();
@@ -24,6 +24,9 @@ class TabBarManager {
       this.isInitialized = true;
 
       console.log(`📱 TabBar初始化完成 - 登录状态: ${isLoggedIn}`);
+
+      // 现在所有5个TabBar项目都在app.json中配置，无需动态修改
+      console.log('📱 TabBar配置已完成，所有功能模块已显示');
 
       return { success: true, isLoggedIn };
     } catch (error) {
@@ -41,9 +44,15 @@ class TabBarManager {
     this.isLoggedIn = isLoggedIn;
 
     if (isLoggedIn) {
-      console.log('✅ 用户已登录，可以访问所有功能');
+      console.log('✅ 用户已登录，可以访问所有TabBar功能');
+      // 显示成功提示
+      wx.showToast({
+        title: '登录成功！',
+        icon: 'success',
+        duration: 2000,
+      });
     } else {
-      console.log('ℹ️ 用户未登录，部分功能受限');
+      console.log('ℹ️ 用户未登录，点击需要登录的TabBar项目时会提示');
     }
 
     return { success: true, isLoggedIn };

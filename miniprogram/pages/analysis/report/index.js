@@ -1,5 +1,6 @@
 // 学习报告页面逻辑
 const api = require('../../../api/index.js');
+const { authManager } = require('../../../utils/auth.js');
 import * as echarts from '../../../components/ec-canvas/echarts';
 
 // 难度等级映射
@@ -94,8 +95,32 @@ Page({
   /**
    * 生命周期函数--监听页面加载
    */
-  onLoad(options) {
+  async onLoad(options) {
     console.log('学习报告页面加载');
+
+    // 检查登录状态
+    const isLoggedIn = await authManager.isLoggedIn();
+    if (!isLoggedIn) {
+      console.log('用户未登录，跳转到登录页面');
+      wx.showModal({
+        title: '需要登录',
+        content: '查看学习报告需要先登录账户',
+        success(res) {
+          if (res.confirm) {
+            wx.navigateTo({
+              url: '/pages/login/index',
+            });
+          } else {
+            // 用户取消，返回首页
+            wx.switchTab({
+              url: '/pages/index/index',
+            });
+          }
+        },
+      });
+      return;
+    }
+
     this.initSubjectChartComponent();
     this.initKnowledgeChartComponent();
     this.loadAnalyticsData();
@@ -182,7 +207,7 @@ Page({
    */
   processAnalyticsData(analyticsData) {
     const { overview, knowledge, progress } = analyticsData;
-    
+
     // 处理概览数据
     const processedOverview = {
       total_questions: overview?.total_questions || 0,
@@ -193,10 +218,12 @@ Page({
     };
 
     // 处理学科统计数据
-    const subjectStats = overview?.subject_stats ? overview.subject_stats.map(item => ({
-      ...item,
-      subject_name: SUBJECT_MAP[item.subject] || item.subject,
-    })) : [];
+    const subjectStats = overview?.subject_stats
+      ? overview.subject_stats.map(item => ({
+          ...item,
+          subject_name: SUBJECT_MAP[item.subject] || item.subject,
+        }))
+      : [];
 
     // 处理知识点数据
     const knowledgePoints = knowledge?.knowledge_points || [];
@@ -256,17 +283,19 @@ Page({
         analysis: [
           { type: 'visual', name: '视觉型', percentage: 65 },
           { type: 'auditory', name: '听觉型', percentage: 25 },
-          { type: 'kinesthetic', name: '动觉型', percentage: 10 }
+          { type: 'kinesthetic', name: '动觉型', percentage: 10 },
         ],
-        description: '您偏向于视觉学习，建议多使用图表、思维导图等方式学习。'
+        description: '您偏向于视觉学习，建议多使用图表、思维导图等方式学习。',
       },
 
       // 知识点掌握情况
-      knowledge_mastery: overview?.subject_stats ? overview.subject_stats.map(subject => ({
-        subject: subject.subject_name,
-        mastery_rate: Math.round((subject.avg_difficulty || 0.5) * 100),
-        points: this.generateKnowledgePoints(subject)
-      })) : [],
+      knowledge_mastery: overview?.subject_stats
+        ? overview.subject_stats.map(subject => ({
+            subject: subject.subject_name,
+            mastery_rate: Math.round((subject.avg_difficulty || 0.5) * 100),
+            points: this.generateKnowledgePoints(subject),
+          }))
+        : [],
 
       // 学习行为分析
       behavior_analysis: {
@@ -276,24 +305,24 @@ Page({
             value: `${overview?.total_sessions || 0}次`,
             icon: 'fire-o',
             trend: 15,
-            trend_text: '较上周提升15%'
+            trend_text: '较上周提升15%',
           },
           {
             name: '学习专注度',
             value: `${Math.round((overview?.avg_session_length || 30) / 60)}分钟`,
             icon: 'clock-o',
             trend: 0,
-            trend_text: '保持稳定'
+            trend_text: '保持稳定',
           },
           {
             name: '问题解决能力',
             value: `${Math.round((overview?.avg_rating || 0) * 20)}分`,
             icon: 'bulb-o',
             trend: 8,
-            trend_text: '较上周提升8%'
-          }
+            trend_text: '较上周提升8%',
+          },
         ],
-        patterns: ['夜间学习型', '深度思考型', '问答互动型']
+        patterns: ['夜间学习型', '深度思考型', '问答互动型'],
       },
 
       // 个性化改进建议
@@ -305,8 +334,8 @@ Page({
           suggestions: overview?.improvement_suggestions || [
             '建议增加练习频率，巩固薄弱知识点',
             '可以尝试制作知识点思维导图',
-            '定期回顾错题，避免重复犯错'
-          ]
+            '定期回顾错题，避免重复犯错',
+          ],
         },
         {
           category: '学习习惯',
@@ -314,9 +343,9 @@ Page({
           priority: 'medium',
           suggestions: [
             '保持规律的学习时间，建议每天固定时段学习',
-            '适当休息，避免长时间连续学习导致疲劳'
-          ]
-        }
+            '适当休息，避免长时间连续学习导致疲劳',
+          ],
+        },
       ],
 
       // 进步跟踪
@@ -326,14 +355,10 @@ Page({
         highlights: [
           '数学成绩提升明显，继续保持',
           '问答互动积极，学习态度优秀',
-          '错题复习及时，学习方法得当'
+          '错题复习及时，学习方法得当',
         ],
-        next_goals: [
-          '完成本周学习计划',
-          '巩固薄弱知识点',
-          '提高解题速度和准确率'
-        ]
-      }
+        next_goals: ['完成本周学习计划', '巩固薄弱知识点', '提高解题速度和准确率'],
+      },
     };
   },
 
@@ -343,27 +368,29 @@ Page({
   generateKnowledgePoints(subject) {
     // 根据学科生成相应的知识点
     const knowledgeMap = {
-      '数学': [
+      数学: [
         { name: '函数与方程', level: 'high', score: 88 },
         { name: '几何图形', level: 'medium', score: 72 },
-        { name: '概率统计', level: 'low', score: 56 }
+        { name: '概率统计', level: 'low', score: 56 },
       ],
-      '语文': [
+      语文: [
         { name: '阅读理解', level: 'high', score: 85 },
         { name: '作文写作', level: 'medium', score: 75 },
-        { name: '古诗词', level: 'low', score: 60 }
+        { name: '古诗词', level: 'low', score: 60 },
       ],
-      '英语': [
+      英语: [
         { name: '语法', level: 'high', score: 90 },
         { name: '词汇', level: 'medium', score: 78 },
-        { name: '听力', level: 'low', score: 65 }
-      ]
+        { name: '听力', level: 'low', score: 65 },
+      ],
     };
 
-    return knowledgeMap[subject.subject_name] || [
-      { name: '基础知识', level: 'medium', score: 75 },
-      { name: '应用能力', level: 'medium', score: 70 }
-    ];
+    return (
+      knowledgeMap[subject.subject_name] || [
+        { name: '基础知识', level: 'medium', score: 75 },
+        { name: '应用能力', level: 'medium', score: 70 },
+      ]
+    );
   },
 
   /**
@@ -905,13 +932,13 @@ Page({
    */
   onExportReport() {
     wx.showLoading({ title: '导出中...' });
-    
+
     // 模拟导出过程
     setTimeout(() => {
       wx.hideLoading();
       wx.showToast({
         title: '导出功能开发中',
-        icon: 'none'
+        icon: 'none',
       });
     }, 1500);
   },
