@@ -9,7 +9,6 @@ Page({
     hasUserInfo: false,
     canIUseGetUserProfile: !!wx.getUserProfile,
     role: null,
-    quickActions: [],
     notifications: [],
     unreadNotificationCount: 0, // 未读消息数量
     recommendations: [], // 个性化推荐内容
@@ -42,7 +41,6 @@ Page({
         loading: false,
         userInfo: { nickName: '游客' },
         role: null,
-        quickActions: [],
       });
     }
   },
@@ -162,9 +160,6 @@ Page({
 
         console.log('✅ 用户信息设置成功');
 
-        // 初始化快捷操作
-        this.initQuickActions(role);
-
         // 加载用户数据
         await this.loadUserData();
       } else {
@@ -176,9 +171,6 @@ Page({
           hasUserInfo: !!userInfo,
           role: role || 'student',
         });
-
-        // 初始化默认快捷操作
-        this.initQuickActions(role || 'student');
       }
     } catch (error) {
       console.error('❌ 初始化已登录用户失败:', error);
@@ -190,8 +182,6 @@ Page({
         hasUserInfo: false,
         role: 'student',
       });
-
-      this.initQuickActions('student');
     }
   },
 
@@ -203,22 +193,6 @@ Page({
       userInfo: null,
       hasUserInfo: false,
       role: null,
-      quickActions: [
-        {
-          id: 'login',
-          title: '立即登录',
-          icon: '/assets/icons/login.png',
-          path: '/pages/login/index',
-          color: '#1890ff',
-        },
-        {
-          id: 'demo',
-          title: '体验演示',
-          icon: '/assets/icons/demo.png',
-          action: 'showDemo',
-          color: '#52c41a',
-        },
-      ],
       notifications: [
         {
           id: 'welcome',
@@ -292,166 +266,6 @@ Page({
         duration: 1500,
       });
     }
-  },
-
-  /**
-   * 初始化快捷操作
-   */
-  initQuickActions(role) {
-    let actions = [];
-
-    switch (role) {
-      case 'student':
-        actions = [
-          {
-            id: 'homework',
-            title: '作业',
-            icon: '/assets/icons/homework.png',
-            path: '/pages/homework/list/index',
-            color: '#1890ff',
-            type: 'navigate',
-          },
-          {
-            id: 'quick_homework',
-            title: '快速提交',
-            icon: '/assets/icons/homework.png',
-            action: 'quickSubmitHomework',
-            color: '#52c41a',
-            type: 'action',
-          },
-          {
-            id: 'chat',
-            title: '问答',
-            icon: '/assets/icons/chat.png',
-            path: '/pages/chat/index/index',
-            color: '#faad14',
-            type: 'navigate',
-          },
-          {
-            id: 'quick_chat',
-            title: '快速提问',
-            icon: '/assets/icons/chat.png',
-            action: 'quickAskQuestion',
-            color: '#722ed1',
-            type: 'action',
-          },
-          {
-            id: 'report',
-            title: '报告',
-            icon: '/assets/icons/report.png',
-            path: '/pages/analysis/report/index',
-            color: '#ff7875',
-            type: 'navigate',
-          },
-          {
-            id: 'profile',
-            title: '我的',
-            icon: '/assets/icons/profile.png',
-            path: '/pages/profile/index/index',
-            color: '#13c2c2',
-            type: 'navigate',
-          },
-        ];
-        break;
-      case 'parent':
-        actions = [
-          {
-            id: 'progress',
-            title: '学情',
-            icon: '/assets/icons/report.png',
-            path: '/pages/analysis/progress/index',
-            color: '#1890ff',
-            type: 'navigate',
-          },
-          {
-            id: 'homework',
-            title: '作业',
-            icon: '/assets/icons/homework.png',
-            path: '/pages/homework/list/index',
-            color: '#52c41a',
-            type: 'navigate',
-          },
-          {
-            id: 'quick_message',
-            title: '快速消息',
-            icon: '/assets/icons/chat.png',
-            action: 'quickSendMessage',
-            color: '#faad14',
-            type: 'action',
-          },
-          {
-            id: 'report',
-            title: '报告',
-            icon: '/assets/icons/report.png',
-            path: '/pages/analysis/report/index',
-            color: '#ff7875',
-            type: 'navigate',
-          },
-          {
-            id: 'settings',
-            title: '设置',
-            icon: '/assets/icons/profile.png',
-            path: '/pages/profile/settings/index',
-            color: '#722ed1',
-            type: 'navigate',
-          },
-        ];
-        break;
-      case 'teacher':
-        actions = [
-          {
-            id: 'homework',
-            title: '作业管理',
-            icon: '/assets/icons/homework.png',
-            path: '/pages/homework/list/index',
-            color: '#1890ff',
-            type: 'navigate',
-          },
-          {
-            id: 'quick_grade',
-            title: '快速批改',
-            icon: '/assets/icons/homework.png',
-            action: 'quickGradeHomework',
-            color: '#52c41a',
-            type: 'action',
-          },
-          {
-            id: 'analysis',
-            title: '班级分析',
-            icon: '/assets/icons/report.png',
-            path: '/pages/analysis/class/index',
-            color: '#faad14',
-            type: 'navigate',
-          },
-          {
-            id: 'students',
-            title: '学生管理',
-            icon: '/assets/icons/profile.png',
-            path: '/pages/students/list/index',
-            color: '#ff7875',
-            type: 'navigate',
-          },
-          {
-            id: 'quick_announce',
-            title: '快速通知',
-            icon: '/assets/icons/chat.png',
-            action: 'quickSendAnnouncement',
-            color: '#722ed1',
-            type: 'action',
-          },
-          {
-            id: 'profile',
-            title: '个人中心',
-            icon: '/assets/icons/profile.png',
-            path: '/pages/profile/index/index',
-            color: '#13c2c2',
-            type: 'navigate',
-          },
-        ];
-        break;
-    }
-
-    this.setData({ quickActions: actions });
   },
 
   /**
@@ -837,40 +651,6 @@ Page({
   },
 
   /**
-   * 点击快捷操作
-   */
-  onQuickActionTap(e) {
-    const { action } = e.currentTarget.dataset;
-    if (!action) return;
-
-    console.log('点击快捷操作:', action);
-
-    switch (action.type) {
-      case 'navigate':
-        // 页面跳转
-        wx.navigateTo({
-          url: action.path,
-          fail: () => {
-            wx.switchTab({
-              url: action.path,
-            });
-          },
-        });
-        break;
-      case 'action':
-        // 执行特定操作
-        if (this[action.action]) {
-          this[action.action]();
-        } else {
-          console.warn('未找到操作方法:', action.action);
-        }
-        break;
-      default:
-        console.warn('未知的操作类型:', action.type);
-    }
-  },
-
-  /**
    * 点击通知
    */
   onNotificationTap(e) {
@@ -1110,160 +890,6 @@ Page({
   },
 
   // ============ 快捷操作方法 ============
-
-  /**
-   * 快速提交作业
-   */
-  quickSubmitHomework() {
-    wx.showActionSheet({
-      itemList: ['拍照提交', '选择图片', '文字提交'],
-      success: res => {
-        switch (res.tapIndex) {
-          case 0:
-            this.takePhotoForHomework();
-            break;
-          case 1:
-            this.chooseImageForHomework();
-            break;
-          case 2:
-            this.textSubmitHomework();
-            break;
-        }
-      },
-    });
-  },
-
-  /**
-   * 拍照提交作业
-   */
-  takePhotoForHomework() {
-    wx.chooseMedia({
-      count: 1,
-      mediaType: ['image'],
-      sourceType: ['camera'],
-      success: res => {
-        console.log('拍照作业:', res);
-        wx.navigateTo({
-          url: `/pages/homework/submit/index?images=${JSON.stringify(res.tempFiles.map(f => f.tempFilePath))}`,
-        });
-      },
-      fail: err => {
-        console.error('拍照失败:', err);
-        wx.showToast({
-          title: '拍照失败',
-          icon: 'error',
-        });
-      },
-    });
-  },
-
-  /**
-   * 选择图片提交作业
-   */
-  chooseImageForHomework() {
-    wx.chooseMedia({
-      count: 9,
-      mediaType: ['image'],
-      sourceType: ['album'],
-      success: res => {
-        console.log('选择图片作业:', res);
-        wx.navigateTo({
-          url: `/pages/homework/submit/index?images=${JSON.stringify(res.tempFiles.map(f => f.tempFilePath))}`,
-        });
-      },
-      fail: err => {
-        console.error('选择图片失败:', err);
-        wx.showToast({
-          title: '选择图片失败',
-          icon: 'error',
-        });
-      },
-    });
-  },
-
-  /**
-   * 文字提交作业
-   */
-  textSubmitHomework() {
-    wx.navigateTo({
-      url: '/pages/homework/submit/index?type=text',
-    });
-  },
-
-  /**
-   * 快速提问
-   */
-  quickAskQuestion() {
-    wx.showModal({
-      title: '快速提问',
-      placeholderText: '请输入您的问题...',
-      editable: true,
-      confirmText: '提问',
-      success: res => {
-        if (res.confirm && res.content) {
-          wx.navigateTo({
-            url: `/pages/chat/index/index?question=${encodeURIComponent(res.content)}`,
-          });
-        }
-      },
-    });
-  },
-
-  /**
-   * 快速发送消息 (家长功能)
-   */
-  quickSendMessage() {
-    wx.showActionSheet({
-      itemList: ['联系老师', '查看班群消息', '发送学习反馈'],
-      success: res => {
-        switch (res.tapIndex) {
-          case 0:
-            wx.navigateTo({
-              url: '/pages/messages/teacher/index',
-            });
-            break;
-          case 1:
-            wx.navigateTo({
-              url: '/pages/messages/group/index',
-            });
-            break;
-          case 2:
-            wx.navigateTo({
-              url: '/pages/feedback/create/index',
-            });
-            break;
-        }
-      },
-    });
-  },
-
-  /**
-   * 快速批改作业 (教师功能)
-   */
-  quickGradeHomework() {
-    wx.navigateTo({
-      url: '/pages/homework/correction/pending/index',
-    });
-  },
-
-  /**
-   * 快速发送通知 (教师功能)
-   */
-  quickSendAnnouncement() {
-    wx.showModal({
-      title: '快速通知',
-      placeholderText: '请输入通知内容...',
-      editable: true,
-      confirmText: '发送',
-      success: res => {
-        if (res.confirm && res.content) {
-          wx.navigateTo({
-            url: `/pages/announcements/create/index?content=${encodeURIComponent(res.content)}`,
-          });
-        }
-      },
-    });
-  },
 
   /**
    * 测试登录

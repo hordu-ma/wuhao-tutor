@@ -60,27 +60,6 @@
       </view>
     </view>
 
-    <!-- 快捷操作区域 -->
-    <view class="quick-actions-section">
-      <view class="section-header">
-        <text class="section-title font-bold">快捷操作</text>
-      </view>
-      <view class="quick-actions-grid">
-        <view
-          class="quick-action-item"
-          wx:for="{{quickActions}}"
-          wx:key="id"
-          data-action="{{item}}"
-          bind:tap="onQuickActionTap"
-        >
-          <view class="action-icon-wrapper" style="background-color: {{item.color}}20">
-            <image class="action-icon" src="{{item.icon}}" mode="aspectFit" />
-          </view>
-          <text class="action-title">{{item.title}}</text>
-        </view>
-      </view>
-    </view>
-
     <!-- 消息通知区域 -->
     <view class="notifications-section" wx:if="{{notifications.length > 0}}">
       <view class="section-header flex-between">
