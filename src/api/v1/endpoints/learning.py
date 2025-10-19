@@ -6,6 +6,7 @@
 import logging
 from datetime import datetime
 from typing import Any, Dict, Optional
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi import status as http_status
@@ -646,7 +647,7 @@ async def search_questions(
 
 @router.get("/sessions/{id}/history", summary="获取会话问答历史")
 async def get_session_history(
-    id: str,
+    id: UUID,
     page: int = Query(1, ge=1, description="页码"),
     size: int = Query(20, ge=1, le=100, description="每页大小"),
     current_user_id: str = Depends(get_current_user_id),
@@ -657,7 +658,7 @@ async def get_session_history(
         learning_service = get_learning_service(db)
 
         # 验证会话归属
-        session = await learning_service.session_repo.get_by_id(id)
+        session = await learning_service.session_repo.get_by_id(str(id))
         if not session:
             raise HTTPException(
                 status_code=http_status.HTTP_404_NOT_FOUND, detail="会话不存在"
@@ -668,7 +669,7 @@ async def get_session_history(
                 status_code=http_status.HTTP_404_NOT_FOUND, detail="无权限访问该会话"
             )
 
-        query = QuestionHistoryQuery(session_id=id, page=page, size=size)
+        query = QuestionHistoryQuery(session_id=str(id), page=page, size=size)
 
         result = await learning_service.get_question_history(current_user_id, query)
 
