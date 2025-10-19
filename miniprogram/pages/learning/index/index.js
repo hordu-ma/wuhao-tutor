@@ -289,32 +289,27 @@ Page({
    */
   async initSession() {
     try {
-      // 尝试获取本地存储的会话ID
-      let sessionId = wx.getStorageSync('chat_session_id');
+      // 强制清除旧的session，创建新的
+      // TODO: 这是临时解决方案，生产环境应该保留有效session
+      console.log('强制清除旧session，创建新的会话...');
+      wx.removeStorageSync('chat_session_id');
 
-      // 检查是否为有效的UUID格式，如果不是则清除旧格式的ID
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      if (sessionId && !uuidRegex.test(sessionId)) {
-        console.log('清除旧格式的session ID:', sessionId);
-        wx.removeStorageSync('chat_session_id');
-        sessionId = '';
-      }
+      // 创建新会话
+      const sessionResponse = await api.learning.createSession({
+        title: '新对话',
+        context_enabled: true,
+      });
 
-      if (!sessionId) {
-        // 如果没有会话ID，创建新会话
-        const sessionResponse = await api.learning.createSession({
-          title: '新对话',
-          context_enabled: true,
-        });
-
-        if (sessionResponse.success) {
-          sessionId = sessionResponse.data.id;
-          wx.setStorageSync('chat_session_id', sessionId);
-        } else {
-          // 如果创建会话失败，回退到本地生成
-          sessionId = this.generateSessionId();
-          wx.setStorageSync('chat_session_id', sessionId);
-        }
+      let sessionId;
+      if (sessionResponse.success) {
+        sessionId = sessionResponse.data.id;
+        wx.setStorageSync('chat_session_id', sessionId);
+        console.log('新会话创建成功:', sessionId);
+      } else {
+        // 如果创建会话失败，回退到本地生成
+        sessionId = this.generateSessionId();
+        wx.setStorageSync('chat_session_id', sessionId);
+        console.log('使用本地生成的sessionId:', sessionId);
       }
 
       this.setData({ sessionId });
