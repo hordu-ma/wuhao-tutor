@@ -436,6 +436,12 @@ Page({
         return;
       }
 
+      // 调试：在调用API前验证sessionId
+      console.log('调试 - loadHistoryMessages开始:');
+      console.log('  this.data.sessionId:', this.data.sessionId);
+      console.log('  长度:', this.data.sessionId.length);
+      console.log('  类型:', typeof this.data.sessionId);
+
       // 使用learning API而不是chat API
       const response = await api.learning.getMessages({
         sessionId: this.data.sessionId,

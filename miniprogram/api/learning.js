@@ -492,8 +492,18 @@ const learningAPI = {
       return Promise.reject(new Error('缺少会话ID'));
     }
 
+    // 调试：验证sessionId在API调用前的状态
+    console.log('调试 - getMessages API调用:');
+    console.log('  接收到的sessionId:', sessionId);
+    console.log('  sessionId长度:', sessionId.length);
+    console.log('  sessionId类型:', typeof sessionId);
+
+    const url = `api/v1/learning/sessions/${sessionId}/history`;
+    console.log('  构建的URL:', url);
+    console.log('  URL长度:', url.length);
+
     return request.get(
-      `api/v1/learning/sessions/${sessionId}/history`,
+      url,
       { page, size },
       {
         showLoading: false,
