@@ -406,7 +406,7 @@ Page({
    * 生成会话ID
    */
   generateSessionId() {
-    return utils.uuid();
+    return utils.string.uuid();
   },
 
   /**
