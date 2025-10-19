@@ -78,18 +78,7 @@
     "uploadFile": 10000,
     "connectSocket": 10000
   },
-  "permission": {
-    "scope.userLocation": {
-      "desc": "您的位置信息将用于为您提供更精准的学习服务"
-    }
-  },
   "requiredBackgroundModes": ["audio", "backgroundFetch"],
-  "requiredPrivateInfos": [
-    "getFuzzyLocation",
-    "chooseLocation",
-    "chooseAddress",
-    "choosePoi"
-  ],
   "preloadRule": {
     "pages/learning/index/index": {
       "network": "all",

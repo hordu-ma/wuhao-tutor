@@ -11,19 +11,71 @@
         "type": "file"
       },
       {
+        "value": ".prettierignore",
+        "type": "file"
+      },
+      {
+        "value": ".gitignore",
+        "type": "file"
+      },
+      {
         "value": "tsconfig.json",
         "type": "file"
       },
       {
-        "value": "node_modules",
-        "type": "folder"
+        "value": "README.md",
+        "type": "file"
       },
       {
-        "value": ".git",
-        "type": "folder"
+        "value": "TROUBLESHOOTING.md",
+        "type": "file"
+      },
+      {
+        "value": "package.json",
+        "type": "file"
       },
       {
         "value": "package-lock.json",
+        "type": "file"
+      },
+      {
+        "value": "*.sh",
+        "type": "glob"
+      },
+      {
+        "value": "*.py",
+        "type": "glob"
+      },
+      {
+        "value": "node_modules/",
+        "type": "folder"
+      },
+      {
+        "value": ".git/",
+        "type": "folder"
+      },
+      {
+        "value": "docs/",
+        "type": "folder"
+      },
+      {
+        "value": "examples/",
+        "type": "folder"
+      },
+      {
+        "value": "tests/",
+        "type": "folder"
+      },
+      {
+        "value": "cloudbase/",
+        "type": "folder"
+      },
+      {
+        "value": "workers/",
+        "type": "folder"
+      },
+      {
+        "value": "project.config.json.backup",
         "type": "file"
       }
     ],
@@ -94,7 +146,7 @@
   "packNpmRelationList": [],
   "cloudfunctionTemplateRoot": "cloudfunctionTemplate/",
   "downloadDomain": ["https://t.alicdn.com", "https://at.alicdn.com"],
-  "requestDomain": ["https://121.199.173.244"],
+  "requestDomain": ["https://www.horsduroot.com"],
   "network": {
     "request": {
       "timeout": 10000
