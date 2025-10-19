@@ -319,6 +319,17 @@ Page({
 
       this.setData({ sessionId });
 
+      // 调试：验证存储后的 sessionId
+      console.log('调试 - setData 后的 sessionId:');
+      console.log('  设置的值:', sessionId);
+      console.log('  data中的值:', this.data.sessionId);
+      console.log('  长度比较:', sessionId.length, 'vs', this.data.sessionId?.length);
+
+      // 同时验证本地存储
+      const storedId = wx.getStorageSync('chat_session_id');
+      console.log('  存储中的值:', storedId);
+      console.log('  存储值长度:', storedId?.length);
+
       // 恢复草稿
       const draft = wx.getStorageSync('chat_draft');
       if (draft) {
@@ -406,7 +417,12 @@ Page({
    * 生成会话ID
    */
   generateSessionId() {
-    return utils.string.uuid();
+    const uuid = utils.string.uuid();
+    console.log('调试 - 生成新的 sessionId:');
+    console.log('  生成的UUID:', uuid);
+    console.log('  长度:', uuid.length);
+    console.log('  类型:', typeof uuid);
+    return uuid;
   },
 
   /**
@@ -436,9 +452,20 @@ Page({
         return;
       }
 
+      // 调试：验证 sessionId 完整性
+      const sessionId = this.data.sessionId;
+      console.log('调试 - sessionId 详情:');
+      console.log('  原始值:', sessionId);
+      console.log('  长度:', sessionId.length);
+      console.log('  类型:', typeof sessionId);
+      console.log(
+        '  是否为有效UUID:',
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sessionId),
+      );
+
       // 使用learning API而不是chat API
       const response = await api.learning.getMessages({
-        sessionId: this.data.sessionId,
+        sessionId: sessionId,
         page: 1,
         size: 20,
       });
