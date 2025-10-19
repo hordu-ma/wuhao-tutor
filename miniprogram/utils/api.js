@@ -7,6 +7,7 @@ const storage = require('./storage.js');
 const { networkMonitor } = require('./network-monitor.js');
 const { cacheManager, CacheStrategy } = require('./cache-manager.js');
 const { requestQueue, Priority } = require('./request-queue.js');
+const { btoa } = require('./base64.js');
 
 /**
  * 网络错误类型枚举
@@ -513,6 +514,7 @@ class EnhancedApiClient {
     const url = config.url;
     const params = config.data ? JSON.stringify(config.data) : '';
     const userRole = auth.getUserRole?.() || 'anonymous';
+    // 使用微信小程序兼容的 btoa 替代浏览器 API
     return `api_${userRole}_${btoa(url + params).replace(/[^a-zA-Z0-9]/g, '')}`;
   }
 

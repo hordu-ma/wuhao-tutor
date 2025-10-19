@@ -1,7 +1,6 @@
 // 学习报告页面逻辑
 const api = require('../../../api/index.js');
 const { authManager } = require('../../../utils/auth.js');
-import * as echarts from '../../../components/ec-canvas/echarts';
 
 // 难度等级映射
 const DIFFICULTY_MAP = {
@@ -28,9 +27,6 @@ const SUBJECT_MAP = {
   other: '其他',
 };
 
-let subjectChart = null;
-let knowledgeChart = null;
-
 Page({
   data: {
     // API状态管理
@@ -49,15 +45,7 @@ Page({
     loading: true,
     hasData: false,
 
-    // ECharts 配置
-    subjectChartEc: {
-      lazyLoad: true,
-    },
-    knowledgeChartEc: {
-      lazyLoad: true,
-    },
-
-    // 知识点数据
+    // 知识点数据（保留用于诊断组件）
     knowledgePoints: [],
 
     // 学情分析数据
@@ -87,9 +75,7 @@ Page({
 
     // 时间范围文本
     timeRangeText: '30天',
-
-    // 学情诊断报告数据
-    reportData: null,
+    // 学情诊断报告数据已移除，保持简洁显示
   },
 
   /**
@@ -121,8 +107,6 @@ Page({
       return;
     }
 
-    this.initSubjectChartComponent();
-    this.initKnowledgeChartComponent();
     this.loadAnalyticsData();
   },
 
@@ -150,6 +134,7 @@ Page({
     console.log('开始加载学情分析数据，时间范围:', this.data.timeRange);
 
     this.setData({
+      loading: true,
       apiStatus: 'loading',
     });
 
@@ -189,6 +174,7 @@ Page({
       this.setData({
         apiStatus: 'error',
         errorMessage: error.message || '加载失败，请重试',
+        loading: false, // 关键：错误时也要结束加载状态
       });
     }
   },
@@ -218,6 +204,11 @@ Page({
   processAnalyticsData(analyticsData) {
     const { overview, knowledge, progress } = analyticsData;
 
+    console.log('[DEBUG] processAnalyticsData 被调用');
+    console.log('[DEBUG] overview:', overview);
+    console.log('[DEBUG] knowledge:', knowledge);
+    console.log('[DEBUG] progress:', progress);
+
     // 处理概览数据
     const processedOverview = {
       total_questions: overview?.total_questions || 0,
@@ -246,8 +237,11 @@ Page({
 
     const hasData = processedOverview.total_questions > 0 || processedOverview.total_sessions > 0;
 
-    // 生成学情诊断报告数据
-    const reportData = this.generateDiagnosisReport(analyticsData);
+    console.log('[DEBUG] hasData:', hasData);
+    console.log('[DEBUG] total_questions:', processedOverview.total_questions);
+    console.log('[DEBUG] total_sessions:', processedOverview.total_sessions);
+
+    // 学情诊断报告组件已移除，不再生成 reportData
 
     this.setData({
       analytics: {
@@ -262,145 +256,17 @@ Page({
       knowledgePoints,
       learningPattern,
       formattedUpdateTime,
-      reportData, // 新增学情诊断报告数据
       apiStatus: hasData ? 'success' : 'empty',
       hasData,
+      loading: false, // 关键：结束加载状态
     });
 
-    // 如果有数据，初始化图表
-    if (hasData && subjectStats.length > 0) {
-      this.initSubjectChart();
-      this.initKnowledgeChart();
-    }
-  },
+    console.log('[DEBUG] setData 完成，当前状态:');
+    console.log('[DEBUG] - loading:', false);
+    console.log('[DEBUG] - hasData:', hasData);
+    console.log('[DEBUG] - apiStatus:', hasData ? 'success' : 'empty');
 
-  /**
-   * 生成学情诊断报告数据
-   */
-  generateDiagnosisReport(analyticsData) {
-    const { overview, knowledge, progress } = analyticsData;
-    const currentUser = wx.getStorageSync('userInfo') || {};
-
-    return {
-      student_name: currentUser.nickname || '同学',
-      time_range: this.data.timeRangeText,
-      overall_score: Math.round((overview?.avg_rating || 0) * 20), // 转换为100分制
-      generated_time: new Date().toLocaleString('zh-CN'),
-      data_range: this.getTimeRangeDays(),
-
-      // 学习风格分析
-      learning_style: {
-        analysis: [
-          { type: 'visual', name: '视觉型', percentage: 65 },
-          { type: 'auditory', name: '听觉型', percentage: 25 },
-          { type: 'kinesthetic', name: '动觉型', percentage: 10 },
-        ],
-        description: '您偏向于视觉学习，建议多使用图表、思维导图等方式学习。',
-      },
-
-      // 知识点掌握情况
-      knowledge_mastery: overview?.subject_stats
-        ? overview.subject_stats.map(subject => ({
-            subject: subject.subject_name,
-            mastery_rate: Math.round((subject.avg_difficulty || 0.5) * 100),
-            points: this.generateKnowledgePoints(subject),
-          }))
-        : [],
-
-      // 学习行为分析
-      behavior_analysis: {
-        metrics: [
-          {
-            name: '学习积极性',
-            value: `${overview?.total_sessions || 0}次`,
-            icon: 'fire-o',
-            trend: 15,
-            trend_text: '较上周提升15%',
-          },
-          {
-            name: '学习专注度',
-            value: `${Math.round((overview?.avg_session_length || 30) / 60)}分钟`,
-            icon: 'clock-o',
-            trend: 0,
-            trend_text: '保持稳定',
-          },
-          {
-            name: '问题解决能力',
-            value: `${Math.round((overview?.avg_rating || 0) * 20)}分`,
-            icon: 'bulb-o',
-            trend: 8,
-            trend_text: '较上周提升8%',
-          },
-        ],
-        patterns: ['夜间学习型', '深度思考型', '问答互动型'],
-      },
-
-      // 个性化改进建议
-      improvement_suggestions: [
-        {
-          category: '学习方法',
-          icon: 'guide-o',
-          priority: 'high',
-          suggestions: overview?.improvement_suggestions || [
-            '建议增加练习频率，巩固薄弱知识点',
-            '可以尝试制作知识点思维导图',
-            '定期回顾错题，避免重复犯错',
-          ],
-        },
-        {
-          category: '学习习惯',
-          icon: 'clock-o',
-          priority: 'medium',
-          suggestions: [
-            '保持规律的学习时间，建议每天固定时段学习',
-            '适当休息，避免长时间连续学习导致疲劳',
-          ],
-        },
-      ],
-
-      // 进步跟踪
-      progress_tracking: {
-        overall_trend: Math.round(Math.random() * 20 - 5), // 模拟进步趋势
-        consecutive_days: overview?.total_study_days || 0,
-        highlights: [
-          '数学成绩提升明显，继续保持',
-          '问答互动积极，学习态度优秀',
-          '错题复习及时，学习方法得当',
-        ],
-        next_goals: ['完成本周学习计划', '巩固薄弱知识点', '提高解题速度和准确率'],
-      },
-    };
-  },
-
-  /**
-   * 生成知识点详情
-   */
-  generateKnowledgePoints(subject) {
-    // 根据学科生成相应的知识点
-    const knowledgeMap = {
-      数学: [
-        { name: '函数与方程', level: 'high', score: 88 },
-        { name: '几何图形', level: 'medium', score: 72 },
-        { name: '概率统计', level: 'low', score: 56 },
-      ],
-      语文: [
-        { name: '阅读理解', level: 'high', score: 85 },
-        { name: '作文写作', level: 'medium', score: 75 },
-        { name: '古诗词', level: 'low', score: 60 },
-      ],
-      英语: [
-        { name: '语法', level: 'high', score: 90 },
-        { name: '词汇', level: 'medium', score: 78 },
-        { name: '听力', level: 'low', score: 65 },
-      ],
-    };
-
-    return (
-      knowledgeMap[subject.subject_name] || [
-        { name: '基础知识', level: 'medium', score: 75 },
-        { name: '应用能力', level: 'medium', score: 70 },
-      ]
-    );
+    // 图表和诊断组件已移除，仅保留简洁的学习概览和学习模式
   },
 
   /**
@@ -492,268 +358,7 @@ Page({
     }
   },
 
-  /**
-   * 初始化知识点掉维图（新增）
-   */
-  initKnowledgeChart() {
-    if (!this.data.knowledgePoints || this.data.knowledgePoints.length === 0) {
-      console.log('没有知识点数据，跳过图表渲染');
-      return;
-    }
-
-    // 初始化知识点雷达图
-    this.initKnowledgeChartComponent();
-  },
-
-  /**
-   * 初始化知识点图表组件
-   */
-  initKnowledgeChartComponent() {
-    this.setData({
-      knowledgeChartEc: {
-        onInit: this.initKnowledgeChartCanvas.bind(this),
-      },
-    });
-  },
-
-  /**
-   * 知识点图表初始化回调
-   */
-  initKnowledgeChartCanvas(canvas, width, height, dpr) {
-    knowledgeChart = echarts.init(canvas, null, {
-      width: width,
-      height: height,
-      devicePixelRatio: dpr,
-    });
-
-    canvas.setChart(knowledgeChart);
-
-    // 如果有数据，立即配置图表
-    if (this.data.knowledgePoints && this.data.knowledgePoints.length > 0) {
-      this.updateKnowledgeChartData();
-    }
-
-    return knowledgeChart;
-  },
-
-  /**
-   * 更新知识点雷达图数据
-   */
-  updateKnowledgeChartData() {
-    if (!knowledgeChart || !this.data.knowledgePoints || this.data.knowledgePoints.length === 0) {
-      console.log('知识点图表实例未初始化或无数据');
-      return;
-    }
-
-    const knowledgePoints = this.data.knowledgePoints;
-    const indicator = knowledgePoints.map(point => ({
-      name: point.name,
-      max: 100,
-    }));
-
-    const radarData = knowledgePoints.map(point => point.mastery || point.value || 0);
-
-    const option = {
-      color: ['#667eea'],
-      tooltip: {
-        trigger: 'item',
-        confine: true,
-        formatter: function (params) {
-          if (params.value) {
-            return `${params.name}: ${Math.round(params.value)}%`;
-          }
-          return params.name;
-        },
-      },
-      radar: {
-        indicator: indicator,
-        shape: 'polygon',
-        splitNumber: 4,
-        radius: '60%',
-        name: {
-          textStyle: {
-            fontSize: 10,
-            color: '#666',
-          },
-        },
-        splitLine: {
-          lineStyle: {
-            color: '#e0e0e0',
-          },
-        },
-        splitArea: {
-          areaStyle: {
-            color: ['#ffffff', '#f5f7fa'],
-          },
-        },
-        axisLine: {
-          lineStyle: {
-            color: '#cccccc',
-          },
-        },
-      },
-      series: [
-        {
-          name: '知识点掌握度',
-          type: 'radar',
-          data: [
-            {
-              value: radarData,
-              name: '掌握度',
-              areaStyle: {
-                color: new echarts.graphic.RadialGradient(0.5, 0.5, 1, [
-                  { offset: 0, color: 'rgba(102, 126, 234, 0.3)' },
-                  { offset: 1, color: 'rgba(102, 126, 234, 0.05)' },
-                ]),
-              },
-              lineStyle: {
-                color: '#667eea',
-                width: 2,
-              },
-              symbol: 'circle',
-              symbolSize: 4,
-            },
-          ],
-        },
-      ],
-    };
-
-    knowledgeChart.setOption(option);
-  },
-
-  /**
-   * 初始化学科统计图表
-   */
-  initSubjectChart() {
-    if (!this.data.analytics.subject_stats || this.data.analytics.subject_stats.length === 0) {
-      console.log('没有学科统计数据，跳过图表渲染');
-      return;
-    }
-
-    console.log('初始化学科统计图表');
-
-    const subjectStats = this.data.analytics.subject_stats;
-    const subjectNames = subjectStats.map(item => item.subject_name);
-    const questionCounts = subjectStats.map(item => item.question_count);
-
-    if (subjectChart) {
-      // 更新图表数据
-      subjectChart.setOption({
-        xAxis: {
-          data: subjectNames,
-        },
-        series: [
-          {
-            data: questionCounts,
-          },
-        ],
-      });
-    }
-  },
-
-  /**
-   * 初始化图表组件
-   */
-  initSubjectChartComponent() {
-    this.setData({
-      subjectChartEc: {
-        onInit: this.initChart.bind(this),
-      },
-    });
-  },
-
-  /**
-   * 图表初始化回调
-   */
-  initChart(canvas, width, height, dpr) {
-    subjectChart = echarts.init(canvas, null, {
-      width: width,
-      height: height,
-      devicePixelRatio: dpr,
-    });
-
-    canvas.setChart(subjectChart);
-
-    // 设置初始配置
-    const option = {
-      color: ['#667eea', '#764ba2', '#4ecb73', '#ffa502', '#ff6b6b'],
-      tooltip: {
-        trigger: 'axis',
-        axisPointer: {
-          type: 'shadow',
-        },
-        confine: true,
-      },
-      grid: {
-        left: '10%',
-        right: '10%',
-        bottom: '15%',
-        top: '10%',
-        containLabel: true,
-      },
-      xAxis: {
-        type: 'category',
-        data: [],
-        axisLabel: {
-          interval: 0,
-          rotate: 45,
-          fontSize: 10,
-        },
-        axisLine: {
-          lineStyle: {
-            color: '#cccccc',
-          },
-        },
-      },
-      yAxis: {
-        type: 'value',
-        name: '提问数',
-        nameTextStyle: {
-          fontSize: 10,
-        },
-        axisLabel: {
-          fontSize: 10,
-        },
-        axisLine: {
-          lineStyle: {
-            color: '#cccccc',
-          },
-        },
-        splitLine: {
-          lineStyle: {
-            type: 'dashed',
-            color: '#eeeeee',
-          },
-        },
-      },
-      series: [
-        {
-          name: '提问数',
-          type: 'bar',
-          data: [],
-          barWidth: '50%',
-          itemStyle: {
-            borderRadius: [4, 4, 0, 0],
-            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: '#667eea' },
-              { offset: 1, color: '#764ba2' },
-            ]),
-          },
-          label: {
-            show: true,
-            position: 'top',
-            fontSize: 10,
-          },
-        },
-      ],
-    };
-
-    subjectChart.setOption(option);
-
-    return subjectChart;
-  },
-
-  // 注意：generateKnowledgePoints, initKnowledgeChartComponent, initKnowledgeChartCanvas, initKnowledgeChart 等方法已在前面定义，此处删除重复定义
+  // ECharts 图表相关方法已移除，仅保留学习概览和学习模式
 
   /**
    * 时间范围变化

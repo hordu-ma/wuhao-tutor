@@ -2,6 +2,7 @@
 // 缓存管理器 - 五好伴学微信小程序
 
 const storage = require('./storage.js');
+const { btoa, atob } = require('./base64.js');
 
 /**
  * 缓存管理器类
@@ -26,7 +27,7 @@ class CacheManager {
       // 压缩阈值(字节)
       compressionThreshold: 1024, // 1KB
       // 加密密钥
-      encryptionKey: 'wuhao_cache_key_2024'
+      encryptionKey: 'wuhao_cache_key_2024',
     };
 
     // 缓存统计
@@ -36,7 +37,7 @@ class CacheManager {
       sets: 0,
       deletes: 0,
       evictions: 0,
-      startTime: Date.now()
+      startTime: Date.now(),
     };
 
     // 清理定时器
@@ -50,7 +51,7 @@ class CacheManager {
       NETWORK_FIRST: 'NETWORK_FIRST',
       CACHE_FIRST: 'CACHE_FIRST',
       CACHE_ONLY: 'CACHE_ONLY',
-      NETWORK_ONLY: 'NETWORK_ONLY'
+      NETWORK_ONLY: 'NETWORK_ONLY',
     };
 
     // 初始化
@@ -84,7 +85,7 @@ class CacheManager {
         strategy = this.strategies.MEMORY_CACHE,
         tags = [],
         encrypt = false,
-        compress = false
+        compress = false,
       } = options;
 
       const cacheItem = {
@@ -97,7 +98,7 @@ class CacheManager {
         tags,
         size: this.calculateSize(value),
         encrypted: encrypt,
-        compressed: compress
+        compressed: compress,
       };
 
       // 处理数据
@@ -145,10 +146,7 @@ class CacheManager {
    */
   async get(key, options = {}) {
     try {
-      const {
-        strategy = this.strategies.MEMORY_CACHE,
-        updateAccessTime = true
-      } = options;
+      const { strategy = this.strategies.MEMORY_CACHE, updateAccessTime = true } = options;
 
       let cacheItem = null;
 
@@ -472,7 +470,7 @@ class CacheManager {
     try {
       // 这里需要根据实际的storage实现来获取所有键
       // 由于小程序存储API限制，这里使用一个简化的实现
-      const allKeys = await storage.getKeys?.() || [];
+      const allKeys = (await storage.getKeys?.()) || [];
       return allKeys.filter(key => key.startsWith(this.config.storagePrefix));
     } catch (error) {
       console.error('获取存储缓存键失败', error);
@@ -562,7 +560,7 @@ class CacheManager {
       if (currCode < 256) {
         phrase = String.fromCharCode(currCode);
       } else {
-        phrase = dict[currCode] ? dict[currCode] : (oldPhrase + currChar);
+        phrase = dict[currCode] ? dict[currCode] : oldPhrase + currChar;
       }
       result.push(phrase);
       currChar = phrase.charAt(0);
@@ -584,11 +582,10 @@ class CacheManager {
       let result = '';
 
       for (let i = 0; i < str.length; i++) {
-        result += String.fromCharCode(
-          str.charCodeAt(i) ^ key.charCodeAt(i % key.length)
-        );
+        result += String.fromCharCode(str.charCodeAt(i) ^ key.charCodeAt(i % key.length));
       }
 
+      // 使用微信小程序兼容的 btoa 替代浏览器 API
       return btoa(result); // Base64编码
     } catch (error) {
       console.error('加密数据失败', error);
@@ -601,14 +598,13 @@ class CacheManager {
    */
   decrypt(data) {
     try {
+      // 使用微信小程序兼容的 atob 替代浏览器 API
       const encryptedData = atob(data); // Base64解码
       const key = this.config.encryptionKey;
       let result = '';
 
       for (let i = 0; i < encryptedData.length; i++) {
-        result += String.fromCharCode(
-          encryptedData.charCodeAt(i) ^ key.charCodeAt(i % key.length)
-        );
+        result += String.fromCharCode(encryptedData.charCodeAt(i) ^ key.charCodeAt(i % key.length));
       }
 
       try {
@@ -627,15 +623,16 @@ class CacheManager {
    */
   getStats() {
     const runTime = Date.now() - this.stats.startTime;
-    const hitRate = this.stats.hits + this.stats.misses > 0
-      ? (this.stats.hits / (this.stats.hits + this.stats.misses) * 100).toFixed(2)
-      : '0.00';
+    const hitRate =
+      this.stats.hits + this.stats.misses > 0
+        ? ((this.stats.hits / (this.stats.hits + this.stats.misses)) * 100).toFixed(2)
+        : '0.00';
 
     return {
       ...this.stats,
       hitRate: parseFloat(hitRate),
       runTime,
-      memorySize: this.memoryCache.size
+      memorySize: this.memoryCache.size,
     };
   }
 
@@ -649,7 +646,7 @@ class CacheManager {
       sets: 0,
       deletes: 0,
       evictions: 0,
-      startTime: Date.now()
+      startTime: Date.now(),
     };
     this.saveStats();
   }
@@ -718,7 +715,7 @@ class CacheManager {
         memory: memoryData,
         storage: storageData,
         stats: this.stats,
-        exportTime: Date.now()
+        exportTime: Date.now(),
       };
     } catch (error) {
       console.error('导出缓存数据失败', error);
@@ -774,29 +771,31 @@ module.exports = {
   // 导出常用方法
   set: (key, value, options) => cacheManager.set(key, value, options),
   get: (key, options) => cacheManager.get(key, options),
-  delete: (key) => cacheManager.delete(key),
+  delete: key => cacheManager.delete(key),
   clear: () => cacheManager.clear(),
-  has: (key) => cacheManager.has(key),
+  has: key => cacheManager.has(key),
   size: () => cacheManager.size(),
   getStats: () => cacheManager.getStats(),
   resetStats: () => cacheManager.resetStats(),
-  deleteByTags: (tags) => cacheManager.deleteByTags(tags),
+  deleteByTags: tags => cacheManager.deleteByTags(tags),
   cleanup: () => cacheManager.cleanup(),
 
   // 高级功能
   export: () => cacheManager.export(),
-  import: (data) => cacheManager.import(data),
+  import: data => cacheManager.import(data),
 
   // 便捷方法
   setWithTTL: (key, value, ttl) => cacheManager.set(key, value, { ttl }),
-  setMemory: (key, value, ttl) => cacheManager.set(key, value, {
-    strategy: cacheManager.strategies.MEMORY_CACHE,
-    ttl
-  }),
-  setStorage: (key, value, ttl) => cacheManager.set(key, value, {
-    strategy: cacheManager.strategies.STORAGE_CACHE,
-    ttl
-  }),
+  setMemory: (key, value, ttl) =>
+    cacheManager.set(key, value, {
+      strategy: cacheManager.strategies.MEMORY_CACHE,
+      ttl,
+    }),
+  setStorage: (key, value, ttl) =>
+    cacheManager.set(key, value, {
+      strategy: cacheManager.strategies.STORAGE_CACHE,
+      ttl,
+    }),
 
   // 缓存装饰器
   cached: (key, ttl = 5 * 60 * 1000) => {
@@ -823,5 +822,5 @@ module.exports = {
 
       return descriptor;
     };
-  }
+  },
 };

@@ -26,23 +26,13 @@
   </view>
 
   <!-- 空状态 -->
-  <view wx:elif="{{!hasData}}" class="empty-container">
+  <view wx:elif="{{!loading && !hasData}}" class="empty-container">
     <van-empty description="暂无学习数据" />
     <view class="empty-tip">完成作业或提问后，这里将展示您的学习报告</view>
   </view>
 
-  <!-- 学情诊断报告组件 -->
-  <learning-diagnosis 
-    wx:if="{{!loading && hasData && reportData}}"
-    report-data="{{reportData}}"
-    show-actions="{{true}}"
-    bind:exportReport="onExportReport"
-    bind:shareReport="onShareReport"
-    bind:refreshData="onRefreshData"
-  />
-
-  <!-- 报告内容 (保留原有内容作为备用) -->
-  <view wx:else-if="{{!loading && hasData}}" class="report-content">
+  <!-- 报告内容：简洁显示学习概览和学习模式 -->
+  <view wx:elif="{{!loading && hasData}}" class="report-content">
     <!-- 学习概览 -->
     <view class="section overview-section">
       <view class="section-header">
@@ -101,31 +91,6 @@
       </van-grid>
     </view>
 
-    <!-- 学科统计 -->
-    <view class="section subject-section" wx:if="{{analytics.subject_stats.length > 0}}">
-      <view class="section-header">
-        <text class="section-title">学科分析</text>
-        <text class="section-subtitle">各学科学习情况对比</text>
-      </view>
-
-      <view class="chart-container">
-        <ec-canvas id="subjectChart" canvas-id="subjectChart" ec="{{ subjectChartEc }}"></ec-canvas>
-      </view>
-
-      <!-- 学科列表 -->
-      <view class="subject-list">
-        <view class="subject-item" wx:for="{{analytics.subject_stats}}" wx:key="subject">
-          <view class="subject-info">
-            <text class="subject-name">{{item.subject_name}}</text>
-            <text class="subject-count">{{item.question_count}} 个问题</text>
-          </view>
-          <view class="subject-stats">
-            <text class="subject-difficulty">难度 {{item.avg_difficulty}}</text>
-          </view>
-        </view>
-      </view>
-    </view>
-
     <!-- 学习模式 -->
     <view class="section pattern-section">
       <view class="section-header">
@@ -156,70 +121,8 @@
       </view>
     </view>
 
-    <!-- 改进建议 -->
-    <view class="section suggestions-section" wx:if="{{analytics.improvement_suggestions.length > 0}}">
-      <view class="section-header">
-        <text class="section-title">改进建议</text>
-        <text class="section-subtitle">AI 为您提供的学习建议</text>
-      </view>
-
-      <view class="suggestions-list">
-        <view class="suggestion-item" wx:for="{{analytics.improvement_suggestions}}" wx:key="index">
-          <view class="suggestion-icon">
-            <van-icon name="bulb-o" color="#ff9800" size="20px" />
-          </view>
-          <text class="suggestion-text">{{item}}</text>
-        </view>
-      </view>
-    </view>
-
-    <!-- 知识缺口 -->
-    <view class="section gaps-section" wx:if="{{analytics.knowledge_gaps.length > 0}}">
-      <view class="section-header">
-        <text class="section-title">知识薄弱点</text>
-        <text class="section-subtitle">需要加强的知识点</text>
-      </view>
-
-      <view class="gaps-list">
-        <van-tag 
-          wx:for="{{analytics.knowledge_gaps}}" 
-          wx:key="index"
-          type="warning" 
-          size="large"
-          class="gap-tag"
-        >
-          {{item}}
-        </van-tag>
-      </view>
-    </view>
-
-    <!-- 知识点掌握度雷达图 (如果后端支持) -->
-    <view class="section knowledge-section" wx:if="{{knowledgePoints.length > 0}}">
-      <view class="section-header">
-        <text class="section-title">知识点掌握度</text>
-        <text class="section-subtitle">各知识点掌握情况分析</text>
-      </view>
-
-      <view class="chart-container">
-        <ec-canvas id="knowledgeChart" canvas-id="knowledgeChart" ec="{{ knowledgeChartEc }}"></ec-canvas>
-      </view>
-
-      <!-- 知识点列表 -->
-      <view class="knowledge-list">
-        <view class="knowledge-item" wx:for="{{knowledgePoints}}" wx:key="name">
-          <view class="knowledge-info">
-            <text class="knowledge-name">{{item.name}}</text>
-            <view class="knowledge-bar">
-              <view class="knowledge-progress" style="width: {{item.mastery}}%"></view>
-            </view>
-          </view>
-          <text class="knowledge-value">{{item.mastery}}%</text>
-        </view>
-      </view>
-    </view>
-
     <!-- 最后更新时间 -->
-    <view class="report-footer" wx:if="{{!loading && hasData}}">
+    <view class="report-footer">
       <text class="update-time">更新于 {{formattedUpdateTime}}</text>
     </view>
   </view>
