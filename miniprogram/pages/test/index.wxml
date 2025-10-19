@@ -48,6 +48,60 @@
     </button>
   </view>
 
+  <!-- 登录诊断工具 -->
+  <view class="quick-actions">
+    <button
+      class="action-btn warning"
+      bindtap="runLoginDiagnostic"
+      disabled="{{isRunning}}"
+    >
+      🔍 登录诊断
+    </button>
+
+    <button
+      class="action-btn success"
+      bindtap="testLoginFlow"
+      disabled="{{isRunning}}"
+    >
+      🧪 测试登录
+    </button>
+
+    <button
+      class="action-btn danger"
+      bindtap="fixLoginState"
+      disabled="{{isRunning}}"
+    >
+      🔧 修复登录
+    </button>
+
+    <button
+      class="action-btn secondary"
+      bindtap="cleanOldData"
+      disabled="{{isRunning}}"
+    >
+      🧹 清理旧数据
+    </button>
+  </view>
+
+  <!-- API 诊断工具 -->
+  <view class="quick-actions">
+    <button
+      class="action-btn info"
+      bindtap="runApiDiagnostic"
+      disabled="{{isRunning}}"
+    >
+      🔍 API诊断
+    </button>
+
+    <button
+      class="action-btn primary"
+      bindtap="testSingleApi"
+      disabled="{{isRunning}}"
+    >
+      🌐 测试API
+    </button>
+  </view>
+
   <!-- 测试配置 -->
   <view class="test-config">
     <view class="config-title">测试配置</view>

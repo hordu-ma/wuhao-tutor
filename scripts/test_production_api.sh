@@ -61,7 +61,7 @@ test_endpoint "GET" "/health/" "" "200" "健康检查"
 
 # 2. 认证端点
 echo -e "${BLUE}=== 认证服务检查 ===${NC}"
-test_endpoint "POST" "/auth/login" '{"phone":"13800138000","password":"test"}' "400|500" "手机号登录端点"
+test_endpoint "POST" "/auth/login" '{"phone":"13800000001","password":"password123"}' "400|500" "手机号登录端点"
 
 # 检查JWT刷新端点（无token时应返回401）
 test_endpoint "POST" "/auth/refresh" '{}' "40[1-3]" "Token刷新端点"

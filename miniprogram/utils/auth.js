@@ -339,6 +339,13 @@ class AuthManager {
    */
   async saveUserSession(accessToken, refreshToken, userInfo, role = 'student', sessionId) {
     try {
+      console.log('开始保存用户会话', {
+        userId: userInfo?.id,
+        role,
+        hasToken: !!accessToken,
+        hasRefreshToken: !!refreshToken,
+      });
+
       // 保存到内存
       this.currentToken = accessToken;
       this.currentRefreshToken = refreshToken;
@@ -363,9 +370,13 @@ class AuthManager {
 
       await Promise.all(savePromises);
 
-      console.log('用户会话保存成功');
+      console.log('✅ 用户会话保存成功', {
+        userId: userInfo?.id,
+        role,
+        keys: [this.tokenKey, this.userInfoKey, this.roleKey],
+      });
     } catch (error) {
-      console.error('保存用户会话失败', error);
+      console.error('❌ 保存用户会话失败', error);
       throw error;
     }
   }
@@ -375,15 +386,17 @@ class AuthManager {
    */
   async getToken() {
     if (this.currentToken) {
+      console.log('从内存获取Token');
       return this.currentToken;
     }
 
     try {
       const token = await storage.get(this.tokenKey);
+      console.log('从存储获取Token', { hasToken: !!token, key: this.tokenKey });
       this.currentToken = token;
       return token;
     } catch (error) {
-      console.error('获取Token失败', error);
+      console.error('❌ 获取Token失败', error);
       return null;
     }
   }
@@ -429,15 +442,21 @@ class AuthManager {
    */
   async getUserInfo() {
     if (this.currentUser) {
+      console.log('从内存获取用户信息', { userId: this.currentUser?.id });
       return this.currentUser;
     }
 
     try {
       const userInfo = await storage.get(this.userInfoKey);
+      console.log('从存储获取用户信息', {
+        hasUserInfo: !!userInfo,
+        userId: userInfo?.id,
+        key: this.userInfoKey,
+      });
       this.currentUser = userInfo;
       return userInfo;
     } catch (error) {
-      console.error('获取用户信息失败', error);
+      console.error('❌ 获取用户信息失败', error);
       return null;
     }
   }
@@ -530,9 +549,17 @@ class AuthManager {
       const token = await this.getToken();
       const userInfo = await this.getUserInfo();
 
-      return !!(token && userInfo);
+      const isLoggedIn = !!(token && userInfo);
+      console.log('检查登录状态', {
+        isLoggedIn,
+        hasToken: !!token,
+        hasUserInfo: !!userInfo,
+        userId: userInfo?.id,
+      });
+
+      return isLoggedIn;
     } catch (error) {
-      console.error('检查登录状态失败', error);
+      console.error('❌ 检查登录状态失败', error);
       return false;
     }
   }
@@ -576,11 +603,28 @@ class AuthManager {
         return null;
       }
 
-      const payload = parts[1];
-      const decoded = wx.base64ToArrayBuffer(payload);
-      const jsonStr = wx.arrayBufferToBase64(decoded);
+      let payload = parts[1];
 
-      return JSON.parse(atob(jsonStr));
+      // JWT使用base64url编码，需要处理padding
+      // base64url转base64: 替换 - 为 +, _ 为 /，并添加必要的padding
+      payload = payload.replace(/-/g, '+').replace(/_/g, '/');
+
+      // 添加padding使长度为4的倍数
+      while (payload.length % 4) {
+        payload += '=';
+      }
+
+      // 在小程序环境中直接使用base64解码
+      const decoded = wx.base64ToArrayBuffer(payload);
+      const uint8Array = new Uint8Array(decoded);
+
+      // 将ArrayBuffer转为字符串
+      let jsonStr = '';
+      for (let i = 0; i < uint8Array.length; i++) {
+        jsonStr += String.fromCharCode(uint8Array[i]);
+      }
+
+      return JSON.parse(jsonStr);
     } catch (error) {
       console.error('JWT解析失败', error);
       return null;

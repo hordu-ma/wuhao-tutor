@@ -1,7 +1,7 @@
 // utils/sync-manager.js - 信息同步管理器
 
 const { authManager } = require('./auth.js');
-const { api } = require('./api.js');
+const { apiClient } = require('./api.js');
 const { storage } = require('./storage.js');
 const { networkMonitor } = require('./network-monitor.js');
 const { profileErrorHandler } = require('./profile-error-handler.js');
@@ -14,17 +14,17 @@ const SyncStatus = {
   SYNCING: 'syncing',
   SUCCESS: 'success',
   FAILED: 'failed',
-  CONFLICT: 'conflict'
+  CONFLICT: 'conflict',
 };
 
 /**
  * 同步策略枚举
  */
 const SyncStrategy = {
-  LOCAL_FIRST: 'local_first',    // 本地优先
-  SERVER_FIRST: 'server_first',  // 服务端优先
+  LOCAL_FIRST: 'local_first', // 本地优先
+  SERVER_FIRST: 'server_first', // 服务端优先
   MANUAL_RESOLVE: 'manual_resolve', // 手动解决冲突
-  TIMESTAMP_BASED: 'timestamp_based' // 基于时间戳
+  TIMESTAMP_BASED: 'timestamp_based', // 基于时间戳
 };
 
 /**
@@ -39,7 +39,7 @@ class SyncManager {
     this.syncInterval = 5 * 60 * 1000; // 5分钟自动同步间隔
     this.syncTimer = null;
     this.listeners = new Set();
-    
+
     // 同步配置
     this.config = {
       enableAutoSync: true,
@@ -47,7 +47,7 @@ class SyncManager {
       conflictResolution: SyncStrategy.MANUAL_RESOLVE,
       maxRetries: 3,
       retryDelay: 2000,
-      batchSize: 10
+      batchSize: 10,
     };
 
     this.initSyncManager();
@@ -169,14 +169,13 @@ class SyncManager {
 
     try {
       this.setSyncStatus(SyncStatus.SYNCING);
-      
+
       await this.performSync(options);
-      
+
       this.setSyncStatus(SyncStatus.SUCCESS);
       this.lastSyncTime = Date.now();
-      
-      console.log('同步完成');
 
+      console.log('同步完成');
     } catch (error) {
       console.error('同步失败:', error);
       this.setSyncStatus(SyncStatus.FAILED);
@@ -221,21 +220,23 @@ class SyncManager {
       const localTimestamp = authManager.getUserInfoCacheTime();
 
       // 获取服务器用户信息
-      const response = await api.get('/auth/me');
-      
+      const response = await apiClient.get('/auth/me');
+
       if (!response.success || !response.data) {
         throw new Error('获取服务器用户信息失败');
       }
 
       const serverUserInfo = response.data;
-      const serverTimestamp = new Date(serverUserInfo.updated_at || serverUserInfo.updatedAt).getTime();
+      const serverTimestamp = new Date(
+        serverUserInfo.updated_at || serverUserInfo.updatedAt,
+      ).getTime();
 
       // 比较时间戳决定同步策略
       const syncResult = await this.resolveUserInfoConflict(
-        localUserInfo, 
-        serverUserInfo, 
-        localTimestamp, 
-        serverTimestamp
+        localUserInfo,
+        serverUserInfo,
+        localTimestamp,
+        serverTimestamp,
       );
 
       if (syncResult.needsUpdate) {
@@ -244,21 +245,20 @@ class SyncManager {
       } else {
         console.log('用户信息无需同步');
       }
-
     } catch (error) {
       console.error('用户信息同步失败:', error);
-      
+
       // 使用专业的错误处理器
       const errorResult = await profileErrorHandler.handleSyncError(error, {
         syncType: 'userInfo',
         silent: true, // 同步错误默认静默处理
         retryFunction: async () => {
-          const response = await api.get('/auth/me');
+          const response = await apiClient.get('/auth/me');
           if (response.success && response.data) {
             return response.data;
           }
           throw new Error('获取服务器用户信息失败');
-        }
+        },
       });
 
       if (errorResult.success) {
@@ -266,13 +266,15 @@ class SyncManager {
         const serverUserInfo = errorResult.data;
         const localUserInfo = await authManager.getUserInfo();
         const localTimestamp = authManager.getUserInfoCacheTime();
-        const serverTimestamp = new Date(serverUserInfo.updated_at || serverUserInfo.updatedAt).getTime();
-        
+        const serverTimestamp = new Date(
+          serverUserInfo.updated_at || serverUserInfo.updatedAt,
+        ).getTime();
+
         const syncResult = await this.resolveUserInfoConflict(
-          localUserInfo, 
-          serverUserInfo, 
-          localTimestamp, 
-          serverTimestamp
+          localUserInfo,
+          serverUserInfo,
+          localTimestamp,
+          serverTimestamp,
         );
 
         if (syncResult.needsUpdate) {
@@ -280,7 +282,7 @@ class SyncManager {
           console.log('用户信息同步完成（重试后）');
         }
       }
-      
+
       // 同步失败不抛出错误，避免影响主流程
       throw error;
     }
@@ -294,7 +296,7 @@ class SyncManager {
     if (!localInfo) {
       return {
         needsUpdate: true,
-        mergedInfo: this.normalizeUserInfo(serverInfo)
+        mergedInfo: this.normalizeUserInfo(serverInfo),
       };
     }
 
@@ -302,7 +304,7 @@ class SyncManager {
     if (!serverTimestamp) {
       return {
         needsUpdate: false,
-        mergedInfo: localInfo
+        mergedInfo: localInfo,
       };
     }
 
@@ -333,7 +335,7 @@ class SyncManager {
 
     return {
       needsUpdate: JSON.stringify(mergedInfo) !== JSON.stringify(localInfo),
-      mergedInfo
+      mergedInfo,
     };
   }
 
@@ -346,7 +348,7 @@ class SyncManager {
       // 保留本地的一些字段
       avatarUrl: localInfo.avatarUrl || serverInfo.avatar_url,
       // 确保时间戳更新
-      lastUpdated: Date.now()
+      lastUpdated: Date.now(),
     };
   }
 
@@ -371,7 +373,7 @@ class SyncManager {
       is_verified: serverInfo.is_verified,
       created_at: serverInfo.created_at,
       updated_at: serverInfo.updated_at,
-      lastUpdated: Date.now()
+      lastUpdated: Date.now(),
     };
   }
 
@@ -384,7 +386,6 @@ class SyncManager {
 
       // TODO: 实现用户设置同步逻辑
       // 这里可以扩展同步用户偏好设置、应用配置等
-
     } catch (error) {
       console.error('用户设置同步失败:', error);
     }
@@ -401,7 +402,6 @@ class SyncManager {
       await this.cleanExpiredCache();
 
       // TODO: 同步其他缓存数据
-
     } catch (error) {
       console.error('缓存数据同步失败:', error);
     }
@@ -431,10 +431,10 @@ class SyncManager {
    * 手动同步用户信息
    */
   async manualSyncUserInfo() {
-    return this.triggerSync({ 
-      userInfo: true, 
-      userSettings: false, 
-      cacheData: false 
+    return this.triggerSync({
+      userInfo: true,
+      userSettings: false,
+      cacheData: false,
     });
   }
 
@@ -458,7 +458,7 @@ class SyncManager {
       type: 'statusChange',
       previousStatus,
       currentStatus: status,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
@@ -491,7 +491,7 @@ class SyncManager {
       status: this.syncStatus,
       lastSyncTime: this.lastSyncTime,
       nextSyncTime: this.lastSyncTime + this.syncInterval,
-      isAutoSyncEnabled: !!this.syncTimer
+      isAutoSyncEnabled: !!this.syncTimer,
     };
   }
 
@@ -519,5 +519,5 @@ module.exports = {
   syncManager,
   SyncManager,
   SyncStatus,
-  SyncStrategy
+  SyncStrategy,
 };

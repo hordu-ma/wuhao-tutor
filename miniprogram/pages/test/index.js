@@ -11,6 +11,8 @@ const { TestRunner } = require('../../tests/run-all-tests.js');
 const { ApiTester } = require('../../tests/api-tester.js');
 const { FrontendTester } = require('../../tests/frontend-tester.js');
 const { PerformanceUtils } = require('../../tests/performance-monitor.js');
+const { loginDiagnostic } = require('../../utils/login-diagnostic.js');
+const { apiDebugger } = require('../../utils/api-debug.js');
 
 Page({
   data: {
@@ -65,10 +67,325 @@ Page({
       this.addLog(`设备型号: ${systemInfo.brand} ${systemInfo.model}`, 'info');
       this.addLog(`系统版本: ${systemInfo.system}`, 'info');
       this.addLog(`微信版本: ${systemInfo.version}`, 'info');
-
     } catch (error) {
       this.addLog(`获取环境信息失败: ${error.message}`, 'error');
     }
+  },
+
+  /**
+   * 运行登录诊断
+   */
+  async runLoginDiagnostic() {
+    this.addLog('========================================', 'info');
+    this.addLog('🔍 开始登录问题诊断', 'info');
+    this.addLog('========================================', 'info');
+
+    try {
+      this.setData({ isRunning: true, currentTest: '登录诊断' });
+
+      const results = await loginDiagnostic.runFullDiagnostic();
+
+      // 输出诊断结果
+      for (const section of results) {
+        this.addLog(`\n【${section.title}】`, 'info');
+        for (const item of section.items) {
+          const statusIcon =
+            item.status === 'ok'
+              ? '✅'
+              : item.status === 'warning'
+                ? '⚠️'
+                : item.status === 'error'
+                  ? '❌'
+                  : 'ℹ️';
+          const logType =
+            item.status === 'error' ? 'error' : item.status === 'warning' ? 'warning' : 'info';
+          this.addLog(`${statusIcon} ${item.name}: ${item.value}`, logType);
+        }
+      }
+
+      this.addLog('\n========================================', 'info');
+      this.addLog('✅ 登录诊断完成', 'success');
+      this.addLog('========================================', 'info');
+
+      wx.showToast({
+        title: '诊断完成',
+        icon: 'success',
+      });
+    } catch (error) {
+      this.addLog(`❌ 登录诊断失败: ${error.message}`, 'error');
+      wx.showToast({
+        title: '诊断失败',
+        icon: 'error',
+      });
+    } finally {
+      this.setData({ isRunning: false, currentTest: '' });
+    }
+  },
+
+  /**
+   * 测试登录流程
+   */
+  async testLoginFlow() {
+    this.addLog('========================================', 'info');
+    this.addLog('🧪 测试登录流程', 'info');
+    this.addLog('========================================', 'info');
+
+    try {
+      this.setData({ isRunning: true, currentTest: '登录流程测试' });
+
+      await loginDiagnostic.testLoginFlow();
+
+      this.addLog('✅ 登录流程测试完成', 'success');
+
+      wx.showToast({
+        title: '测试完成',
+        icon: 'success',
+      });
+    } catch (error) {
+      this.addLog(`❌ 登录流程测试失败: ${error.message}`, 'error');
+      wx.showToast({
+        title: '测试失败',
+        icon: 'error',
+      });
+    } finally {
+      this.setData({ isRunning: false, currentTest: '' });
+    }
+  },
+
+  /**
+   * 运行 API 诊断
+   */
+  async runApiDiagnostic() {
+    this.addLog('========================================', 'info');
+    this.addLog('🔍 开始 API 诊断', 'info');
+    this.addLog('========================================', 'info');
+
+    try {
+      this.setData({ isRunning: true, currentTest: 'API 诊断' });
+
+      const results = await apiDebugger.diagnose();
+
+      // 输出环境配置
+      this.addLog('\n【环境配置】', 'info');
+      this.addLog(`API 地址: ${results.environment.baseUrl}`, 'info');
+      this.addLog(`超时时间: ${results.environment.timeout}ms`, 'info');
+      this.addLog(`API 版本: ${results.environment.version}`, 'info');
+
+      // 输出认证状态
+      this.addLog('\n【认证状态】', 'info');
+      if (results.auth.error) {
+        this.addLog(`❌ 认证检查失败: ${results.auth.error.message}`, 'error');
+      } else {
+        this.addLog(
+          `${results.auth.isLoggedIn ? '✅' : '❌'} 登录状态: ${results.auth.isLoggedIn ? '已登录' : '未登录'}`,
+          results.auth.isLoggedIn ? 'success' : 'error',
+        );
+        this.addLog(
+          `${results.auth.hasToken ? '✅' : '❌'} Token: ${results.auth.hasToken ? '存在' : '不存在'}`,
+          results.auth.hasToken ? 'success' : 'error',
+        );
+        this.addLog(
+          `${results.auth.hasUserInfo ? '✅' : '❌'} 用户信息: ${results.auth.hasUserInfo ? '存在' : '不存在'}`,
+          results.auth.hasUserInfo ? 'success' : 'error',
+        );
+        if (results.auth.userId) {
+          this.addLog(`用户ID: ${results.auth.userId}`, 'info');
+        }
+      }
+
+      // 输出网络状态
+      this.addLog('\n【网络状态】', 'info');
+      if (results.network.error) {
+        this.addLog(`❌ 网络检查失败: ${results.network.error.message}`, 'error');
+      } else {
+        this.addLog(
+          `${results.network.isConnected ? '✅' : '❌'} 连接状态: ${results.network.isConnected ? '已连接' : '未连接'}`,
+          results.network.isConnected ? 'success' : 'error',
+        );
+        this.addLog(`网络类型: ${results.network.networkType}`, 'info');
+      }
+
+      // 输出 API 测试结果
+      this.addLog('\n【API 测试结果】', 'info');
+      for (const test of results.tests) {
+        const statusIcon = test.success ? '✅' : '❌';
+        const logType = test.success ? 'success' : 'error';
+
+        if (test.success) {
+          this.addLog(`${statusIcon} ${test.name} - 成功 (${test.duration}ms)`, logType);
+          if (test.response && test.response.data) {
+            this.addLog(
+              `   响应数据: ${JSON.stringify(test.response.data).substring(0, 100)}...`,
+              'info',
+            );
+          }
+        } else {
+          this.addLog(`${statusIcon} ${test.name} - 失败`, logType);
+          this.addLog(`   错误: ${test.errorMessage}`, 'error');
+          if (test.error && test.error.statusCode) {
+            this.addLog(`   状态码: ${test.error.statusCode}`, 'error');
+          }
+          if (test.error && test.error.originalError) {
+            this.addLog(`   原始错误: ${test.error.originalError.message}`, 'error');
+          }
+        }
+      }
+
+      // 输出汇总
+      this.addLog('\n【测试汇总】', 'info');
+      this.addLog(`总计: ${results.summary.total} 个测试`, 'info');
+      this.addLog(`成功: ${results.summary.success} 个`, 'success');
+      this.addLog(
+        `失败: ${results.summary.failed} 个`,
+        results.summary.failed > 0 ? 'error' : 'info',
+      );
+      this.addLog(`通过率: ${results.summary.passRate}`, 'info');
+
+      this.addLog('\n========================================', 'info');
+      this.addLog('✅ API 诊断完成', 'success');
+      this.addLog('========================================', 'info');
+
+      wx.showToast({
+        title: '诊断完成',
+        icon: 'success',
+      });
+    } catch (error) {
+      this.addLog(`❌ API 诊断失败: ${error.message}`, 'error');
+      console.error('API 诊断详细错误:', error);
+      wx.showToast({
+        title: '诊断失败',
+        icon: 'error',
+      });
+    } finally {
+      this.setData({ isRunning: false, currentTest: '' });
+    }
+  },
+
+  /**
+   * 测试单个 API
+   */
+  async testSingleApi() {
+    this.addLog('========================================', 'info');
+    this.addLog('🌐 测试单个 API', 'info');
+    this.addLog('========================================', 'info');
+
+    try {
+      this.setData({ isRunning: true, currentTest: '单个 API 测试' });
+
+      // 测试 /auth/me
+      this.addLog('\n测试 GET /auth/me...', 'info');
+      const result = await apiDebugger.testAuthMe();
+
+      if (result.success) {
+        this.addLog(`✅ 请求成功 (${result.duration}ms)`, 'success');
+        this.addLog(`响应数据: ${JSON.stringify(result.response.data, null, 2)}`, 'info');
+      } else {
+        this.addLog(`❌ 请求失败: ${result.errorMessage}`, 'error');
+        if (result.error) {
+          this.addLog(`错误详情: ${JSON.stringify(result.error, null, 2)}`, 'error');
+        }
+      }
+
+      this.addLog('\n========================================', 'info');
+      this.addLog('✅ 单个 API 测试完成', 'success');
+      this.addLog('========================================', 'info');
+
+      wx.showToast({
+        title: '测试完成',
+        icon: 'success',
+      });
+    } catch (error) {
+      this.addLog(`❌ API 测试失败: ${error.message}`, 'error');
+      console.error('API 测试详细错误:', error);
+      wx.showToast({
+        title: '测试失败',
+        icon: 'error',
+      });
+    } finally {
+      this.setData({ isRunning: false, currentTest: '' });
+    }
+  },
+
+  /**
+   * 修复登录状态
+   */
+  async fixLoginState() {
+    this.addLog('========================================', 'info');
+    this.addLog('🔧 尝试修复登录状态', 'info');
+    this.addLog('========================================', 'info');
+
+    try {
+      this.setData({ isRunning: true, currentTest: '修复登录状态' });
+
+      const success = await loginDiagnostic.fixLoginState();
+
+      if (success) {
+        this.addLog('✅ 登录状态修复成功', 'success');
+        wx.showModal({
+          title: '修复成功',
+          content: '登录状态已修复，建议重启小程序以应用更改',
+          confirmText: '重启',
+          success: res => {
+            if (res.confirm) {
+              wx.reLaunch({
+                url: '/pages/index/index',
+              });
+            }
+          },
+        });
+      } else {
+        this.addLog('⚠️ 无法修复登录状态，可能需要重新登录', 'warning');
+        wx.showModal({
+          title: '无法修复',
+          content: '未找到可恢复的登录数据，请重新登录',
+          showCancel: false,
+        });
+      }
+    } catch (error) {
+      this.addLog(`❌ 修复失败: ${error.message}`, 'error');
+      wx.showToast({
+        title: '修复失败',
+        icon: 'error',
+      });
+    } finally {
+      this.setData({ isRunning: false, currentTest: '' });
+    }
+  },
+
+  /**
+   * 清理旧版本数据
+   */
+  async cleanOldData() {
+    wx.showModal({
+      title: '确认清理',
+      content: '此操作将清理主版本不兼容的旧数据，是否继续？',
+      success: async res => {
+        if (res.confirm) {
+          this.addLog('🧹 开始清理旧版本数据...', 'info');
+
+          try {
+            this.setData({ isRunning: true, currentTest: '清理旧数据' });
+
+            const count = await loginDiagnostic.cleanOldData();
+
+            this.addLog(`✅ 清理完成，共清理 ${count} 项`, 'success');
+
+            wx.showToast({
+              title: `清理了${count}项`,
+              icon: 'success',
+            });
+          } catch (error) {
+            this.addLog(`❌ 清理失败: ${error.message}`, 'error');
+            wx.showToast({
+              title: '清理失败',
+              icon: 'error',
+            });
+          } finally {
+            this.setData({ isRunning: false, currentTest: '' });
+          }
+        }
+      },
+    });
   },
 
   /**
@@ -139,7 +456,6 @@ Page({
       }
 
       this.addLog('快速测试完成', 'success');
-
     } catch (error) {
       this.addLog(`快速测试失败: ${error.message}`, 'error');
     } finally {
@@ -180,7 +496,6 @@ Page({
       } else {
         this.addLog(`完整测试完成，但有${results.summary.failed}个失败`, 'warning');
       }
-
     } catch (error) {
       this.addLog(`完整测试失败: ${error.message}`, 'error');
     } finally {
@@ -256,7 +571,6 @@ Page({
       if (suggestions.length > 0) {
         this.addLog(`发现${suggestions.length}个性能优化建议`, 'warning');
       }
-
     } catch (error) {
       this.addLog(`性能报告生成失败: ${error.message}`, 'error');
     }
@@ -279,7 +593,6 @@ Page({
       } else {
         this.addLog(`API调用失败: ${result.message}`, 'error');
       }
-
     } catch (error) {
       this.addLog(`API调用异常: ${error.message}`, 'error');
     }
@@ -318,7 +631,6 @@ Page({
         title: '导出成功',
         icon: 'success',
       });
-
     } catch (error) {
       this.addLog(`导出失败: ${error.message}`, 'error');
 

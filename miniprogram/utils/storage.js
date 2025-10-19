@@ -21,7 +21,7 @@ class StorageManager {
       // 静态数据中期缓存
       staticData: config.cache.staticDataTTL,
       // 临时数据短期缓存
-      tempData: this.defaultTTL
+      tempData: this.defaultTTL,
     };
 
     console.log('存储管理器初始化成功');
@@ -43,7 +43,7 @@ class StorageManager {
       value,
       timestamp: now,
       expiry: ttl > 0 ? now + ttl : 0, // 0表示永不过期
-      version: config.version
+      version: config.version,
     };
   }
 
@@ -55,10 +55,33 @@ class StorageManager {
       return false;
     }
 
-    // 检查版本兼容性
-    if (cacheData.version !== config.version) {
-      return false;
+    // 检查版本兼容性 - 向后兼容策略
+    // 允许没有 version 字段的旧数据
+    // 只在主版本号（major version）不匹配时才判定为无效
+    if (cacheData.version && cacheData.version !== config.version) {
+      try {
+        const currentMajor = config.version.split('.')[0];
+        const cacheMajor = cacheData.version.split('.')[0];
+
+        // 只在主版本号不匹配时才判定为无效
+        if (currentMajor !== cacheMajor) {
+          console.warn('缓存主版本不匹配，清理缓存', {
+            current: config.version,
+            cached: cacheData.version,
+          });
+          return false;
+        }
+        // 主版本匹配，次版本和补丁版本不匹配时允许继续使用
+        console.log('缓存版本兼容', {
+          current: config.version,
+          cached: cacheData.version,
+        });
+      } catch (error) {
+        console.warn('版本检查失败，允许使用缓存', error);
+        // 版本解析失败时，允许使用缓存（宽容策略）
+      }
     }
+    // 允许旧数据没有 version 字段（向后兼容）
 
     // 检查是否过期
     if (cacheData.expiry > 0 && Date.now() > cacheData.expiry) {
@@ -73,12 +96,7 @@ class StorageManager {
    */
   async set(key, value, options = {}) {
     try {
-      const {
-        ttl = this.defaultTTL,
-        sync = false,
-        memory = true,
-        strategy = 'tempData'
-      } = options;
+      const { ttl = this.defaultTTL, sync = false, memory = true, strategy = 'tempData' } = options;
 
       const finalKey = this.getKey(key);
       const finalTTL = ttl || this.cacheStrategy[strategy] || this.defaultTTL;
@@ -100,7 +118,7 @@ class StorageManager {
             key: finalKey,
             data: cacheData,
             success: resolve,
-            fail: reject
+            fail: reject,
           });
         });
       }
@@ -118,11 +136,7 @@ class StorageManager {
    */
   async get(key, options = {}) {
     try {
-      const {
-        sync = false,
-        memory = true,
-        defaultValue = null
-      } = options;
+      const { sync = false, memory = true, defaultValue = null } = options;
 
       const finalKey = this.getKey(key);
 
@@ -149,8 +163,8 @@ class StorageManager {
         cacheData = await new Promise((resolve, reject) => {
           wx.getStorage({
             key: finalKey,
-            success: (res) => resolve(res.data),
-            fail: () => resolve(null) // 不存在时返回null而不是抛错
+            success: res => resolve(res.data),
+            fail: () => resolve(null), // 不存在时返回null而不是抛错
           });
         });
       }
@@ -182,10 +196,7 @@ class StorageManager {
    */
   async remove(key, options = {}) {
     try {
-      const {
-        sync = false,
-        silent = false
-      } = options;
+      const { sync = false, silent = false } = options;
 
       const finalKey = this.getKey(key);
 
@@ -202,14 +213,14 @@ class StorageManager {
           wx.removeStorage({
             key: finalKey,
             success: resolve,
-            fail: (error) => {
+            fail: error => {
               // 如果key不存在，不认为是错误
               if (error.errMsg && error.errMsg.includes('data not found')) {
                 resolve();
               } else {
                 reject(error);
               }
-            }
+            },
           });
         });
       }
@@ -244,7 +255,7 @@ class StorageManager {
     try {
       const {
         sync = false,
-        pattern = null // 可以指定清空模式，如只清空某个前缀的数据
+        pattern = null, // 可以指定清空模式，如只清空某个前缀的数据
       } = options;
 
       // 清空内存缓存
@@ -269,11 +280,11 @@ class StorageManager {
           if (sync) {
             wx.removeStorageSync(key);
           } else {
-            await new Promise((resolve) => {
+            await new Promise(resolve => {
               wx.removeStorage({
                 key,
                 success: resolve,
-                fail: resolve // 忽略删除失败
+                fail: resolve, // 忽略删除失败
               });
             });
           }
@@ -286,7 +297,7 @@ class StorageManager {
           await new Promise((resolve, reject) => {
             wx.clearStorage({
               success: resolve,
-              fail: reject
+              fail: reject,
             });
           });
         }
@@ -313,8 +324,8 @@ class StorageManager {
       } else {
         return new Promise((resolve, reject) => {
           wx.getStorageInfo({
-            success: (res) => resolve(res.keys || []),
-            fail: reject
+            success: res => resolve(res.keys || []),
+            fail: reject,
           });
         });
       }
@@ -337,7 +348,7 @@ class StorageManager {
         return new Promise((resolve, reject) => {
           wx.getStorageInfo({
             success: resolve,
-            fail: reject
+            fail: reject,
           });
         });
       }
@@ -346,7 +357,7 @@ class StorageManager {
       return {
         keys: [],
         currentSize: 0,
-        limitSize: 0
+        limitSize: 0,
       };
     }
   }
@@ -364,7 +375,7 @@ class StorageManager {
         try {
           const cacheData = await this.get(key.replace(this.prefix, ''), {
             memory: false,
-            defaultValue: undefined
+            defaultValue: undefined,
           });
 
           if (cacheData === undefined) {
@@ -425,7 +436,7 @@ class StorageManager {
         results.push({
           success: false,
           error: error.message,
-          operation
+          operation,
         });
       }
     }
@@ -437,20 +448,16 @@ class StorageManager {
    * 缓存装饰器工厂
    */
   cache(options = {}) {
-    const {
-      ttl = this.defaultTTL,
-      key: keyGenerator,
-      strategy = 'tempData'
-    } = options;
+    const { ttl = this.defaultTTL, key: keyGenerator, strategy = 'tempData' } = options;
 
     return function (target, propertyKey, descriptor) {
       const originalMethod = descriptor.value;
 
       descriptor.value = async function (...args) {
         // 生成缓存key
-        const cacheKey = keyGenerator ?
-          keyGenerator(...args) :
-          `${propertyKey}_${JSON.stringify(args)}`;
+        const cacheKey = keyGenerator
+          ? keyGenerator(...args)
+          : `${propertyKey}_${JSON.stringify(args)}`;
 
         // 尝试从缓存获取
         try {
@@ -486,13 +493,13 @@ class StorageManager {
     return {
       memoryCache: {
         size: this.memoryCache.size,
-        keys: Array.from(this.memoryCache.keys())
+        keys: Array.from(this.memoryCache.keys()),
       },
       config: {
         prefix: this.prefix,
         defaultTTL: this.defaultTTL,
-        strategies: this.cacheStrategy
-      }
+        strategies: this.cacheStrategy,
+      },
     };
   }
 }
@@ -510,51 +517,55 @@ module.exports = {
   get: (key, options) => storageManager.get(key, options),
   remove: (key, options) => storageManager.remove(key, options),
   has: (key, options) => storageManager.has(key, options),
-  clear: (options) => storageManager.clear(options),
+  clear: options => storageManager.clear(options),
 
   // 同步操作方法
   setSync: (key, value, ttl) => storageManager.set(key, value, { sync: true, ttl }),
   getSync: (key, defaultValue) => storageManager.get(key, { sync: true, defaultValue }),
-  removeSync: (key) => storageManager.remove(key, { sync: true }),
-  hasSync: (key) => storageManager.has(key, { sync: true }),
+  removeSync: key => storageManager.remove(key, { sync: true }),
+  hasSync: key => storageManager.has(key, { sync: true }),
   clearSync: () => storageManager.clear({ sync: true }),
 
   // 高级功能
-  getAllKeys: (options) => storageManager.getAllKeys(options),
-  getStorageInfo: (options) => storageManager.getStorageInfo(options),
+  getAllKeys: options => storageManager.getAllKeys(options),
+  getStorageInfo: options => storageManager.getStorageInfo(options),
   cleanExpiredCache: () => storageManager.cleanExpiredCache(),
-  batch: (operations) => storageManager.batch(operations),
+  batch: operations => storageManager.batch(operations),
   getStats: () => storageManager.getStats(),
 
   // 缓存装饰器
-  cache: (options) => storageManager.cache(options),
+  cache: options => storageManager.cache(options),
 
   // 预定义的存储策略
   strategies: {
     // 用户信息存储
-    userInfo: (key, value) => storageManager.set(key, value, {
-      strategy: 'userInfo',
-      memory: true
-    }),
+    userInfo: (key, value) =>
+      storageManager.set(key, value, {
+        strategy: 'userInfo',
+        memory: true,
+      }),
 
     // 静态数据存储
-    staticData: (key, value) => storageManager.set(key, value, {
-      strategy: 'staticData',
-      memory: true
-    }),
+    staticData: (key, value) =>
+      storageManager.set(key, value, {
+        strategy: 'staticData',
+        memory: true,
+      }),
 
     // 临时数据存储
-    tempData: (key, value, ttl) => storageManager.set(key, value, {
-      strategy: 'tempData',
-      ttl,
-      memory: false
-    }),
+    tempData: (key, value, ttl) =>
+      storageManager.set(key, value, {
+        strategy: 'tempData',
+        ttl,
+        memory: false,
+      }),
 
     // 会话数据存储（仅内存）
-    sessionData: (key, value) => storageManager.set(key, value, {
-      ttl: 0, // 永不过期
-      memory: true,
-      sync: false
-    })
-  }
+    sessionData: (key, value) =>
+      storageManager.set(key, value, {
+        ttl: 0, // 永不过期
+        memory: true,
+        sync: false,
+      }),
+  },
 };

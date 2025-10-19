@@ -25,6 +25,7 @@ api/ → services/ → repositories/ → models/
 - ✅ **必须使用类型注解**和 `async/await` 异步模式
 - ✅ **Repository 层**：使用 `BaseRepository[Model]` 泛型实现 CRUD
 - ✅ **Service 层**：处理业务逻辑、组合多个 Repository、管理事务
+- 若使用修复脚本进行修复工作，生成脚本前，先获得授权和确认。
 
 ### 核心基础设施 (src/core/)
 
@@ -133,12 +134,6 @@ class HomeworkRepository(BaseRepository[HomeworkModel]):
 # ✅ 使用具体异常类型（定义在 src/core/exceptions.py）
 raise HomeworkNotFoundError(f"作业 {homework_id} 不存在")
 
-# ❌ 禁止使用通用异常
-# raise Exception("作业不存在")  # 永远不要这样做
-
-# ❌ 禁止裸 except
-# except:  # 永远不要这样做
-#     pass
 ```
 
 **异常处理原则**：

@@ -2,7 +2,7 @@
 
 const { routeGuard } = require('../../../utils/route-guard.js');
 const { authManager } = require('../../../utils/auth.js');
-const { api } = require('../../../utils/api.js');
+const { api, apiClient } = require('../../../utils/api.js');
 const { errorToast } = require('../../../utils/error-toast.js');
 const { avatarUploadManager } = require('../../../utils/avatar-upload.js');
 const { syncManager } = require('../../../utils/sync-manager.js');
@@ -172,7 +172,7 @@ Page({
    */
   async fetchLatestUserInfo() {
     try {
-      const response = await api.get('/auth/me');
+      const response = await apiClient.get('/auth/me');
 
       if (response.success && response.data) {
         const serverUserInfo = response.data;
@@ -202,7 +202,7 @@ Page({
   async loadUserStats() {
     try {
       // 尝试从API获取实际统计数据
-      const response = await api.get('/user/stats').catch(() => null);
+      const response = await apiClient.get('/user/stats').catch(() => null);
 
       let stats = {};
 

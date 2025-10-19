@@ -1,7 +1,7 @@
 {
   "pages": [
-    "pages/test-async/index",
     "pages/index/index",
+    "pages/test-async/index",
     "pages/login/index",
     "pages/role-selection/index",
     "pages/mistakes/list/index",
@@ -133,9 +133,6 @@
   "lazyCodeLoading": "requiredComponents",
   "singlePage": {
     "navigationBarFit": "squeezed"
-  },
-  "supportedMaterials": {
-    "voiceToText": true
   },
   "serviceProviderTicket": "",
   "embeddedAppIdList": [],

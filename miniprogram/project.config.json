@@ -90,23 +90,11 @@
     "baseURL": "",
     "serveOnStart": false
   },
-  "srcMiniprogramRoot": "miniprogram/",
-  "cloudfunctionRoot": "cloudfunctions/",
-  "packNpmManually": true,
-  "packNpmRelationList": [
-    {
-      "packageJsonPath": "./package.json",
-      "miniprogramNpmDistDir": "./miniprogram/"
-    }
-  ],
+  "packNpmManually": false,
+  "packNpmRelationList": [],
   "cloudfunctionTemplateRoot": "cloudfunctionTemplate/",
-  "downloadDomain": [
-    "https://t.alicdn.com",
-    "https://at.alicdn.com"
-  ],
-  "requestDomain": [
-    "https://121.199.173.244"
-  ],
+  "downloadDomain": ["https://t.alicdn.com", "https://at.alicdn.com"],
+  "requestDomain": ["https://121.199.173.244"],
   "network": {
     "request": {
       "timeout": 10000
