@@ -14,21 +14,7 @@ const pageObject = {
     loading: true,
     refreshing: false,
 
-    // 用户统计信息
-    stats: {
-      joinDate: '',
-      lastLoginDate: '',
-      homeworkCount: 0,
-      questionCount: 0,
-      studyDays: 0,
-      totalScore: 0,
-      avgScore: 0,
-      errorCount: 0,
-      studyHours: 0,
-    },
-
     // 显示控制
-    showStatsSection: true,
     showContactInfo: true,
 
     // 同步状态
@@ -78,7 +64,7 @@ const pageObject = {
       this.setupSyncListener();
 
       // 加载本地数据
-      await Promise.all([this.loadUserInfo(), this.loadUserStats()]);
+      await this.loadUserInfo();
 
       // 检查是否需要后台同步（不阻塞页面）
       if (authManager.needsUserInfoRefresh()) {
@@ -199,120 +185,6 @@ const pageObject = {
   },
 
   /**
-   * 加载用户统计信息
-   */
-  async loadUserStats() {
-    console.error('===== [Profile] loadUserStats 方法开始执行 =====');
-
-    try {
-      console.error('[Profile] 准备调用 API: /analytics/learning-stats');
-      console.error('[Profile] 请求参数:', { time_range: '30d' });
-
-      // 复用学习报告的 analytics 接口（包含所有统计数据）
-      const response = await apiClient
-        .get('/analytics/learning-stats', { time_range: '30d' }) // 最近30天数据
-        .catch(error => {
-          console.error('[Profile] ❌ API 调用异常捕获:', error);
-          console.error('[Profile] 错误类型:', typeof error);
-          console.error('[Profile] 错误详情:', JSON.stringify(error));
-          return null;
-        });
-
-      console.error('[Profile] API 响应结果:', response);
-      console.error('[Profile] 响应类型:', typeof response);
-      console.error('[Profile] API 响应结果:', response);
-      console.error('[Profile] 响应类型:', typeof response);
-      console.error('[Profile] 响应详情:', JSON.stringify(response));
-
-      let stats = {};
-
-      // apiClient 返回格式：{ data: {...}, statusCode: 200, header: {...} }
-      // 需要检查 response.data 而不是 response.success
-      if (response && response.data) {
-        console.error('[Profile] ✅ 进入数据处理分支');
-
-        // 使用 analytics 接口返回的数据
-        const data = response.data;
-        console.error('[Profile] 原始数据:', data);
-        console.error('[Profile] 原始数据详情:', JSON.stringify(data));
-        console.error('[Profile] image_questions:', data.image_questions);
-        console.error('[Profile] total_questions:', data.total_questions);
-        console.error('[Profile] total_sessions:', data.total_sessions);
-
-        stats = {
-          joinDate: this.formatJoinDate(this.data.userInfo?.createdAt),
-          lastLoginDate: this.formatLastLogin(),
-          // 真实数据：从 analytics 获取
-          homeworkCount: data.image_questions || 0, // 图片提问数（作业问答）
-          questionCount: data.total_questions || 0, // 总提问数
-          studyDays: data.total_sessions || 0, // 学习会话数（天数）
-          avgScore: data.avg_rating > 0 ? Math.round(data.avg_rating * 20) : 0, // 评分转百分制
-          errorCount: data.mistake_count || 0, // 错题数
-          // 暂未实现的数据显示占位符
-          totalScore: '--', // 总分（暂未实现）
-          studyHours: '--', // 学习时长（暂未实现）
-        };
-        console.error('[Profile] 映射后的 stats:', stats);
-        console.error('[Profile] 映射后的 stats 详情:', JSON.stringify(stats));
-      } else {
-        console.error('[Profile] ⚠️ 进入占位数据分支');
-        console.error('[Profile] response:', response);
-        console.error('[Profile] response.data:', response?.data);
-
-        // API调用失败，使用本地缓存或占位数据
-        const cachedStats = wx.getStorageSync('user_stats_cache');
-
-        if (cachedStats && Date.now() - cachedStats.timestamp < 3600000) {
-          // 缓存未过期（1小时）
-          console.error('[Profile] 使用缓存数据');
-          stats = cachedStats.data;
-        } else {
-          // 使用占位数据（首次加载或缓存过期）
-          console.error('[Profile] 使用占位数据（缓存不存在或已过期）');
-          stats = {
-            joinDate: this.formatJoinDate(this.data.userInfo?.createdAt),
-            lastLoginDate: this.formatLastLogin(),
-            homeworkCount: '--',
-            questionCount: '--',
-            studyDays: '--',
-            totalScore: '--',
-            avgScore: '--',
-            errorCount: '--',
-            studyHours: '--',
-          };
-        }
-      }
-
-      console.error('[Profile] 最终 setData 的 stats:', stats);
-      console.error('[Profile] 最终 setData 的 stats 详情:', JSON.stringify(stats));
-
-      this.setData({ stats });
-
-      console.error('[Profile] ✅ setData 执行完成');
-
-      // 缓存统计数据
-      wx.setStorageSync('user_stats_cache', {
-        data: stats,
-        timestamp: Date.now(),
-      });
-
-      console.error('[Profile] ✅ 缓存保存完成');
-    } catch (error) {
-      console.error('[Profile] ❌ loadUserStats 外层捕获异常:', error);
-      console.error('[Profile] 异常详情:', JSON.stringify(error));
-      // 统计信息加载失败不影响主要功能
-
-      // 尝试使用缓存数据
-      const cachedStats = wx.getStorageSync('user_stats_cache');
-      if (cachedStats && cachedStats.data) {
-        this.setData({ stats: cachedStats.data });
-      }
-    }
-
-    console.error('===== [Profile] loadUserStats 方法执行结束 =====');
-  },
-
-  /**
    * 刷新用户信息
    */
   async refreshUserInfo() {
@@ -327,53 +199,6 @@ const pageObject = {
       errorToast.show('刷新失败，请稍后重试');
     } finally {
       this.setData({ refreshing: false });
-    }
-  },
-
-  /**
-   * 格式化加入日期
-   */
-  formatJoinDate(createdAt) {
-    if (!createdAt) return '未知';
-
-    try {
-      const date = new Date(createdAt);
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}年${month}月${day}日`;
-    } catch (error) {
-      return '未知';
-    }
-  },
-
-  /**
-   * 格式化最后登录时间
-   */
-  formatLastLogin(lastLogin) {
-    try {
-      if (lastLogin) {
-        const date = new Date(lastLogin);
-        const now = new Date();
-        const diffMs = now - date;
-        const diffMins = Math.floor(diffMs / 60000);
-        const diffHours = Math.floor(diffMs / 3600000);
-        const diffDays = Math.floor(diffMs / 86400000);
-
-        if (diffMins < 1) return '刚刚';
-        if (diffMins < 60) return `${diffMins}分钟前`;
-        if (diffHours < 24) return `${diffHours}小时前`;
-        if (diffDays < 7) return `${diffDays}天前`;
-
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-      }
-
-      return '今天';
-    } catch (error) {
-      return '今天';
     }
   },
 
@@ -469,28 +294,6 @@ const pageObject = {
 
     wx.navigateTo({
       url: '/pages/profile/help/index',
-    });
-  },
-
-  /**
-   * 查看作业记录
-   */
-  onViewHomework() {
-    console.log('查看作业记录');
-
-    wx.navigateTo({
-      url: '/pages/homework/list/index',
-    });
-  },
-
-  /**
-   * 查看问答历史
-   */
-  onViewQuestions() {
-    console.log('查看问答历史');
-
-    wx.navigateTo({
-      url: '/pages/chat/history/index',
     });
   },
 
