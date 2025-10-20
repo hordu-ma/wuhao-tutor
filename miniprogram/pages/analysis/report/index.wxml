@@ -71,7 +71,7 @@
               <van-icon name="star-o" size="24px" />
             </view>
             <view class="stat-content">
-              <text class="stat-value">{{analytics.avg_rating}}</text>
+              <text class="stat-value">{{analytics.avg_rating > 0 ? analytics.avg_rating : '--'}}</text>
               <text class="stat-label">平均评分</text>
             </view>
           </view>
@@ -83,7 +83,7 @@
               <van-icon name="thumb-circle-o" size="24px" />
             </view>
             <view class="stat-content">
-              <text class="stat-value">{{analytics.positive_feedback_rate}}%</text>
+              <text class="stat-value">{{analytics.positive_feedback_rate > 0 ? analytics.positive_feedback_rate + '%' : '--'}}</text>
               <text class="stat-label">好评率</text>
             </view>
           </view>
