@@ -35,6 +35,7 @@ from src.schemas.learning import (
     SessionResponse,
     UpdateSessionRequest,
 )
+from src.schemas.mistake import MistakeDetailResponse
 from src.services.learning_service import get_learning_service
 
 router = APIRouter()
@@ -961,8 +962,8 @@ async def voice_to_text(
         # 获取语音识别服务
         speech_service = get_speech_recognition_service()
 
-        # 调用语音识别
-        result = await speech_service.recognize_from_file(voice, language)
+        # 调用语音识别（确保 language 有默认值）
+        result = await speech_service.recognize_from_file(voice, language or "zh-CN")
 
         if result["success"]:
             return {
@@ -997,4 +998,82 @@ async def voice_to_text(
         raise HTTPException(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"语音识别处理失败: {str(e)}",
+        )
+
+
+# ========== 错题本集成 ==========
+
+
+@router.post(
+    "/questions/{question_id}/add-to-mistakes",
+    response_model=MistakeDetailResponse,
+    status_code=http_status.HTTP_201_CREATED,
+    summary="将题目加入错题本",
+)
+async def add_question_to_mistakes(
+    question_id: str,
+    student_answer: Optional[str] = Query(
+        None, description="学生答案（可选，用于标记答错）"
+    ),
+    current_user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    将学习问答中的题目加入到错题本
+
+    支持从学习问答中提取错题：
+    - 答错的题目：提供 student_answer 参数
+    - 空白未作答的题目：不提供 student_answer
+
+    加入错题本后将自动：
+    - 标记来源为 learning
+    - 关联原始 Question ID
+    - 设置艾宾浩斯遗忘曲线复习计划（首次复习为1天后）
+    - 提取 AI 回答中的正确答案
+
+    Args:
+        question_id: 问题ID
+        student_answer: 学生答案（可选）
+
+    Returns:
+        创建的错题详情
+
+    Raises:
+        404: 问题不存在或无权限
+        409: 该问题已在错题本中
+        500: 服务错误
+    """
+    try:
+        learning_service = get_learning_service(db)
+
+        # 调用服务层方法
+        mistake = await learning_service.add_question_to_mistakes(
+            user_id=current_user_id,
+            question_id=question_id,
+            student_answer=student_answer,
+        )
+
+        return MistakeDetailResponse(**mistake)
+
+    except NotFoundError as e:
+        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValidationError as e:
+        # 409: 已存在
+        if "已存在" in str(e) or "already" in str(e).lower():
+            raise HTTPException(
+                status_code=http_status.HTTP_409_CONFLICT, detail=str(e)
+            )
+        # 422: 其他验证错误
+        raise HTTPException(
+            status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)
+        )
+    except ServiceError as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"Add question to mistakes failed: {e}")
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="加入错题本失败，请稍后重试",
         )

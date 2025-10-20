@@ -563,6 +563,38 @@ const learningAPI = {
   },
 
   /**
+   * 将学习问答中的题目加入错题本
+   * @param {string} questionId - 问题 ID
+   * @param {Object} params - 参数
+   * @param {string} [params.student_answer] - 学生答案（可选，用于标记答错）
+   * @param {Object} [config] - 请求配置
+   * @returns {Promise<Object>} 创建的错题详情
+   */
+  addQuestionToMistakes(questionId, params = {}, config = {}) {
+    if (!questionId) {
+      return Promise.reject({
+        code: 'VALIDATION_ERROR',
+        message: '问题ID不能为空',
+      });
+    }
+
+    const { student_answer } = params;
+    const queryParams = student_answer ? { student_answer } : {};
+
+    return request.post(
+      `api/v1/learning/questions/${questionId}/add-to-mistakes`,
+      {},
+      {
+        params: queryParams, // query 参数
+        showLoading: true,
+        loadingText: '加入错题本中...',
+        showError: true,
+        ...config,
+      },
+    );
+  },
+
+  /**
    * 获取系统统计 - 使用日统计接口
    * @param {Object} [config] - 请求配置
    * @returns {Promise<Object>} 系统统计信息

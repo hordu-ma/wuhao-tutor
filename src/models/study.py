@@ -130,10 +130,24 @@ class MistakeRecord(BaseModel):
     # 元数据
     source = Column(
         String(50),
-        default="upload",
+        default="manual",
         nullable=False,
-        comment="来源（upload/import/generate）",
+        comment="来源（learning/homework/manual/upload/import/generate）",
     )
+
+    # 【新增】关联的Question ID（从学习问答创建）
+    source_question_id = Column(
+        String(36) if is_sqlite else UUID(as_uuid=True),  # type: ignore[arg-type]
+        nullable=True,
+        index=True,
+        comment="关联的Question ID",
+    )
+
+    # 【新增】学生答案（可选）
+    student_answer = Column(Text, nullable=True, comment="学生答案")
+
+    # 【新增】正确答案（可选）
+    correct_answer = Column(Text, nullable=True, comment="正确答案")
 
     tags = Column(JSON, nullable=True, comment="标签列表")
 
@@ -185,7 +199,7 @@ class MistakeReview(BaseModel):
 
     # 复习信息
     review_date = Column(
-        DateTime(timezone=True) if not is_sqlite else String(50),
+        DateTime(timezone=True) if not is_sqlite else String(50),  # type: ignore[arg-type]
         server_default=func.now() if not is_sqlite else None,
         default=lambda: (
             func.now() if not is_sqlite else func.strftime("%Y-%m-%d %H:%M:%S", "now")
@@ -211,7 +225,7 @@ class MistakeReview(BaseModel):
     )
 
     next_review_date = Column(
-        DateTime(timezone=True) if not is_sqlite else String(50),
+        DateTime(timezone=True) if not is_sqlite else String(50),  # type: ignore[arg-type]
         nullable=True,
         index=True,
         comment="计算的下次复习时间",

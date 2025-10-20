@@ -1051,6 +1051,171 @@ class LearningService:
         # 简化逻辑：如果某个话题问得比较多，可能是薄弱环节
         return topics[:5]
 
+    # ========== 错题本功能 ==========
+
+    async def add_question_to_mistakes(
+        self,
+        user_id: str,
+        question_id: str,
+        student_answer: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        将学习问答中的题目加入错题本
+
+        Args:
+            user_id: 用户ID
+            question_id: 问题ID
+            student_answer: 学生答案（可选，用于标记答错）
+
+        Returns:
+            Dict: 创建的错题详情
+
+        Raises:
+            NotFoundError: 问题不存在
+            ServiceError: 创建失败
+        """
+        try:
+            # 1. 获取问题和答案
+            question = await self.question_repo.get_by_id(question_id)
+            if not question or str(question.user_id) != user_id:
+                raise NotFoundError(f"问题 {question_id} 不存在")
+
+            # 使用 get_by_field 方法获取答案（BaseRepository 的标准方法）
+            answer = await self.answer_repo.get_by_field("question_id", question_id)
+            if not answer:
+                raise NotFoundError(f"问题 {question_id} 暂无答案")
+
+            # 2. 提取知识点（从Question.topic获取）
+            knowledge_points = []
+            # 使用 getattr 安全访问属性
+            question_topic = getattr(question, "topic", None)
+            if question_topic:
+                knowledge_points.append(question_topic)
+
+            # 3. 提取正确答案（从AI回答中解析）
+            correct_answer = None
+            if answer:
+                answer_content = getattr(answer, "content", "")
+                correct_answer = self._extract_correct_answer(answer_content)
+
+            # 4. 解析图片URL
+            image_urls = []
+            question_has_images = getattr(question, "has_images", False)
+            question_image_urls = getattr(question, "image_urls", None)
+            if question_has_images and question_image_urls:
+                try:
+                    image_urls = json.loads(question_image_urls)
+                except:
+                    image_urls = []
+
+            # 5. 构造错题数据
+            from src.models.study import MistakeRecord
+            from src.repositories.mistake_repository import MistakeRepository
+
+            mistake_repo = MistakeRepository(MistakeRecord, self.db)
+
+            # 安全获取问题属性
+            question_content = getattr(question, "content", "")
+            question_subject = getattr(question, "subject", None)
+            question_difficulty = getattr(question, "difficulty_level", None)
+
+            mistake_data = {
+                "user_id": user_id,
+                "subject": question_subject or "其他",
+                "title": self._generate_mistake_title(question_content),
+                "ocr_text": question_content,  # 题目内容
+                "image_urls": image_urls,
+                "difficulty_level": question_difficulty or 2,
+                "knowledge_points": knowledge_points,
+                "ai_feedback": (
+                    {
+                        "model": (
+                            getattr(answer, "model_name", "unknown")
+                            if answer
+                            else "unknown"
+                        ),
+                        "answer": getattr(answer, "content", "") if answer else "",
+                        "confidence": (
+                            getattr(answer, "confidence_score", 0.0) if answer else 0.0
+                        ),
+                        "tokens_used": (
+                            getattr(answer, "tokens_used", 0) if answer else 0
+                        ),
+                    }
+                    if answer
+                    else None
+                ),
+                # 【新增】来源信息
+                "source": "learning",
+                "source_question_id": question_id,
+                "student_answer": student_answer,
+                "correct_answer": correct_answer,
+                # 复习相关（使用艾宾浩斯算法）
+                "mastery_status": "learning",
+                "next_review_at": datetime.now()
+                + timedelta(days=1),  # 第一次复习：1天后
+                "review_count": 0,
+                "correct_count": 0,
+            }
+
+            # 6. 创建错题记录
+            mistake = await mistake_repo.create(mistake_data)
+
+            logger.info(
+                f"从学习问答创建错题: question_id={question_id}, mistake_id={mistake.id}"
+            )
+
+            # 7. 转换为响应格式
+            return {
+                "id": str(mistake.id),
+                "title": mistake.title,
+                "subject": mistake.subject,
+                "source": "learning",
+                "source_question_id": question_id,
+                "knowledge_points": knowledge_points,
+                "next_review_date": (
+                    next_review_at.isoformat()
+                    if (next_review_at := getattr(mistake, "next_review_at", None))
+                    else None
+                ),
+                "created_at": (
+                    mistake.created_at.isoformat()
+                    if hasattr(mistake, "created_at")
+                    else None
+                ),
+            }
+
+        except NotFoundError:
+            raise
+        except Exception as e:
+            logger.error(f"加入错题本失败: {e}", exc_info=True)
+            raise ServiceError(f"加入错题本失败: {str(e)}")
+
+    def _generate_mistake_title(self, content: str) -> str:
+        """生成错题标题（截取前30字）"""
+        if len(content) <= 30:
+            return content
+        return content[:30] + "..."
+
+    def _extract_correct_answer(self, ai_answer: str) -> Optional[str]:
+        """从AI回答中提取正确答案"""
+        import re
+
+        # 简单规则：查找“答案：”、“正确答案：”等关键词后的内容
+        patterns = [
+            r"答案[：:]\s*(.+?)(?:\n|$)",
+            r"正确答案[：:]\s*(.+?)(?:\n|$)",
+            r"解[：:]\s*(.+?)(?:\n|$)",
+        ]
+
+        for pattern in patterns:
+            match = re.search(pattern, ai_answer)
+            if match:
+                return match.group(1).strip()
+
+        # 如果没找到，返回AI回答的前100字
+        return ai_answer[:100] if len(ai_answer) > 100 else ai_answer
+
 
 # 依赖注入函数
 def get_learning_service(db: AsyncSession) -> LearningService:
