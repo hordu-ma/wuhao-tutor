@@ -203,44 +203,50 @@ const pageObject = {
    */
   async loadUserStats() {
     try {
-      // 尝试从API获取实际统计数据
-      const response = await apiClient.get('/user/stats').catch(() => null);
+      // 复用学习报告的 analytics 接口（包含所有统计数据）
+      const response = await apiClient
+        .get('/analytics/learning-stats', {
+          params: { time_range: '30d' }, // 最近30天数据
+        })
+        .catch(() => null);
 
       let stats = {};
 
       if (response && response.success && response.data) {
-        // 使用API返回的数据
+        // 使用 analytics 接口返回的数据
+        const data = response.data;
         stats = {
-          joinDate: this.formatJoinDate(response.data.join_date || this.data.userInfo?.createdAt),
-          lastLoginDate: this.formatLastLogin(response.data.last_login),
-          homeworkCount: response.data.homework_count || 0,
-          questionCount: response.data.question_count || 0,
-          studyDays: response.data.study_days || 0,
-          // 新增字段
-          totalScore: response.data.total_score || 0,
-          avgScore: response.data.avg_score || 0,
-          errorCount: response.data.error_count || 0,
-          studyHours: response.data.study_hours || 0,
+          joinDate: this.formatJoinDate(this.data.userInfo?.createdAt),
+          lastLoginDate: this.formatLastLogin(),
+          // 真实数据：从 analytics 获取
+          homeworkCount: data.image_questions || 0, // 图片提问数（作业问答）
+          questionCount: data.total_questions || 0, // 总提问数
+          studyDays: data.total_sessions || 0, // 学习会话数（天数）
+          avgScore: data.avg_rating > 0 ? Math.round(data.avg_rating * 20) : 0, // 评分转百分制
+          errorCount: data.mistake_count || 0, // 错题数
+          // 暂未实现的数据显示占位符
+          totalScore: '--', // 总分（暂未实现）
+          studyHours: '--', // 学习时长（暂未实现）
         };
       } else {
-        // API调用失败，使用本地缓存或模拟数据
+        // API调用失败，使用本地缓存或占位数据
         const cachedStats = wx.getStorageSync('user_stats_cache');
 
         if (cachedStats && Date.now() - cachedStats.timestamp < 3600000) {
           // 缓存未过期（1小时）
           stats = cachedStats.data;
         } else {
-          // 使用模拟数据
+          // 使用占位数据（首次加载或缓存过期）
           stats = {
             joinDate: this.formatJoinDate(this.data.userInfo?.createdAt),
             lastLoginDate: this.formatLastLogin(),
-            homeworkCount: 12,
-            questionCount: 45,
-            studyDays: 28,
-            totalScore: 95,
-            avgScore: 88,
-            errorCount: 8,
-            studyHours: 36,
+            homeworkCount: '--',
+            questionCount: '--',
+            studyDays: '--',
+            totalScore: '--',
+            avgScore: '--',
+            errorCount: '--',
+            studyHours: '--',
           };
         }
       }

@@ -59,6 +59,10 @@ class AnalyticsService:
             subject_stats = await self._get_subject_stats(user_id, start_date)
             learning_pattern = await self._analyze_learning_pattern(user_id, start_date)
 
+            # "我的"页面统计数据（复用 analytics）
+            image_questions = await self._count_image_questions(user_id, start_date)
+            mistake_count = await self._count_mistakes(user_id, start_date)
+
             return {
                 # 新格式（小程序前端需要的字段）
                 "total_questions": total_questions,
@@ -68,6 +72,9 @@ class AnalyticsService:
                 "positive_feedback_rate": rating_stats["positive_rate"],
                 "subject_stats": subject_stats,
                 "learning_pattern": learning_pattern,
+                # "我的"页面专用字段
+                "image_questions": image_questions,  # 图片提问数（作业数）
+                "mistake_count": mistake_count,  # 错题数
                 # 保留原有字段（保持向后兼容）
                 "total_homework": total_homework,
                 "avg_score": avg_score,
@@ -265,7 +272,7 @@ class AnalyticsService:
     async def _count_homework(
         self, user_id: UUID, start_date: Optional[datetime]
     ) -> int:
-        """统计作业数量"""
+        """统计作业数量（已弃用，保留兼容性）"""
         try:
             conditions = [HomeworkSubmission.student_id == str(user_id)]
             if start_date:
@@ -277,6 +284,45 @@ class AnalyticsService:
 
         except Exception as e:
             logger.warning(f"统计作业数量失败: {e}")
+            return 0
+
+    async def _count_image_questions(
+        self, user_id: UUID, start_date: Optional[datetime]
+    ) -> int:
+        """统计图片提问数量（作业问答模块）"""
+        try:
+            conditions = [
+                Question.user_id == str(user_id),
+                Question.image_url.isnot(None),  # 有图片的提问
+            ]
+            if start_date:
+                conditions.append(Question.created_at >= start_date)
+
+            stmt = select(func.count(Question.id)).where(and_(*conditions))
+            result = await self.db.execute(stmt)
+            return result.scalar() or 0
+
+        except Exception as e:
+            logger.warning(f"统计图片提问数量失败: {e}")
+            return 0
+
+    async def _count_mistakes(
+        self, user_id: UUID, start_date: Optional[datetime]
+    ) -> int:
+        """统计错题数量"""
+        try:
+            from src.models.study import MistakeRecord
+
+            conditions = [MistakeRecord.user_id == str(user_id)]
+            if start_date:
+                conditions.append(MistakeRecord.created_at >= start_date)
+
+            stmt = select(func.count(MistakeRecord.id)).where(and_(*conditions))
+            result = await self.db.execute(stmt)
+            return result.scalar() or 0
+
+        except Exception as e:
+            logger.warning(f"统计错题数量失败: {e}")
             return 0
 
     async def _calculate_avg_score(
