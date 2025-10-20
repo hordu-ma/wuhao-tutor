@@ -202,17 +202,43 @@ const pageObject = {
    * 加载用户统计信息
    */
   async loadUserStats() {
+    console.error('===== [Profile] loadUserStats 方法开始执行 =====');
+
     try {
+      console.error('[Profile] 准备调用 API: /analytics/learning-stats');
+      console.error('[Profile] 请求参数:', { time_range: '30d' });
+
       // 复用学习报告的 analytics 接口（包含所有统计数据）
       const response = await apiClient
         .get('/analytics/learning-stats', { time_range: '30d' }) // 最近30天数据
-        .catch(() => null);
+        .catch(error => {
+          console.error('[Profile] ❌ API 调用异常捕获:', error);
+          console.error('[Profile] 错误类型:', typeof error);
+          console.error('[Profile] 错误详情:', JSON.stringify(error));
+          return null;
+        });
+
+      console.error('[Profile] API 响应结果:', response);
+      console.error('[Profile] 响应类型:', typeof response);
+      console.error('[Profile] API 响应结果:', response);
+      console.error('[Profile] 响应类型:', typeof response);
+      console.error('[Profile] 响应详情:', JSON.stringify(response));
 
       let stats = {};
 
-      if (response && response.success && response.data) {
+      // apiClient 返回格式：{ data: {...}, statusCode: 200, header: {...} }
+      // 需要检查 response.data 而不是 response.success
+      if (response && response.data) {
+        console.error('[Profile] ✅ 进入数据处理分支');
+
         // 使用 analytics 接口返回的数据
         const data = response.data;
+        console.error('[Profile] 原始数据:', data);
+        console.error('[Profile] 原始数据详情:', JSON.stringify(data));
+        console.error('[Profile] image_questions:', data.image_questions);
+        console.error('[Profile] total_questions:', data.total_questions);
+        console.error('[Profile] total_sessions:', data.total_sessions);
+
         stats = {
           joinDate: this.formatJoinDate(this.data.userInfo?.createdAt),
           lastLoginDate: this.formatLastLogin(),
@@ -226,15 +252,23 @@ const pageObject = {
           totalScore: '--', // 总分（暂未实现）
           studyHours: '--', // 学习时长（暂未实现）
         };
+        console.error('[Profile] 映射后的 stats:', stats);
+        console.error('[Profile] 映射后的 stats 详情:', JSON.stringify(stats));
       } else {
+        console.error('[Profile] ⚠️ 进入占位数据分支');
+        console.error('[Profile] response:', response);
+        console.error('[Profile] response.data:', response?.data);
+
         // API调用失败，使用本地缓存或占位数据
         const cachedStats = wx.getStorageSync('user_stats_cache');
 
         if (cachedStats && Date.now() - cachedStats.timestamp < 3600000) {
           // 缓存未过期（1小时）
+          console.error('[Profile] 使用缓存数据');
           stats = cachedStats.data;
         } else {
           // 使用占位数据（首次加载或缓存过期）
+          console.error('[Profile] 使用占位数据（缓存不存在或已过期）');
           stats = {
             joinDate: this.formatJoinDate(this.data.userInfo?.createdAt),
             lastLoginDate: this.formatLastLogin(),
@@ -249,15 +283,23 @@ const pageObject = {
         }
       }
 
+      console.error('[Profile] 最终 setData 的 stats:', stats);
+      console.error('[Profile] 最终 setData 的 stats 详情:', JSON.stringify(stats));
+
       this.setData({ stats });
+
+      console.error('[Profile] ✅ setData 执行完成');
 
       // 缓存统计数据
       wx.setStorageSync('user_stats_cache', {
         data: stats,
         timestamp: Date.now(),
       });
+
+      console.error('[Profile] ✅ 缓存保存完成');
     } catch (error) {
-      console.warn('加载统计信息失败:', error);
+      console.error('[Profile] ❌ loadUserStats 外层捕获异常:', error);
+      console.error('[Profile] 异常详情:', JSON.stringify(error));
       // 统计信息加载失败不影响主要功能
 
       // 尝试使用缓存数据
@@ -266,6 +308,8 @@ const pageObject = {
         this.setData({ stats: cachedStats.data });
       }
     }
+
+    console.error('===== [Profile] loadUserStats 方法执行结束 =====');
   },
 
   /**
