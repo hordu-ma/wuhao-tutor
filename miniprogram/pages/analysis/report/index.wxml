@@ -40,55 +40,47 @@
         <text class="section-subtitle">最近{{timeRangeText}}的学习数据</text>
       </view>
       
-      <van-grid column-num="2" border="{{false}}" gutter="12rpx">
-        <van-grid-item>
-          <view class="stat-card">
-            <view class="stat-icon study-time-icon">
-              <van-icon name="clock-o" size="24px" />
-            </view>
-            <view class="stat-content">
-              <text class="stat-value">{{analytics.total_sessions}}</text>
-              <text class="stat-label">学习会话</text>
-            </view>
+      <view class="stat-grid">
+        <view class="stat-card">
+          <view class="stat-icon study-time-icon">
+            <van-icon name="clock-o" size="24px" />
           </view>
-        </van-grid-item>
+          <view class="stat-content">
+            <text class="stat-value">{{analytics.total_sessions}}</text>
+            <text class="stat-label">学习会话</text>
+          </view>
+        </view>
 
-        <van-grid-item>
-          <view class="stat-card">
-            <view class="stat-icon question-icon">
-              <van-icon name="chat-o" size="24px" />
-            </view>
-            <view class="stat-content">
-              <text class="stat-value">{{analytics.total_questions}}</text>
-              <text class="stat-label">总提问数</text>
-            </view>
+        <view class="stat-card">
+          <view class="stat-icon question-icon">
+            <van-icon name="chat-o" size="24px" />
           </view>
-        </van-grid-item>
+          <view class="stat-content">
+            <text class="stat-value">{{analytics.total_questions}}</text>
+            <text class="stat-label">总提问数</text>
+          </view>
+        </view>
 
-        <van-grid-item>
-          <view class="stat-card">
-            <view class="stat-icon rating-icon">
-              <van-icon name="star-o" size="24px" />
-            </view>
-            <view class="stat-content">
-              <text class="stat-value">{{analytics.avg_rating > 0 ? analytics.avg_rating : '--'}}</text>
-              <text class="stat-label">平均评分</text>
-            </view>
+        <view class="stat-card">
+          <view class="stat-icon rating-icon">
+            <van-icon name="star-o" size="24px" />
           </view>
-        </van-grid-item>
+          <view class="stat-content">
+            <text class="stat-value">{{analytics.avg_rating > 0 ? analytics.avg_rating : '--'}}</text>
+            <text class="stat-label">平均评分</text>
+          </view>
+        </view>
 
-        <van-grid-item>
-          <view class="stat-card">
-            <view class="stat-icon feedback-icon">
-              <van-icon name="thumb-circle-o" size="24px" />
-            </view>
-            <view class="stat-content">
-              <text class="stat-value">{{analytics.positive_feedback_rate > 0 ? analytics.positive_feedback_rate + '%' : '--'}}</text>
-              <text class="stat-label">好评率</text>
-            </view>
+        <view class="stat-card">
+          <view class="stat-icon feedback-icon">
+            <van-icon name="thumb-circle-o" size="24px" />
           </view>
-        </van-grid-item>
-      </van-grid>
+          <view class="stat-content">
+            <text class="stat-value">{{analytics.positive_feedback_rate > 0 ? analytics.positive_feedback_rate + '%' : '--'}}</text>
+            <text class="stat-label">好评率</text>
+          </view>
+        </view>
+      </view>
     </view>
 
     <!-- 学习模式 -->
