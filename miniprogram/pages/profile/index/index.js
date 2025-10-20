@@ -205,9 +205,7 @@ const pageObject = {
     try {
       // 复用学习报告的 analytics 接口（包含所有统计数据）
       const response = await apiClient
-        .get('/analytics/learning-stats', {
-          params: { time_range: '30d' }, // 最近30天数据
-        })
+        .get('/analytics/learning-stats', { time_range: '30d' }) // 最近30天数据
         .catch(() => null);
 
       let stats = {};
