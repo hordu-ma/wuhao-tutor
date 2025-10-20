@@ -6,28 +6,19 @@
   class="role-badge role-badge--{{ type }} role-badge--{{ size }} role-badge--{{ role }} {{ customClass }} {{ clickable ? 'role-badge--clickable' : '' }}"
   bind:tap="onTap"
   bind:longpress="onLongPress"
-  style="
-    --role-color: {{ getRoleColor() }};
-    --role-bg-color: {{ getBgColor() }};
-    --role-light-color: {{ getLightColor() }};
-    --size-font: {{ getSizeConfig().fontSize }};
-    --size-padding: {{ getSizeConfig().padding }};
-    --size-icon: {{ getSizeConfig().iconSize }};
-    --size-height: {{ getSizeConfig().height }};
-    --size-avatar: {{ getSizeConfig().avatarSize }};
-  "
+  style="--role-color: {{ currentRoleColor }}; --role-bg-color: {{ currentBgColor }}; --role-light-color: {{ currentLightColor }}; --size-font: {{ currentSizeConfig.fontSize }}; --size-padding: {{ currentSizeConfig.padding }}; --size-icon: {{ currentSizeConfig.iconSize }}; --size-height: {{ currentSizeConfig.height }}; --size-avatar: {{ currentSizeConfig.avatarSize }};"
 >
   <!-- 徽章样式 -->
   <block wx:if="{{ type === 'badge' }}">
     <!-- 图标 -->
     <text
       wx:if="{{ showIcon }}"
-      class="icon icon-{{ getIconName() }} role-badge__icon"
+      class="icon icon-{{ currentIconName }} role-badge__icon"
     ></text>
 
     <!-- 文字 -->
     <text wx:if="{{ showText }}" class="role-badge__text">
-      {{ getDisplayText() }}
+      {{ currentDisplayText }}
     </text>
 
     <!-- 在线状态指示器 -->
@@ -43,12 +34,12 @@
       <!-- 图标 -->
       <text
         wx:if="{{ showIcon }}"
-        class="icon icon-{{ getIconName() }} role-badge__tag-icon"
+        class="icon icon-{{ currentIconName }} role-badge__tag-icon"
       ></text>
 
       <!-- 文字 -->
       <text wx:if="{{ showText }}" class="role-badge__tag-text">
-        {{ getDisplayText() }}
+        {{ currentDisplayText }}
       </text>
     </view>
 
@@ -65,13 +56,13 @@
       <!-- 头像背景 -->
       <view class="role-badge__avatar-bg">
         <text
-          class="icon icon-{{ getIconName() }} role-badge__avatar-icon"
+          class="icon icon-{{ currentIconName }} role-badge__avatar-icon"
         ></text>
       </view>
 
       <!-- 角色文字 -->
       <text wx:if="{{ showText }}" class="role-badge__avatar-text">
-        {{ getDisplayText() }}
+        {{ currentDisplayText }}
       </text>
 
       <!-- 在线状态指示器 -->

@@ -90,19 +90,9 @@
   "functionalPages": false,
   "subpackages": [
     {
-      "root": "subpackages/homework",
-      "name": "homework",
-      "pages": ["create/index", "correction/index", "history/index"]
-    },
-    {
       "root": "subpackages/learning",
       "name": "learning",
       "pages": ["voice/index", "image/index", "history/index"]
-    },
-    {
-      "root": "subpackages/analysis",
-      "name": "analysis",
-      "pages": ["detail/index", "compare/index", "export/index"]
     }
   ],
   "workers": "workers",

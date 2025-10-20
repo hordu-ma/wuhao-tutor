@@ -5,9 +5,6 @@
     "van-button": "@vant/weapp/button/index",
     "van-dialog": "@vant/weapp/dialog/index",
     "van-toast": "@vant/weapp/toast/index",
-    "api-status": "/components/api-status/index",
-    "error-boundary": "/components/error-boundary/index",
-    "network-status": "/components/network-status/index",
     "image-cropper": "/components/image-cropper/index",
     "quality-selector": "/components/quality-selector/index",
     "ocr-progress": "/components/ocr-progress/index"
