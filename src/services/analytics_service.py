@@ -53,9 +53,22 @@ class AnalyticsService:
             knowledge_points = await self._analyze_knowledge_points(user_id, start_date)
             study_trend = await self._get_study_trend(user_id, start_date)
 
+            # 新增统计
+            total_sessions = await self._count_sessions(user_id, start_date)
+            rating_stats = await self._get_rating_stats(user_id, start_date)
+            subject_stats = await self._get_subject_stats(user_id, start_date)
+            learning_pattern = await self._analyze_learning_pattern(user_id, start_date)
+
             return {
-                "total_study_days": total_study_days,
+                # 新格式（小程序前端需要的字段）
                 "total_questions": total_questions,
+                "total_sessions": total_sessions,
+                "total_study_days": total_study_days,
+                "avg_rating": rating_stats["avg_rating"],
+                "positive_feedback_rate": rating_stats["positive_rate"],
+                "subject_stats": subject_stats,
+                "learning_pattern": learning_pattern,
+                # 保留原有字段（保持向后兼容）
                 "total_homework": total_homework,
                 "avg_score": avg_score,
                 "knowledge_points": knowledge_points,
@@ -738,6 +751,251 @@ class AnalyticsService:
         except Exception as e:
             logger.error(f"获取学科统计失败: {e}", exc_info=True)
             raise ServiceError(f"获取学科统计失败: {str(e)}")
+
+    async def _count_sessions(
+        self, user_id: UUID, start_date: Optional[datetime]
+    ) -> int:
+        """
+        统计会话数
+
+        Args:
+            user_id: 用户ID
+            start_date: 开始日期
+
+        Returns:
+            会话总数
+        """
+        try:
+            from src.models.learning import ChatSession
+
+            conditions = [ChatSession.user_id == str(user_id)]
+            if start_date:
+                conditions.append(ChatSession.created_at >= start_date)
+
+            stmt = select(func.count(ChatSession.id)).where(and_(*conditions))
+            result = await self.db.execute(stmt)
+            count = result.scalar() or 0
+
+            return int(count)
+
+        except Exception as e:
+            logger.warning(f"统计会话数失败: {e}")
+            return 0
+
+    async def _get_rating_stats(
+        self, user_id: UUID, start_date: Optional[datetime]
+    ) -> Dict[str, Any]:
+        """
+        统计评分数据
+
+        Args:
+            user_id: 用户ID
+            start_date: 开始日期
+
+        Returns:
+            评分统计字典 {avg_rating, positive_rate}
+        """
+        try:
+            from src.models.learning import Answer, Question
+
+            # 构建查询条件
+            conditions = [Question.user_id == str(user_id)]
+            if start_date:
+                conditions.append(Question.created_at >= start_date)
+
+            # 查询所有评分
+            stmt = (
+                select(Answer.user_rating)
+                .join(Question, Question.id == Answer.question_id)
+                .where(and_(*conditions))
+                .where(Answer.user_rating.isnot(None))
+            )
+
+            result = await self.db.execute(stmt)
+            ratings = [row[0] for row in result.all()]
+
+            if not ratings:
+                return {"avg_rating": 0.0, "positive_rate": 0.0}
+
+            # 计算平均评分
+            avg_rating = sum(ratings) / len(ratings)
+
+            # 计算好评率（评分>=4为好评）
+            positive_count = sum(1 for r in ratings if r >= 4)
+            positive_rate = (positive_count / len(ratings)) * 100
+
+            return {
+                "avg_rating": round(avg_rating, 1),
+                "positive_rate": round(positive_rate, 1),
+            }
+
+        except Exception as e:
+            logger.warning(f"统计评分失败: {e}")
+            return {"avg_rating": 0.0, "positive_rate": 0.0}
+
+    async def _get_subject_stats(
+        self, user_id: UUID, start_date: Optional[datetime]
+    ) -> List[Dict[str, Any]]:
+        """
+        统计学科分布
+
+        Args:
+            user_id: 用户ID
+            start_date: 开始日期
+
+        Returns:
+            学科统计列表
+        """
+        try:
+            from src.models.learning import Answer, Question
+
+            # 构建查询条件
+            conditions = [Question.user_id == str(user_id)]
+            if start_date:
+                conditions.append(Question.created_at >= start_date)
+
+            # 按学科分组统计
+            stmt = (
+                select(
+                    Question.subject,
+                    func.count(Question.id).label("question_count"),
+                    func.avg(Answer.user_rating).label("avg_rating"),
+                )
+                .outerjoin(Answer, Question.id == Answer.question_id)
+                .where(and_(*conditions))
+                .where(Question.subject.isnot(None))
+                .group_by(Question.subject)
+            )
+
+            result = await self.db.execute(stmt)
+            rows = result.all()
+
+            subject_stats = []
+            for row in rows:
+                subject_stats.append(
+                    {
+                        "subject": row.subject,
+                        "subject_name": row.subject,  # 可以添加中文映射
+                        "question_count": int(row.question_count or 0),
+                        "avg_rating": round(float(row.avg_rating or 0), 1),
+                    }
+                )
+
+            return subject_stats
+
+        except Exception as e:
+            logger.warning(f"统计学科分布失败: {e}")
+            return []
+
+    async def _analyze_learning_pattern(
+        self, user_id: UUID, start_date: Optional[datetime]
+    ) -> Dict[str, Any]:
+        """
+        分析学习模式
+
+        Args:
+            user_id: 用户ID
+            start_date: 开始日期
+
+        Returns:
+            学习模式字典
+        """
+        try:
+            from src.models.learning import ChatSession, Question
+
+            # 构建查询条件
+            conditions = [Question.user_id == str(user_id)]
+            if start_date:
+                conditions.append(Question.created_at >= start_date)
+
+            # 查询所有问题的创建时间和难度
+            stmt = select(
+                Question.created_at, Question.difficulty_level, Question.session_id
+            ).where(and_(*conditions))
+
+            result = await self.db.execute(stmt)
+            rows = result.all()
+
+            if not rows:
+                return {
+                    "most_active_hour": 0,
+                    "most_active_day": 0,
+                    "avg_session_length": 0,
+                    "preferred_difficulty": "medium",
+                }
+
+            # 分析最活跃时段（小时）
+            hour_counts = {}
+            day_counts = {}
+            difficulty_counts = {}
+
+            for row in rows:
+                if row.created_at:
+                    # 解析时间字符串
+                    if isinstance(row.created_at, str):
+                        dt = datetime.fromisoformat(
+                            row.created_at.replace("Z", "+00:00")
+                        )
+                    else:
+                        dt = row.created_at
+
+                    hour = dt.hour
+                    weekday = dt.weekday()
+
+                    hour_counts[hour] = hour_counts.get(hour, 0) + 1
+                    day_counts[weekday] = day_counts.get(weekday, 0) + 1
+
+                if row.difficulty_level:
+                    difficulty_counts[row.difficulty_level] = (
+                        difficulty_counts.get(row.difficulty_level, 0) + 1
+                    )
+
+            # 找出最活跃时段和日期
+            most_active_hour = (
+                max(hour_counts, key=hour_counts.get) if hour_counts else 0
+            )
+            most_active_day = max(day_counts, key=day_counts.get) if day_counts else 0
+
+            # 找出偏好难度
+            difficulty_map = {1: "easy", 2: "easy", 3: "medium", 4: "hard", 5: "hard"}
+            preferred_difficulty = "medium"
+            if difficulty_counts:
+                avg_difficulty = sum(k * v for k, v in difficulty_counts.items()) / sum(
+                    difficulty_counts.values()
+                )
+                preferred_difficulty = difficulty_map.get(
+                    round(avg_difficulty), "medium"
+                )
+
+            # 计算平均会话时长（会话中的问题数作为时长估算）
+            session_counts = {}
+            for row in rows:
+                if row.session_id:
+                    session_counts[row.session_id] = (
+                        session_counts.get(row.session_id, 0) + 1
+                    )
+
+            avg_session_length = 0
+            if session_counts:
+                # 估算：每个问题5分钟
+                avg_questions = sum(session_counts.values()) / len(session_counts)
+                avg_session_length = int(avg_questions * 5)
+
+            return {
+                "most_active_hour": most_active_hour,
+                "most_active_day": most_active_day,
+                "avg_session_length": avg_session_length,
+                "preferred_difficulty": preferred_difficulty,
+            }
+
+        except Exception as e:
+            logger.warning(f"分析学习模式失败: {e}")
+            return {
+                "most_active_hour": 0,
+                "most_active_day": 0,
+                "avg_session_length": 0,
+                "preferred_difficulty": "medium",
+            }
 
 
 # ========== 依赖注入 ==========
