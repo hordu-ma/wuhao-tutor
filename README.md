@@ -294,6 +294,7 @@ make lint
 
 ### 部署文档
 
+- **[一键部署脚本](scripts/DEPLOY-README.md)** ⭐ - 简单高效的生产部署工具
 - [生产部署指南](docs/deployment/production-deployment-guide.md) - systemd + Nginx 完整部署流程
 - [本地代码验证](docs/deployment/local-code-verification.md) - 部署前代码安全检查
 - [RDS 数据库配置](docs/deployment/RDS_CONNECTION_GUIDE.md) - PostgreSQL 连接配置

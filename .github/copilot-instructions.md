@@ -416,30 +416,78 @@ async def test_get_mistakes_list(client, auth_headers):
 
 ## 部署流程
 
+### 生产环境配置
+
+**⚠️ 重要：以下是阿里云生产环境的实际配置，修改代码时需要考虑这些约束**
+
+| 配置项           | 值                   | 说明                       |
+| ---------------- | -------------------- | -------------------------- |
+| **服务器 IP**    | 121.199.173.244      | 阿里云 ECS                 |
+| **域名**         | horsduroot.com       | 主域名（已配置 SSL）       |
+| **SSH 用户**     | root@121.199.173.244 | 服务器访问                 |
+| **后端部署路径** | /opt/wuhao-tutor     | FastAPI 应用目录           |
+| **前端部署路径** | /var/www/html        | Nginx 静态文件目录         |
+| **服务名称**     | wuhao-tutor.service  | systemd 服务               |
+| **后端端口**     | 8000                 | 内部端口（Nginx 反向代理） |
+| **数据库**       | PostgreSQL           | 生产数据库                 |
+| **缓存**         | Redis                | 限流和会话存储             |
+| **SSL 证书**     | Let's Encrypt        | www.horsduroot.com         |
+
+**访问地址**：
+
+- 前端：https://horsduroot.com
+- 后端 API：https://horsduroot.com/api/v1/
+- 健康检查：https://horsduroot.com/api/v1/health
+
+**部署命令**：
+
+```bash
+# 一键部署（推荐）
+./scripts/deploy.sh
+
+# 检查生产状态
+./scripts/check-production.sh
+
+# 查看服务日志
+ssh root@121.199.173.244 'journalctl -u wuhao-tutor.service -f'
+```
+
+**注意事项**：
+
+- 前端在本地构建后同步到服务器（避免 npm install 卡住）
+- 微信小程序在本地开发工具中编译上传（不在服务器）
+- `.env.production` 文件在服务器上，包含敏感配置
+- 数据库迁移需要手动执行：`ssh root@121.199.173.244 'cd /opt/wuhao-tutor && source venv/bin/activate && alembic upgrade head'`
+
 ### 生产部署检查清单
 
 ```bash
-# 1. 预检查
-./scripts/pre_deploy_check.sh
+# 1. 执行部署（已整合所有步骤）
+./scripts/deploy.sh
 
-# 2. 执行部署
-./scripts/deploy_to_production.sh
+# 2. 验证部署
+curl https://horsduroot.com/api/v1/health
 
-# 3. 验证部署
-./scripts/verify_deployment.sh
-
-# 4. 健康检查
-curl https://your-domain.com/api/v1/health
+# 3. 检查服务状态
+./scripts/check-production.sh
 ```
 
-### 部署步骤详解
+### 部署步骤详解（自动执行）
 
-1. **代码推送**：Git push 到生产服务器
-2. **依赖安装**：`uv sync --no-dev`（仅生产依赖）
-3. **数据库迁移**：`alembic upgrade head`
-4. **前端构建**：`npm run build`
-5. **服务重启**：`systemctl restart wuhao-tutor`
-6. **健康检查**：验证 `/health` 端点
+`./scripts/deploy.sh` 会自动执行以下步骤：
+
+1. **检查 SSH 连接**：验证服务器可访问
+2. **同步后端代码**：rsync 到 /opt/wuhao-tutor
+3. **重启后端服务**：systemctl restart wuhao-tutor.service
+4. **构建前端**：本地执行 npm run build
+5. **同步前端文件**：rsync 到 /var/www/html
+6. **验证部署**：检查 API 健康端点和前端访问
+
+**手动执行数据库迁移**：
+
+```bash
+ssh root@121.199.173.244 'cd /opt/wuhao-tutor && source venv/bin/activate && alembic upgrade head'
+```
 
 ### 回滚流程
 

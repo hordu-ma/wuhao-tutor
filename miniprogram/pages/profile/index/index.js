@@ -191,7 +191,7 @@ const pageObject = {
     try {
       this.setData({ refreshing: true });
 
-      await Promise.all([this.fetchLatestUserInfo(), this.loadUserStats()]);
+      await this.fetchLatestUserInfo();
 
       console.log('用户信息刷新成功');
     } catch (error) {
