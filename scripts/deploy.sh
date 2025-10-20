@@ -60,7 +60,7 @@ echo
 log_info "=== 第1步：部署后端服务 ==="
 
 log_info "同步后端代码..."
-rsync -avz --delete \
+rsync -avz \
     --exclude='venv' \
     --exclude='__pycache__' \
     --exclude='*.pyc' \
@@ -121,7 +121,7 @@ fi
 log_success "前端构建完成"
 
 log_info "同步前端文件到服务器..."
-rsync -avz --delete \
+rsync -avz \
     dist/ \
     "${SERVER_SSH}:${FRONTEND_REMOTE_DIR}/"
 
