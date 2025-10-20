@@ -293,7 +293,7 @@ class AnalyticsService:
         try:
             conditions = [
                 Question.user_id == str(user_id),
-                Question.image_url.isnot(None),  # 有图片的提问
+                Question.has_images == True,  # 有图片的提问
             ]
             if start_date:
                 conditions.append(Question.created_at >= start_date)
