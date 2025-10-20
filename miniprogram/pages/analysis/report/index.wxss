@@ -166,6 +166,16 @@
   margin-top: 4rpx;
 }
 
+/* 修复 van-grid-item 的默认背景 */
+.overview-section >>> .van-grid-item {
+  background: transparent !important;
+}
+
+.overview-section >>> .van-grid-item__content {
+  background: transparent !important;
+  padding: 0 !important;
+}
+
 /* 学习模式卡片 */
 .pattern-cards {
   display: grid;
