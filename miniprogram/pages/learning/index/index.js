@@ -1327,20 +1327,59 @@ const pageObject = {
 
         console.log('准备添加的图片:', newImages);
 
+        // 文件大小预检：检查总大小和单个文件大小
+        const existingImages = this.data.uploadedImages;
+        const allImages = [...existingImages, ...newImages];
+
+        // 计算总大小
+        const totalSize = allImages.reduce((sum, img) => sum + (img.size || 0), 0);
+        const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(1);
+
+        // 检查是否有超大单个文件（>10MB）
+        const oversizedImages = newImages.filter(img => img.size > 10 * 1024 * 1024);
+
+        // 检查总大小是否超过20MB
+        const isTotalOversized = totalSize > 20 * 1024 * 1024;
+
+        // 如果有超大文件，警告用户
+        if (oversizedImages.length > 0) {
+          const oversizedInfo = oversizedImages
+            .map(img => `${(img.size / (1024 * 1024)).toFixed(1)}MB`)
+            .join('、');
+
+          wx.showModal({
+            title: '图片过大提示',
+            content: `检测到 ${oversizedImages.length} 张图片超过10MB（${oversizedInfo}），上传时将自动压缩优化。建议使用较小的图片以获得更快的上传速度。`,
+            showCancel: false,
+            confirmText: '知道了',
+          });
+        } else if (isTotalOversized) {
+          // 总大小超过20MB，提示将自动压缩
+          wx.showModal({
+            title: '自动压缩提示',
+            content: `当前图片总大小为 ${totalSizeMB}MB，上传时将自动压缩优化，以确保上传速度和AI处理效率。`,
+            showCancel: false,
+            confirmText: '好的',
+          });
+        }
+
         this.setData(
           {
-            uploadedImages: [...this.data.uploadedImages, ...newImages],
+            uploadedImages: allImages,
           },
           () => {
             // setData 完成后的回调
             console.log('setData 完成，当前图片数量:', this.data.uploadedImages.length);
+            console.log('当前图片总大小:', totalSizeMB + 'MB');
 
             // 给用户明确的反馈
-            wx.showToast({
-              title: `已选择 ${this.data.uploadedImages.length} 张图片`,
-              icon: 'success',
-              duration: 1500,
-            });
+            if (!oversizedImages.length && !isTotalOversized) {
+              wx.showToast({
+                title: `已选择 ${this.data.uploadedImages.length} 张图片`,
+                icon: 'success',
+                duration: 1500,
+              });
+            }
           },
         );
 
@@ -1397,22 +1436,102 @@ const pageObject = {
   },
 
   /**
+   * 图片压缩处理
+   * 策略：超过2MB或需要优化时才压缩
+   * @param {string} filePath - 原始图片路径
+   * @param {number} originalSize - 原始文件大小（字节）
+   * @returns {Promise<{path: string, size: number, compressed: boolean}>} 压缩后的文件信息
+   */
+  async compressImageIfNeeded(filePath, originalSize) {
+    const COMPRESS_THRESHOLD = 2 * 1024 * 1024; // 2MB阈值
+    const TARGET_WIDTH = 1920; // AI识别最佳分辨率
+    const QUALITY = 80; // 压缩质量80%
+
+    // 判断是否需要压缩
+    const needCompress = originalSize > COMPRESS_THRESHOLD;
+
+    if (!needCompress) {
+      console.log(
+        `图片无需压缩: ${(originalSize / 1024).toFixed(0)}KB < ${COMPRESS_THRESHOLD / 1024}KB`,
+      );
+      return {
+        path: filePath,
+        size: originalSize,
+        compressed: false,
+      };
+    }
+
+    try {
+      console.log(`开始压缩图片: ${(originalSize / 1024).toFixed(0)}KB`);
+
+      const res = await wx.compressImage({
+        src: filePath,
+        quality: QUALITY,
+        compressedWidth: TARGET_WIDTH,
+        compressedHeight: TARGET_WIDTH,
+      });
+
+      // 获取压缩后的文件信息
+      const fileInfo = await new Promise((resolve, reject) => {
+        wx.getFileInfo({
+          filePath: res.tempFilePath,
+          success: resolve,
+          fail: reject,
+        });
+      });
+
+      const compressedSize = fileInfo.size;
+      const compressionRatio = ((1 - compressedSize / originalSize) * 100).toFixed(1);
+
+      console.log(
+        `图片压缩成功: ${(originalSize / 1024).toFixed(0)}KB → ${(compressedSize / 1024).toFixed(0)}KB (减少${compressionRatio}%)`,
+      );
+
+      return {
+        path: res.tempFilePath,
+        size: compressedSize,
+        compressed: true,
+      };
+    } catch (error) {
+      console.warn('图片压缩失败，使用原图:', error);
+      wx.showToast({
+        title: '图片压缩失败，使用原图上传',
+        icon: 'none',
+        duration: 2000,
+      });
+
+      return {
+        path: filePath,
+        size: originalSize,
+        compressed: false,
+      };
+    }
+  },
+
+  /**
    * 上传单张图片到 AI 服务
    * 返回 AI 可访问的公开 URL
+   * @param {string} filePath - 图片文件路径
+   * @param {number} originalSize - 原始文件大小
    */
-  async uploadImageToAI(filePath) {
+  async uploadImageToAI(filePath, originalSize = 0) {
     try {
+      // 1. 先压缩图片（如果需要）
+      const compressedImage = await this.compressImageIfNeeded(filePath, originalSize);
+
       const token = await authManager.getToken();
 
       console.log('===== 开始上传图片 =====');
-      console.log('文件路径:', filePath);
+      console.log('文件路径:', compressedImage.path);
+      console.log('文件大小:', (compressedImage.size / 1024).toFixed(0) + 'KB');
+      console.log('已压缩:', compressedImage.compressed ? '是' : '否');
       console.log('上传 URL:', `${config.api.baseUrl}/api/v1/files/upload-for-ai`);
       console.log('Token:', token ? '已获取' : '未获取');
 
       const uploadResult = await new Promise((resolve, reject) => {
         const uploadTask = wx.uploadFile({
           url: `${config.api.baseUrl}/api/v1/files/upload-for-ai`,
-          filePath: filePath,
+          filePath: compressedImage.path, // 使用压缩后的路径
           name: 'file',
           timeout: 60000, // 设置 60 秒超时（重要！）
           header: {
@@ -1445,13 +1564,24 @@ const pageObject = {
 
             // 根据错误类型给出更友好的提示
             let errorMessage = '图片上传失败';
+            let errorType = 'unknown';
+
             if (error.errMsg.includes('timeout')) {
-              errorMessage = '上传超时，请检查网络连接';
-            } else if (error.errMsg.includes('fail')) {
-              errorMessage = '网络连接失败，请重试';
+              errorMessage = '上传超时';
+              errorType = 'timeout';
+            } else if (error.errMsg.includes('fail uploadFile')) {
+              errorMessage = '网络连接失败';
+              errorType = 'network';
+            } else if (error.errMsg.includes('abort')) {
+              errorMessage = '上传已取消';
+              errorType = 'abort';
             }
 
-            reject(new Error(errorMessage));
+            const detailedError = new Error(errorMessage);
+            detailedError.type = errorType;
+            detailedError.originalError = error;
+
+            reject(detailedError);
           },
         });
 
@@ -1504,7 +1634,7 @@ const pageObject = {
         });
 
         try {
-          const aiUrl = await this.uploadImageToAI(img.tempFilePath);
+          const aiUrl = await this.uploadImageToAI(img.tempFilePath, img.size);
 
           // 更新图片列表中的 aiUrl
           const allImages = [...this.data.uploadedImages];
@@ -1518,6 +1648,48 @@ const pageObject = {
           aiUrls.push(aiUrl);
         } catch (error) {
           console.error(`图片 ${i + 1} 上传失败:`, error);
+
+          // 隐藏加载提示，准备显示详细错误
+          wx.hideLoading();
+          this.setData({ uploadingCount: 0 });
+
+          // 根据错误类型提供具体的解决建议
+          let errorTitle = '图片上传失败';
+          let errorContent = '请重试或选择其他图片';
+
+          if (error.type === 'timeout') {
+            errorTitle = '上传超时';
+            errorContent =
+              '网络连接较慢，建议：\n1. 切换到WiFi环境\n2. 选择较小的图片\n3. 稍后重试';
+          } else if (error.type === 'network') {
+            errorTitle = '网络连接失败';
+            errorContent =
+              '无法连接到服务器，请检查：\n1. 网络是否正常\n2. 是否开启了飞行模式\n3. 稍后重试';
+          } else if (error.message && error.message.includes('过大')) {
+            errorTitle = '图片文件过大';
+            errorContent =
+              '即使压缩后仍超出限制，建议：\n1. 选择分辨率较低的图片\n2. 使用相机拍照而非从相册选择\n3. 分批上传图片';
+          } else if (error.message && error.message.includes('格式')) {
+            errorTitle = '图片格式不支持';
+            errorContent = '请使用 JPG、PNG 或 WebP 格式的图片';
+          }
+
+          wx.showModal({
+            title: errorTitle,
+            content: errorContent,
+            showCancel: true,
+            confirmText: '知道了',
+            cancelText: '重试',
+            success: res => {
+              if (res.cancel) {
+                // 用户选择重试，递归调用上传
+                this.uploadAllImages().catch(retryError => {
+                  console.error('重试上传失败:', retryError);
+                });
+              }
+            },
+          });
+
           throw error;
         }
       }
@@ -1528,15 +1700,8 @@ const pageObject = {
       console.log('所有图片上传成功:', aiUrls);
       return aiUrls;
     } catch (error) {
-      wx.hideLoading();
-      this.setData({ uploadingCount: 0 });
-
-      wx.showToast({
-        title: '图片上传失败',
-        icon: 'error',
-        duration: 2000,
-      });
-
+      // 错误已在上面处理，这里只需要抛出
+      console.error('批量上传中断:', error);
       throw error;
     }
   },

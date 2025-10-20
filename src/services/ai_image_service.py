@@ -213,20 +213,42 @@ class AIImageAccessService:
         Args:
             file: 上传文件
             content: 文件内容
+
+        Raises:
+            AIServiceError: 文件验证失败时抛出，包含详细错误信息
         """
         # 检查文件大小（最大10MB）
         max_size = 10 * 1024 * 1024
+        actual_size_mb = len(content) / (1024 * 1024)
+
         if len(content) > max_size:
-            raise AIServiceError(f"图片文件过大，最大支持10MB")
+            raise AIServiceError(
+                f"图片文件过大（{actual_size_mb:.1f}MB），最大支持10MB。"
+                f"建议：1) 在客户端压缩后上传 2) 使用较低分辨率的图片"
+            )
 
         # 检查文件类型
         allowed_types = {"image/jpeg", "image/png", "image/webp", "image/gif"}
         if file.content_type not in allowed_types:
-            raise AIServiceError(f"不支持的图片格式，支持: {', '.join(allowed_types)}")
+            raise AIServiceError(
+                f"不支持的图片格式（{file.content_type}），"
+                f"仅支持: JPG、PNG、WebP、GIF"
+            )
 
         # 检查文件内容（简单验证）
         if len(content) < 100:  # 至少100字节
-            raise AIServiceError("图片文件内容异常")
+            raise AIServiceError("图片文件内容异常，文件可能已损坏")
+
+        # 警告：图片较大可能影响AI处理速度
+        if actual_size_mb > 5:
+            logger.warning(
+                f"上传的图片较大（{actual_size_mb:.1f}MB），可能影响AI处理速度和响应时间",
+                extra={
+                    "file_size_mb": actual_size_mb,
+                    "file_name": file.filename,
+                    "content_type": file.content_type,
+                },
+            )
 
     async def _upload_to_local_for_ai(
         self, user_id: str, file: UploadFile, content: bytes
