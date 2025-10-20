@@ -1,0 +1,252 @@
+<!--
+  Task 1.5 测试页面
+  微信开发者工具中的测试界面
+-->
+
+<view class="test-container">
+  <!-- 页面标题 -->
+  <view class="test-header">
+    <text class="test-title">🧪 Task 1.5 全面测试</text>
+    <text class="test-subtitle">Phase 3 集成测试和调试</text>
+  </view>
+
+  <!-- 测试状态 -->
+  <view class="test-status" wx:if="{{isRunning}}">
+    <view class="status-indicator">
+      <text class="status-icon">⏳</text>
+      <text class="status-text">正在执行: {{currentTest}}</text>
+    </view>
+    <view class="progress-bar">
+      <view class="progress-fill"></view>
+    </view>
+  </view>
+
+  <!-- 快捷操作按钮 -->
+  <view class="quick-actions">
+    <button
+      class="action-btn primary"
+      bindtap="runQuickTests"
+      disabled="{{isRunning}}"
+    >
+      ⚡ 快速测试
+    </button>
+
+    <button
+      class="action-btn secondary"
+      bindtap="runFullTests"
+      disabled="{{isRunning}}"
+    >
+      🔍 完整测试
+    </button>
+
+    <button
+      class="action-btn info"
+      bindtap="testSingleApi"
+      disabled="{{isRunning}}"
+    >
+      🌐 测试API
+    </button>
+  </view>
+
+  <!-- 登录诊断工具 -->
+  <view class="quick-actions">
+    <button
+      class="action-btn warning"
+      bindtap="runLoginDiagnostic"
+      disabled="{{isRunning}}"
+    >
+      🔍 登录诊断
+    </button>
+
+    <button
+      class="action-btn success"
+      bindtap="testLoginFlow"
+      disabled="{{isRunning}}"
+    >
+      🧪 测试登录
+    </button>
+
+    <button
+      class="action-btn danger"
+      bindtap="fixLoginState"
+      disabled="{{isRunning}}"
+    >
+      🔧 修复登录
+    </button>
+
+    <button
+      class="action-btn secondary"
+      bindtap="cleanOldData"
+      disabled="{{isRunning}}"
+    >
+      🧹 清理旧数据
+    </button>
+  </view>
+
+  <!-- API 诊断工具 -->
+  <view class="quick-actions">
+    <button
+      class="action-btn info"
+      bindtap="runApiDiagnostic"
+      disabled="{{isRunning}}"
+    >
+      🔍 API诊断
+    </button>
+
+    <button
+      class="action-btn primary"
+      bindtap="testSingleApi"
+      disabled="{{isRunning}}"
+    >
+      🌐 测试API
+    </button>
+  </view>
+
+  <!-- 测试配置 -->
+  <view class="test-config">
+    <view class="config-title">测试配置</view>
+    <view class="config-options">
+      <view class="config-item">
+        <switch
+          checked="{{testConfig.runApiTests}}"
+          bindchange="toggleConfig"
+          data-key="runApiTests"
+        />
+        <text class="config-label">API集成测试</text>
+      </view>
+
+      <view class="config-item">
+        <switch
+          checked="{{testConfig.runFrontendTests}}"
+          bindchange="toggleConfig"
+          data-key="runFrontendTests"
+        />
+        <text class="config-label">前端功能测试</text>
+      </view>
+
+      <view class="config-item">
+        <switch
+          checked="{{testConfig.runPerformanceTests}}"
+          bindchange="toggleConfig"
+          data-key="runPerformanceTests"
+        />
+        <text class="config-label">性能监控测试</text>
+      </view>
+
+      <view class="config-item">
+        <switch
+          checked="{{testConfig.enableDetailedLogs}}"
+          bindchange="toggleConfig"
+          data-key="enableDetailedLogs"
+        />
+        <text class="config-label">详细日志</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 测试结果概览 -->
+  <view class="test-results" wx:if="{{testResults}}">
+    <view class="results-header">
+      <text class="results-title">📊 测试结果</text>
+      <view class="results-actions">
+        <button class="mini-btn" bindtap="viewDetailedResults">详情</button>
+        <button class="mini-btn" bindtap="exportResults">导出</button>
+        <button class="mini-btn" bindtap="shareResults">分享</button>
+      </view>
+    </view>
+
+    <view class="results-summary">
+      <view class="summary-item">
+        <text class="summary-label">总测试数</text>
+        <text class="summary-value">{{testResults.summary.total_tests}}</text>
+      </view>
+
+      <view class="summary-item">
+        <text class="summary-label">通过数</text>
+        <text class="summary-value success">{{testResults.summary.passed_tests}}</text>
+      </view>
+
+      <view class="summary-item">
+        <text class="summary-label">失败数</text>
+        <text class="summary-value error">{{testResults.summary.failed_tests}}</text>
+      </view>
+
+      <view class="summary-item">
+        <text class="summary-label">通过率</text>
+        <text class="summary-value">{{testResults.summary.pass_rate}}</text>
+      </view>
+    </view>
+
+    <view class="overall-status">
+      <text class="status-label">总体状态:</text>
+      <text class="status-value {{testResults.summary.overall_status}}">
+        {{testResults.summary.overall_status === 'passed' ? '✅ 全部通过' :
+          testResults.summary.overall_status === 'failed' ? '❌ 存在失败' : '⚠️ 部分通过'}}
+      </text>
+    </view>
+  </view>
+
+  <!-- 性能数据 -->
+  <view class="performance-data" wx:if="{{performanceData}}">
+    <view class="perf-header">
+      <text class="perf-title">🚀 性能监控</text>
+      <button class="mini-btn" bindtap="viewPerformanceSuggestions">建议</button>
+    </view>
+
+    <view class="perf-summary">
+      <view class="perf-item">
+        <text class="perf-label">健康得分</text>
+        <text class="perf-value {{performanceData.health.health}}">
+          {{performanceData.health.score}}/100
+        </text>
+      </view>
+
+      <view class="perf-item">
+        <text class="perf-label">健康状况</text>
+        <text class="perf-value {{performanceData.health.health}}">
+          {{performanceData.health.health === 'good' ? '良好' :
+            performanceData.health.health === 'fair' ? '一般' : '较差'}}
+        </text>
+      </view>
+
+      <view class="perf-item" wx:if="{{performanceData.suggestions.length > 0}}">
+        <text class="perf-label">优化建议</text>
+        <text class="perf-value warning">{{performanceData.suggestions.length}}条</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 测试日志 -->
+  <view class="test-logs">
+    <view class="logs-header">
+      <text class="logs-title">📝 测试日志</text>
+      <button class="mini-btn" bindtap="clearLogs">清空</button>
+    </view>
+
+    <scroll-view class="logs-container" scroll-y="true" scroll-top="{{999999}}">
+      <view class="log-item {{item.type}}" wx:for="{{testLogs}}" wx:key="index">
+        <text class="log-time">{{item.time}}</text>
+        <text class="log-message">{{item.message}}</text>
+      </view>
+
+      <view class="log-item info" wx:if="{{testLogs.length === 0}}">
+        <text class="log-message">暂无日志记录</text>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 底部工具栏 -->
+  <view class="test-toolbar">
+    <button class="tool-btn" bindtap="getPerformanceReport">
+      📈 性能报告
+    </button>
+
+    <button class="tool-btn" bindtap="exportResults">
+      💾 导出结果
+    </button>
+
+    <navigator url="/pages/index/index" class="tool-btn">
+      🏠 返回首页
+    </navigator>
+  </view>
+</view>

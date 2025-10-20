@@ -1,0 +1,69 @@
+<!--
+  敏感操作确认模态框组件
+  用于需要密码或理由输入的复杂确认
+-->
+
+<modal show="{{sensitiveConfirmModal.show}}" bind:close="onModalClose">
+  <view class="sensitive-confirm-modal">
+    <!-- 标题和图标 -->
+    <view class="modal-header">
+      <view class="modal-icon {{sensitiveConfirmModal.type}}">
+        <text class="icon-{{sensitiveConfirmModal.icon}}"></text>
+      </view>
+      <text class="modal-title">{{sensitiveConfirmModal.title}}</text>
+    </view>
+
+    <!-- 消息内容 -->
+    <view class="modal-content">
+      <text class="modal-message">{{sensitiveConfirmModal.message}}</text>
+      
+      <!-- 密码输入 -->
+      <view class="input-section" wx:if="{{sensitiveConfirmModal.requirePassword}}">
+        <text class="input-label">请输入密码确认：</text>
+        <input 
+          class="password-input"
+          type="password"
+          placeholder="请输入密码"
+          value="{{confirmPassword}}"
+          bindinput="onPasswordInput"
+          maxlength="20"
+        />
+        <text class="input-error" wx:if="{{passwordError}}">{{passwordError}}</text>
+      </view>
+
+      <!-- 理由输入 -->
+      <view class="input-section" wx:if="{{sensitiveConfirmModal.requireReason}}">
+        <text class="input-label">请说明操作理由：</text>
+        <textarea 
+          class="reason-input"
+          placeholder="请输入操作理由"
+          value="{{confirmReason}}"
+          bindinput="onReasonInput"
+          maxlength="200"
+          auto-height
+        />
+        <view class="input-footer">
+          <text class="char-count">{{confirmReason.length}}/200</text>
+        </view>
+        <text class="input-error" wx:if="{{reasonError}}">{{reasonError}}</text>
+      </view>
+    </view>
+
+    <!-- 操作按钮 -->
+    <view class="modal-actions">
+      <button 
+        class="btn btn-cancel" 
+        bind:tap="onCancel"
+      >
+        {{sensitiveConfirmModal.cancelText || '取消'}}
+      </button>
+      <button 
+        class="btn btn-confirm {{sensitiveConfirmModal.type}}" 
+        bind:tap="onConfirm"
+        disabled="{{!canConfirm}}"
+      >
+        {{sensitiveConfirmModal.confirmText || '确认'}}
+      </button>
+    </view>
+  </view>
+</modal>

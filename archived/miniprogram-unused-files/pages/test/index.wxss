@@ -1,0 +1,470 @@
+/**
+ * Task 1.5 测试页面样式
+ * 微信开发者工具中的测试界面样式
+ */
+
+.test-container {
+  padding: 20rpx;
+  background-color: #f8f9fa;
+  min-height: 100vh;
+}
+
+/* 页面标题 */
+.test-header {
+  text-align: center;
+  margin-bottom: 30rpx;
+  padding: 20rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 20rpx;
+  color: white;
+}
+
+.test-title {
+  display: block;
+  font-size: 36rpx;
+  font-weight: bold;
+  margin-bottom: 10rpx;
+}
+
+.test-subtitle {
+  display: block;
+  font-size: 28rpx;
+  opacity: 0.9;
+}
+
+/* 测试状态 */
+.test-status {
+  background: white;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 30rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.1);
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.status-icon {
+  font-size: 32rpx;
+  margin-right: 16rpx;
+}
+
+.status-text {
+  font-size: 30rpx;
+  color: #333;
+  font-weight: 500;
+}
+
+.progress-bar {
+  height: 8rpx;
+  background-color: #e9ecef;
+  border-radius: 4rpx;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #28a745, #20c997);
+  animation: progress 2s infinite linear;
+}
+
+@keyframes progress {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* 快捷操作按钮 */
+.quick-actions {
+  display: flex;
+  gap: 20rpx;
+  margin-bottom: 30rpx;
+}
+
+.action-btn {
+  flex: 1;
+  height: 80rpx;
+  border-radius: 16rpx;
+  font-size: 28rpx;
+  font-weight: 500;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-btn.primary {
+  background: linear-gradient(135deg, #28a745, #20c997);
+  color: white;
+}
+
+.action-btn.secondary {
+  background: linear-gradient(135deg, #007bff, #6610f2);
+  color: white;
+}
+
+.action-btn.info {
+  background: linear-gradient(135deg, #17a2b8, #6f42c1);
+  color: white;
+}
+
+.action-btn[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 测试配置 */
+.test-config {
+  background: white;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 30rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.1);
+}
+
+.config-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 20rpx;
+}
+
+.config-options {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.config-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f1f3f4;
+}
+
+.config-item:last-child {
+  border-bottom: none;
+}
+
+.config-label {
+  font-size: 28rpx;
+  color: #555;
+}
+
+/* 测试结果 */
+.test-results {
+  background: white;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 30rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.1);
+}
+
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.results-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.results-actions {
+  display: flex;
+  gap: 12rpx;
+}
+
+.mini-btn {
+  padding: 8rpx 16rpx;
+  font-size: 24rpx;
+  border-radius: 8rpx;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+}
+
+.results-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20rpx;
+  margin-bottom: 20rpx;
+}
+
+.summary-item {
+  text-align: center;
+  padding: 16rpx;
+  border-radius: 12rpx;
+  background-color: #f8f9fa;
+}
+
+.summary-label {
+  display: block;
+  font-size: 24rpx;
+  color: #6c757d;
+  margin-bottom: 8rpx;
+}
+
+.summary-value {
+  display: block;
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.summary-value.success {
+  color: #28a745;
+}
+
+.summary-value.error {
+  color: #dc3545;
+}
+
+.overall-status {
+  text-align: center;
+  padding: 16rpx;
+  border-radius: 12rpx;
+  background-color: #e9ecef;
+}
+
+.status-label {
+  font-size: 28rpx;
+  color: #495057;
+  margin-right: 12rpx;
+}
+
+.status-value {
+  font-size: 28rpx;
+  font-weight: bold;
+}
+
+.status-value.passed {
+  color: #28a745;
+}
+
+.status-value.failed {
+  color: #dc3545;
+}
+
+.status-value.passed_with_warnings {
+  color: #ffc107;
+}
+
+/* 性能数据 */
+.performance-data {
+  background: white;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 30rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.1);
+}
+
+.perf-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.perf-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.perf-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.perf-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12rpx 0;
+  border-bottom: 1rpx solid #f1f3f4;
+}
+
+.perf-item:last-child {
+  border-bottom: none;
+}
+
+.perf-label {
+  font-size: 28rpx;
+  color: #555;
+}
+
+.perf-value {
+  font-size: 28rpx;
+  font-weight: bold;
+}
+
+.perf-value.good {
+  color: #28a745;
+}
+
+.perf-value.fair {
+  color: #ffc107;
+}
+
+.perf-value.poor {
+  color: #dc3545;
+}
+
+.perf-value.warning {
+  color: #fd7e14;
+}
+
+/* 测试日志 */
+.test-logs {
+  background: white;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 30rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.1);
+}
+
+.logs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.logs-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.logs-container {
+  height: 400rpx;
+  background-color: #f8f9fa;
+  border-radius: 12rpx;
+  padding: 16rpx;
+}
+
+.log-item {
+  display: flex;
+  margin-bottom: 12rpx;
+  padding: 8rpx 12rpx;
+  border-radius: 8rpx;
+  font-size: 24rpx;
+  line-height: 1.4;
+}
+
+.log-item.info {
+  background-color: #d1ecf1;
+  color: #0c5460;
+}
+
+.log-item.success {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.log-item.error {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.log-item.warning {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.log-time {
+  min-width: 120rpx;
+  color: #6c757d;
+  margin-right: 12rpx;
+  font-size: 22rpx;
+}
+
+.log-message {
+  flex: 1;
+  word-break: break-all;
+}
+
+/* 底部工具栏 */
+.test-toolbar {
+  display: flex;
+  justify-content: space-around;
+  background: white;
+  border-radius: 16rpx;
+  padding: 20rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.1);
+  margin-bottom: 20rpx;
+}
+
+.tool-btn {
+  flex: 1;
+  text-align: center;
+  padding: 16rpx 12rpx;
+  font-size: 26rpx;
+  color: #495057;
+  background: none;
+  border: none;
+  border-radius: 12rpx;
+  margin: 0 8rpx;
+  text-decoration: none;
+}
+
+.tool-btn:active {
+  background-color: #f8f9fa;
+}
+
+/* 响应式适配 */
+@media (max-width: 750rpx) {
+  .quick-actions {
+    flex-direction: column;
+  }
+
+  .results-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .test-toolbar {
+    flex-direction: column;
+    gap: 12rpx;
+  }
+}
+
+/* 暗色模式支持 */
+@media (prefers-color-scheme: dark) {
+  .test-container {
+    background-color: #1a1a1a;
+  }
+
+  .test-config,
+  .test-results,
+  .performance-data,
+  .test-logs,
+  .test-toolbar {
+    background: #2d2d2d;
+    color: #ffffff;
+  }
+
+  .config-title,
+  .results-title,
+  .perf-title,
+  .logs-title {
+    color: #ffffff;
+  }
+
+  .summary-item,
+  .overall-status {
+    background-color: #3a3a3a;
+  }
+
+  .logs-container {
+    background-color: #3a3a3a;
+  }
+}

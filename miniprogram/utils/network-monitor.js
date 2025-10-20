@@ -16,7 +16,7 @@ class NetworkMonitor {
       latency: 0,
       bandwidth: 0,
       isMetered: false,
-      lastCheckTime: 0
+      lastCheckTime: 0,
     };
 
     // 状态变化监听器
@@ -30,12 +30,12 @@ class NetworkMonitor {
       latencyTimeout: 5000,
       // 带宽检测超时(毫秒)
       bandwidthTimeout: 10000,
-      // 延迟检测URL
-      latencyTestUrl: 'https://www.baidu.com/favicon.ico',
+      // 延迟检测URL - 使用已配置的合法域名
+      latencyTestUrl: 'https://www.horsduroot.com/health',
       // 带宽检测数据大小(字节)
       bandwidthTestSize: 1024 * 100, // 100KB
       // 历史记录最大数量
-      maxHistorySize: 100
+      maxHistorySize: 100,
     };
 
     // 网络历史记录
@@ -77,7 +77,7 @@ class NetworkMonitor {
    */
   setupNetworkListeners() {
     // 监听网络状态变化
-    wx.onNetworkStatusChange((res) => {
+    wx.onNetworkStatusChange(res => {
       console.log('网络状态发生变化', res);
       this.handleNetworkStatusChange(res);
     });
@@ -149,7 +149,6 @@ class NetworkMonitor {
 
       // 通知监听器
       this.notifyListeners(this.currentStatus, oldStatus);
-
     } catch (error) {
       console.error('更新网络状态失败', error);
     }
@@ -159,20 +158,20 @@ class NetworkMonitor {
    * 获取网络信息
    */
   getNetworkInfo() {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       wx.getNetworkType({
-        success: (res) => {
+        success: res => {
           resolve({
             isConnected: res.networkType !== 'none',
-            networkType: res.networkType
+            networkType: res.networkType,
           });
         },
         fail: () => {
           resolve({
             isConnected: false,
-            networkType: 'none'
+            networkType: 'none',
           });
-        }
+        },
       });
     });
   }
@@ -185,7 +184,7 @@ class NetworkMonitor {
       // 并行执行延迟和带宽检测
       const [latency, bandwidth] = await Promise.allSettled([
         this.measureLatency(),
-        this.measureBandwidth()
+        this.measureBandwidth(),
       ]);
 
       // 更新延迟
@@ -203,7 +202,6 @@ class NetworkMonitor {
 
       // 判断是否为计费网络
       this.currentStatus.isMetered = this.isMeteredNetwork();
-
     } catch (error) {
       console.error('详细网络检测失败', error);
     }
@@ -222,16 +220,19 @@ class NetworkMonitor {
 
       wx.request({
         url: this.config.latencyTestUrl,
-        method: 'HEAD',
+        method: 'GET', // 改用 GET 方法，HEAD 可能不被支持
+        timeout: this.config.latencyTimeout,
         success: () => {
           clearTimeout(timer);
           const latency = Date.now() - startTime;
           resolve(latency);
         },
-        fail: (error) => {
+        fail: error => {
           clearTimeout(timer);
+          // 静默失败，不影响小程序运行
+          console.warn('延迟检测失败(不影响使用):', error.errMsg);
           reject(new Error('延迟检测失败: ' + error.errMsg));
-        }
+        },
       });
     });
   }
@@ -248,27 +249,30 @@ class NetworkMonitor {
         reject(new Error('带宽检测超时'));
       }, this.config.bandwidthTimeout);
 
-      // 构造一个用于测试的URL（实际项目中需要替换为真实的测试文件）
-      const testUrl = `${this.config.latencyTestUrl}?t=${Date.now()}&size=${this.config.bandwidthTestSize}`;
+      // 使用健康检查端点进行带宽测试
+      const testUrl = `${this.config.latencyTestUrl}?t=${Date.now()}`;
 
       wx.request({
         url: testUrl,
         method: 'GET',
-        success: (res) => {
+        timeout: this.config.bandwidthTimeout,
+        success: res => {
           clearTimeout(timer);
           const duration = Date.now() - startTime;
 
           // 估算下载的数据大小
-          const dataSize = JSON.stringify(res.data || '').length || this.config.bandwidthTestSize;
+          const dataSize = JSON.stringify(res.data || '').length || 1024;
 
           // 计算带宽 (Mbps)
           const bandwidth = (dataSize * 8) / (duration / 1000) / 1024 / 1024;
           resolve(Math.round(bandwidth * 100) / 100);
         },
-        fail: (error) => {
+        fail: error => {
           clearTimeout(timer);
+          // 静默失败，不影响小程序运行
+          console.warn('带宽检测失败(不影响使用):', error.errMsg);
           reject(new Error('带宽检测失败: ' + error.errMsg));
-        }
+        },
       });
     });
   }
@@ -280,15 +284,16 @@ class NetworkMonitor {
     const { latency, networkType } = this.currentStatus;
 
     // 基于网络类型的基础分数
-    const baseScore = {
-      'wifi': 90,
-      '5g': 85,
-      '4g': 75,
-      '3g': 50,
-      '2g': 20,
-      'unknown': 60,
-      'none': 0
-    }[networkType] || 60;
+    const baseScore =
+      {
+        wifi: 90,
+        '5g': 85,
+        '4g': 75,
+        '3g': 50,
+        '2g': 20,
+        unknown: 60,
+        none: 0,
+      }[networkType] || 60;
 
     // 基于延迟调整分数
     let latencyScore = 100;
@@ -302,7 +307,7 @@ class NetworkMonitor {
     }
 
     // 综合计算信号强度
-    const signalStrength = Math.round((baseScore * 0.6 + latencyScore * 0.4));
+    const signalStrength = Math.round(baseScore * 0.6 + latencyScore * 0.4);
     return Math.max(0, Math.min(100, signalStrength));
   }
 
@@ -385,7 +390,7 @@ class NetworkMonitor {
   addToHistory(status) {
     const historyItem = {
       ...status,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     this.history.push(historyItem);
@@ -449,7 +454,7 @@ class NetworkMonitor {
       return {
         grade: 'F',
         score: 0,
-        description: '无网络连接'
+        description: '无网络连接',
       };
     }
 
@@ -505,7 +510,7 @@ class NetworkMonitor {
     return {
       grade,
       score: Math.round(score),
-      description
+      description,
     };
   }
 
@@ -518,48 +523,48 @@ class NetworkMonitor {
     if (!isConnected) {
       return {
         suitable: false,
-        reason: '无网络连接'
+        reason: '无网络连接',
       };
     }
 
     const requirements = {
       // 文本聊天
-      'chat': {
+      chat: {
         minLatency: 1000,
         minBandwidth: 0.1,
-        allowedNetworks: ['wifi', '5g', '4g', '3g', '2g']
+        allowedNetworks: ['wifi', '5g', '4g', '3g', '2g'],
       },
       // 图片上传
-      'image_upload': {
+      image_upload: {
         minLatency: 500,
         minBandwidth: 1,
-        allowedNetworks: ['wifi', '5g', '4g', '3g']
+        allowedNetworks: ['wifi', '5g', '4g', '3g'],
       },
       // 文件上传
-      'file_upload': {
+      file_upload: {
         minLatency: 300,
         minBandwidth: 2,
-        allowedNetworks: ['wifi', '5g', '4g']
+        allowedNetworks: ['wifi', '5g', '4g'],
       },
       // 视频通话
-      'video_call': {
+      video_call: {
         minLatency: 200,
         minBandwidth: 5,
-        allowedNetworks: ['wifi', '5g', '4g']
+        allowedNetworks: ['wifi', '5g', '4g'],
       },
       // 大文件下载
-      'large_download': {
+      large_download: {
         minLatency: 500,
         minBandwidth: 3,
-        allowedNetworks: ['wifi', '5g', '4g']
-      }
+        allowedNetworks: ['wifi', '5g', '4g'],
+      },
     };
 
     const requirement = requirements[operation];
     if (!requirement) {
       return {
         suitable: true,
-        reason: '未知操作类型，默认允许'
+        reason: '未知操作类型，默认允许',
       };
     }
 
@@ -567,7 +572,7 @@ class NetworkMonitor {
     if (!requirement.allowedNetworks.includes(networkType)) {
       return {
         suitable: false,
-        reason: `当前网络类型 ${networkType} 不适合进行${operation}操作`
+        reason: `当前网络类型 ${networkType} 不适合进行${operation}操作`,
       };
     }
 
@@ -575,7 +580,7 @@ class NetworkMonitor {
     if (latency > 0 && latency > requirement.minLatency) {
       return {
         suitable: false,
-        reason: `网络延迟过高 (${latency}ms > ${requirement.minLatency}ms)`
+        reason: `网络延迟过高 (${latency}ms > ${requirement.minLatency}ms)`,
       };
     }
 
@@ -583,13 +588,13 @@ class NetworkMonitor {
     if (bandwidth > 0 && bandwidth < requirement.minBandwidth) {
       return {
         suitable: false,
-        reason: `网络带宽不足 (${bandwidth}Mbps < ${requirement.minBandwidth}Mbps)`
+        reason: `网络带宽不足 (${bandwidth}Mbps < ${requirement.minBandwidth}Mbps)`,
       };
     }
 
     return {
       suitable: true,
-      reason: '网络状况良好'
+      reason: '网络状况良好',
     };
   }
 
@@ -626,7 +631,7 @@ class NetworkMonitor {
     const bandwidths = recentHistory.filter(h => h.bandwidth > 0).map(h => h.bandwidth);
     const signalStrengths = recentHistory.map(h => h.signalStrength);
 
-    const calculateStats = (values) => {
+    const calculateStats = values => {
       if (values.length === 0) return { min: 0, max: 0, avg: 0 };
 
       const min = Math.min(...values);
@@ -643,8 +648,8 @@ class NetworkMonitor {
       sampleCount: recentHistory.length,
       timeRange: {
         start: recentHistory[0]?.timestamp,
-        end: recentHistory[recentHistory.length - 1]?.timestamp
-      }
+        end: recentHistory[recentHistory.length - 1]?.timestamp,
+      },
     };
   }
 }
@@ -657,12 +662,12 @@ module.exports = {
 
   // 导出常用方法
   getCurrentStatus: () => networkMonitor.getCurrentStatus(),
-  addListener: (listener) => networkMonitor.addListener(listener),
-  removeListener: (listener) => networkMonitor.removeListener(listener),
+  addListener: listener => networkMonitor.addListener(listener),
+  removeListener: listener => networkMonitor.removeListener(listener),
   getNetworkQuality: () => networkMonitor.getNetworkQuality(),
-  isNetworkSuitableFor: (operation) => networkMonitor.isNetworkSuitableFor(operation),
+  isNetworkSuitableFor: operation => networkMonitor.isNetworkSuitableFor(operation),
   refresh: () => networkMonitor.refresh(),
-  getHistory: (limit) => networkMonitor.getHistory(limit),
+  getHistory: limit => networkMonitor.getHistory(limit),
   getStatistics: () => networkMonitor.getStatistics(),
 
   // 工具方法
@@ -670,5 +675,5 @@ module.exports = {
   isWifi: () => networkMonitor.getCurrentStatus().networkType === 'wifi',
   isMobile: () => ['2g', '3g', '4g', '5g'].includes(networkMonitor.getCurrentStatus().networkType),
   isHighSpeed: () => ['wifi', '5g', '4g'].includes(networkMonitor.getCurrentStatus().networkType),
-  isMetered: () => networkMonitor.getCurrentStatus().isMetered
+  isMetered: () => networkMonitor.getCurrentStatus().isMetered,
 };

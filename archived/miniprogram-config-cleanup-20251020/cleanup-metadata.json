@@ -1,0 +1,23 @@
+{
+  "timestamp": "2025-10-20T22:56:48.908278",
+  "files": [
+    {
+      "path": "config/index.example.js",
+      "size": 10332
+    },
+    {
+      "path": "config/environments/development.js",
+      "size": 7015
+    },
+    {
+      "path": "config/environments/production.js",
+      "size": 7043
+    },
+    {
+      "path": "config/environments/staging.js",
+      "size": 8992
+    }
+  ],
+  "total_files": 4,
+  "total_size": 33382
+}

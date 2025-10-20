@@ -1,0 +1,114 @@
+<view class="voice-input">
+  
+  <!-- 空闲状态 -->
+  <view wx:if="{{ recordStatus === 'idle' }}" class="voice-idle">
+    <van-button 
+      type="primary" 
+      size="large"
+      round
+      icon="volume-o"
+      bind:click="onRecordTap"
+    >
+      按住录音
+    </van-button>
+    <view class="voice-tips">
+      <text class="tips-text">点击开始录音，最长{{ maxDuration }}秒</text>
+    </view>
+  </view>
+
+  <!-- 录音中状态 -->
+  <view wx:elif="{{ recordStatus === 'recording' }}" class="voice-recording">
+    <view class="recording-visual">
+      <view class="wave-container">
+        <view 
+          class="wave-bar" 
+          wx:for="{{ [1,2,3,4,5] }}" 
+          wx:key="*this"
+          style="height: {{ volume * 100 + 20 }}%"
+        ></view>
+      </view>
+      <view class="recording-info">
+        <text class="recording-text">正在录音...</text>
+        <text class="recording-time">{{ formatTime(recordDuration) }}</text>
+      </view>
+    </view>
+    
+    <view class="recording-actions">
+      <van-button 
+        type="default" 
+        size="small"
+        bind:click="onCancelTap"
+      >
+        取消
+      </van-button>
+      <van-button 
+        type="primary" 
+        size="small"
+        bind:click="onRecordTap"
+      >
+        完成
+      </van-button>
+    </view>
+  </view>
+
+  <!-- 处理中状态 -->
+  <view wx:elif="{{ recordStatus === 'processing' }}" class="voice-processing">
+    <view class="processing-content">
+      <van-loading type="spinner" size="32px" />
+      <text class="processing-text">正在识别语音...</text>
+    </view>
+  </view>
+
+  <!-- 完成状态 -->
+  <view wx:elif="{{ recordStatus === 'completed' }}" class="voice-completed">
+    <view class="result-content">
+      <view class="audio-info">
+        <van-icon name="volume-o" size="20px" />
+        <text class="duration-text">{{ formatTime(recordDuration) }}</text>
+        <view wx:if="{{ enablePlayback }}" class="play-btn" bind:tap="onPlayTap">
+          <van-icon name="play-circle-o" size="24px" />
+        </view>
+      </view>
+      
+      <view wx:if="{{ recognizeText }}" class="recognize-result">
+        <text class="result-text">{{ recognizeText }}</text>
+      </view>
+    </view>
+    
+    <view class="completed-actions">
+      <van-button 
+        type="default" 
+        size="small"
+        bind:click="onRetryTap"
+      >
+        重录
+      </van-button>
+      <van-button 
+        type="primary" 
+        size="small"
+        bind:click="onConfirmTap"
+      >
+        确认
+      </van-button>
+    </view>
+  </view>
+
+  <!-- 错误状态 -->
+  <view wx:elif="{{ recordStatus === 'error' }}" class="voice-error">
+    <view class="error-content">
+      <van-icon name="warning-o" size="32px" color="#f5222d" />
+      <text class="error-text">{{ errorMessage }}</text>
+    </view>
+    
+    <view class="error-actions">
+      <van-button 
+        type="primary" 
+        size="small"
+        bind:click="onRetryTap"
+      >
+        重试
+      </van-button>
+    </view>
+  </view>
+
+</view>
