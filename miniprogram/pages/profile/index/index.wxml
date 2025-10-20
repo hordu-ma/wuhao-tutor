@@ -153,28 +153,6 @@
           <van-icon name="arrow" size="32rpx" color="#ccc" />
         </view>
 
-        <view class="action-item" bind:tap="onSwitchRole">
-          <view class="action-icon">
-            <van-icon name="user-circle-o" size="36rpx" color="#1890ff" />
-          </view>
-          <view class="action-content">
-            <view class="action-title">切换角色</view>
-            <view class="action-desc">切换学生/家长/教师身份</view>
-          </view>
-          <van-icon name="arrow" size="32rpx" color="#ccc" />
-        </view>
-
-        <view class="action-item" bind:tap="onViewReport">
-          <view class="action-icon">
-            <van-icon name="chart-trending-o" size="36rpx" color="#faad14" />
-          </view>
-          <view class="action-content">
-            <view class="action-title">学习报告</view>
-            <view class="action-desc">查看详细的学情分析</view>
-          </view>
-          <van-icon name="arrow" size="32rpx" color="#ccc" />
-        </view>
-
         <view class="action-item" bind:tap="onSettingsTap">
           <view class="action-icon">
             <van-icon name="setting-o" size="36rpx" color="#722ed1" />

@@ -425,17 +425,6 @@ const pageObject = {
   },
 
   /**
-   * 查看学习报告
-   */
-  onViewReport() {
-    console.log('查看学习报告');
-
-    wx.navigateTo({
-      url: '/pages/analysis/report/index',
-    });
-  },
-
-  /**
    * 查看作业记录
    */
   onViewHomework() {
@@ -454,17 +443,6 @@ const pageObject = {
 
     wx.navigateTo({
       url: '/pages/chat/history/index',
-    });
-  },
-
-  /**
-   * 切换角色
-   */
-  onSwitchRole() {
-    console.log('切换角色');
-
-    wx.navigateTo({
-      url: '/pages/role-selection/index?from=profile',
     });
   },
 
