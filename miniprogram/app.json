@@ -107,8 +107,7 @@
       "query": "type=location"
     }
   },
-  "darkmode": true,
-  "themeLocation": "theme.json",
+  "darkmode": false,
   "lazyCodeLoading": "requiredComponents",
   "singlePage": {
     "navigationBarFit": "squeezed"

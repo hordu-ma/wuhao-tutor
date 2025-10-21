@@ -219,21 +219,20 @@
                     cursor-spacing="10"
                     maxlength="{{maxInputLength || 500}}"
                     fixed="{{true}}" />
+          
+          <!-- 内嵌发送按钮 -->
+          <view class="send-btn-inner {{!hasInputContent && uploadedImages.length === 0 ? 'disabled' : ''}}"
+                bindtap="sendMessage">
+            <van-icon name="guide-o" size="20" color="{{hasInputContent || uploadedImages.length > 0 ? '#7c3aed' : '#ccc'}}" />
+          </view>
         </view>
 
-        <!-- 右侧图片按钮（无内容时显示） -->
-        <view class="input-right" wx:if="{{!inputText.trim() && uploadedImages.length === 0}}">
+        <!-- 右侧图片按钮 -->
+        <view class="input-right">
           <view class="action-btn-circle image-mode" bindtap="onShowImageActions">
             <van-icon name="photo-o" size="20" color="#7c3aed" />
           </view>
         </view>
-      </view>
-
-      <!-- 底部发送按钮（有内容时显示） -->
-      <view class="send-btn-bottom" 
-            wx:if="{{inputText.trim() || uploadedImages.length > 0}}"
-            bindtap="sendMessage">
-        <text>发送</text>
       </view>
     </view>
   </view>

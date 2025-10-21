@@ -116,6 +116,9 @@ const pageObject = {
     uploadedImages: [], // 待发送的图片列表 [{tempFilePath, aiUrl}]
     uploadingCount: 0, // 正在上传的图片数量
     maxImageCount: 5, // 最大图片数量（与 Web 前端保持一致）
+
+    // 计算属性：是否有输入内容（用于条件渲染）
+    hasInputContent: false, // inputText.trim() 是否有内容
   },
 
   /**
@@ -985,12 +988,17 @@ const pageObject = {
    */
   onInputChange(e) {
     const newValue = e.detail.value;
+    const hasContent = newValue.trim().length > 0;
     console.log('输入变化调试:', {
       新值: newValue,
       长度: newValue.length,
+      是否有内容: hasContent,
       事件对象: e.detail,
     });
-    this.setData({ inputText: newValue });
+    this.setData({
+      inputText: newValue,
+      hasInputContent: hasContent,
+    });
   },
 
   /**
