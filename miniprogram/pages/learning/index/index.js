@@ -119,6 +119,10 @@ const pageObject = {
 
     // 计算属性：是否有输入内容（用于条件渲染）
     hasInputContent: false, // inputText.trim() 是否有内容
+
+    // 历史会话
+    showHistoryPopup: false, // 显示历史会话弹窗
+    recentSessions: [], // 最近的会话列表
   },
 
   /**
@@ -1812,6 +1816,247 @@ const pageObject = {
    */
   onCloseActionSheet() {
     this.setData({ showActionSheet: false });
+  },
+
+  /**
+   * 显示历史会话弹窗
+   */
+  async onShowHistory() {
+    try {
+      // 加载最近的会话列表
+      await this.loadRecentSessions();
+      this.setData({ showHistoryPopup: true });
+    } catch (error) {
+      console.error('加载历史会话失败:', error);
+      wx.showToast({
+        title: '加载失败',
+        icon: 'none',
+      });
+    }
+  },
+
+  /**
+   * 关闭历史会话弹窗
+   */
+  onCloseHistory() {
+    this.setData({ showHistoryPopup: false });
+  },
+
+  /**
+   * 加载最近的会话列表
+   */
+  async loadRecentSessions() {
+    try {
+      // 调用后端API获取历史会话
+      const response = await api.learning.getSessions({
+        page: 1,
+        size: 6,
+        status_filter: 'active', // 只获取活跃会话
+      });
+
+      // 转换为前端需要的格式
+      const sessions = response.items.map(session => ({
+        id: session.id,
+        title: session.title || '未命名会话',
+        messageCount: session.message_count || 0,
+        lastMessageTime: new Date(session.last_active_at || session.updated_at).getTime(),
+        timeText: this.formatSessionTime(new Date(session.last_active_at || session.updated_at)),
+      }));
+
+      this.setData({
+        recentSessions: sessions,
+      });
+    } catch (error) {
+      console.error('加载最近会话失败:', error);
+      // 失败时使用模拟数据作为降级方案
+      const mockSessions = this.generateMockSessions();
+      this.setData({
+        recentSessions: mockSessions,
+      });
+      throw error;
+    }
+  },
+
+  /**
+   * 生成模拟会话数据（临时使用）
+   */
+  generateMockSessions() {
+    const now = new Date();
+    const sessions = [];
+
+    // 当前会话
+    if (this.data.sessionId && this.data.messageList.length > 0) {
+      const firstMessage = this.data.messageList[0];
+      sessions.push({
+        id: this.data.sessionId,
+        title: firstMessage?.content?.substring(0, 20) || '当前会话',
+        messageCount: this.data.messageList.length,
+        lastMessageTime: now.getTime(),
+        timeText: '刚刚',
+      });
+    }
+
+    // 模拟历史会话
+    const mockTitles = [
+      '今天的作业有疑问吗？',
+      '需要复习什么知识点？',
+      '数学函数概念讲解',
+      '英语语法点总结',
+      '物理实验分析讨论',
+    ];
+
+    mockTitles.forEach((title, index) => {
+      const hoursAgo = (index + 1) * 3;
+      const time = new Date(now.getTime() - hoursAgo * 60 * 60 * 1000);
+      sessions.push({
+        id: `session_${index + 1}`,
+        title: title,
+        messageCount: Math.floor(Math.random() * 10) + 3,
+        lastMessageTime: time.getTime(),
+        timeText: this.formatSessionTime(time),
+      });
+    });
+
+    return sessions.slice(0, 6); // 最多显示6条
+  },
+
+  /**
+   * 格式化时间戳为可读时间
+   */
+  formatTime(timestamp) {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+
+    if (hours < 1) {
+      return '刚刚';
+    } else if (hours < 24) {
+      const hour = date.getHours();
+      const minute = date.getMinutes();
+      return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+    } else if (
+      date.toDateString() === new Date(now.getTime() - 24 * 60 * 60 * 1000).toDateString()
+    ) {
+      return '昨天';
+    } else {
+      return `${date.getMonth() + 1}-${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+    }
+  },
+
+  /**
+   * 格式化会话时间
+   */
+  formatSessionTime(time) {
+    const now = new Date();
+    const diff = now.getTime() - time.getTime();
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const days = Math.floor(hours / 24);
+
+    if (hours < 1) {
+      return '刚刚';
+    } else if (hours < 24) {
+      return `${hours}小时前`;
+    } else if (days === 1) {
+      return '昨天';
+    } else if (days < 7) {
+      return `${days}天前`;
+    } else {
+      return `${time.getMonth() + 1}月${time.getDate()}日`;
+    }
+  },
+
+  /**
+   * 选择历史会话
+   */
+  async onSelectSession(e) {
+    const { sessionId } = e.currentTarget.dataset;
+
+    if (sessionId === this.data.sessionId) {
+      // 已经是当前会话，直接关闭弹窗
+      this.onCloseHistory();
+      return;
+    }
+
+    try {
+      wx.showLoading({ title: '加载会话中...' });
+
+      // 1. 获取会话详情
+      const session = await api.learning.getSessionDetail(sessionId);
+
+      // 2. 加载会话的历史消息
+      const historyResponse = await api.learning.getMessages({
+        sessionId: sessionId,
+        page: 1,
+        size: 50,
+      });
+
+      // 3. 转换为聊天消息格式
+      const messages = [];
+      if (historyResponse.items && historyResponse.items.length > 0) {
+        historyResponse.items.forEach(pair => {
+          // 添加用户问题
+          if (pair.question) {
+            messages.push({
+              id: pair.question.id,
+              sender: 'user',
+              type: 'text',
+              content: pair.question.content,
+              timestamp: this.formatTime(pair.question.created_at),
+              images: pair.question.image_urls || [],
+            });
+          }
+
+          // 添加AI回答
+          if (pair.answer) {
+            messages.push({
+              id: pair.answer.id,
+              sender: 'ai',
+              type: 'text',
+              content: pair.answer.content,
+              timestamp: this.formatTime(pair.answer.created_at),
+              confidence: pair.answer.confidence,
+              sources: pair.answer.sources || [],
+            });
+          }
+        });
+      }
+
+      // 4. 更新当前会话状态
+      this.setData({
+        sessionId: sessionId,
+        messageList: messages,
+        conversationContext: messages.map(msg => ({
+          role: msg.sender === 'user' ? 'user' : 'assistant',
+          content: msg.content,
+        })),
+      });
+
+      // 5. 关闭弹窗
+      this.onCloseHistory();
+
+      // 6. 滚动到底部
+      setTimeout(() => {
+        this.scrollToBottom();
+      }, 300);
+
+      wx.hideLoading();
+      wx.showToast({
+        title: '会话已切换',
+        icon: 'success',
+        duration: 1500,
+      });
+
+      console.log(`切换到会话: ${sessionId}, 加载了 ${messages.length} 条消息`);
+    } catch (error) {
+      wx.hideLoading();
+      console.error('切换会话失败:', error);
+      wx.showToast({
+        title: error.message || '切换失败',
+        icon: 'none',
+        duration: 2000,
+      });
+    }
   },
 
   /**

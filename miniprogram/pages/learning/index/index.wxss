@@ -61,6 +61,19 @@
   padding: 8rpx;
 }
 
+.history-btn {
+  font-size: 28rpx;
+  color: #fff;
+  padding: 8rpx 16rpx;
+  border-radius: 16rpx;
+  background-color: rgba(255, 255, 255, 0.15);
+  transition: all 0.2s ease;
+}
+
+.history-btn:active {
+  background-color: rgba(255, 255, 255, 0.25);
+}
+
 /* 聊天消息区域 */
 .chat-messages {
   flex: 1;
@@ -981,15 +994,110 @@
   .input-text:focus {
     background-color: #3f3f3f;
   }
+}
 
-  .quick-item,
-  .subject-item {
-    background-color: #2f2f2f;
-    color: #ccc;
-  }
+/* 历史会话弹窗 */
+.history-popup {
+  padding: 32rpx 0;
+  background-color: #fff;
+  border-radius: 32rpx 32rpx 0 0;
+}
 
-  .quick-item.active,
-  .subject-item.active {
-    background-color: rgba(24, 144, 255, 0.2);
-  }
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 32rpx 24rpx;
+  border-bottom: 2rpx solid #f0f0f0;
+}
+
+.history-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.history-list {
+  max-height: calc(60vh - 120rpx);
+  padding: 16rpx 0;
+}
+
+.history-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80rpx 0;
+  gap: 24rpx;
+}
+
+.empty-text {
+  font-size: 28rpx;
+  color: #999;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 32rpx;
+  border-bottom: 2rpx solid #f7f8fa;
+  transition: all 0.2s ease;
+}
+
+.history-item:active {
+  background-color: #f7f8fa;
+}
+
+.history-item.active {
+  background-color: #f0f8ff;
+  border-left: 6rpx solid #7c3aed;
+  padding-left: 26rpx;
+}
+
+.history-item-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.history-item-title {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.title-text {
+  font-size: 30rpx;
+  color: #333;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 500rpx;
+}
+
+.history-item.active .title-text {
+  color: #7c3aed;
+}
+
+.history-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  font-size: 24rpx;
+  color: #999;
+}
+
+.meta-count {
+  color: #666;
+}
+
+.meta-divider {
+  color: #ddd;
+}
+
+.meta-time {
+  color: #999;
 }

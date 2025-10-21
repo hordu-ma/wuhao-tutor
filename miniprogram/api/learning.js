@@ -31,21 +31,23 @@ const learningAPI = {
    * @param {Object} params - 查询参数
    * @param {number} [params.page=1] - 页码
    * @param {number} [params.size=10] - 每页数量
-   * @param {string} [params.status] - 会话状态 (active/archived)
-   * @param {string} [params.subject] - 学科筛选
+   * @param {string} [params.status_filter] - 会话状态筛选 (active/archived)
+   * @param {string} [params.subject_filter] - 学科筛选
+   * @param {string} [params.search] - 搜索关键词
    * @param {Object} [config] - 请求配置
-   * @returns {Promise<Object>} 会话列表
+   * @returns {Promise<Object>} 会话列表响应 {total, page, size, pages, items}
    */
   getSessions(params = {}, config = {}) {
-    const { page = 1, size = 10, status, subject } = params;
+    const { page = 1, size = 10, status_filter, subject_filter, search } = params;
 
     const queryParams = {
-      limit: size,
-      offset: (page - 1) * size,
+      page,
+      size,
     };
 
-    if (status) queryParams.status = status;
-    if (subject) queryParams.subject = subject;
+    if (status_filter) queryParams.status_filter = status_filter;
+    if (subject_filter) queryParams.subject_filter = subject_filter;
+    if (search) queryParams.search = search;
 
     return request.get('api/v1/learning/sessions', queryParams, {
       showLoading: false,
