@@ -44,16 +44,15 @@
         <text class="welcome-title">你好！我是五好AI助手</text>
         <text class="welcome-desc">我可以帮你解答学习中的各种问题，快来问我吧～</text>
       </view>
-      <view class="quick-questions" wx:if="{{quickQuestions.length > 0}}">
-        <text class="quick-title">你可以这样问我：</text>
-        <view class="question-list">
-          <view class="question-item"
-                wx:for="{{quickQuestions}}"
-                wx:key="*this"
-                bindtap="onQuickQuestion"
-                data-question="{{item}}">
-            {{item}}
-          </view>
+      
+      <!-- 快捷问题气泡 -->
+      <view class="quick-questions-bubbles" wx:if="{{quickQuestions.length > 0}}">
+        <view class="bubble-item"
+              wx:for="{{quickQuestions}}"
+              wx:key="*this"
+              bindtap="onQuickQuestion"
+              data-question="{{item}}">
+          {{item}}
         </view>
       </view>
     </view>
@@ -200,76 +199,42 @@
     <!-- 输入框区域 -->
     <view class="input-area">
       <view class="input-wrapper">
-        <!-- 添加按钮（图片上传/拍照） -->
+        <!-- 左侧语音按钮 -->
         <view class="input-left">
-          <van-icon name="plus" size="22" 
-                    bindtap="onShowImageActions"
-                    class="add-btn" />
-        </view>
-
-        <!-- 主输入区域 -->
-        <view class="input-main">
-          <!-- 文本输入框 -->
-          <view class="text-input-wrapper" wx:if="{{inputMode === 'text'}}">
-            <textarea class="input-text"
-                      placeholder="{{inputPlaceholder || '有什么问题想问我吗？'}}"
-                      value="{{inputText}}"
-                      bindinput="onInputChange"
-                      bindfocus="onInputFocus"
-                      bindblur="onInputBlur"
-                      auto-height="{{true}}"
-                      show-confirm-bar="{{false}}"
-                      cursor-spacing="10"
-                      maxlength="{{maxInputLength || 500}}"
-                      fixed="{{true}}" />
-          </view>
-
-          <!-- 语音输入按钮 -->
-          <view class="voice-input-wrapper" wx:else>
-            <view class="voice-btn {{recordStatus === 'recording' ? 'recording' : ''}}"
-                  bindtouchstart="onVoiceStart"
-                  bindtouchend="onVoiceEnd"
-                  bindtouchmove="onVoiceMove">
-              <van-icon name="volume-o" size="20" />
-              <text>{{recordStatus === 'recording' ? '松开结束' : '按住说话'}}</text>
-            </view>
-          </view>
-
-          <!-- 字符计数 -->
-          <view class="char-count" wx:if="{{inputMode === 'text' && inputText.length > 0}}">
-            {{inputText.length}}/{{maxInputLength || 500}}
+          <view class="voice-btn-circle" bindtap="onSwitchInputMode">
+            <van-icon name="volume-o" size="20" color="#7c3aed" />
           </view>
         </view>
 
-        <!-- 右侧功能区 -->
-        <view class="input-right">
-          <!-- 语音/文字切换按钮 -->
-          <view class="mode-switch" bindtap="onSwitchInputMode">
-            <van-icon name="{{inputMode === 'text' ? 'volume-o' : 'edit'}}" size="20" />
-          </view>
+        <!-- 中间输入框 -->
+        <view class="input-main {{inputFocus ? 'focused' : ''}}">
+          <textarea class="input-text"
+                    placeholder="在这里跟我对话"
+                    value="{{inputText}}"
+                    bindinput="onInputChange"
+                    bindfocus="onInputFocus"
+                    bindblur="onInputBlur"
+                    auto-height="{{true}}"
+                    show-confirm-bar="{{false}}"
+                    cursor-spacing="10"
+                    maxlength="{{maxInputLength || 500}}"
+                    fixed="{{true}}" />
+        </view>
 
-          <!-- 发送按钮 -->
-          <view class="send-btn {{inputText.trim() || uploadedImages.length > 0 || recordStatus === 'recorded' ? 'active' : ''}}"
-                bindtap="sendMessage">
-            <van-icon name="send" size="20" color="{{inputText.trim() || uploadedImages.length > 0 || recordStatus === 'recorded' ? '#fff' : '#999'}}" />
+        <!-- 右侧图片按钮（无内容时显示） -->
+        <view class="input-right" wx:if="{{!inputText.trim() && uploadedImages.length === 0}}">
+          <view class="action-btn-circle image-mode" bindtap="onShowImageActions">
+            <van-icon name="photo-o" size="20" color="#7c3aed" />
           </view>
         </view>
       </view>
-    </view>
 
-    <!-- 快捷回复 -->
-    <view class="quick-replies" wx:if="{{showQuickReply && quickReplies.length > 0}}">
-      <scroll-view scroll-x="{{true}}" class="quick-scroll">
-        <view class="quick-items">
-          <view class="quick-item"
-                wx:for="{{quickReplies}}"
-                wx:key="*this"
-                bindtap="onQuickReply"
-                data-question="{{item}}">
-            {{item}}
-          </view>
-        </view>
-      </scroll-view>
+      <!-- 底部发送按钮（有内容时显示） -->
+      <view class="send-btn-bottom" 
+            wx:if="{{inputText.trim() || uploadedImages.length > 0}}"
+            bindtap="sendMessage">
+        <text>发送</text>
+      </view>
     </view>
   </view>
 
