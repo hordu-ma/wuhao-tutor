@@ -69,7 +69,7 @@ class Settings(BaseSettings):
     BAILIAN_APPLICATION_ID: str = ""
     BAILIAN_API_KEY: str = ""
     BAILIAN_BASE_URL: str = "https://dashscope.aliyuncs.com/api/v1"
-    BAILIAN_TIMEOUT: int = 30
+    BAILIAN_TIMEOUT: int = 120  # 提高到120秒以支持图片OCR和AI分析
     BAILIAN_MAX_RETRIES: int = 3
 
     # 阿里云基础配置

@@ -1545,7 +1545,7 @@ const pageObject = {
           url: `${config.api.baseUrl}/api/v1/files/upload-for-ai`,
           filePath: compressedImage.path, // 使用压缩后的路径
           name: 'file',
-          timeout: 60000, // 设置 60 秒超时（重要！）
+          timeout: 120000, // 设置 120 秒超时，与API超时一致
           header: {
             Authorization: `Bearer ${token}`,
           },

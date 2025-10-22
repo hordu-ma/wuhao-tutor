@@ -126,7 +126,7 @@ const learningAPI = {
     }
 
     return request.post('api/v1/learning/ask', params, {
-      timeout: 60000, // 60秒超时 - 支持图片OCR和AI处理
+      timeout: 120000, // 120秒超时 - 支持图片OCR和AI处理
       showLoading: true,
       loadingText: 'AI 思考中...',
       showError: true,

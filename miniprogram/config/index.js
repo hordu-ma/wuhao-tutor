@@ -17,8 +17,8 @@ const config = {
     baseUrl: 'https://www.horsduroot.com', // 生产环境API地址 - 使用域名
     // API 版本
     version: 'v1',
-    // 请求超时时间 (毫秒) - 提高到60秒以支持图片上传和AI处理
-    timeout: 60000,
+    // 请求超时时间 (毫秒) - 提高到120秒以支持图片上传和AI处理
+    timeout: 120000,
     // 重试次数
     retryCount: 3,
     // 重试间隔 (毫秒)
