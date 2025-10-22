@@ -437,7 +437,7 @@ async def test_get_mistakes_list(client, auth_headers):
 
 - 前端：https://horsduroot.com
 - 后端 API：https://horsduroot.com/api/v1/
-- 健康检查：https://horsduroot.com/api/v1/health
+- 健康检查：https://horsduroot.com/health
 
 **部署命令**：
 
@@ -466,7 +466,7 @@ ssh root@121.199.173.244 'journalctl -u wuhao-tutor.service -f'
 ./scripts/deploy.sh
 
 # 2. 验证部署
-curl https://horsduroot.com/api/v1/health
+curl https://horsduroot.com/health
 
 # 3. 检查服务状态
 ./scripts/check-production.sh

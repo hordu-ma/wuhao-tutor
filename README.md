@@ -431,7 +431,8 @@ docs(readme): 更新项目现状和核心功能说明
 
 - 项目地址: https://github.com/hordu-ma/wuhao-tutor
 - 问题反馈: https://github.com/hordu-ma/wuhao-tutor/issues
-- 生产环境: https://wuhao-tutor.liguoma.top
+- 生产环境: https://www.horsduroot.com
+- 健康检查: https://horsduroot.com/health
 
 ---
 
