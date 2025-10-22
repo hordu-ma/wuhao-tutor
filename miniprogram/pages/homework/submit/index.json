@@ -12,6 +12,6 @@
   "navigationBarTitleText": "提交作业",
   "enablePullDownRefresh": true,
   "onReachBottomDistance": 50,
-  "backgroundTextStyle": "dark",
+  "backgroundTextStyle": "light",
   "backgroundColor": "#f5f5f5"
 }

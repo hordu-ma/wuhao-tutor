@@ -368,22 +368,3 @@
     opacity: 1;
   }
 }
-
-/* 夜间模式支持 */
-@media (prefers-color-scheme: dark) {
-  .login-form {
-    background-color: rgba(42, 42, 42, 0.95);
-  }
-
-  .welcome-title {
-    color: #ffffff;
-  }
-
-  .welcome-desc {
-    color: #cccccc;
-  }
-
-  .agreement-text {
-    color: #888888;
-  }
-}

@@ -347,33 +347,3 @@
     right: 0;
   }
 }
-
-/* 深色模式支持 */
-@media (prefers-color-scheme: dark) {
-  .container {
-    background-color: #1a1a1a;
-  }
-
-  .info-card,
-  .stats-card,
-  .actions-card {
-    background-color: #2a2a2a;
-  }
-
-  .user-name {
-    color: #ffffff;
-  }
-
-  .info-row .value,
-  .action-title,
-  .date-value {
-    color: #ffffff;
-  }
-
-  .info-row .label,
-  .stat-label,
-  .action-desc,
-  .date-label {
-    color: #cccccc;
-  }
-}

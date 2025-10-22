@@ -280,37 +280,6 @@
   }
 }
 
-/* 夜间模式支持 */
-@media (prefers-color-scheme: dark) {
-  .role-card {
-    background-color: rgba(42, 42, 42, 0.95);
-  }
-  
-  .role-name {
-    color: #ffffff;
-  }
-  
-  .role-description {
-    color: #cccccc;
-  }
-  
-  .feature-text {
-    color: #999999;
-  }
-  
-  .explanation-card {
-    background-color: rgba(42, 42, 42, 0.9);
-  }
-  
-  .explanation-title {
-    color: #ffffff;
-  }
-  
-  .explanation-text {
-    color: #cccccc;
-  }
-}
-
 /* 动画效果 */
 .role-card {
   animation: cardSlideIn 0.6s ease-out;

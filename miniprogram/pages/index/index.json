@@ -9,6 +9,6 @@
   "navigationBarTitleText": "五好伴学",
   "enablePullDownRefresh": true,
   "onReachBottomDistance": 50,
-  "backgroundTextStyle": "dark",
+  "backgroundTextStyle": "light",
   "backgroundColor": "#f5f5f5"
 }

@@ -7,6 +7,6 @@
   "navigationBarTitleText": "个人信息",
   "enablePullDownRefresh": true,
   "onReachBottomDistance": 50,
-  "backgroundTextStyle": "dark",
+  "backgroundTextStyle": "light",
   "backgroundColor": "#f5f5f5"
 }

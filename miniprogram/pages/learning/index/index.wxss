@@ -962,31 +962,6 @@
   }
 }
 
-/* 暗色模式适配 */
-@media (prefers-color-scheme: dark) {
-  .chat-container {
-    background-color: #1f1f1f;
-  }
-
-  .bubble-main {
-    background-color: #2f2f2f;
-    color: #fff;
-  }
-
-  .chat-bubble.ai .bubble-main::before {
-    border-right-color: #2f2f2f;
-  }
-
-  .input-text {
-    background-color: #2f2f2f;
-    color: #fff;
-  }
-
-  .input-text:focus {
-    background-color: #3f3f3f;
-  }
-}
-
 /* 历史会话弹窗 */
 .history-popup {
   padding: 32rpx 0;

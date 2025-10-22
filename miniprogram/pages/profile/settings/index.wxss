@@ -95,28 +95,3 @@
   line-height: 1.6;
   text-align: center;
 }
-
-/* 暗黑模式适配（可选） */
-@media (prefers-color-scheme: dark) {
-  .settings-container {
-    background: #1a1a1a;
-  }
-
-  .page-header,
-  .settings-section {
-    background: #2a2a2a;
-  }
-
-  .page-title,
-  .item-label {
-    color: #ffffff;
-  }
-
-  .section-title {
-    color: #999999;
-  }
-
-  .setting-item {
-    border-bottom-color: #3a3a3a;
-  }
-}
