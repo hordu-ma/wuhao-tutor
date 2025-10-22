@@ -38,23 +38,14 @@
 
 .header-info {
   display: flex;
-  flex-direction: column;
+  align-items: center;
 }
 
 .ai-name {
   font-size: 32rpx;
   font-weight: 600;
   color: #fff;
-  margin-bottom: 4rpx;
-}
-
-.ai-status {
-  font-size: 24rpx;
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.ai-status.offline {
-  color: #faad14;
+  line-height: 1.2;
 }
 
 .header-actions {

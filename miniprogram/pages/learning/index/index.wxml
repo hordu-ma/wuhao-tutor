@@ -6,8 +6,6 @@
       <image class="ai-avatar" src="/assets/images/ai-avatar.png" mode="aspectFill" />
       <view class="header-info">
         <text class="ai-name">五好AI助手</text>
-        <text class="ai-status" wx:if="{{isConnected}}">在线</text>
-        <text class="ai-status offline" wx:else>离线</text>
       </view>
     </view>
     <view class="header-actions">
