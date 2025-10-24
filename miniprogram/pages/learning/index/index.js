@@ -1125,16 +1125,21 @@ const pageObject = {
 
     // 录音结束
     recorderManager.onStop(res => {
-      console.log('录音结束', res);
+      console.log('===== 录音结束回调触发 =====');
+      console.log('录音结果:', res);
+      console.log('当前录音时长:', this.data.recordDuration, '秒');
+      console.log('当前状态:', this.data.recordStatus);
 
       // 清除计时器
       if (this.recordTimer) {
         clearInterval(this.recordTimer);
         this.recordTimer = null;
+        console.log('计时器已清除');
       }
 
       // 录音时长不足1秒，提示
       if (this.data.recordDuration < 1) {
+        console.log('录音时间太短，不上传');
         this.setData({ recordStatus: 'idle' });
         wx.showToast({
           title: '录音时间太短',
@@ -1144,6 +1149,7 @@ const pageObject = {
       }
 
       // 上传语音文件
+      console.log('开始上传语音文件...');
       this.setData({ recordStatus: 'uploading' });
       this.uploadVoiceFile(res.tempFilePath);
     });
@@ -1383,16 +1389,22 @@ const pageObject = {
    * 语音按钮松开停止录音
    */
   onVoiceTouchEnd() {
-    console.log('松开按钮');
+    console.log('===== 松开按钮 =====');
+    console.log('当前状态:', this.data.recordStatus);
+    console.log('是否取消:', this.data.cancelVoice);
 
     if (this.data.recordStatus === 'recording') {
       if (this.data.cancelVoice) {
         // 取消录音
+        console.log('用户上滑取消录音');
         this.cancelVoiceRecord();
       } else {
         // 发送录音
+        console.log('正常结束录音，调用 stopVoiceRecord');
         this.stopVoiceRecord();
       }
+    } else {
+      console.log('状态不是 recording，不处理');
     }
   },
 
