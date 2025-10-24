@@ -1261,13 +1261,24 @@ const pageObject = {
           recordStatus: 'idle',
         });
 
+        // 显示识别成功提示
         wx.showToast({
-          title: '识别成功',
-          icon: 'success',
-          duration: 1500,
+          title: '识别成功，正在发送...',
+          icon: 'loading',
+          duration: 1000,
         });
 
         console.log('语音识别结果:', uploadResult);
+
+        // 自动发送消息给AI
+        // 等待短暂时间让用户看到识别结果
+        setTimeout(() => {
+          // 检查是否有内容需要发送
+          if (this.data.inputText && this.data.inputText.trim()) {
+            console.log('自动发送语音识别结果:', this.data.inputText);
+            this.sendMessage();
+          }
+        }, 500);
       } else {
         throw new Error('语音转换结果为空');
       }
