@@ -75,20 +75,68 @@ class SpeechRecognitionService:
 
             logger.info("正在获取阿里云 NLS Token...")
 
-            # 调用阿里云 Token 服务
-            token_url = "https://nls-meta.cn-shanghai.aliyuncs.com/"
+            # 使用阿里云POP API的CreateToken接口
+            # 构造请求参数
+            import hashlib
+            import hmac
+            import urllib.parse
+            import uuid
+            from datetime import datetime
+
+            # 基本参数
+            params = {
+                "AccessKeyId": self.access_key_id,
+                "Action": "CreateToken",
+                "Format": "JSON",
+                "RegionId": "cn-shanghai",
+                "SignatureMethod": "HMAC-SHA1",
+                "SignatureNonce": str(uuid.uuid4()),
+                "SignatureVersion": "1.0",
+                "Timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "Version": "2019-02-28",
+            }
+
+            # 按字典序排序
+            sorted_params = sorted(params.items())
+
+            # 构造规范化的请求字符串
+            canonicalized_query_string = "&".join(
+                [
+                    f"{urllib.parse.quote(k, safe='')}={urllib.parse.quote(v, safe='')}"
+                    for k, v in sorted_params
+                ]
+            )
+
+            # 构造待签名的字符串
+            string_to_sign = (
+                f"GET&{urllib.parse.quote('/', safe='')}&"
+                f"{urllib.parse.quote(canonicalized_query_string, safe='')}"
+            )
+
+            # 计算签名
+            if not self.access_key_secret:
+                raise SpeechRecognitionError("AccessKey Secret 未配置")
+
+            h = hmac.new(
+                (self.access_key_secret + "&").encode("utf-8"),
+                string_to_sign.encode("utf-8"),
+                hashlib.sha1,
+            )
+            signature = base64.b64encode(h.digest()).decode("utf-8")
+
+            # 添加签名到参数
+            params["Signature"] = signature
+
+            # 构造请求URL
+            token_url = f"http://nls-meta.cn-shanghai.aliyuncs.com/?{urllib.parse.urlencode(params)}"
+
+            logger.debug(f"Token请求URL: {token_url}")
 
             async with httpx.AsyncClient(timeout=10) as client:
-                response = await client.post(
-                    token_url,
-                    headers={
-                        "Content-Type": "application/json",
-                    },
-                    json={
-                        "AccessKeyId": self.access_key_id,
-                        "AccessKeySecret": self.access_key_secret,
-                    },
-                )
+                response = await client.get(token_url)
+
+                logger.info(f"Token响应状态码: {response.status_code}")
+                logger.debug(f"Token响应内容: {response.text}")
 
                 if response.status_code != 200:
                     logger.error(
