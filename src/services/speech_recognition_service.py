@@ -248,51 +248,47 @@ class SpeechRecognitionService:
             # 获取 Access Token
             access_token = await self._get_access_token()
 
-            # 准备请求参数
-            request_params = {
+            # 获取音频格式
+            audio_format = self._get_format_from_filename(filename)
+
+            # 构造URL参数（按照阿里云RESTful API规范）
+            params = {
                 "appkey": self.app_key,
-                "token": access_token,
-                "format": self._get_format_from_filename(filename),
+                "format": audio_format,
                 "sample_rate": settings.ASR_SAMPLE_RATE,
-                "enable_intermediate_result": settings.ASR_ENABLE_INTERMEDIATE_RESULT,
-                "enable_punctuation_prediction": settings.ASR_ENABLE_PUNCTUATION_PREDICTION,
-                "enable_inverse_text_normalization": settings.ASR_ENABLE_INVERSE_TEXT_NORMALIZATION,
-                "language": language,
+                "enable_punctuation_prediction": str(
+                    settings.ASR_ENABLE_PUNCTUATION_PREDICTION
+                ).lower(),
+                "enable_inverse_text_normalization": str(
+                    settings.ASR_ENABLE_INVERSE_TEXT_NORMALIZATION
+                ).lower(),
             }
 
-            # 编码音频数据
-            audio_base64 = base64.b64encode(audio_data).decode("utf-8")
+            # 构造完整URL
+            import urllib.parse
 
-            # 构建请求体
-            request_body = {
-                "audio": audio_base64,
-                "audio_format": request_params["format"],
-                "sample_rate": request_params["sample_rate"],
-                "language": language,
-                "enable_punctuation": request_params["enable_punctuation_prediction"],
-                "enable_inverse_text_normalization": request_params[
-                    "enable_inverse_text_normalization"
-                ],
-            }
+            one_sentence_url = f"{self.endpoint}?{urllib.parse.urlencode(params)}"
 
-            # 构建请求头
+            logger.info(f"ASR API请求URL: {one_sentence_url}")
+            logger.info(f"音频格式: {audio_format}, 大小: {len(audio_data)} bytes")
+
+            # 构建请求头（按照阿里云RESTful API规范）
             headers = {
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-                "X-NLS-Token": access_token,
-                "Authorization": f"Bearer {access_token}",
+                "X-NLS-Token": access_token,  # Token通过X-NLS-Token头传递
+                "Content-type": "application/octet-stream",  # 二进制音频流
+                "Content-Length": str(len(audio_data)),
             }
 
-            # 发送HTTP请求 (使用一次性识别接口)
+            # 发送HTTP请求（请求体为二进制音频数据）
             async with httpx.AsyncClient(timeout=self.timeout) as client:
-                # 使用阿里云一句话识别接口
-                one_sentence_url = (
-                    "https://nls-gateway-cn-shanghai.aliyuncs.com/stream/v1/asr"
+                response = await client.post(
+                    one_sentence_url,
+                    content=audio_data,
+                    headers=headers,  # 使用content而不json
                 )
 
-                response = await client.post(
-                    one_sentence_url, json=request_body, headers=headers
-                )
+                logger.info(f"ASR API响应状态码: {response.status_code}")
+                logger.debug(f"ASR API响应内容: {response.text}")
 
                 if response.status_code != 200:
                     logger.error(
