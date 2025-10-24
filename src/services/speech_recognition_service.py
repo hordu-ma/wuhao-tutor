@@ -40,14 +40,94 @@ class SpeechRecognitionService:
 
     def __init__(self):
         self.app_key = settings.ASR_APP_KEY
-        self.access_token = settings.ASR_ACCESS_TOKEN
+        self.access_key_id = settings.ASR_ACCESS_KEY_ID
+        self.access_key_secret = settings.ASR_ACCESS_KEY_SECRET
         self.endpoint = settings.ASR_ENDPOINT
         self.timeout = 30
 
-        if not self.app_key or not self.access_token:
+        # Token 缓存
+        self._access_token: Optional[str] = None
+        self._token_expire_time: float = 0  # Token 过期时间戳
+
+        if not self.app_key or not self.access_key_id or not self.access_key_secret:
             logger.warning(
-                "语音识别服务配置不完整，请检查 ASR_APP_KEY 和 ASR_ACCESS_TOKEN"
+                "语音识别服务配置不完整，请检查 ASR_APP_KEY、ASR_ACCESS_KEY_ID 和 ASR_ACCESS_KEY_SECRET"
             )
+
+    async def _get_access_token(self) -> str:
+        """
+        使用 AccessKey 获取临时 Token
+
+        Token 有效期为 24 小时，自动缓存和刷新
+
+        Returns:
+            str: 访问令牌
+
+        Raises:
+            SpeechRecognitionError: Token 获取失败
+        """
+        try:
+            # 检查缓存的 Token 是否有效（提前 1 小时刷新）
+            current_time = time.time()
+            if self._access_token and current_time < self._token_expire_time - 3600:
+                logger.debug("使用缓存的 Token")
+                return self._access_token
+
+            logger.info("正在获取阿里云 NLS Token...")
+
+            # 调用阿里云 Token 服务
+            token_url = "https://nls-meta.cn-shanghai.aliyuncs.com/"
+
+            async with httpx.AsyncClient(timeout=10) as client:
+                response = await client.post(
+                    token_url,
+                    headers={
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "AccessKeyId": self.access_key_id,
+                        "AccessKeySecret": self.access_key_secret,
+                    },
+                )
+
+                if response.status_code != 200:
+                    logger.error(
+                        f"Token 获取失败: {response.status_code}, {response.text}"
+                    )
+                    raise SpeechRecognitionError(
+                        f"Token 获取失败: HTTP {response.status_code}"
+                    )
+
+                result = response.json()
+
+                if "Token" not in result or "Id" not in result.get("Token", {}):
+                    logger.error(f"Token 响应格式错误: {result}")
+                    raise SpeechRecognitionError("Token 响应格式错误")
+
+                # 缓存 Token（有效期 24 小时）
+                token_id = result["Token"]["Id"]
+                if not token_id or not isinstance(token_id, str):
+                    raise SpeechRecognitionError("Token 值无效")
+
+                self._access_token = token_id
+                self._token_expire_time = current_time + result["Token"].get(
+                    "ExpireTime", 86400
+                )
+
+                logger.info(
+                    f"Token 获取成功，有效期至: "
+                    f"{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(self._token_expire_time))}"
+                )
+
+                return self._access_token
+
+        except httpx.TimeoutException:
+            raise SpeechRecognitionError("Token 获取超时")
+        except httpx.RequestError as e:
+            raise SpeechRecognitionError(f"Token 获取网络错误: {str(e)}")
+        except Exception as e:
+            logger.error(f"Token 获取异常: {str(e)}", exc_info=True)
+            raise SpeechRecognitionError(f"Token 获取失败: {str(e)}")
 
     async def recognize_from_file(
         self, audio_file: UploadFile, language: str = "zh-CN"
@@ -74,7 +154,9 @@ class SpeechRecognitionService:
         """
         try:
             # 验证文件格式
-            if not self._is_supported_format(audio_file.filename):
+            if not audio_file.filename or not self._is_supported_format(
+                audio_file.filename
+            ):
                 raise SpeechRecognitionError(f"不支持的音频格式: {audio_file.filename}")
 
             # 检查文件大小
@@ -89,7 +171,7 @@ class SpeechRecognitionService:
 
             # 调用阿里云语音识别API
             result = await self._call_recognition_api(
-                content, audio_file.filename, language
+                content, audio_file.filename or "audio.mp3", language
             )
 
             return result
@@ -115,10 +197,13 @@ class SpeechRecognitionService:
             Dict: API响应结果
         """
         try:
+            # 获取 Access Token
+            access_token = await self._get_access_token()
+
             # 准备请求参数
             request_params = {
                 "appkey": self.app_key,
-                "token": self.access_token,
+                "token": access_token,
                 "format": self._get_format_from_filename(filename),
                 "sample_rate": settings.ASR_SAMPLE_RATE,
                 "enable_intermediate_result": settings.ASR_ENABLE_INTERMEDIATE_RESULT,
@@ -146,8 +231,8 @@ class SpeechRecognitionService:
             headers = {
                 "Content-Type": "application/json",
                 "Accept": "application/json",
-                "X-NLS-Token": self.access_token,
-                "Authorization": f"Bearer {self.access_token}",
+                "X-NLS-Token": access_token,
+                "Authorization": f"Bearer {access_token}",
             }
 
             # 发送HTTP请求 (使用一次性识别接口)
@@ -260,7 +345,9 @@ class SpeechRecognitionService:
             "status": "unknown",
             "config": {
                 "app_key_configured": bool(self.app_key),
-                "access_token_configured": bool(self.access_token),
+                "access_key_configured": bool(
+                    self.access_key_id and self.access_key_secret
+                ),
                 "endpoint": self.endpoint,
                 "max_audio_duration": settings.ASR_MAX_AUDIO_DURATION,
                 "supported_formats": [".mp3", ".wav", ".m4a", ".aac", ".flac", ".ogg"],
@@ -272,7 +359,7 @@ class SpeechRecognitionService:
             status["message"] = "语音识别服务已禁用"
             return status
 
-        if not self.app_key or not self.access_token:
+        if not self.app_key or not self.access_key_id or not self.access_key_secret:
             status["status"] = "error"
             status["message"] = "语音识别服务配置不完整"
             return status

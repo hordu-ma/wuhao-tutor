@@ -199,7 +199,10 @@
       <view class="input-wrapper">
         <!-- 左侧语音按钮 -->
         <view class="input-left">
-          <view class="voice-btn-circle" bindtap="onSwitchInputMode">
+          <view class="voice-btn-circle"
+                bindtouchstart="onVoiceTouchStart"
+                bindtouchend="onVoiceTouchEnd"
+                bindtouchmove="onVoiceTouchMove">
             <van-icon name="volume-o" size="20" color="#7c3aed" />
           </view>
         </view>
@@ -246,15 +249,22 @@
     <van-icon name="arrow-down" size="16" />
   </view>
 
-  <!-- 语音录制状态 -->
-  <view class="voice-recording" wx:if="{{recordStatus === 'recording'}}">
-    <view class="recording-mask"></view>
+  <!-- 语音录制状态遮罩 -->
+  <view class="voice-recording-mask" wx:if="{{recordStatus === 'recording'}}">
     <view class="recording-content">
-      <view class="recording-wave">
-        <view class="wave-item" wx:for="{{[1,2,3,4,5]}}" wx:key="*this"></view>
+      <!-- 波纹动画 -->
+      <view class="recording-wave-container">
+        <view class="wave-circle wave-1"></view>
+        <view class="wave-circle wave-2"></view>
+        <view class="wave-circle wave-3"></view>
+        <view class="recording-icon">
+          <van-icon name="volume-o" size="48" color="#fff" />
+        </view>
       </view>
-      <text class="recording-text">正在录音，松开发送</text>
-      <text class="recording-tip">上滑取消</text>
+
+      <!-- 提示文字 -->
+      <text class="recording-text">{{cancelVoice ? '松开取消发送' : '正在录音，松开发送'}}</text>
+      <text class="recording-duration">{{recordDuration}}s / 60s</text>
     </view>
   </view>
 </view>

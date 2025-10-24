@@ -80,7 +80,8 @@ class Settings(BaseSettings):
     # 语音识别服务配置
     ASR_ENABLED: bool = True
     ASR_APP_KEY: Optional[str] = None  # 语音识别应用Key
-    ASR_ACCESS_TOKEN: Optional[str] = None  # 实时语音识别访问令牌
+    ASR_ACCESS_KEY_ID: Optional[str] = None  # 阿里云AccessKey ID
+    ASR_ACCESS_KEY_SECRET: Optional[str] = None  # 阿里云AccessKey Secret
     ASR_ENDPOINT: str = "https://nls-gateway-cn-shanghai.aliyuncs.com/stream/v1/asr"
     ASR_FORMAT: str = "mp3"  # 音频格式
     ASR_SAMPLE_RATE: int = 16000  # 采样率

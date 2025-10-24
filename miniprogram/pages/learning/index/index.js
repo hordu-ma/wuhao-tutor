@@ -52,6 +52,9 @@ const pageObject = {
 
     // 功能状态
     recordStatus: 'idle', // 录音状态: idle, recording, uploading
+    recordDuration: 0, // 录音时长（秒）
+    cancelVoice: false, // 是否取消录音
+    touchStartY: 0, // 触摸起始Y坐标
     showQuickReply: true, // 显示快捷回复
     showSubjectTabs: true, // 显示学科标签
     showTools: false, // 显示工具栏
@@ -1096,30 +1099,64 @@ const pageObject = {
   startVoiceRecord() {
     if (this.data.recordStatus !== 'idle') return;
 
-    this.setData({ recordStatus: 'recording' });
+    this.setData({
+      recordStatus: 'recording',
+      recordDuration: 0,
+    });
 
     const recorderManager = wx.getRecorderManager();
     this.recorderManager = recorderManager;
 
+    // 录音开始
     recorderManager.onStart(() => {
       console.log('开始录音');
-      wx.showToast({
-        title: '正在录音...',
-        icon: 'loading',
-        duration: 60000,
-      });
+
+      // 开始计时
+      this.recordTimer = setInterval(() => {
+        const duration = this.data.recordDuration + 1;
+        this.setData({ recordDuration: duration });
+
+        // 超过60秒自动停止
+        if (duration >= 60) {
+          this.stopVoiceRecord();
+        }
+      }, 1000);
     });
 
+    // 录音结束
     recorderManager.onStop(res => {
       console.log('录音结束', res);
-      wx.hideToast();
+
+      // 清除计时器
+      if (this.recordTimer) {
+        clearInterval(this.recordTimer);
+        this.recordTimer = null;
+      }
+
+      // 录音时长不足1秒，提示
+      if (this.data.recordDuration < 1) {
+        this.setData({ recordStatus: 'idle' });
+        wx.showToast({
+          title: '录音时间太短',
+          icon: 'none',
+        });
+        return;
+      }
+
+      // 上传语音文件
       this.setData({ recordStatus: 'uploading' });
       this.uploadVoiceFile(res.tempFilePath);
     });
 
+    // 录音错误
     recorderManager.onError(err => {
       console.error('录音错误', err);
-      wx.hideToast();
+
+      if (this.recordTimer) {
+        clearInterval(this.recordTimer);
+        this.recordTimer = null;
+      }
+
       this.setData({ recordStatus: 'idle' });
       wx.showToast({
         title: '录音失败',
@@ -1127,6 +1164,7 @@ const pageObject = {
       });
     });
 
+    // 开始录音
     recorderManager.start({
       duration: 60000, // 最长录音60秒
       sampleRate: 16000,
@@ -1146,22 +1184,58 @@ const pageObject = {
   },
 
   /**
+   * 取消录音
+   */
+  cancelVoiceRecord() {
+    console.log('取消录音');
+
+    if (this.recorderManager) {
+      this.recorderManager.stop();
+    }
+
+    if (this.recordTimer) {
+      clearInterval(this.recordTimer);
+      this.recordTimer = null;
+    }
+
+    this.setData({
+      recordStatus: 'idle',
+      recordDuration: 0,
+      cancelVoice: false,
+    });
+
+    wx.showToast({
+      title: '已取消',
+      icon: 'none',
+    });
+  },
+
+  /**
    * 上传语音文件并转换为文字
    */
   async uploadVoiceFile(filePath) {
     try {
       const token = await authManager.getToken();
 
-      // 上传语音文件到新的API接口
+      // 显示加载提示
+      wx.showLoading({
+        title: '识别中...',
+        mask: true,
+      });
+
+      // 上传语音文件到语音识别API
       const uploadResult = await new Promise((resolve, reject) => {
         wx.uploadFile({
-          url: `${api.baseUrl}/learning/voice-to-text`,
+          url: `${api.baseUrl}/api/v1/learning/voice-to-text`,
           filePath: filePath,
-          name: 'voice', // 后端期望的字段名
+          name: 'voice',
           header: {
             Authorization: `Bearer ${token}`,
           },
+          timeout: 30000, // 30秒超时
           success: res => {
+            wx.hideLoading();
+
             try {
               const data = JSON.parse(res.data);
               if (data.success) {
@@ -1173,7 +1247,10 @@ const pageObject = {
               reject(new Error('响应解析失败'));
             }
           },
-          fail: reject,
+          fail: err => {
+            wx.hideLoading();
+            reject(err);
+          },
         });
       });
 
@@ -1183,30 +1260,36 @@ const pageObject = {
           inputText: uploadResult.text,
           recordStatus: 'idle',
         });
+
         wx.showToast({
-          title: '语音转换成功',
+          title: '识别成功',
           icon: 'success',
+          duration: 1500,
         });
+
+        console.log('语音识别结果:', uploadResult);
       } else {
         throw new Error('语音转换结果为空');
       }
     } catch (error) {
       console.error('语音上传失败:', error);
+
       this.setData({ recordStatus: 'idle' });
 
-      // 更详细的错误处理
-      let errorMessage = '语音转换失败';
-      if (error.message.includes('配置')) {
+      // 错误提示
+      let errorMessage = '语音识别失败';
+      if (error.message.includes('timeout')) {
+        errorMessage = '识别超时，请重试';
+      } else if (error.message.includes('配置')) {
         errorMessage = '语音识别服务暂不可用';
-      } else if (error.message.includes('格式')) {
-        errorMessage = '不支持的音频格式';
-      } else if (error.message.includes('大小') || error.message.includes('时长')) {
-        errorMessage = '音频文件过大或过长';
+      } else if (error.message) {
+        errorMessage = error.message;
       }
 
-      wx.showToast({
-        title: errorMessage,
-        icon: 'error',
+      wx.showModal({
+        title: '识别失败',
+        content: errorMessage,
+        showCancel: false,
       });
     }
   },
@@ -1214,9 +1297,70 @@ const pageObject = {
   /**
    * 语音按钮长按开始录音
    */
-  onVoiceTouchStart() {
-    if (this.data.inputMode === 'voice') {
-      this.startVoiceRecord();
+  onVoiceTouchStart(e) {
+    console.log('开始长按录音');
+
+    // 记录触摸起始位置
+    this.setData({
+      touchStartY: e.touches[0].pageY,
+      cancelVoice: false,
+    });
+
+    // 检查录音权限
+    wx.getSetting({
+      success: res => {
+        if (res.authSetting['scope.record']) {
+          // 已授权，直接开始录音
+          this.startVoiceRecord();
+        } else if (res.authSetting['scope.record'] === false) {
+          // 用户曾拒绝授权
+          wx.showModal({
+            title: '需要录音权限',
+            content: '请在设置中开启录音权限以使用语音功能',
+            confirmText: '去设置',
+            success: modalRes => {
+              if (modalRes.confirm) {
+                wx.openSetting();
+              }
+            },
+          });
+        } else {
+          // 首次请求权限
+          wx.authorize({
+            scope: 'scope.record',
+            success: () => {
+              this.startVoiceRecord();
+            },
+            fail: () => {
+              wx.showToast({
+                title: '需要录音权限',
+                icon: 'none',
+              });
+            },
+          });
+        }
+      },
+    });
+  },
+
+  /**
+   * 语音按钮触摸移动（检测上滑取消）
+   */
+  onVoiceTouchMove(e) {
+    if (this.data.recordStatus !== 'recording') return;
+
+    const currentY = e.touches[0].pageY;
+    const moveDistance = this.data.touchStartY - currentY;
+
+    // 上滑超过100px，显示"松开取消"
+    const shouldCancel = moveDistance > 100;
+    if (shouldCancel !== this.data.cancelVoice) {
+      this.setData({ cancelVoice: shouldCancel });
+
+      // 震动反馈
+      if (shouldCancel) {
+        wx.vibrateShort({ type: 'medium' });
+      }
     }
   },
 
@@ -1224,8 +1368,16 @@ const pageObject = {
    * 语音按钮松开停止录音
    */
   onVoiceTouchEnd() {
-    if (this.data.inputMode === 'voice') {
-      this.stopVoiceRecord();
+    console.log('松开按钮');
+
+    if (this.data.recordStatus === 'recording') {
+      if (this.data.cancelVoice) {
+        // 取消录音
+        this.cancelVoiceRecord();
+      } else {
+        // 发送录音
+        this.stopVoiceRecord();
+      }
     }
   },
 
