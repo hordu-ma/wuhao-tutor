@@ -1287,14 +1287,18 @@ const pageObject = {
 
       this.setData({ recordStatus: 'idle' });
 
-      // 错误提示
+      // 错误提示 - 修复 includes 错误
       let errorMessage = '语音识别失败';
-      if (error.message.includes('timeout')) {
+      const errMsg = error.message || error.errMsg || '';
+
+      if (errMsg.includes('timeout')) {
         errorMessage = '识别超时，请重试';
-      } else if (error.message.includes('配置')) {
+      } else if (errMsg.includes('配置')) {
         errorMessage = '语音识别服务暂不可用';
-      } else if (error.message) {
-        errorMessage = error.message;
+      } else if (errMsg.includes('domain')) {
+        errorMessage = '请在微信开发者工具中配置服务器域名';
+      } else if (errMsg) {
+        errorMessage = errMsg;
       }
 
       wx.showModal({
