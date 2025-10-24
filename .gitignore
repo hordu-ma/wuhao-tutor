@@ -108,6 +108,3 @@ nginx/*.bak
 # Git backup directory
 .git.backup/
 wuhao_tutor_dev.db
-
-# ASR 实施方案(包含密钥信息)
-阿里云ASR语音识别实施方案.md
