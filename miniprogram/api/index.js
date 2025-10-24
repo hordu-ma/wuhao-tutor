@@ -7,6 +7,7 @@ const analysisAPI = require('./analysis.js');
 const userAPI = require('./user.js');
 const mistakesAPI = require('./mistakes.js');
 const fileAPI = require('./file.js');
+const config = require('../config/index.js');
 
 /**
  * API 模块集合
@@ -33,6 +34,9 @@ const api = {
 
   // 文件上传模块
   file: fileAPI,
+
+  // 基础URL，供wx.uploadFile等API使用
+  baseUrl: config.api.baseUrl,
 };
 
 module.exports = api;
