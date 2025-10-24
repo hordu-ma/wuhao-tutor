@@ -1221,7 +1221,15 @@ const pageObject = {
    */
   async uploadVoiceFile(filePath) {
     try {
+      console.log('===== 开始上传语音文件 =====');
+      console.log('filePath:', filePath);
+      console.log('api.baseUrl:', api.baseUrl);
+      
+      const uploadUrl = `${api.baseUrl}/api/v1/learning/voice-to-text`;
+      console.log('完整上传URL:', uploadUrl);
+      
       const token = await authManager.getToken();
+      console.log('Token获取成功:', token ? '✅' : '❌');
 
       // 显示加载提示
       wx.showLoading({
@@ -1231,8 +1239,9 @@ const pageObject = {
 
       // 上传语音文件到语音识别API
       const uploadResult = await new Promise((resolve, reject) => {
+        console.log('开始调用 wx.uploadFile...');
         wx.uploadFile({
-          url: `${api.baseUrl}/api/v1/learning/voice-to-text`,
+          url: uploadUrl,
           filePath: filePath,
           name: 'voice',
           header: {
@@ -1240,6 +1249,7 @@ const pageObject = {
           },
           timeout: 30000, // 30秒超时
           success: res => {
+            console.log('uploadFile success:', res);
             wx.hideLoading();
 
             try {
@@ -1250,10 +1260,12 @@ const pageObject = {
                 reject(new Error(data.message || '语音转换失败'));
               }
             } catch (error) {
+              console.error('响应解析失败:', error);
               reject(new Error('响应解析失败'));
             }
           },
           fail: err => {
+            console.error('uploadFile fail:', err);
             wx.hideLoading();
             reject(err);
           },
