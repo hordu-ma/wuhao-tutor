@@ -86,7 +86,7 @@
     }
   },
   "entryPagePath": "pages/index/index",
-  "debug": false,
+  "debug": true,
   "functionalPages": false,
   "subpackages": [
     {

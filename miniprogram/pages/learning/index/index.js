@@ -1156,7 +1156,10 @@ const pageObject = {
 
     // 录音错误
     recorderManager.onError(err => {
-      console.error('录音错误', err);
+      console.error('===== 录音错误 =====');
+      console.error('错误对象:', err);
+      console.error('错误码:', err.errCode);
+      console.error('错误信息:', err.errMsg);
 
       if (this.recordTimer) {
         clearInterval(this.recordTimer);
@@ -1164,19 +1167,45 @@ const pageObject = {
       }
 
       this.setData({ recordStatus: 'idle' });
-      wx.showToast({
+
+      // 根据错误码显示不同提示
+      let errorMsg = '录音失败，请重试';
+      if (err.errMsg) {
+        const msg = err.errMsg.toLowerCase();
+        if (msg.includes('系统') || msg.includes('system') || msg.includes('busy')) {
+          errorMsg = '系统繁忙，请稍后再试';
+        } else if (msg.includes('权限') || msg.includes('auth') || msg.includes('permission')) {
+          errorMsg = '没有录音权限，请在设置中开启';
+        } else if (msg.includes('fail')) {
+          errorMsg = '录音启动失败，请再试一次';
+        }
+      }
+
+      wx.showModal({
         title: '录音失败',
-        icon: 'error',
+        content: errorMsg + '\n\n错误码: ' + (err.errCode || '未知'),
+        showCancel: true,
+        cancelText: '取消',
+        confirmText: '再试',
+        success: res => {
+          if (res.confirm) {
+            // 用户点击再试，提示重新长按
+            wx.showToast({
+              title: '请再次长按语音按钮',
+              icon: 'none',
+            });
+          }
+        },
       });
     });
 
-    // 开始录音
+    // 开始录音（使用简化的配置，提高兼容性）
     recorderManager.start({
       duration: 60000, // 最长录音60秒
-      sampleRate: 16000,
-      numberOfChannels: 1,
-      encodeBitRate: 96000,
-      format: 'mp3',
+      sampleRate: 16000, // 采样率 16kHz
+      numberOfChannels: 1, // 单声道
+      encodeBitRate: 96000, // 码率 96kbps（降低以提高兼容性）
+      format: 'mp3', // MP3格式
     });
   },
 
@@ -1361,16 +1390,31 @@ const pageObject = {
             confirmText: '去设置',
             success: modalRes => {
               if (modalRes.confirm) {
-                wx.openSetting();
+                wx.openSetting({
+                  success: settingRes => {
+                    // 用户从设置页面返回后，检查是否授权
+                    if (settingRes.authSetting['scope.record']) {
+                      wx.showToast({
+                        title: '权限已开启，请再次点击语音按钮',
+                        icon: 'success',
+                      });
+                    }
+                  },
+                });
               }
             },
           });
         } else {
-          // 首次请求权限
+          // 首次请求权限 - 关键修改：授权后提示用户再次点击
           wx.authorize({
             scope: 'scope.record',
             success: () => {
-              this.startVoiceRecord();
+              // 授权成功后提示用户
+              wx.showToast({
+                title: '权限已开启，请再次长按录音',
+                icon: 'success',
+                duration: 2000,
+              });
             },
             fail: () => {
               wx.showToast({

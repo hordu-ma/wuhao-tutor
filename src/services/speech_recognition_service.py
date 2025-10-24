@@ -288,7 +288,9 @@ class SpeechRecognitionService:
                 )
 
                 logger.info(f"ASR API响应状态码: {response.status_code}")
-                logger.debug(f"ASR API响应内容: {response.text}")
+                logger.info(
+                    f"ASR API完整响应: {response.text}"
+                )  # 临时改为INFO级别以便调试
 
                 if response.status_code != 200:
                     logger.error(
