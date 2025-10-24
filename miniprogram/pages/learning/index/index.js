@@ -1224,10 +1224,10 @@ const pageObject = {
       console.log('===== 开始上传语音文件 =====');
       console.log('filePath:', filePath);
       console.log('api.baseUrl:', api.baseUrl);
-      
+
       const uploadUrl = `${api.baseUrl}/api/v1/learning/voice-to-text`;
       console.log('完整上传URL:', uploadUrl);
-      
+
       const token = await authManager.getToken();
       console.log('Token获取成功:', token ? '✅' : '❌');
 
@@ -1250,17 +1250,25 @@ const pageObject = {
           timeout: 30000, // 30秒超时
           success: res => {
             console.log('uploadFile success:', res);
+            console.log('服务器返回的原始data:', res.data);
+            console.log('响应statusCode:', res.statusCode);
             wx.hideLoading();
 
             try {
               const data = JSON.parse(res.data);
+              console.log('解析后的data:', data);
+              console.log('data.success:', data.success);
+              console.log('data.data:', data.data);
+
               if (data.success) {
                 resolve(data.data);
               } else {
+                console.error('服务器返回失败:', data.message);
                 reject(new Error(data.message || '语音转换失败'));
               }
             } catch (error) {
               console.error('响应解析失败:', error);
+              console.error('原始响应:', res.data);
               reject(new Error('响应解析失败'));
             }
           },
