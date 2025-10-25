@@ -3,6 +3,7 @@
 const { routeGuard } = require('../../../utils/route-guard.js');
 const { authManager } = require('../../../utils/auth.js');
 const { api } = require('../../../utils/api.js');
+const userAPI = require('../../../api/user.js');
 const { errorToast } = require('../../../utils/error-toast.js');
 const { avatarUploadManager } = require('../../../utils/avatar-upload.js');
 const { syncManager } = require('../../../utils/sync-manager.js');
@@ -57,8 +58,12 @@ Page({
       { text: '高中一年级（高一）', value: 'senior_1' },
       { text: '高中二年级（高二）', value: 'senior_2' },
       { text: '高中三年级（高三）', value: 'senior_3' },
-    ], // 显示控制
+    ],
+
+    // 显示控制
     showGradePicker: false,
+    gradeDefaultIndex: [0], // 年级选择器的默认索引
+    gradeDisplayText: '请选择年级', // 年级显示文本
     focusField: '', // 来自页面参数，用于聚焦特定字段
     hasChanges: false, // 是否有未保存的更改
   },
@@ -162,6 +167,9 @@ Page({
       formData,
       originalData: { ...formData },
     });
+
+    // 更新年级显示文本
+    this.updateGradeDisplayText();
   },
 
   /**
@@ -273,12 +281,52 @@ Page({
    * 年级选择器
    */
   onGradePickerTap() {
-    this.setData({ showGradePicker: true });
+    console.log('🔧 [Grade Picker Debug] 打开年级选择器');
+    console.log('🔧 [Grade Picker Debug] 当前年级值:', this.data.formData.grade_level);
+    console.log('🔧 [Grade Picker Debug] 年级选项:', this.data.gradeOptions);
+
+    // 计算当前年级的索引
+    const currentGradeIndex = this.data.gradeOptions.findIndex(
+      item => item.value === this.data.formData.grade_level,
+    );
+
+    const defaultIndex = currentGradeIndex >= 0 ? currentGradeIndex : 0;
+    console.log('🔧 [Grade Picker Debug] 默认索引:', defaultIndex);
+
+    this.setData({
+      showGradePicker: true,
+      gradeDefaultIndex: [defaultIndex],
+    });
   },
 
   onGradePickerChange(e) {
-    const { value } = e.detail;
-    const selectedGrade = this.data.gradeOptions[value];
+    console.log('🔧 [Grade Picker Debug] 年级选择事件:', e.detail);
+
+    const { value, index } = e.detail;
+
+    // 对于单列选择器：
+    // value: 直接是选中项的value值，如 'primary_1'
+    // index: 直接是选中项的索引，如 0
+
+    let selectedGrade;
+
+    if (typeof index === 'number' && index >= 0 && index < this.data.gradeOptions.length) {
+      // 优先使用index，因为它是最可靠的
+      selectedGrade = this.data.gradeOptions[index];
+    } else if (value) {
+      // 如果index不可用，使用value查找
+      selectedGrade = this.data.gradeOptions.find(item => item.value === value);
+    } else {
+      console.error('年级选择器返回了无效的数据:', { value, index });
+      return;
+    }
+
+    if (!selectedGrade) {
+      console.error('未找到匹配的年级选项:', { value, index });
+      return;
+    }
+
+    console.log('🔧 [Grade Picker Debug] 选中的年级:', selectedGrade);
 
     this.setData({
       'formData.grade_level': selectedGrade.value,
@@ -286,11 +334,32 @@ Page({
       hasChanges: true,
     });
 
+    // 更新年级显示文本
+    this.updateGradeDisplayText();
+
     this.detectChanges();
   },
-
   onGradePickerCancel() {
     this.setData({ showGradePicker: false });
+  },
+
+  /**
+   * 更新年级显示文本
+   */
+  updateGradeDisplayText() {
+    const gradeValue = this.data.formData.grade_level;
+    const grade = this.data.gradeOptions.find(item => item.value === gradeValue);
+    const displayText = grade ? grade.text : '请选择年级';
+
+    console.log('🔧 [Grade Display Debug] 更新年级显示文本:', {
+      gradeValue,
+      grade,
+      displayText,
+    });
+
+    this.setData({
+      gradeDisplayText: displayText,
+    });
   },
 
   /**
@@ -322,7 +391,7 @@ Page({
       this.setData({ saving: true });
 
       // 准备发送到后端的数据，转换字段名以匹配后端schema
-      const updateData = {
+      const rawData = {
         name: this.data.formData.name,
         nickname: this.data.formData.nickname,
         school: this.data.formData.school,
@@ -332,8 +401,38 @@ Page({
         parent_contact: this.data.formData.contact_info, // 转换字段名
       };
 
+      // 数据预处理：过滤空值和验证格式
+      const updateData = {};
+
+      // 手机号正则验证（与后端保持一致）
+      const phoneRegex = /^1[3-9]\d{9}$/;
+
+      Object.keys(rawData).forEach(key => {
+        const value = rawData[key];
+
+        // 跳过空字符串和null/undefined
+        if (value === null || value === undefined || value === '') {
+          return;
+        }
+
+        // parent_contact需要特殊验证
+        if (key === 'parent_contact') {
+          if (phoneRegex.test(value)) {
+            updateData[key] = value;
+          } else {
+            console.warn('联系方式格式不正确，已跳过:', value);
+          }
+          return;
+        }
+
+        // 其他字段直接添加
+        updateData[key] = value;
+      });
+
+      console.log('🔍 [Profile Save Debug] 发送的数据:', updateData);
+
       // 调用后端API更新用户信息
-      const response = await api.put('/auth/profile', updateData);
+      const response = await userAPI.updateProfile(updateData);
 
       if (response.success) {
         // 更新本地缓存
@@ -377,8 +476,8 @@ Page({
       const errorResult = await profileErrorHandler.handleUserInfoUpdateError(error, {
         operation: 'save',
         retryFunction: async () => {
-          // 准备重试数据，保持字段名转换
-          const retryData = {
+          // 准备重试数据，使用相同的数据预处理逻辑
+          const rawRetryData = {
             name: this.data.formData.name,
             nickname: this.data.formData.nickname,
             school: this.data.formData.school,
@@ -388,7 +487,30 @@ Page({
             parent_contact: this.data.formData.contact_info,
           };
 
-          const response = await api.put('/auth/profile', retryData);
+          // 应用相同的数据过滤逻辑
+          const retryData = {};
+          const phoneRegex = /^1[3-9]\d{9}$/;
+
+          Object.keys(rawRetryData).forEach(key => {
+            const value = rawRetryData[key];
+
+            if (value === null || value === undefined || value === '') {
+              return;
+            }
+
+            if (key === 'parent_contact') {
+              if (phoneRegex.test(value)) {
+                retryData[key] = value;
+              }
+              return;
+            }
+
+            retryData[key] = value;
+          });
+
+          console.log('🔍 [Profile Retry Debug] 重试数据:', retryData);
+
+          const response = await userAPI.updateProfile(retryData);
           if (response.success) {
             const updatedUserInfo = {
               ...this.data.userInfo,

@@ -1074,7 +1074,7 @@ const api = {
     getUserInfo: () =>
       apiClient.get('/auth/user-info', {}, { enableCache: true, cache: { ttl: 10 * 60 * 1000 } }),
     // 更新用户信息
-    updateUserInfo: data => apiClient.put('/auth/user-info', data),
+    updateUserInfo: data => apiClient.put('/auth/profile', data),
   },
 
   // 作业相关

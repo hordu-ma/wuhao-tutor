@@ -31,11 +31,20 @@ from .base import BaseModel
 
 
 class GradeLevel(enum.Enum):
-    """学段枚举"""
+    """学段枚举 - 完整K12教育体系"""
 
+    # 小学阶段
+    PRIMARY_1 = "primary_1"  # 小学一年级
+    PRIMARY_2 = "primary_2"  # 小学二年级
+    PRIMARY_3 = "primary_3"  # 小学三年级
+    PRIMARY_4 = "primary_4"  # 小学四年级
+    PRIMARY_5 = "primary_5"  # 小学五年级
+    PRIMARY_6 = "primary_6"  # 小学六年级
+    # 初中阶段
     JUNIOR_1 = "junior_1"  # 初一
     JUNIOR_2 = "junior_2"  # 初二
     JUNIOR_3 = "junior_3"  # 初三
+    # 高中阶段
     SENIOR_1 = "senior_1"  # 高一
     SENIOR_2 = "senior_2"  # 高二
     SENIOR_3 = "senior_3"  # 高三

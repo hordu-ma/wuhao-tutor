@@ -21,11 +21,20 @@ class UserRole(str, Enum):
 
 
 class GradeLevel(str, Enum):
-    """学段枚举"""
+    """学段枚举 - 完整K12教育体系"""
 
+    # 小学阶段
+    PRIMARY_1 = "primary_1"
+    PRIMARY_2 = "primary_2"
+    PRIMARY_3 = "primary_3"
+    PRIMARY_4 = "primary_4"
+    PRIMARY_5 = "primary_5"
+    PRIMARY_6 = "primary_6"
+    # 初中阶段
     JUNIOR_1 = "junior_1"
     JUNIOR_2 = "junior_2"
     JUNIOR_3 = "junior_3"
+    # 高中阶段
     SENIOR_1 = "senior_1"
     SENIOR_2 = "senior_2"
     SENIOR_3 = "senior_3"

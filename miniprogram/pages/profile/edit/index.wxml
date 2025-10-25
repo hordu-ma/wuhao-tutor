@@ -97,7 +97,7 @@
         <view class="form-label">年级</view>
         <view class="picker-input" bind:tap="onGradePickerTap">
           <text class="{{formData.grade_level ? 'picker-text' : 'picker-placeholder'}}">
-            {{getGradeDisplayText(formData.grade_level)}}
+            {{gradeDisplayText}}
           </text>
           <van-icon name="arrow-down" size="32rpx" color="#ccc" />
         </view>
@@ -195,6 +195,7 @@
       bind:cancel="onGradePickerCancel"
       title="选择年级"
       show-toolbar
+      default-index="{{gradeDefaultIndex[0]}}"
     />
   </van-popup>
 
