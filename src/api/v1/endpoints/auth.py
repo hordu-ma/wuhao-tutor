@@ -747,15 +747,23 @@ async def upload_avatar(
 
         # 确保上传目录存在
         upload_dir = os.path.join(settings.UPLOAD_DIR, "avatars")
+        nginx_upload_dir = "/var/www/uploads/avatars"
         os.makedirs(upload_dir, exist_ok=True)
+        os.makedirs(nginx_upload_dir, exist_ok=True)
 
-        # 保存文件
+        # 保存文件到两个位置
         file_path = os.path.join(upload_dir, unique_filename)
+        nginx_file_path = os.path.join(nginx_upload_dir, unique_filename)
+
         with open(file_path, "wb") as f:
             f.write(content)
 
-        # 生成访问 URL
-        avatar_url = f"/api/v1/files/avatars/{unique_filename}"
+        # 同时保存到Nginx静态文件目录
+        with open(nginx_file_path, "wb") as f:
+            f.write(content)
+
+        # 生成访问 URL（使用Nginx静态文件路径）
+        avatar_url = f"/uploads/avatars/{unique_filename}"
 
         # 更新用户头像
         user_service = get_user_service(db)

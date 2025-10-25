@@ -131,7 +131,7 @@ const userAPI = {
    * @returns {Promise<Object>} 更新结果
    */
   updateProfile(params, config = {}) {
-    return request.put('api/v1/users/profile', params, {
+    return request.put('/api/v1/auth/profile', params, {
       showLoading: true,
       loadingText: '保存中...',
       showError: true,

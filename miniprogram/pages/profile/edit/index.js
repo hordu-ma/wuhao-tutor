@@ -38,23 +38,26 @@ Page({
       contact_info: { valid: true, message: '' },
     },
 
-    // 年级选项
+    // 年级选项 - 完整的K12教育体系
     gradeOptions: [
-      { value: 'primary_1', label: '小学一年级' },
-      { value: 'primary_2', label: '小学二年级' },
-      { value: 'primary_3', label: '小学三年级' },
-      { value: 'primary_4', label: '小学四年级' },
-      { value: 'primary_5', label: '小学五年级' },
-      { value: 'primary_6', label: '小学六年级' },
-      { value: 'junior_1', label: '初中一年级' },
-      { value: 'junior_2', label: '初中二年级' },
-      { value: 'junior_3', label: '初中三年级' },
-      { value: 'senior_1', label: '高中一年级' },
-      { value: 'senior_2', label: '高中二年级' },
-      { value: 'senior_3', label: '高中三年级' },
-    ],
+      // 小学阶段
+      { text: '小学一年级', value: 'primary_1' },
+      { text: '小学二年级', value: 'primary_2' },
+      { text: '小学三年级', value: 'primary_3' },
+      { text: '小学四年级', value: 'primary_4' },
+      { text: '小学五年级', value: 'primary_5' },
+      { text: '小学六年级', value: 'primary_6' },
 
-    // 显示控制
+      // 初中阶段
+      { text: '初中一年级（初一）', value: 'junior_1' },
+      { text: '初中二年级（初二）', value: 'junior_2' },
+      { text: '初中三年级（初三）', value: 'junior_3' },
+
+      // 高中阶段
+      { text: '高中一年级（高一）', value: 'senior_1' },
+      { text: '高中二年级（高二）', value: 'senior_2' },
+      { text: '高中三年级（高三）', value: 'senior_3' },
+    ], // 显示控制
     showGradePicker: false,
     focusField: '', // 来自页面参数，用于聚焦特定字段
     hasChanges: false, // 是否有未保存的更改
@@ -295,7 +298,7 @@ Page({
    */
   getGradeDisplayText(gradeValue) {
     const grade = this.data.gradeOptions.find(item => item.value === gradeValue);
-    return grade ? grade.label : '请选择年级';
+    return grade ? grade.text : '请选择年级';
   },
 
   /**
@@ -318,8 +321,19 @@ Page({
     try {
       this.setData({ saving: true });
 
+      // 准备发送到后端的数据，转换字段名以匹配后端schema
+      const updateData = {
+        name: this.data.formData.name,
+        nickname: this.data.formData.nickname,
+        school: this.data.formData.school,
+        grade_level: this.data.formData.grade_level,
+        class_name: this.data.formData.class_name,
+        institution: this.data.formData.institution_name, // 转换字段名
+        parent_contact: this.data.formData.contact_info, // 转换字段名
+      };
+
       // 调用后端API更新用户信息
-      const response = await api.put('/auth/profile', this.data.formData);
+      const response = await api.put('/auth/profile', updateData);
 
       if (response.success) {
         // 更新本地缓存
@@ -363,7 +377,18 @@ Page({
       const errorResult = await profileErrorHandler.handleUserInfoUpdateError(error, {
         operation: 'save',
         retryFunction: async () => {
-          const response = await api.put('/auth/profile', this.data.formData);
+          // 准备重试数据，保持字段名转换
+          const retryData = {
+            name: this.data.formData.name,
+            nickname: this.data.formData.nickname,
+            school: this.data.formData.school,
+            grade_level: this.data.formData.grade_level,
+            class_name: this.data.formData.class_name,
+            institution: this.data.formData.institution_name,
+            parent_contact: this.data.formData.contact_info,
+          };
+
+          const response = await api.put('/auth/profile', retryData);
           if (response.success) {
             const updatedUserInfo = {
               ...this.data.userInfo,

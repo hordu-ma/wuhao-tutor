@@ -850,13 +850,21 @@ class EnhancedApiClient {
           header['Authorization'] = `Bearer ${token}`;
         }
 
+        const finalUrl = url.startsWith('http') ? url : `${this.baseUrl}/api/${this.version}${url}`;
+        console.log('🔧 [API Upload Debug] 构建的完整URL:', finalUrl);
+        console.log('🔧 [API Upload Debug] baseUrl:', this.baseUrl);
+        console.log('🔧 [API Upload Debug] version:', this.version);
+        console.log('🔧 [API Upload Debug] 传入url:', url);
+
         const uploadConfig = {
-          url: url.startsWith('http') ? url : `${this.baseUrl}/api/${this.version}${url}`,
+          url: finalUrl,
           filePath,
           name: options.name || 'file',
           formData: options.formData || {},
           header,
           success: res => {
+            console.log('🔧 [API Upload Debug] 上传成功，状态码:', res.statusCode);
+            console.log('🔧 [API Upload Debug] 响应数据:', res.data);
             if (res.statusCode >= 200 && res.statusCode < 300) {
               try {
                 const data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
@@ -884,6 +892,13 @@ class EnhancedApiClient {
             }
           },
           fail: error => {
+            console.error('🔧 [API Upload Debug] 上传失败:', error);
+            console.error('🔧 [API Upload Debug] 错误详情:', {
+              errMsg: error.errMsg,
+              errCode: error.errCode,
+              statusCode: error.statusCode,
+              data: error.data,
+            });
             reject({
               statusCode: 0,
               message: error.errMsg || '文件上传失败',

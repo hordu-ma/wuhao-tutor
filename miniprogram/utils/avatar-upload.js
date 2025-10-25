@@ -1,6 +1,6 @@
 // utils/avatar-upload.js - 头像上传工具
 
-const { api } = require('./api.js');
+const { apiClient } = require('./api.js'); // 使用 apiClient 而不是 api
 const { authManager } = require('./auth.js');
 const { errorToast } = require('./error-toast.js');
 const { profileErrorHandler } = require('./profile-error-handler.js');
@@ -22,10 +22,12 @@ class AvatarUploadManager {
    * 选择并上传头像
    */
   async selectAndUploadAvatar(options = {}) {
+    console.log('🚀 [Avatar Debug] selectAndUploadAvatar 被调用');
+
     if (this.uploadInProgress) {
       wx.showToast({
         title: '正在上传中...',
-        icon: 'none'
+        icon: 'none',
       });
       return;
     }
@@ -37,10 +39,11 @@ class AvatarUploadManager {
         return null;
       }
 
+      console.log('🚀 [Avatar Debug] 图片选择成功，准备上传');
+
       // 上传图片
       const uploadResult = await this.uploadAvatarImage(imageResult.tempFilePath);
       return uploadResult;
-
     } catch (error) {
       console.error('头像上传失败:', error);
       this.handleUploadError(error);
@@ -55,7 +58,7 @@ class AvatarUploadManager {
     return new Promise((resolve, reject) => {
       wx.showActionSheet({
         itemList: ['从相册选择', '拍照'],
-        success: (res) => {
+        success: res => {
           if (res.tapIndex === 0) {
             // 从相册选择
             this.chooseImageFromAlbum(options).then(resolve).catch(reject);
@@ -66,7 +69,7 @@ class AvatarUploadManager {
         },
         fail: () => {
           resolve(null); // 用户取消选择
-        }
+        },
       });
     });
   }
@@ -81,20 +84,20 @@ class AvatarUploadManager {
         sizeType: ['compressed', 'original'],
         sourceType: ['album'],
         ...options,
-        success: async (res) => {
+        success: async res => {
           try {
             const filePath = res.tempFilePaths[0];
             const validationResult = await this.validateImage(filePath);
-            
+
             if (validationResult.valid) {
               resolve({
                 tempFilePath: filePath,
-                size: validationResult.size
+                size: validationResult.size,
               });
             } else {
               wx.showToast({
                 title: validationResult.message,
-                icon: 'error'
+                icon: 'error',
               });
               resolve(null);
             }
@@ -102,13 +105,13 @@ class AvatarUploadManager {
             reject(error);
           }
         },
-        fail: (error) => {
+        fail: error => {
           if (error.errMsg !== 'chooseImage:fail cancel') {
             reject(error);
           } else {
             resolve(null);
           }
-        }
+        },
       });
     });
   }
@@ -123,20 +126,20 @@ class AvatarUploadManager {
         sizeType: ['compressed'],
         sourceType: ['camera'],
         ...options,
-        success: async (res) => {
+        success: async res => {
           try {
             const filePath = res.tempFilePaths[0];
             const validationResult = await this.validateImage(filePath);
-            
+
             if (validationResult.valid) {
               resolve({
                 tempFilePath: filePath,
-                size: validationResult.size
+                size: validationResult.size,
               });
             } else {
               wx.showToast({
                 title: validationResult.message,
-                icon: 'error'
+                icon: 'error',
               });
               resolve(null);
             }
@@ -144,13 +147,13 @@ class AvatarUploadManager {
             reject(error);
           }
         },
-        fail: (error) => {
+        fail: error => {
           if (error.errMsg !== 'chooseImage:fail cancel') {
             reject(error);
           } else {
             resolve(null);
           }
-        }
+        },
       });
     });
   }
@@ -162,12 +165,12 @@ class AvatarUploadManager {
     try {
       // 获取图片信息
       const imageInfo = await this.getImageInfo(filePath);
-      
+
       // 检查文件大小
       if (imageInfo.size > this.maxFileSize) {
         return {
           valid: false,
-          message: `图片大小不能超过${this.formatFileSize(this.maxFileSize)}`
+          message: `图片大小不能超过${this.formatFileSize(this.maxFileSize)}`,
         };
       }
 
@@ -176,7 +179,7 @@ class AvatarUploadManager {
       if (!this.allowedTypes.includes(extension.toLowerCase())) {
         return {
           valid: false,
-          message: `不支持的图片格式，请选择${this.allowedTypes.join('、')}格式的图片`
+          message: `不支持的图片格式，请选择${this.allowedTypes.join('、')}格式的图片`,
         };
       }
 
@@ -184,7 +187,7 @@ class AvatarUploadManager {
       if (imageInfo.width < 100 || imageInfo.height < 100) {
         return {
           valid: false,
-          message: '图片尺寸太小，建议选择至少100x100像素的图片'
+          message: '图片尺寸太小，建议选择至少100x100像素的图片',
         };
       }
 
@@ -192,14 +195,13 @@ class AvatarUploadManager {
         valid: true,
         size: imageInfo.size,
         width: imageInfo.width,
-        height: imageInfo.height
+        height: imageInfo.height,
       };
-
     } catch (error) {
       console.error('验证图片失败:', error);
       return {
         valid: false,
-        message: '图片格式不正确'
+        message: '图片格式不正确',
       };
     }
   }
@@ -211,16 +213,16 @@ class AvatarUploadManager {
     return new Promise((resolve, reject) => {
       wx.getImageInfo({
         src: filePath,
-        success: (res) => {
+        success: res => {
           // 获取文件大小
           wx.getFileInfo({
             filePath,
-            success: (fileRes) => {
+            success: fileRes => {
               resolve({
                 width: res.width,
                 height: res.height,
                 size: fileRes.size,
-                type: res.type
+                type: res.type,
               });
             },
             fail: () => {
@@ -228,12 +230,12 @@ class AvatarUploadManager {
                 width: res.width,
                 height: res.height,
                 size: 0,
-                type: res.type
+                type: res.type,
               });
-            }
+            },
           });
         },
-        fail: reject
+        fail: reject,
       });
     });
   }
@@ -242,79 +244,109 @@ class AvatarUploadManager {
    * 上传头像图片
    */
   async uploadAvatarImage(filePath) {
+    console.log('🚀 [Avatar Debug] uploadAvatarImage 开始，文件路径:', filePath);
+
     try {
       this.uploadInProgress = true;
 
       // 显示上传进度
       wx.showLoading({
         title: '上传中...',
-        mask: true
+        mask: true,
       });
 
       // 调用后端头像上传接口
-      const response = await api.upload('/auth/avatar', filePath, {
+      console.log('🔧 [Avatar Upload Debug] 开始上传头像');
+      console.log('🔧 [Avatar Upload Debug] 文件路径:', filePath);
+      console.log('🔧 [Avatar Upload Debug] 上传URL路径: /auth/avatar');
+
+      const response = await apiClient.upload('/auth/avatar', filePath, {
         name: 'file',
         formData: {
           category: 'avatar',
-          compress: 'true'
-        }
+          compress: 'true',
+        },
       });
+
+      console.log('🔧 [Avatar Upload Debug] 上传响应:', response);
 
       wx.hideLoading();
 
-      if (response.success && response.data) {
-        const avatarUrl = response.data.avatar_url || response.data.url;
-        
+      // 修复：检查实际的响应结构
+      if (
+        response.statusCode >= 200 &&
+        response.statusCode < 300 &&
+        response.data &&
+        response.data.success
+      ) {
+        const avatarUrl = response.data.data.avatar_url;
+
+        // 确保头像URL是完整的HTTPS URL
+        const fullAvatarUrl = avatarUrl.startsWith('http')
+          ? avatarUrl
+          : `https://www.horsduroot.com${avatarUrl}`;
+
         // 更新本地用户信息
-        await this.updateLocalUserAvatar(avatarUrl);
+        await this.updateLocalUserAvatar(fullAvatarUrl);
+
+        console.log('🔧 [Avatar Upload Debug] 完整头像URL:', fullAvatarUrl);
 
         wx.showToast({
           title: '头像上传成功',
-          icon: 'success'
+          icon: 'success',
         });
 
         return {
           success: true,
-          avatarUrl: avatarUrl,
-          data: response.data
+          avatarUrl: fullAvatarUrl,
+          data: response.data.data,
         };
-
       } else {
-        throw new Error(response.message || '上传失败');
+        throw new Error(response.data?.message || response.data?.detail || '上传失败');
       }
-
     } catch (error) {
       console.error('头像上传失败:', error);
-      
+
       // 使用专业的错误处理器
       const errorResult = await profileErrorHandler.handleAvatarUploadError(error, {
         retryFunction: async () => {
-          const response = await api.upload('/auth/avatar', filePath, {
+          const response = await apiClient.upload('/auth/avatar', filePath, {
             name: 'file',
             formData: {
               category: 'avatar',
-              compress: 'true'
-            }
+              compress: 'true',
+            },
           });
 
-          if (response.success && response.data) {
-            const avatarUrl = response.data.avatar_url || response.data.url;
-            await this.updateLocalUserAvatar(avatarUrl);
+          if (
+            response.statusCode >= 200 &&
+            response.statusCode < 300 &&
+            response.data &&
+            response.data.success
+          ) {
+            const avatarUrl = response.data.data.avatar_url;
+
+            // 确保头像URL是完整的HTTPS URL
+            const fullAvatarUrl = avatarUrl.startsWith('http')
+              ? avatarUrl
+              : `https://www.horsduroot.com${avatarUrl}`;
+
+            await this.updateLocalUserAvatar(fullAvatarUrl);
             return {
               success: true,
-              avatarUrl: avatarUrl,
-              data: response.data
+              avatarUrl: fullAvatarUrl,
+              data: response.data.data,
             };
           } else {
-            throw new Error(response.message || '上传失败');
+            throw new Error(response.data?.message || response.data?.detail || '上传失败');
           }
-        }
+        },
       });
 
       if (errorResult.success) {
         wx.showToast({
           title: '头像上传成功',
-          icon: 'success'
+          icon: 'success',
         });
         return errorResult.data;
       }
@@ -335,12 +367,11 @@ class AvatarUploadManager {
         ...currentUserInfo,
         avatarUrl: avatarUrl,
         avatar_url: avatarUrl, // 兼容后端字段名
-        lastUpdated: Date.now()
+        lastUpdated: Date.now(),
       };
 
       await authManager.updateUserInfo(updatedUserInfo);
       console.log('本地用户头像已更新:', avatarUrl);
-
     } catch (error) {
       console.error('更新本地用户头像失败:', error);
     }
@@ -359,11 +390,11 @@ class AvatarUploadManager {
    */
   formatFileSize(bytes) {
     if (bytes === 0) return '0B';
-    
+
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    
+
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + sizes[i];
   }
 
@@ -411,7 +442,7 @@ class AvatarUploadManager {
     if (!avatarUrl || avatarUrl.includes('default-avatar')) {
       wx.showToast({
         title: '暂无头像',
-        icon: 'none'
+        icon: 'none',
       });
       return;
     }
@@ -422,9 +453,9 @@ class AvatarUploadManager {
       fail: () => {
         wx.showToast({
           title: '预览失败',
-          icon: 'error'
+          icon: 'error',
         });
-      }
+      },
     });
   }
 
@@ -435,7 +466,7 @@ class AvatarUploadManager {
     try {
       wx.showLoading({
         title: '删除中...',
-        mask: true
+        mask: true,
       });
 
       // 调用后端删除头像接口
@@ -447,14 +478,13 @@ class AvatarUploadManager {
 
         wx.showToast({
           title: '头像已删除',
-          icon: 'success'
+          icon: 'success',
         });
 
         return true;
       } else {
         throw new Error(response.message || '删除失败');
       }
-
     } catch (error) {
       console.error('删除头像失败:', error);
       errorToast.show('删除失败，请稍后重试');
@@ -470,5 +500,5 @@ const avatarUploadManager = new AvatarUploadManager();
 
 module.exports = {
   avatarUploadManager,
-  AvatarUploadManager
+  AvatarUploadManager,
 };
