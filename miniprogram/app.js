@@ -1,8 +1,4 @@
 // app.js - 五好伴学小程序应用入口文件
-
-// ✅ 引入 regenerator-runtime 支持 async/await（使用简化路径）
-require('regenerator-runtime');
-
 const { authManager } = require('./utils/auth.js');
 const { networkMonitor } = require('./utils/network-monitor.js');
 const { tabBarManager } = require('./utils/tabbar-manager.js');
@@ -48,6 +44,16 @@ App({
 
   onError(error) {
     const errorStr = typeof error === 'string' ? error : JSON.stringify(error);
+
+    // ✅ 过滤stopPropagation相关错误（组件生命周期问题）
+    if (
+      errorStr.includes('stopPropagation') ||
+      errorStr.includes('regeneratorRuntime') ||
+      errorStr.includes('MiniProgramError')
+    ) {
+      console.warn('[已忽略系统错误]', errorStr);
+      return;
+    }
 
     // 过滤微信系统的 unbind download 警告
     if (errorStr.includes('6000100') || errorStr.includes('unbind download')) {

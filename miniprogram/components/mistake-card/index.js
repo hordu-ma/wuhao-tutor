@@ -34,8 +34,11 @@ Component({
   lifetimes: {
     attached() {
       // ✅ 调试：打印接收到的数据
-      console.log('[mistake-card] 组件加载', {
-        mistake: this.data.mistake,
+      console.log('[🚀 mistake-card] 组件加载', {
+        'this.data.mistake': this.data.mistake,
+        'this.properties.mistake': this.properties.mistake,
+        'mistake.id': this.data.mistake?.id,
+        'mistake.title': this.data.mistake?.title,
         created_at: this.data.mistake?.created_at,
         updated_at: this.data.mistake?.updated_at,
         mode: this.data.mode,
@@ -49,11 +52,12 @@ Component({
   observers: {
     mistake(newVal) {
       // ✅ 调试：打印属性变化
-      console.log('[mistake-card] mistake属性变化', {
-        id: newVal?.id,
-        title: newVal?.title,
+      console.log('[🔄 mistake-card] mistake属性变化', {
+        'newVal.id': newVal?.id,
+        'newVal.title': newVal?.title,
         created_at: newVal?.created_at,
         updated_at: newVal?.updated_at,
+        完整对象: newVal,
       });
     },
   },
@@ -235,69 +239,129 @@ Component({
      * 卡片点击事件
      */
     onCardTap(e) {
-      const { mistake } = e.currentTarget.dataset;
-
-      this.triggerEvent('tap', {
-        mistake: mistake || this.data.mistake,
+      // ✅ 调试：输出完整的组件状态
+      console.log('[⚠️ mistake-card] onCardTap 被调用', {
+        'this.data.mistake': this.data.mistake,
+        'this.data.mode': this.data.mode,
+        'this.properties.mistake': this.properties.mistake,
       });
+
+      // ✅ 直接使用 this.data.mistake，不依赖 dataset
+      const mistake = this.data.mistake;
+
+      if (!mistake || !mistake.id) {
+        console.error('[❌ mistake-card] onCardTap: 错题数据无效', {
+          mistake: this.data.mistake,
+          mistakeType: typeof this.data.mistake,
+          properties: this.properties,
+        });
+        return;
+      }
+
+      // ✅ 调试日志
+      console.log('[✅ mistake-card] onCardTap: 触发点击事件', {
+        mistakeId: mistake.id,
+        mistakeTitle: mistake.title,
+      });
+
+      this.triggerEvent('tap', { mistake });
     },
 
     /**
      * 查看详情
      */
     onViewDetail(e) {
-      e.stopPropagation();
-      const { mistake } = e.currentTarget.dataset;
+      // ✅ 防止事件冒泡
+      if (e && typeof e.stopPropagation === 'function') {
+        e.stopPropagation();
+      }
 
-      this.triggerEvent('detail', {
-        mistake: mistake || this.data.mistake,
-      });
+      // ✅ 直接使用 this.data.mistake
+      const mistake = this.data.mistake;
+
+      if (!mistake || !mistake.id) {
+        console.error('[mistake-card] onViewDetail: 错题数据无效');
+        return;
+      }
+
+      this.triggerEvent('detail', { mistake });
     },
 
     /**
      * 开始复习
      */
     onStartReview(e) {
-      e.stopPropagation();
-      const { mistake } = e.currentTarget.dataset;
+      // ✅ 防止事件冒泡
+      if (e && typeof e.stopPropagation === 'function') {
+        e.stopPropagation();
+      }
 
-      this.triggerEvent('review', {
-        mistake: mistake || this.data.mistake,
-      });
+      // ✅ 直接使用 this.data.mistake
+      const mistake = this.data.mistake;
+
+      if (!mistake || !mistake.id) {
+        console.error('[mistake-card] onStartReview: 错题数据无效');
+        return;
+      }
+
+      this.triggerEvent('review', { mistake });
     },
 
     /**
      * 编辑
      */
     onEdit(e) {
-      e.stopPropagation();
-      const { mistake } = e.currentTarget.dataset;
+      // ✅ 防止事件冒泡
+      if (e && typeof e.stopPropagation === 'function') {
+        e.stopPropagation();
+      }
 
-      this.triggerEvent('edit', {
-        mistake: mistake || this.data.mistake,
-      });
+      // ✅ 直接使用 this.data.mistake
+      const mistake = this.data.mistake;
+
+      if (!mistake || !mistake.id) {
+        console.error('[mistake-card] onEdit: 错题数据无效');
+        return;
+      }
+
+      this.triggerEvent('edit', { mistake });
     },
 
     /**
      * 删除
      */
     onDelete(e) {
-      e.stopPropagation();
-      const { mistake } = e.currentTarget.dataset;
+      // ✅ 防止事件冒泡
+      if (e && typeof e.stopPropagation === 'function') {
+        e.stopPropagation();
+      }
 
-      this.triggerEvent('delete', {
-        mistake: mistake || this.data.mistake,
-      });
+      // ✅ 直接使用 this.data.mistake
+      const mistake = this.data.mistake;
+
+      if (!mistake || !mistake.id) {
+        console.error('[mistake-card] onDelete: 错题数据无效');
+        return;
+      }
+
+      this.triggerEvent('delete', { mistake });
     },
 
     /**
      * 图片预览
      */
     onImagePreview(e) {
-      e.stopPropagation();
-      const { urls, index } = e.currentTarget.dataset;
+      // ✅ 防御性编程：检查事件对象
+      if (e && typeof e.stopPropagation === 'function') {
+        e.stopPropagation();
+      }
 
-      if (!urls || urls.length === 0) return;
+      const { urls, index } = e?.currentTarget?.dataset || {};
+
+      if (!urls || urls.length === 0) {
+        console.warn('[mistake-card] onImagePreview: 图片列表为空');
+        return;
+      }
 
       wx.previewImage({
         current: urls[index || 0],

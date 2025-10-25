@@ -3,7 +3,7 @@
 <wxs src="./utils.wxs" module="utils" />
 
 <view class="mistake-card {{mode}}"
-      bindtap="onCardTap"
+      catchtap="onCardTap"
       data-mistake="{{mistake}}">
 
   <!-- 卡片头部 -->

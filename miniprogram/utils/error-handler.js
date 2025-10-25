@@ -11,7 +11,7 @@ const ErrorLevel = {
   INFO: 1,
   WARN: 2,
   ERROR: 3,
-  FATAL: 4
+  FATAL: 4,
 };
 
 /**
@@ -26,20 +26,20 @@ const ErrorCategory = {
   UI: 'UI',
   PERMISSION: 'PERMISSION',
   TIMEOUT: 'TIMEOUT',
-  UNKNOWN: 'UNKNOWN'
+  UNKNOWN: 'UNKNOWN',
 };
 
 /**
  * 错误处理策略枚举
  */
 const ErrorStrategy = {
-  SILENT: 'SILENT',           // 静默处理
-  TOAST: 'TOAST',             // 显示Toast
-  MODAL: 'MODAL',             // 显示模态框
-  PAGE: 'PAGE',               // 跳转错误页面
-  RETRY: 'RETRY',             // 自动重试
-  REPORT: 'REPORT',           // 上报错误
-  FALLBACK: 'FALLBACK'        // 降级处理
+  SILENT: 'SILENT', // 静默处理
+  TOAST: 'TOAST', // 显示Toast
+  MODAL: 'MODAL', // 显示模态框
+  PAGE: 'PAGE', // 跳转错误页面
+  RETRY: 'RETRY', // 自动重试
+  REPORT: 'REPORT', // 上报错误
+  FALLBACK: 'FALLBACK', // 降级处理
 };
 
 /**
@@ -69,8 +69,8 @@ class ErrorHandler {
       retry: {
         maxRetries: 3,
         baseDelay: 1000,
-        maxDelay: 10000
-      }
+        maxDelay: 10000,
+      },
     };
 
     // 错误日志队列
@@ -89,7 +89,7 @@ class ErrorHandler {
       systemErrors: 0,
       handledErrors: 0,
       reportedErrors: 0,
-      startTime: Date.now()
+      startTime: Date.now(),
     };
 
     // 错误处理规则
@@ -135,68 +135,68 @@ class ErrorHandler {
     // 网络错误
     this.addRule({
       category: ErrorCategory.NETWORK,
-      condition: (error) => error.statusCode === 0 || error.type === 'NETWORK_ERROR',
+      condition: error => error.statusCode === 0 || error.type === 'NETWORK_ERROR',
       strategy: ErrorStrategy.TOAST,
       message: '网络连接失败，请检查网络设置',
       allowRetry: true,
-      retryCount: 2
+      retryCount: 2,
     });
 
     // 认证错误
     this.addRule({
       category: ErrorCategory.AUTH,
-      condition: (error) => error.statusCode === 401,
+      condition: error => error.statusCode === 401,
       strategy: ErrorStrategy.MODAL,
       message: '登录已过期，请重新登录',
-      action: 'redirectToLogin'
+      action: 'redirectToLogin',
     });
 
     // 权限错误
     this.addRule({
       category: ErrorCategory.PERMISSION,
-      condition: (error) => error.statusCode === 403,
+      condition: error => error.statusCode === 403,
       strategy: ErrorStrategy.TOAST,
       message: '没有权限执行此操作',
-      level: ErrorLevel.WARN
+      level: ErrorLevel.WARN,
     });
 
     // 参数验证错误
     this.addRule({
       category: ErrorCategory.VALIDATION,
-      condition: (error) => error.statusCode === 422,
+      condition: error => error.statusCode === 422,
       strategy: ErrorStrategy.TOAST,
-      message: (error) => error.data?.message || '请求参数有误',
-      level: ErrorLevel.WARN
+      message: error => error.data?.message || '请求参数有误',
+      level: ErrorLevel.WARN,
     });
 
     // 业务错误
     this.addRule({
       category: ErrorCategory.BUSINESS,
-      condition: (error) => error.statusCode >= 400 && error.statusCode < 500,
+      condition: error => error.statusCode >= 400 && error.statusCode < 500,
       strategy: ErrorStrategy.TOAST,
-      message: (error) => error.data?.message || '操作失败',
-      level: ErrorLevel.ERROR
+      message: error => error.data?.message || '操作失败',
+      level: ErrorLevel.ERROR,
     });
 
     // 服务器错误
     this.addRule({
       category: ErrorCategory.SYSTEM,
-      condition: (error) => error.statusCode >= 500,
+      condition: error => error.statusCode >= 500,
       strategy: ErrorStrategy.MODAL,
       message: '服务器暂时不可用，请稍后重试',
       allowRetry: true,
       retryCount: 1,
-      level: ErrorLevel.ERROR
+      level: ErrorLevel.ERROR,
     });
 
     // 超时错误
     this.addRule({
       category: ErrorCategory.TIMEOUT,
-      condition: (error) => error.message && error.message.includes('timeout'),
+      condition: error => error.message && error.message.includes('timeout'),
       strategy: ErrorStrategy.TOAST,
       message: '请求超时，请稍后重试',
       allowRetry: true,
-      retryCount: 1
+      retryCount: 1,
     });
 
     // 默认错误处理
@@ -205,7 +205,7 @@ class ErrorHandler {
       condition: () => true,
       strategy: ErrorStrategy.TOAST,
       message: '操作失败，请稍后重试',
-      level: ErrorLevel.ERROR
+      level: ErrorLevel.ERROR,
     });
   }
 
@@ -214,7 +214,7 @@ class ErrorHandler {
    */
   setupGlobalErrorHandling() {
     // 监听小程序错误
-    wx.onError((error) => {
+    wx.onError(error => {
       this.handleError({
         type: 'SYSTEM_ERROR',
         message: error,
@@ -223,13 +223,27 @@ class ErrorHandler {
         stack: error,
         context: {
           source: 'wx.onError',
-          timestamp: Date.now()
-        }
+          timestamp: Date.now(),
+        },
       });
     });
 
     // 监听未处理的Promise拒绝
-    wx.onUnhandledRejection((event) => {
+    wx.onUnhandledRejection(event => {
+      // ✅ 过滤组件生命周期相关错误
+      const reason = event.reason;
+      const reasonStr = typeof reason === 'string' ? reason : JSON.stringify(reason);
+
+      if (
+        reasonStr.includes('stopPropagation') ||
+        reasonStr.includes('regeneratorRuntime') ||
+        reasonStr.includes('MiniProgramError') ||
+        reasonStr.includes('is not a function')
+      ) {
+        console.warn('[已忽略Promise拒绝]', reasonStr);
+        return;
+      }
+
       this.handleError({
         type: 'UNHANDLED_REJECTION',
         message: event.reason?.message || 'Unhandled promise rejection',
@@ -239,8 +253,8 @@ class ErrorHandler {
         stack: event.reason?.stack,
         context: {
           source: 'wx.onUnhandledRejection',
-          timestamp: Date.now()
-        }
+          timestamp: Date.now(),
+        },
       });
     });
   }
@@ -258,7 +272,7 @@ class ErrorHandler {
     this.rules.set(ruleId, {
       id: ruleId,
       priority: rule.priority || 0,
-      ...rule
+      ...rule,
     });
 
     return ruleId;
@@ -304,7 +318,6 @@ class ErrorHandler {
       if (this.config.autoReport && this.shouldReport(normalizedError)) {
         this.queueErrorReport(normalizedError);
       }
-
     } catch (handlingError) {
       console.error('错误处理失败', handlingError);
 
@@ -333,13 +346,12 @@ class ErrorHandler {
         userAgent: this.getUserAgent(),
         page: this.getCurrentPage(),
         route: this.getCurrentRoute(),
-        scene: this.getScene()
+        scene: this.getScene(),
       },
-      originalError: error.originalError || error
+      originalError: error.originalError || error,
     };
 
-    //
-    自动分类错误
+    // 自动分类错误
     if (normalized.category === ErrorCategory.UNKNOWN) {
       normalized.category = this.categorizeError(normalized);
     }
@@ -382,8 +394,9 @@ class ErrorHandler {
    * 查找匹配的错误处理规则
    */
   findMatchingRule(error) {
-    const rules = Array.from(this.rules.values())
-      .sort((a, b) => (b.priority || 0) - (a.priority || 0));
+    const rules = Array.from(this.rules.values()).sort(
+      (a, b) => (b.priority || 0) - (a.priority || 0),
+    );
 
     for (const rule of rules) {
       try {
@@ -440,7 +453,6 @@ class ErrorHandler {
       if (rule.action) {
         await this.executeCustomAction(error, rule);
       }
-
     } catch (strategyError) {
       console.error('执行错误处理策略失败', strategyError);
       this.showFallbackError();
@@ -457,7 +469,7 @@ class ErrorHandler {
       title: message,
       icon: 'error',
       duration: 3000,
-      mask: false
+      mask: false,
     });
   }
 
@@ -474,11 +486,11 @@ class ErrorHandler {
       showCancel: rule.allowRetry || false,
       confirmText: rule.allowRetry ? '重试' : '确定',
       cancelText: '取消',
-      success: (res) => {
+      success: res => {
         if (res.confirm && rule.allowRetry) {
           this.retryOperation(error, rule);
         }
-      }
+      },
     });
   }
 
@@ -487,18 +499,20 @@ class ErrorHandler {
    */
   navigateToErrorPage(error, rule) {
     const errorPage = rule.errorPage || '/pages/error/index';
-    const errorInfo = encodeURIComponent(JSON.stringify({
-      message: this.getMessage(error, rule),
-      code: error.statusCode,
-      type: error.type
-    }));
+    const errorInfo = encodeURIComponent(
+      JSON.stringify({
+        message: this.getMessage(error, rule),
+        code: error.statusCode,
+        type: error.type,
+      }),
+    );
 
     wx.navigateTo({
       url: `${errorPage}?error=${errorInfo}`,
       fail: () => {
         // 降级到Modal显示
         this.showModal(error, { ...rule, strategy: ErrorStrategy.MODAL });
-      }
+      },
     });
   }
 
@@ -531,7 +545,6 @@ class ErrorHandler {
         error.retryContext.currentRetry = currentRetry + 1;
         await error.retryContext.retryFunction();
       }
-
     } catch (retryError) {
       console.error('重试操作失败', retryError);
 
@@ -542,7 +555,7 @@ class ErrorHandler {
         this.showModal(retryError, {
           ...rule,
           strategy: ErrorStrategy.MODAL,
-          message: '操作失败，请稍后重试'
+          message: '操作失败，请稍后重试',
         });
       }
     }
@@ -574,7 +587,7 @@ class ErrorHandler {
           url: '/pages/login/index',
           fail: () => {
             wx.reLaunch({ url: '/pages/login/index' });
-          }
+          },
         });
         break;
 
@@ -582,7 +595,7 @@ class ErrorHandler {
         wx.navigateBack({
           fail: () => {
             wx.reLaunch({ url: '/pages/index/index' });
-          }
+          },
         });
         break;
 
@@ -625,7 +638,7 @@ class ErrorHandler {
     wx.showToast({
       title: '系统繁忙，请稍后重试',
       icon: 'error',
-      duration: 2000
+      duration: 2000,
     });
   }
 
@@ -648,7 +661,6 @@ class ErrorHandler {
       if (this.config.showDetails) {
         console.error('错误详情:', error);
       }
-
     } catch (logError) {
       console.error('记录错误日志失败', logError);
     }
@@ -708,7 +720,7 @@ class ErrorHandler {
   queueErrorReport(error) {
     this.pendingReports.push({
       ...error,
-      reportTime: Date.now()
+      reportTime: Date.now(),
     });
 
     // 达到批量上报数量时立即上报
@@ -757,8 +769,8 @@ class ErrorHandler {
           platform: 'miniprogram',
           version: wx.getSystemInfoSync().version,
           model: wx.getSystemInfoSync().model,
-          timestamp: Date.now()
-        }
+          timestamp: Date.now(),
+        },
       };
 
       await wx.request({
@@ -766,18 +778,17 @@ class ErrorHandler {
         method: 'POST',
         data: reportData,
         header: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
         success: () => {
           this.stats.reportedErrors += reportData.errors.length;
         },
-        fail: (error) => {
+        fail: error => {
           console.warn('错误上报失败', error);
           // 将失败的错误重新加入队列
           this.pendingReports.unshift(...reportData.errors);
-        }
+        },
       });
-
     } catch (reportError) {
       console.error('错误上报异常', reportError);
     }
@@ -860,10 +871,11 @@ class ErrorHandler {
     return {
       ...this.stats,
       uptime: Date.now() - this.stats.startTime,
-      errorRate: this.stats.totalErrors > 0
-        ? ((this.stats.totalErrors / (Date.now() - this.stats.startTime)) * 1000 * 60).toFixed(2)
-        : '0.00', // 每分钟错误数
-      pendingReports: this.pendingReports.length
+      errorRate:
+        this.stats.totalErrors > 0
+          ? ((this.stats.totalErrors / (Date.now() - this.stats.startTime)) * 1000 * 60).toFixed(2)
+          : '0.00', // 每分钟错误数
+      pendingReports: this.pendingReports.length,
     };
   }
 
@@ -880,7 +892,7 @@ class ErrorHandler {
       systemErrors: 0,
       handledErrors: 0,
       reportedErrors: 0,
-      startTime: Date.now()
+      startTime: Date.now(),
     };
   }
 
@@ -898,8 +910,7 @@ class ErrorHandler {
    * 延迟函数
    */
   delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms
-    ));
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   /**
@@ -968,8 +979,7 @@ class ErrorHandler {
   /**
    * 设置配置
    */
-  setConfig
-    (newConfig) {
+  setConfig(newConfig) {
     this.config = { ...this.config, ...newConfig };
   }
 
@@ -1000,40 +1010,60 @@ module.exports = {
 
   // 常用方法
   handleError: (error, context) => errorHandler.handleError(error, context),
-  addRule: (rule) => errorHandler.addRule(rule),
-  removeRule: (ruleId) => errorHandler.removeRule(ruleId),
-  addListener: (listener) => errorHandler.addListener(listener),
-  getErrorLogs: (limit) => errorHandler.getErrorLogs(limit),
+  addRule: rule => errorHandler.addRule(rule),
+  removeRule: ruleId => errorHandler.removeRule(ruleId),
+  addListener: listener => errorHandler.addListener(listener),
+  getErrorLogs: limit => errorHandler.getErrorLogs(limit),
   clearErrorLogs: () => errorHandler.clearErrorLogs(),
   getStats: () => errorHandler.getStats(),
   resetStats: () => errorHandler.resetStats(),
-  setConfig: (config) => errorHandler.setConfig(config),
+  setConfig: config => errorHandler.setConfig(config),
 
   // 便捷方法
-  handleNetworkError: (error, context) => errorHandler.handleError({
-    ...error,
-    category: ErrorCategory.NETWORK
-  }, context),
+  handleNetworkError: (error, context) =>
+    errorHandler.handleError(
+      {
+        ...error,
+        category: ErrorCategory.NETWORK,
+      },
+      context,
+    ),
 
-  handleAuthError: (error, context) => errorHandler.handleError({
-    ...error,
-    category: ErrorCategory.AUTH
-  }, context),
+  handleAuthError: (error, context) =>
+    errorHandler.handleError(
+      {
+        ...error,
+        category: ErrorCategory.AUTH,
+      },
+      context,
+    ),
 
-  handleValidationError: (error, context) => errorHandler.handleError({
-    ...error,
-    category: ErrorCategory.VALIDATION
-  }, context),
+  handleValidationError: (error, context) =>
+    errorHandler.handleError(
+      {
+        ...error,
+        category: ErrorCategory.VALIDATION,
+      },
+      context,
+    ),
 
-  handleBusinessError: (error, context) => errorHandler.handleError({
-    ...error,
-    category: ErrorCategory.BUSINESS
-  }, context),
+  handleBusinessError: (error, context) =>
+    errorHandler.handleError(
+      {
+        ...error,
+        category: ErrorCategory.BUSINESS,
+      },
+      context,
+    ),
 
-  handleSystemError: (error, context) => errorHandler.handleError({
-    ...error,
-    category: ErrorCategory.SYSTEM
-  }, context),
+  handleSystemError: (error, context) =>
+    errorHandler.handleError(
+      {
+        ...error,
+        category: ErrorCategory.SYSTEM,
+      },
+      context,
+    ),
 
   // 错误处理装饰器
   withErrorHandling: (category = ErrorCategory.UNKNOWN, level = ErrorLevel.ERROR) => {
@@ -1051,8 +1081,8 @@ module.exports = {
             context: {
               method: propertyKey,
               args: args.length,
-              timestamp: Date.now()
-            }
+              timestamp: Date.now(),
+            },
           });
           throw error;
         }
@@ -1060,5 +1090,5 @@ module.exports = {
 
       return descriptor;
     };
-  }
+  },
 };

@@ -342,7 +342,26 @@ const pageObject = {
    * 错题卡片点击
    */
   onMistakeTap(e) {
+    // ✅ 防御性编程：检查事件数据
+    if (!e || !e.detail) {
+      console.error('点击错题事件无效', e);
+      return;
+    }
+
     const { mistake } = e.detail;
+
+    if (!mistake || !mistake.id) {
+      console.error('错题数据无效', {
+        event: e,
+        detail: e.detail,
+        mistake: mistake,
+      });
+      wx.showToast({
+        title: '错题数据加载失败',
+        icon: 'error',
+      });
+      return;
+    }
 
     console.log('点击错题', mistake);
 
@@ -356,6 +375,12 @@ const pageObject = {
    * 删除错题
    */
   async onMistakeDelete(e) {
+    // ✅ 防御性编程
+    if (!e || !e.detail || !e.detail.mistake) {
+      console.error('删除错题事件无效', e);
+      return;
+    }
+
     const { mistake } = e.detail;
 
     console.log('删除错题', mistake);
@@ -407,6 +432,12 @@ const pageObject = {
    * 开始复习错题
    */
   onMistakeReview(e) {
+    // ✅ 防御性编程
+    if (!e || !e.detail || !e.detail.mistake || !e.detail.mistake.id) {
+      console.error('复习错题事件无效', e);
+      return;
+    }
+
     const { mistake } = e.detail;
 
     console.log('复习错题', mistake);
