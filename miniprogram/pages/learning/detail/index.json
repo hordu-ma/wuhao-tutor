@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "对话详情",
+  "usingComponents": {
+    "van-icon": "@vant/weapp/icon/index"
+  }
+}

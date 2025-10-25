@@ -737,6 +737,16 @@ const pageObject = {
           sources: response.answer.sources || [],
         };
 
+        // 🎯 静默处理错题自动创建（无UI提示）
+        if (response.mistake_created) {
+          console.log('✅ 错题已自动加入复习本:', {
+            category: response.mistake_info?.category,
+            mistakeId: response.mistake_info?.id,
+            nextReview: response.mistake_info?.next_review_date,
+          });
+          // AI在后台默默工作，不打断用户学习流程
+        }
+
         // 更新消息列表
         const newMessageList = [...this.data.messageList];
         newMessageList[newMessageList.length - 1] = updatedUserMessage;
@@ -747,8 +757,8 @@ const pageObject = {
           isAITyping: false,
         });
 
-        // 打字机效果显示AI回复
-        this.showAIReplyWithTyping(aiMessage);
+        // 🎯 直接显示完整内容，不使用打字机效果（避免截断）
+        this.scrollToBottom();
 
         // 更新对话上下文
         this.updateConversationContext(userMessage, aiMessage);

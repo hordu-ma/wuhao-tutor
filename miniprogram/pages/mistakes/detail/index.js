@@ -7,7 +7,7 @@ const pageObject = {
     mistakeId: '',
     mistakeDetail: null,
     loading: false,
-    mode: 'view' // view | review
+    mode: 'view', // view | review
   },
 
   async onLoad(options) {
@@ -16,7 +16,7 @@ const pageObject = {
     if (options.id) {
       this.setData({
         mistakeId: options.id,
-        mode: options.mode || 'view'
+        mode: options.mode || 'view',
       });
 
       await this.loadMistakeDetail();
@@ -29,18 +29,19 @@ const pageObject = {
 
       const response = await mistakesApi.getMistakeDetail(this.data.mistakeId);
 
-      if (response.success) {
+      // 🐞 后端API直接返回MistakeDetailResponse对象，不是{success, data}格式
+      if (response && response.id) {
         this.setData({
-          mistakeDetail: response.data
+          mistakeDetail: response, // 🛠️ 直接使用response
         });
       } else {
-        throw new Error(response.message || '加载失败');
+        throw new Error('加载失败：无效的响应数据');
       }
     } catch (error) {
       console.error('加载错题详情失败', error);
       wx.showToast({
         title: error.message || '加载失败',
-        icon: 'error'
+        icon: 'error',
       });
     } finally {
       this.setData({ loading: false });
@@ -49,9 +50,9 @@ const pageObject = {
 
   getMasteryStatusTag(status) {
     const statusMap = {
-      'not_mastered': { type: 'danger', text: '未掌握' },
-      'reviewing': { type: 'warning', text: '复习中' },
-      'mastered': { type: 'success', text: '已掌握' }
+      not_mastered: { type: 'danger', text: '未掌握' },
+      reviewing: { type: 'warning', text: '复习中' },
+      mastered: { type: 'success', text: '已掌握' },
     };
     return statusMap[status] || { type: 'default', text: '未知' };
   },
@@ -60,7 +61,7 @@ const pageObject = {
     const difficultyMap = {
       1: '简单',
       2: '中等',
-      3: '困难'
+      3: '困难',
     };
     return difficultyMap[level] || '未知';
   },
@@ -70,7 +71,7 @@ const pageObject = {
       title: '确认删除',
       content: '确定要删除这道错题吗？',
       confirmText: '删除',
-      confirmColor: '#f5222d'
+      confirmColor: '#f5222d',
     });
 
     if (!res.confirm) return;
@@ -80,10 +81,11 @@ const pageObject = {
 
       const response = await mistakesApi.deleteMistake(this.data.mistakeId);
 
-      if (response.success) {
+      // 🛠️ 删除API返回SuccessResponse: {success: true, message: "..."}
+      if (response && response.success !== false) {
         wx.showToast({
           title: '删除成功',
-          icon: 'success'
+          icon: 'success',
         });
 
         setTimeout(() => {
@@ -96,7 +98,7 @@ const pageObject = {
       console.error('删除错题失败', error);
       wx.showToast({
         title: error.message || '删除失败',
-        icon: 'error'
+        icon: 'error',
       });
     } finally {
       wx.hideLoading();
@@ -106,9 +108,9 @@ const pageObject = {
   onStartReview() {
     // 开始复习模式
     wx.navigateTo({
-      url: `/pages/mistakes/detail/index?id=${this.data.mistakeId}&mode=review`
+      url: `/pages/mistakes/detail/index?id=${this.data.mistakeId}&mode=review`,
     });
-  }
+  },
 };
 
 Page(createGuardedPage(pageObject, 'pages/mistakes/detail/index'));

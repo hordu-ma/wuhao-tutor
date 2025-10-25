@@ -7,20 +7,20 @@ Component({
     // 错题数据对象
     mistake: {
       type: Object,
-      value: null
+      value: null,
     },
 
     // 显示模式: 'list' | 'review' | 'detail'
     mode: {
       type: String,
-      value: 'list'
+      value: 'list',
     },
 
     // 是否显示操作按钮
     showActions: {
       type: Boolean,
-      value: true
-    }
+      value: true,
+    },
   },
 
   /**
@@ -33,13 +33,37 @@ Component({
    */
   methods: {
     /**
+     * 🎯 获取错题类型文本
+     */
+    getCategoryText(category) {
+      const categoryMap = {
+        empty_question: '不会做',
+        wrong_answer: '答错了',
+        hard_question: '有难度',
+      };
+      return categoryMap[category] || '';
+    },
+
+    /**
+     * 🎯 获取来源图标
+     */
+    getSourceIcon(source) {
+      const iconMap = {
+        learning: 'chat-o', // 学习问答
+        manual: 'edit', // 手动添加
+        homework: 'records-o', // 作业
+      };
+      return iconMap[source] || 'records-o';
+    },
+
+    /**
      * 获取难度图标
      */
     getDifficultyIcon(level) {
       const iconMap = {
         1: 'smile-o',
         2: 'flower-o',
-        3: 'fire-o'
+        3: 'fire-o',
       };
       return iconMap[level] || 'flower-o';
     },
@@ -51,7 +75,7 @@ Component({
       const textMap = {
         1: '简单',
         2: '中等',
-        3: '困难'
+        3: '困难',
       };
       return textMap[level] || '未知';
     },
@@ -61,9 +85,9 @@ Component({
      */
     getMasteryStatusText(status) {
       const textMap = {
-        'not_mastered': '未掌握',
-        'reviewing': '复习中',
-        'mastered': '已掌握'
+        not_mastered: '未掌握',
+        reviewing: '复习中',
+        mastered: '已掌握',
       };
       return textMap[status] || '未知';
     },
@@ -184,7 +208,7 @@ Component({
       const { mistake } = e.currentTarget.dataset;
 
       this.triggerEvent('tap', {
-        mistake: mistake || this.data.mistake
+        mistake: mistake || this.data.mistake,
       });
     },
 
@@ -196,7 +220,7 @@ Component({
       const { mistake } = e.currentTarget.dataset;
 
       this.triggerEvent('detail', {
-        mistake: mistake || this.data.mistake
+        mistake: mistake || this.data.mistake,
       });
     },
 
@@ -208,7 +232,7 @@ Component({
       const { mistake } = e.currentTarget.dataset;
 
       this.triggerEvent('review', {
-        mistake: mistake || this.data.mistake
+        mistake: mistake || this.data.mistake,
       });
     },
 
@@ -220,7 +244,7 @@ Component({
       const { mistake } = e.currentTarget.dataset;
 
       this.triggerEvent('edit', {
-        mistake: mistake || this.data.mistake
+        mistake: mistake || this.data.mistake,
       });
     },
 
@@ -232,8 +256,8 @@ Component({
       const { mistake } = e.currentTarget.dataset;
 
       this.triggerEvent('delete', {
-        mistake: mistake || this.data.mistake
+        mistake: mistake || this.data.mistake,
       });
-    }
-  }
+    },
+  },
 });

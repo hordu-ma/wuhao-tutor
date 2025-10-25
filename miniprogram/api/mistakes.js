@@ -19,6 +19,8 @@ const mistakesAPI = {
    * @param {string} [params.subject] - 学科筛选
    * @param {number} [params.difficulty_level] - 难度等级: 1简单|2中等|3困难
    * @param {string} [params.keyword] - 搜索关键词
+   * @param {string} [params.category] - 🎯 错题类型: empty_question|wrong_answer|hard_question
+   * @param {string} [params.source] - 🎯 来源: learning|manual|homework
    * @param {Object} [config] - 请求配置
    * @returns {Promise<Object>} 错题列表
    */
@@ -32,6 +34,8 @@ const mistakesAPI = {
     if (params.subject) queryParams.subject = params.subject;
     if (params.difficulty_level) queryParams.difficulty_level = params.difficulty_level;
     if (params.keyword) queryParams.keyword = params.keyword;
+    if (params.category) queryParams.category = params.category; // 🎯 错题类型筛选
+    if (params.source) queryParams.source = params.source; // 🎯 来源筛选
 
     return request.get('mistakes', queryParams, {
       showLoading: false,
@@ -288,6 +292,22 @@ const mistakesAPI = {
       timeout: 30000, // 30秒超时
       ...config,
     });
+  },
+
+  /**
+   * 🎯 获取学习洞察报告
+   * @param {Object} [config] - 请求配置
+   * @returns {Promise<Object>} 学习洞察数据
+   */
+  getLearningInsights(config = {}) {
+    return request.get(
+      'mistakes/learning-insights',
+      {},
+      {
+        showLoading: false,
+        ...config,
+      },
+    );
   },
 
   /**

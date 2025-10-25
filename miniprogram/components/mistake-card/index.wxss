@@ -30,6 +30,7 @@
   display: flex;
   align-items: center;
   gap: 15rpx;
+  flex-wrap: wrap;
 }
 
 .subject-tag {
@@ -39,6 +40,29 @@
   font-size: 24rpx;
   border-radius: 20rpx;
   font-weight: 500;
+}
+
+/* 🎯 错题类型标签 */
+.category-tag {
+  padding: 6rpx 16rpx;
+  border-radius: 16rpx;
+  font-size: 20rpx;
+  font-weight: 500;
+}
+
+.category-tag.category-empty_question {
+  background-color: #fff2f0;
+  color: #f5222d;
+}
+
+.category-tag.category-wrong_answer {
+  background-color: #fff7e6;
+  color: #faad14;
+}
+
+.category-tag.category-hard_question {
+  background-color: #e6f7ff;
+  color: #1890ff;
 }
 
 .difficulty-tag {
@@ -69,6 +93,38 @@
   display: flex;
   align-items: center;
   gap: 10rpx;
+}
+
+/* 🎯 来源标识 */
+.source-tag {
+  width: 28rpx;
+  height: 28rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.source-tag.source-learning {
+  background-color: #e6f7ff;
+  color: #1890ff;
+}
+
+.source-tag.source-manual {
+  background-color: #f0f0f0;
+  color: #999999;
+}
+
+/* 🎯 AI分析徽章 */
+.ai-badge {
+  width: 28rpx;
+  height: 28rpx;
+  background: linear-gradient(135deg, #ffd700 0%, #ffa500 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
 }
 
 .status-tag {

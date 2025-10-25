@@ -13,9 +13,21 @@
         <van-icon name="{{getDifficultyIcon(mistake.difficulty_level)}}" size="12" />
         <text>{{getDifficultyText(mistake.difficulty_level)}}</text>
       </view>
+      <!-- 🎯 错题类型标签 -->
+      <view class="category-tag category-{{mistake.category}}" wx:if="{{mistake.category}}">
+        <text>{{getCategoryText(mistake.category)}}</text>
+      </view>
     </view>
 
     <view class="status-info">
+      <!-- 🎯 来源标识 -->
+      <view class="source-tag source-{{mistake.source}}" wx:if="{{mistake.source}}">
+        <van-icon name="{{getSourceIcon(mistake.source)}}" size="10" />
+      </view>
+      <!-- 🎯 AI分析徽章 -->
+      <view class="ai-badge" wx:if="{{mistake.ai_analysis}}">
+        <van-icon name="bulb-o" size="10" />
+      </view>
       <view class="status-tag {{mistake.mastery_status}}">
         {{getMasteryStatusText(mistake.mastery_status)}}
       </view>

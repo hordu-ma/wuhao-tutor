@@ -334,6 +334,10 @@ class AskQuestionResponse(BaseModel):
     processing_time: int = Field(..., description="总处理时间(毫秒)")
     tokens_used: int = Field(..., description="本次消耗的token数")
 
+    # 🎯 错题自动创建相关字段
+    mistake_created: bool = Field(default=False, description="是否自动创建了错题")
+    mistake_info: Optional[Dict[str, Any]] = Field(default=None, description="错题信息")
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -355,6 +359,12 @@ class AskQuestionResponse(BaseModel):
                 },
                 "processing_time": 1500,
                 "tokens_used": 245,
+                "mistake_created": True,
+                "mistake_info": {
+                    "id": "mistake-uuid",
+                    "category": "empty_question",
+                    "next_review_date": "2025-10-26T00:00:00Z",
+                },
             }
         }
     )

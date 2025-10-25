@@ -11,7 +11,7 @@ import json
 import logging
 import re
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -50,8 +50,27 @@ class MistakeService:
         self.algorithm = SpacedRepetitionAlgorithm()
         self.bailian_service = bailian_service
 
+    @staticmethod
+    def _safe_extract_orm(obj: Any, attr: str, default: Any = None) -> Any:
+        """安全地从ORM对象提取属性值"""
+        try:
+            value = getattr(obj, attr, default)
+            # 如果是Column对象，返回默认值
+            if hasattr(value, "__class__") and "Column" in str(type(value)):
+                return default
+            return value if value is not None else default
+        except Exception:
+            return default
+
     def _to_list_item(self, mistake: MistakeRecord) -> MistakeListItem:
         """转换为列表项"""
+        from uuid import UUID as UUIDType
+
+        from src.utils.type_converters import (
+            extract_orm_int,
+            extract_orm_str,
+            extract_orm_uuid_str,
+        )
 
         # 在SQLite中，日期字段是字符串；在PostgreSQL中是datetime对象
         # 需要处理两种情况
@@ -64,22 +83,27 @@ class MistakeService:
             return value.isoformat()  # PostgreSQL中是datetime对象
 
         return MistakeListItem(
-            id=mistake.id,
-            title=mistake.title or "未命名错题",
-            subject=mistake.subject,
-            difficulty_level=mistake.difficulty_level,
-            source=mistake.source,
+            id=UUIDType(extract_orm_uuid_str(mistake, "id")),
+            title=extract_orm_str(mistake, "title") or "未命名错题",
+            subject=extract_orm_str(mistake, "subject"),
+            difficulty_level=extract_orm_int(mistake, "difficulty_level"),
+            source=extract_orm_str(mistake, "source"),
             source_id=None,
-            mastery_status=mistake.mastery_status,
-            correct_count=mistake.correct_count,
-            total_reviews=mistake.review_count,
-            next_review_date=to_iso_string(mistake.next_review_at),
-            created_at=to_iso_string(mistake.created_at),
-            knowledge_points=mistake.knowledge_points or [],
+            mastery_status=extract_orm_str(mistake, "mastery_status"),
+            correct_count=extract_orm_int(mistake, "correct_count") or 0,
+            total_reviews=extract_orm_int(mistake, "review_count") or 0,
+            next_review_date=to_iso_string(getattr(mistake, "next_review_at", None)),
+            created_at=to_iso_string(getattr(mistake, "created_at", None)) or "",
+            knowledge_points=getattr(mistake, "knowledge_points", None) or [],
         )
 
     def _to_detail_response(self, mistake: MistakeRecord) -> MistakeDetailResponse:
         """转换为详情响应"""
+        from src.utils.type_converters import (
+            extract_orm_int,
+            extract_orm_str,
+            extract_orm_uuid_str,
+        )
 
         # 在SQLite中，日期字段是字符串；在PostgreSQL中是datetime对象
         # 需要处理两种情况
@@ -91,26 +115,29 @@ class MistakeService:
                 return value  # SQLite中已经是字符串
             return value.isoformat()  # PostgreSQL中是datetime对象
 
+        # 🛠️ 使用extract_orm_*函数提取ORM对象的值
         return MistakeDetailResponse(
-            id=mistake.id,
-            title=mistake.title or "未命名错题",
+            id=extract_orm_uuid_str(mistake, "id"),  # Pydantic会自动将字符串转换为UUID
+            title=extract_orm_str(mistake, "title") or "未命名错题",
             description=None,
-            subject=mistake.subject,
-            difficulty_level=mistake.difficulty_level,
-            source=mistake.source,
+            subject=extract_orm_str(mistake, "subject"),
+            difficulty_level=extract_orm_int(mistake, "difficulty_level"),
+            source=extract_orm_str(mistake, "source"),
             source_id=None,
-            question_content=mistake.ocr_text or "",
-            student_answer=None,
-            correct_answer=None,
-            explanation=None,
-            knowledge_points=mistake.knowledge_points or [],
-            mastery_status=mistake.mastery_status,
-            correct_count=mistake.correct_count,
-            total_reviews=mistake.review_count,
-            next_review_date=to_iso_string(mistake.next_review_at),
-            created_at=to_iso_string(mistake.created_at),
-            updated_at=to_iso_string(mistake.updated_at),
-            image_urls=mistake.image_urls or [],
+            question_content=extract_orm_str(mistake, "ocr_text") or "",
+            student_answer=extract_orm_str(mistake, "student_answer")
+            or None,  # 🛠️ 从数据库读取
+            correct_answer=extract_orm_str(mistake, "correct_answer")
+            or None,  # 🛠️ 从数据库读取
+            explanation=None,  # 模型中没有该字段，保持None
+            knowledge_points=getattr(mistake, "knowledge_points", None) or [],
+            mastery_status=extract_orm_str(mistake, "mastery_status"),
+            correct_count=extract_orm_int(mistake, "correct_count") or 0,
+            total_reviews=extract_orm_int(mistake, "review_count") or 0,
+            next_review_date=to_iso_string(getattr(mistake, "next_review_at", None)),
+            created_at=to_iso_string(getattr(mistake, "created_at", None)) or "",
+            updated_at=to_iso_string(getattr(mistake, "updated_at", None)) or "",
+            image_urls=getattr(mistake, "image_urls", None) or [],
         )
 
     async def get_mistake_list(
@@ -275,23 +302,34 @@ class MistakeService:
         total_minutes = 0
 
         for mistake in mistakes:
+            from src.utils.type_converters import (
+                extract_orm_int,
+                extract_orm_str,
+                extract_orm_uuid_str,
+            )
+
+            # 🛠️ 安全地提取ORM属性
+            mistake_id_str = extract_orm_uuid_str(mistake, "id")
+            next_review = getattr(mistake, "next_review_at", None)
+
             tasks.append(
                 TodayReviewTask(
-                    id=mistake.id,
-                    mistake_id=mistake.id,
-                    title=mistake.title or "未命名错题",
-                    subject=mistake.subject,
-                    review_round=mistake.review_count + 1,
+                    id=UUID(mistake_id_str),
+                    mistake_id=UUID(mistake_id_str),
+                    title=extract_orm_str(mistake, "title") or "未命名错题",
+                    subject=extract_orm_str(mistake, "subject"),
+                    review_round=(extract_orm_int(mistake, "review_count") or 0) + 1,
                     due_date=(
-                        mistake.next_review_at.isoformat()
-                        if mistake.next_review_at
+                        next_review.isoformat()
+                        if next_review and hasattr(next_review, "isoformat")
                         else datetime.now().isoformat()
                     ),
-                    question_content=mistake.ocr_text or "",
-                    image_urls=mistake.image_urls or [],
+                    question_content=extract_orm_str(mistake, "ocr_text") or "",
+                    image_urls=getattr(mistake, "image_urls", None) or [],
                 )
             )
-            total_minutes += mistake.estimated_time or 5
+            estimated_time = extract_orm_int(mistake, "estimated_time")
+            total_minutes += estimated_time if estimated_time else 5
 
         logger.info(
             f"Retrieved {len(tasks)} review tasks for user {user_id}, estimated {total_minutes} minutes"
@@ -342,7 +380,8 @@ class MistakeService:
 
         # 4. 计算下次复习时间
         next_review, interval = self.algorithm.calculate_next_review(
-            review_count=mistake.review_count,
+            review_count=extract_orm_int(mistake, "review_count")
+            or 0,  # 🛠️ 使用extract_orm_int
             review_result=request.review_result,
             current_mastery=current_mastery,
             last_review_date=datetime.now(),

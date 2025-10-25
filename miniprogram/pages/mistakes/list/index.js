@@ -54,6 +54,23 @@ const pageObject = {
       { label: '困难', value: 3 },
     ],
 
+    // 🎯 智能筛选 - 错题类型
+    selectedCategory: '',
+    categoryOptions: [
+      { label: '全部', value: '' },
+      { label: '不会做的题', value: 'empty_question' },
+      { label: '答错的题', value: 'wrong_answer' },
+      { label: '有难度的题', value: 'hard_question' },
+    ],
+
+    // 🎯 智能筛选 - 来源
+    selectedSource: '',
+    sourceOptions: [
+      { label: '全部来源', value: '' },
+      { label: '学习问答', value: 'learning' },
+      { label: '手动添加', value: 'manual' },
+    ],
+
     // 搜索关键词
     searchKeyword: '',
 
@@ -163,6 +180,9 @@ const pageObject = {
             : undefined,
         difficulty_level: this.data.selectedDifficulty || undefined,
         keyword: this.data.searchKeyword || undefined,
+        // 🎯 智能筛选参数
+        category: this.data.selectedCategory || undefined,
+        source: this.data.selectedSource || undefined,
       };
 
       console.log('加载错题列表请求参数', params);
@@ -477,6 +497,28 @@ const pageObject = {
   },
 
   /**
+   * 选择错题类型
+   */
+  onCategorySelect(e) {
+    const { category } = e.currentTarget.dataset;
+
+    this.setData({
+      selectedCategory: category,
+    });
+  },
+
+  /**
+   * 选择来源
+   */
+  onSourceSelect(e) {
+    const { source } = e.currentTarget.dataset;
+
+    this.setData({
+      selectedSource: source,
+    });
+  },
+
+  /**
    * 选择科目
    */
   onSubjectSelect(e) {
@@ -505,6 +547,8 @@ const pageObject = {
     this.setData({
       selectedSubject: '',
       selectedDifficulty: '',
+      selectedCategory: '',
+      selectedSource: '',
     });
   },
 

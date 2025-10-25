@@ -102,29 +102,7 @@
   color: #999999;
 }
 
-/* 浮动操作按钮 */
-.fab-container {
-  position: fixed;
-  right: 30rpx;
-  bottom: 100rpx;
-  z-index: 100;
-}
-
-.fab {
-  width: 100rpx;
-  height: 100rpx;
-  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 8rpx 16rpx rgba(24, 144, 255, 0.4);
-  transition: all 0.3s;
-}
-
-.fab:active {
-  transform: scale(0.95);
-}
+/* 浮动操作按钮 - 已移除，AI自动创建错题 */
 
 /* 筛选弹窗 */
 .filter-popup {

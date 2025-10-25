@@ -86,12 +86,8 @@
     </view>
   </scroll-view>
 
-  <!-- 浮动操作按钮 -->
-  <view class="fab-container">
-    <view class="fab" bindtap="onAddMistake">
-      <van-icon name="plus" size="40rpx" color="#fff" />
-    </view>
-  </view>
+  <!-- 浮动操作按钮 - 已移除手动添加功能 -->
+  <!-- 📌 AI驱动错题本：错题将从学习问答自动创建 -->
 
   <!-- 错题筛选弹窗 -->
   <van-popup show="{{showFilterPopup}}"
@@ -105,6 +101,34 @@
       </view>
 
       <view class="filter-content">
+        <!-- 🎯 错题类型筛选 -->
+        <view class="filter-group">
+          <text class="filter-label">错题类型</text>
+          <view class="filter-options">
+            <view class="filter-option {{selectedCategory === item.value ? 'selected' : ''}}"
+                  wx:for="{{categoryOptions}}"
+                  wx:key="value"
+                  bindtap="onCategorySelect"
+                  data-category="{{item.value}}">
+              {{item.label}}
+            </view>
+          </view>
+        </view>
+
+        <!-- 🎯 来源筛选 -->
+        <view class="filter-group">
+          <text class="filter-label">来源</text>
+          <view class="filter-options">
+            <view class="filter-option {{selectedSource === item.value ? 'selected' : ''}}"
+                  wx:for="{{sourceOptions}}"
+                  wx:key="value"
+                  bindtap="onSourceSelect"
+                  data-source="{{item.value}}">
+              {{item.label}}
+            </view>
+          </view>
+        </view>
+
         <!-- 科目筛选 -->
         <view class="filter-group">
           <text class="filter-label">科目</text>

@@ -182,8 +182,31 @@ class LearningService:
             # 8. 更新用户学习分析
             await self._update_learning_analytics(user_id, question, answer)
 
-            # 9. 构建响应
+            # 🎯 9. 智能错题自动创建（简化规则版）
+            mistake_created = False
+            mistake_info = None
+            try:
+                mistake_result = await self._auto_create_mistake_if_needed(
+                    user_id, question, answer, request
+                )
+                if mistake_result:
+                    mistake_created = True
+                    mistake_info = mistake_result
+                    logger.info(
+                        f"✅ 错题自动创建成功: user_id={user_id}, "
+                        f"mistake_id={mistake_info.get('id')}, "
+                        f"category={mistake_info.get('category')}"
+                    )
+            except Exception as mistake_err:
+                logger.warning(f"错题创建失败，但不影响问答: {str(mistake_err)}")
+
+            # 10. 构建响应
             processing_time = int((time.time() - start_time) * 1000)
+
+            # 🔧 刷新ORM对象，确保所有属性已加载（避免 MissingGreenlet 错误）
+            await self.db.refresh(question)
+            await self.db.refresh(answer)
+            await self.db.refresh(session)
 
             return AskQuestionResponse(
                 question=QuestionResponse.model_validate(question),
@@ -191,6 +214,8 @@ class LearningService:
                 session=SessionResponse.model_validate(session),
                 processing_time=processing_time,
                 tokens_used=ai_response.tokens_used,
+                mistake_created=mistake_created,  # 🎯 新增
+                mistake_info=mistake_info,  # 🎯 新增
             )
 
         except Exception as e:
@@ -1201,7 +1226,7 @@ class LearningService:
         """从AI回答中提取正确答案"""
         import re
 
-        # 简单规则：查找“答案：”、“正确答案：”等关键词后的内容
+        # 简单规则：查找"答案："、"正确答案："等关键词后的内容
         patterns = [
             r"答案[：:]\s*(.+?)(?:\n|$)",
             r"正确答案[：:]\s*(.+?)(?:\n|$)",
@@ -1215,6 +1240,140 @@ class LearningService:
 
         # 如果没找到，返回AI回答的前100字
         return ai_answer[:100] if len(ai_answer) > 100 else ai_answer
+
+    # 🎯 错题自动创建逻辑（简化规则版）
+    async def _auto_create_mistake_if_needed(
+        self,
+        user_id: str,
+        question: Question,
+        answer: Answer,
+        request: AskQuestionRequest,
+    ) -> Optional[Dict[str, Any]]:
+        """
+        智能判断是否需要创建错题
+
+        简化规则：
+        1. 有图片上传 -> 可能是题目
+        2. 包含关键词："不会做"、"不懂"、"不知道"、"错了"
+        3. 问题类型为 problem_solving
+        """
+        try:
+            content = extract_orm_str(question, "content") or ""
+            answer_content = extract_orm_str(answer, "content") or ""
+            has_images = bool(request.image_urls and len(request.image_urls) > 0)
+
+            # 关键词列表（扩展版 - 覆盖更多口语化表达）
+            mistake_keywords = [
+                # === 核心关键词（高优先级）===
+                "不会",  # 🎯 新增，覆盖"999+999这道题不会"
+                "不懂",
+                "不知道",
+                "不明白",  # 🎯 新增
+                "不清楚",  # 🎯 新增
+                # === 扩展关键词 ===
+                "不会做",
+                "不太会",  # 🎯 新增
+                "不太懂",  # 🎯 新增
+                "看不懂",  # 🎯 新增
+                # === 错误相关 ===
+                "错了",
+                "做错",
+                "答错",
+                # === 难度相关 ===
+                "难题",
+                "有难度",  # 🎯 新增
+                "解不出",
+                # === 请求帮助 ===
+                "没学过",
+                "不理解",
+                "帮我看看",  # 🎯 新增
+                "帮我做",  # 🎯 新增
+                "怎么做",  # 🎯 新增
+                "怎么解",  # 🎯 新增
+                "想问",  # 🎯 新增
+            ]
+
+            # 判断是否需要创建错题
+            should_create = False
+            category = "empty_question"  # 默认类型
+
+            # 规则01：有图片上传（很可能是题目）
+            if has_images:
+                should_create = True
+                category = "empty_question"
+                logger.info(f"🖼️ 检测到图片上传，自动创建错题")
+
+            # 规则02：包含关键词
+            elif any(keyword in content for keyword in mistake_keywords):
+                should_create = True
+                if "错" in content or "做错" in content or "答错" in content:
+                    category = "wrong_answer"
+                elif "难" in content or "解不出" in content:
+                    category = "hard_question"
+                else:
+                    category = "empty_question"
+                logger.info(f"🔑 检测到关键词，自动创建错题: category={category}")
+
+            if not should_create:
+                return None
+
+            # 创建错题记录
+            from src.models.study import MistakeRecord
+            from src.repositories.base_repository import BaseRepository
+
+            mistake_repo = BaseRepository(MistakeRecord, self.db)
+
+            # 🛠️ 生成错题数据（只使用数据库中存在的字段）
+            mistake_data = {
+                "user_id": user_id,
+                "source": "learning",
+                "source_question_id": str(extract_orm_uuid_str(question, "id")),
+                # 基本信息
+                "subject": extract_orm_str(question, "subject") or "其他",
+                "title": self._generate_mistake_title(content),
+                "ocr_text": content,
+                "image_urls": (
+                    json.dumps(request.image_urls) if request.image_urls else None
+                ),
+                # AI分析信息（使用ai_feedback字段存储category信息）
+                "ai_feedback": json.dumps(
+                    {
+                        "category": category,  # 🎯 将category信息存储在ai_feedback中
+                        "auto_created": True,
+                        "classification": {
+                            "category": category,
+                            "confidence": 0.8,  # 简化规则置信度
+                            "reasoning": f"基于规则判断：{'has_images' if has_images else 'keyword_match'}",
+                        },
+                        "auto_created_at": datetime.now().isoformat(),
+                    }
+                ),
+                # 学生答案（可选）
+                "student_answer": None,  # 先为None，后续可增加
+                "correct_answer": self._extract_correct_answer(answer_content),
+                # 复习相关
+                "mastery_status": "learning",  # 🛠️ 使用模型中定义的值
+                "next_review_at": datetime.now() + timedelta(days=1),
+                "review_count": 0,
+                "correct_count": 0,
+                "difficulty_level": 2,  # 默认中等难度
+            }
+
+            # 创建错题
+            mistake = await mistake_repo.create(mistake_data)
+
+            # 返回错题信息
+            return {
+                "id": str(mistake.id),
+                "category": category,
+                "next_review_date": (datetime.now() + timedelta(days=1)).isoformat(),
+                "subject": mistake_data["subject"],
+                "auto_created": True,
+            }
+
+        except Exception as e:
+            logger.error(f"错题自动创建失败: {str(e)}", exc_info=True)
+            return None
 
 
 # 依赖注入函数
