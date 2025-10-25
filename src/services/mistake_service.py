@@ -83,7 +83,7 @@ class MistakeService:
             return value.isoformat()  # PostgreSQL中是datetime对象
 
         return MistakeListItem(
-            id=UUIDType(extract_orm_uuid_str(mistake, "id")),
+            id=UUID(extract_orm_uuid_str(mistake, "id")),
             title=extract_orm_str(mistake, "title") or "未命名错题",
             subject=extract_orm_str(mistake, "subject"),
             difficulty_level=extract_orm_int(mistake, "difficulty_level"),
@@ -94,6 +94,9 @@ class MistakeService:
             total_reviews=extract_orm_int(mistake, "review_count") or 0,
             next_review_date=to_iso_string(getattr(mistake, "next_review_at", None)),
             created_at=to_iso_string(getattr(mistake, "created_at", None)) or "",
+            updated_at=to_iso_string(
+                getattr(mistake, "updated_at", None)
+            ),  # ✅ 添加updated_at
             knowledge_points=getattr(mistake, "knowledge_points", None) or [],
         )
 
@@ -117,7 +120,7 @@ class MistakeService:
 
         # 🛠️ 使用extract_orm_*函数提取ORM对象的值
         return MistakeDetailResponse(
-            id=extract_orm_uuid_str(mistake, "id"),  # Pydantic会自动将字符串转换为UUID
+            id=UUID(extract_orm_uuid_str(mistake, "id")),
             title=extract_orm_str(mistake, "title") or "未命名错题",
             description=None,
             subject=extract_orm_str(mistake, "subject"),
@@ -301,13 +304,13 @@ class MistakeService:
         tasks = []
         total_minutes = 0
 
-        for mistake in mistakes:
-            from src.utils.type_converters import (
-                extract_orm_int,
-                extract_orm_str,
-                extract_orm_uuid_str,
-            )
+        from src.utils.type_converters import (
+            extract_orm_int,
+            extract_orm_str,
+            extract_orm_uuid_str,
+        )
 
+        for mistake in mistakes:
             # 🛠️ 安全地提取ORM属性
             mistake_id_str = extract_orm_uuid_str(mistake, "id")
             next_review = getattr(mistake, "next_review_at", None)
@@ -379,6 +382,8 @@ class MistakeService:
         current_mastery = self.algorithm.calculate_mastery_level(review_history)
 
         # 4. 计算下次复习时间
+        from src.utils.type_converters import extract_orm_int
+
         next_review, interval = self.algorithm.calculate_next_review(
             review_count=extract_orm_int(mistake, "review_count")
             or 0,  # 🛠️ 使用extract_orm_int
@@ -394,6 +399,8 @@ class MistakeService:
 
         # 6. 保存复习记录
         review = await self.review_repo.create(review_data)
+
+        from src.utils.type_converters import extract_orm_uuid_str
 
         # 7. 更新错题状态
         update_data = {
@@ -425,7 +432,7 @@ class MistakeService:
         )
 
         return ReviewCompleteResponse(
-            review_id=review.id,
+            review_id=UUID(extract_orm_uuid_str(review, "id")),
             mastery_level=current_mastery,
             next_review_date=next_review,
             is_mastered=is_mastered,
@@ -459,25 +466,36 @@ class MistakeService:
         latest_mastery = reviews[0].mastery_level if reviews else 0.0
 
         from src.schemas.mistake import ReviewHistoryItem
+        from src.utils.type_converters import (
+            extract_orm_float,
+            extract_orm_int,
+            extract_orm_str,
+            extract_orm_uuid_str,
+            extract_orm_value,
+        )
 
         items = [
             ReviewHistoryItem(
-                id=r.id,
-                review_date=r.review_date,
-                review_result=r.review_result,
-                mastery_level=float(r.mastery_level),
-                time_spent=r.time_spent,
-                confidence_level=r.confidence_level,
-                notes=r.notes,
+                id=UUID(extract_orm_uuid_str(r, "id")),
+                review_date=extract_orm_value(r, "review_date", datetime.now()),
+                review_result=extract_orm_str(r, "review_result"),
+                mastery_level=extract_orm_float(r, "mastery_level") or 0.0,
+                time_spent=extract_orm_int(r, "time_spent"),
+                confidence_level=extract_orm_int(r, "confidence_level") or 0,
+                notes=extract_orm_str(r, "notes"),
             )
             for r in reviews
         ]
+
+        latest_mastery_value = (
+            extract_orm_float(reviews[0], "mastery_level") or 0.0 if reviews else 0.0
+        )
 
         return ReviewHistoryResponse(
             items=items,
             total=len(reviews),
             average_mastery=avg_mastery,
-            latest_mastery=float(latest_mastery),
+            latest_mastery=latest_mastery_value,
         )
 
     async def get_statistics(self, user_id: UUID) -> MistakeStatisticsResponse:
@@ -531,11 +549,15 @@ class MistakeService:
         # 按日期分组统计
         from collections import defaultdict
 
+        from src.utils.type_converters import extract_orm_float, extract_orm_value
+
         daily_stats = defaultdict(lambda: {"sum": 0.0, "count": 0})
 
         for review in reviews:
-            date_str = review.review_date.date().isoformat()
-            daily_stats[date_str]["sum"] += float(review.mastery_level)
+            review_date = extract_orm_value(review, "review_date", datetime.now())
+            date_str = review_date.date().isoformat()
+            mastery_level = extract_orm_float(review, "mastery_level") or 0.0
+            daily_stats[date_str]["sum"] += mastery_level
             daily_stats[date_str]["count"] += 1
 
         # 构建进度项
@@ -549,7 +571,7 @@ class MistakeService:
                 MasteryProgressItem(
                     date=date_str,
                     mastery_level=round(avg_mastery, 2),
-                    review_count=stats["count"],
+                    review_count=int(stats["count"]),
                 )
             )
 
@@ -592,14 +614,25 @@ class MistakeService:
             raise ServiceError("AI服务未配置")
 
         try:
+            from src.utils.type_converters import extract_orm_int, extract_orm_str
+
+            # 初始化变量，避免在异常处理中未绑定
+            ai_content = ""
+
+            # 安全提取ORM属性
+            subject = extract_orm_str(mistake, "subject") or "未知"
+            difficulty = extract_orm_int(mistake, "difficulty_level")
+            difficulty_text = str(difficulty) if difficulty else "未知"
+            ocr_text = extract_orm_str(mistake, "ocr_text") or "无题目内容"
+
             # 构造分析提示词
             analysis_prompt = f"""请分析以下错题，提取关键信息并给出学习建议。
 
 【题目信息】
-学科：{mistake.subject}
-难度：{mistake.difficulty_level if mistake.difficulty_level else '未知'}
+学科：{subject}
+难度：{difficulty_text}
 题目内容：
-{mistake.ocr_text if mistake.ocr_text else '无题目内容'}
+{ocr_text}
 
 【任务要求】
 请以JSON格式返回分析结果，包含以下字段：
@@ -640,11 +673,9 @@ class MistakeService:
                 return self._fallback_analysis(mistake)
 
             # 解析AI返回的JSON
-            ai_content = response.content.strip()
+            ai_content = response.content.strip() if response.content else ""
 
             # 尝试提取JSON（处理AI可能返回的额外文本）
-            import re
-
             json_match = re.search(r"\{.*\}", ai_content, re.DOTALL)
             if json_match:
                 json_str = json_match.group()
@@ -663,12 +694,14 @@ class MistakeService:
             }
 
             # 更新错题记录中的AI分析结果（可选）
+            update_data = {}
             if result["knowledge_points"]:
-                mistake.knowledge_points = result["knowledge_points"]
-            if result["error_reason"]:
-                mistake.error_reasons = [result["error_reason"]]
+                update_data["knowledge_points"] = result["knowledge_points"]
 
-            await self.db.commit()
+            if update_data:
+                await self.mistake_repo.update(str(mistake_id), update_data)
+            else:
+                await self.db.commit()
 
             logger.info(
                 f"AI分析完成: {mistake_id}, "
@@ -679,7 +712,8 @@ class MistakeService:
             return result
 
         except json.JSONDecodeError as e:
-            logger.error(f"AI返回的JSON解析失败: {e}, 原始内容: {ai_content[:200]}")
+            content_preview = ai_content[:200] if ai_content else "无AI响应内容"  # type: ignore[possibly-unbound]
+            logger.error(f"AI返回的JSON解析失败: {e}, 原始内容: {content_preview}")
             # 降级方案
             return self._fallback_analysis(mistake)
 

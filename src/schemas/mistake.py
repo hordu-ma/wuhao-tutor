@@ -134,7 +134,9 @@ class TodayReviewResponse(BaseModel):
 class ReviewCompleteRequest(BaseModel):
     """复习完成请求"""
 
-    review_result: str = Field(..., description="复习结果: correct | incorrect | partial")
+    review_result: str = Field(
+        ..., description="复习结果: correct | incorrect | partial"
+    )
     time_spent: Optional[int] = Field(None, ge=0, description="复习耗时（秒）")
     confidence_level: int = Field(3, ge=1, le=5, description="信心等级 1-5")
     user_answer: Optional[str] = Field(None, description="用户答案（可选）")
@@ -199,6 +201,7 @@ class MistakeListItem(BaseModel):
     total_reviews: int = Field(..., description="总复习次数")
     next_review_date: Optional[str] = Field(None, description="下次复习时间")
     created_at: str = Field(..., description="创建时间")
+    updated_at: Optional[str] = Field(None, description="更新时间")  # ✅ 添加更新时间
     knowledge_points: Optional[List[str]] = Field(
         default_factory=list, description="知识点列表"
     )
@@ -216,6 +219,7 @@ class MistakeListItem(BaseModel):
                 "total_reviews": 3,
                 "next_review_date": "2025-10-14T10:00:00",
                 "created_at": "2025-10-10T10:00:00",
+                "updated_at": "2025-10-12T10:00:00",  # ✅ 添加示例
                 "knowledge_points": ["二次函数", "函数图像"],
             }
         }
@@ -435,4 +439,3 @@ class MasteryProgressResponse(BaseModel):
                 "improvement": 0.15,
             }
         }
-

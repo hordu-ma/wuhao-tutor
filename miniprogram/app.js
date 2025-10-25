@@ -1,5 +1,8 @@
 // app.js - 五好伴学小程序应用入口文件
 
+// ✅ 引入 regenerator-runtime 支持 async/await（使用简化路径）
+require('regenerator-runtime');
+
 const { authManager } = require('./utils/auth.js');
 const { networkMonitor } = require('./utils/network-monitor.js');
 const { tabBarManager } = require('./utils/tabbar-manager.js');
