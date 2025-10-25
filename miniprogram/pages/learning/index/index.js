@@ -2069,6 +2069,77 @@ const pageObject = {
   /**
    * 显示历史会话弹窗
    */
+  /**
+   * 新建对话
+   */
+  async onNewChat() {
+    try {
+      // 如果当前已经是新会话且没有消息，直接返回
+      if (this.data.isNewSession && this.data.messageList.length === 0) {
+        wx.showToast({
+          title: '当前已是新对话',
+          icon: 'none',
+          duration: 1500,
+        });
+        return;
+      }
+
+      // 如果有未保存的内容，提示用户
+      if (this.data.inputText.trim() || this.data.uploadedImages.length > 0) {
+        const confirm = await new Promise(resolve => {
+          wx.showModal({
+            title: '提示',
+            content: '当前有未发送的内容，是否要新建对话？',
+            confirmText: '新建',
+            cancelText: '取消',
+            success: res => resolve(res.confirm),
+            fail: () => resolve(false),
+          });
+        });
+
+        if (!confirm) return;
+      }
+
+      wx.showLoading({ title: '创建中...' });
+
+      // 生成新的会话 ID
+      const newSessionId = this.generateSessionId();
+
+      // 保存新会话 ID
+      wx.setStorageSync('chat_session_id', newSessionId);
+
+      // 重置页面状态
+      this.setData({
+        sessionId: newSessionId,
+        isNewSession: true,
+        messageList: [],
+        inputText: '',
+        uploadedImages: [],
+        conversationContext: [],
+      });
+
+      wx.hideLoading();
+
+      wx.showToast({
+        title: '已创建新对话',
+        icon: 'success',
+        duration: 1500,
+      });
+
+      // 滚动到顶部
+      this.setData({ scrollTop: 0 });
+
+      console.log('新建对话成功:', newSessionId);
+    } catch (error) {
+      console.error('新建对话失败:', error);
+      wx.hideLoading();
+      wx.showToast({
+        title: '创建失败',
+        icon: 'error',
+      });
+    }
+  },
+
   async onShowHistory() {
     try {
       // 加载最近的会话列表
@@ -2102,14 +2173,21 @@ const pageObject = {
         status_filter: 'active', // 只获取活跃会话
       });
 
+      console.log('加载会话列表响应:', response);
+
+      // 兼容两种响应格式
+      const sessionList = response.data || response.items || [];
+
       // 转换为前端需要的格式
-      const sessions = response.items.map(session => ({
+      const sessions = sessionList.map(session => ({
         id: session.id,
         title: session.title || '未命名会话',
         messageCount: session.message_count || 0,
         lastMessageTime: new Date(session.last_active_at || session.updated_at).getTime(),
         timeText: this.formatSessionTime(new Date(session.last_active_at || session.updated_at)),
       }));
+
+      console.log(`加载了 ${sessions.length} 个会话`);
 
       this.setData({
         recentSessions: sessions,
@@ -2239,10 +2317,15 @@ const pageObject = {
         size: 50,
       });
 
+      console.log('加载历史消息响应:', historyResponse);
+
       // 3. 转换为聊天消息格式
       const messages = [];
-      if (historyResponse.items && historyResponse.items.length > 0) {
-        historyResponse.items.forEach(pair => {
+      // 兼容两种响应格式: historyResponse.data 或 historyResponse.items
+      const dataList = historyResponse.data || historyResponse.items || [];
+
+      if (dataList.length > 0) {
+        dataList.forEach(pair => {
           // 添加用户问题
           if (pair.question) {
             messages.push({
@@ -2252,6 +2335,7 @@ const pageObject = {
               content: pair.question.content,
               timestamp: this.formatTime(pair.question.created_at),
               images: pair.question.image_urls || [],
+              status: 'sent',
             });
           }
 
@@ -2262,23 +2346,31 @@ const pageObject = {
               sender: 'ai',
               type: 'text',
               content: pair.answer.content,
+              richContent: parseMarkdown(pair.answer.content || ''), // 🎯 解析Markdown格式
               timestamp: this.formatTime(pair.answer.created_at),
               confidence: pair.answer.confidence,
               sources: pair.answer.sources || [],
+              status: 'received',
             });
           }
         });
       }
 
+      console.log(`解析到 ${messages.length} 条消息`);
+
       // 4. 更新当前会话状态
       this.setData({
         sessionId: sessionId,
+        isNewSession: false, // 已存在的会话
         messageList: messages,
         conversationContext: messages.map(msg => ({
           role: msg.sender === 'user' ? 'user' : 'assistant',
           content: msg.content,
         })),
       });
+
+      // 5. 保存到本地存储
+      wx.setStorageSync('chat_session_id', sessionId);
 
       // 5. 关闭弹窗
       this.onCloseHistory();

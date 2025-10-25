@@ -49,20 +49,32 @@
 }
 
 .header-actions {
-  padding: 8rpx;
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
 }
 
-.history-btn {
-  font-size: 28rpx;
-  color: #fff;
-  padding: 8rpx 16rpx;
-  border-radius: 16rpx;
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  padding: 10rpx 20rpx;
+  border-radius: 32rpx;
   background-color: rgba(255, 255, 255, 0.15);
   transition: all 0.2s ease;
+  backdrop-filter: blur(10rpx);
 }
 
-.history-btn:active {
-  background-color: rgba(255, 255, 255, 0.25);
+.action-btn:active {
+  background-color: rgba(255, 255, 255, 0.3);
+  transform: scale(0.95);
+}
+
+.action-btn .btn-text {
+  font-size: 26rpx;
+  color: #fff;
+  line-height: 1;
+  font-weight: 500;
 }
 
 /* 聊天消息区域 */

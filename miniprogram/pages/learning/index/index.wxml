@@ -9,7 +9,14 @@
       </view>
     </view>
     <view class="header-actions">
-      <text class="history-btn" bindtap="onShowHistory">历史会话</text>
+      <view class="action-btn" bindtap="onShowHistory">
+        <van-icon name="clock-o" size="16" color="#fff" />
+        <text class="btn-text">历史</text>
+      </view>
+      <view class="action-btn" bindtap="onNewChat">
+        <van-icon name="plus" size="16" color="#fff" />
+        <text class="btn-text">新建</text>
+      </view>
     </view>
   </view>
 
