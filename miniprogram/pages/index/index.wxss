@@ -114,27 +114,52 @@
 }
 
 .stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120rpx, 1fr));
-  gap: 24rpx;
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch;
+  gap: 16rpx;
+  height: 120rpx;
 }
 
 .stat-item {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   text-align: center;
+  height: 120rpx;
+  flex: 1;
+  padding: 0;
 }
 
 .stat-number {
   font-size: 40rpx;
-  line-height: 1.2;
-  margin-bottom: 8rpx;
+  line-height: 1;
+  margin-bottom: 12rpx;
+  height: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-placeholder {
+  font-size: 30rpx;
+  line-height: 1;
+  margin-bottom: 12rpx;
+  height: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.9;
 }
 
 .stat-label {
   font-size: 24rpx;
-  line-height: 1.2;
+  line-height: 1;
+  height: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* 消息通知区域 */

@@ -14,7 +14,6 @@ Page({
     recommendations: [], // 个性化推荐内容
     todoItems: [], // 待办事项
     stats: {
-      homeworkCount: 0,
       questionCount: 0,
       reportCount: 0,
       todayStudyTime: 0,
@@ -213,7 +212,6 @@ Page({
         },
       ],
       stats: {
-        homeworkCount: 0,
         questionCount: 0,
         reportCount: 0,
         todayStudyTime: 0,
@@ -300,13 +298,14 @@ Page({
 
       // 模拟数据
       const stats = {
-        homeworkCount: 5,
         questionCount: 23,
         reportCount: 3,
-        todayStudyTime: 120,
+        todayStudyTime: 0, // 设为0以展示"待开始"占位信息
       };
 
+      console.log('📊 [统计数据] 设置stats:', stats);
       this.setData({ stats });
+      console.log('📊 [统计数据] 页面data.stats:', this.data.stats);
     } catch (error) {
       console.error('加载用户统计失败:', error);
     }
@@ -328,18 +327,6 @@ Page({
       switch (role) {
         case 'student':
           notifications = [
-            {
-              id: '1',
-              title: '作业提醒',
-              content: '您有2份作业即将到期，请及时完成',
-              type: 'homework',
-              priority: 'high',
-              sender: '系统',
-              recipient: userInfo?.id || '',
-              isRead: false,
-              createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toLocaleString(), // 2小时前
-              actionUrl: '/pages/homework/list/index',
-            },
             {
               id: '2',
               title: '学习报告',
@@ -371,7 +358,7 @@ Page({
             {
               id: '4',
               title: '学习进度更新',
-              content: '孩子本周完成3份作业，总体表现良好',
+              content: '孩子本周完成学习任务，总体表现良好',
               type: 'progress',
               priority: 'medium',
               sender: '系统',
@@ -408,18 +395,6 @@ Page({
           break;
         case 'teacher':
           notifications = [
-            {
-              id: '7',
-              title: '作业批改提醒',
-              content: '您有15份作业等待批改，截止时间明天18:00',
-              type: 'homework',
-              priority: 'high',
-              sender: '系统',
-              recipient: userInfo?.id || '',
-              isRead: false,
-              createdAt: new Date(Date.now() - 30 * 60 * 1000).toLocaleString(), // 30分钟前
-              actionUrl: '/pages/homework/correction/index',
-            },
             {
               id: '8',
               title: '班级成绩统计',
@@ -560,19 +535,6 @@ Page({
               },
               priority: 1,
             },
-            {
-              id: 'homework_correction',
-              type: 'task',
-              title: '作业批改提醒',
-              content: '您有4份作业等待批改，请及时完成。',
-              icon: 'edit',
-              color: '#faad14',
-              action: {
-                type: 'navigate',
-                url: '/pages/homework/correction/index',
-              },
-              priority: 2,
-            },
           ];
           break;
       }
@@ -598,15 +560,6 @@ Page({
         case 'student':
           todoItems = [
             {
-              id: 'homework_math',
-              title: '完成数学作业',
-              description: '第三章函数练习题',
-              deadline: '今天 18:00',
-              priority: 'high',
-              completed: false,
-              type: 'homework',
-            },
-            {
               id: 'review_physics',
               title: '复习物理知识点',
               description: '力学部分重点内容',
@@ -620,9 +573,9 @@ Page({
         case 'parent':
           todoItems = [
             {
-              id: 'check_homework',
-              title: '检查孩子作业',
-              description: '查看今日作业完成情况',
+              id: 'check_progress',
+              title: '查看学习进度',
+              description: '查看孩子今日学习完成情况',
               deadline: '今天',
               priority: 'medium',
               completed: false,
@@ -632,15 +585,6 @@ Page({
           break;
         case 'teacher':
           todoItems = [
-            {
-              id: 'grade_homework',
-              title: '批改作业',
-              description: '数学第三章练习题',
-              deadline: '今天 20:00',
-              priority: 'high',
-              completed: false,
-              type: 'grading',
-            },
             {
               id: 'prepare_class',
               title: '准备明天课程',
@@ -690,8 +634,6 @@ Page({
    */
   getNotificationUrl(notification) {
     switch (notification.type) {
-      case 'homework':
-        return '/pages/homework/list/index';
       case 'grade':
         return '/pages/analysis/report/index';
       case 'progress':
@@ -736,38 +678,6 @@ Page({
       console.log(`通知 ${notificationId} 已标记为已读，未读数量: ${unreadCount}`);
     } catch (error) {
       console.error('标记通知已读失败:', error);
-    }
-  },
-
-  /**
-   * 标记所有通知为已读
-   */
-  async markAllNotificationsRead() {
-    try {
-      // TODO: 调用API标记所有通知为已读
-      // await api.markAllNotificationsRead();
-
-      const notifications = this.data.notifications.map(item => ({
-        ...item,
-        isRead: true,
-      }));
-
-      this.setData({
-        notifications,
-        unreadNotificationCount: 0,
-      });
-
-      wx.showToast({
-        title: '已全部标记为已读',
-        icon: 'success',
-        duration: 1500,
-      });
-    } catch (error) {
-      console.error('标记所有通知已读失败:', error);
-      wx.showToast({
-        title: '操作失败',
-        icon: 'error',
-      });
     }
   },
 
@@ -819,14 +729,8 @@ Page({
     // 根据待办事项类型跳转到相应页面
     let url = '';
     switch (todo.type) {
-      case 'homework':
-        url = '/pages/homework/detail/index?id=' + todo.id;
-        break;
       case 'study':
         url = '/pages/study/detail/index?id=' + todo.id;
-        break;
-      case 'grading':
-        url = '/pages/homework/correction/index?id=' + todo.id;
         break;
       case 'preparation':
         url = '/pages/teacher/preparation/index?id=' + todo.id;
@@ -929,16 +833,6 @@ Page({
     } finally {
       this.setData({ loading: false });
     }
-  },
-
-  /**
-   * 进入作业页
-   */
-  handleGoToHomework() {
-    console.log('进入作业页按钮点击');
-    wx.navigateTo({
-      url: '/pages/homework/list/index',
-    });
   },
 
   /**
