@@ -346,17 +346,35 @@ class AuthManager {
         hasRefreshToken: !!refreshToken,
       });
 
+      // 🔧 [修复] 转换服务器字段格式为前端期望格式
+      const normalizedUserInfo = userInfo
+        ? {
+            ...userInfo,
+            avatarUrl:
+              userInfo.avatar_url || userInfo.avatarUrl || '/assets/images/default-avatar.png',
+          }
+        : userInfo;
+
+      console.log('🔧 [字段转换] 原始userInfo:', userInfo);
+      console.log('🔧 [字段转换] 转换后userInfo:', normalizedUserInfo);
+      console.log(
+        '🔧 [字段转换] avatar_url -> avatarUrl:',
+        userInfo?.avatar_url,
+        '->',
+        normalizedUserInfo?.avatarUrl,
+      );
+
       // 保存到内存
       this.currentToken = accessToken;
       this.currentRefreshToken = refreshToken;
-      this.currentUser = userInfo;
+      this.currentUser = normalizedUserInfo;
       this.currentRole = role;
       this.currentSessionId = sessionId;
 
       // 保存到本地存储
       const savePromises = [
         storage.set(this.tokenKey, accessToken),
-        storage.set(this.userInfoKey, userInfo),
+        storage.set(this.userInfoKey, normalizedUserInfo),
         storage.set(this.roleKey, role),
       ];
 

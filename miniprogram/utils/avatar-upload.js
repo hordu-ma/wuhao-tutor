@@ -289,6 +289,9 @@ class AvatarUploadManager {
         // 更新本地用户信息
         await this.updateLocalUserAvatar(fullAvatarUrl);
 
+        // 重要：同步头像URL到后端数据库
+        await this.syncAvatarToBackend(fullAvatarUrl);
+
         console.log('🔧 [Avatar Upload Debug] 完整头像URL:', fullAvatarUrl);
 
         wx.showToast({
@@ -354,6 +357,51 @@ class AvatarUploadManager {
       throw error;
     } finally {
       this.uploadInProgress = false;
+    }
+  }
+
+  /**
+   * 同步头像到后端数据库
+   */
+  async syncAvatarToBackend(avatarUrl) {
+    try {
+      console.log('🔧 [Avatar Sync Debug] 开始同步头像到后端:', avatarUrl);
+
+      // 获取用户API模块
+      const userAPI = require('../api/user.js');
+
+      // 调用后端更新接口，只更新头像字段
+      const updateData = {
+        avatar_url: avatarUrl,
+      };
+
+      console.log('🔧 [Avatar Sync Debug] 发送更新数据:', updateData);
+
+      const response = await userAPI.updateProfile(updateData);
+
+      console.log('🔧 [Avatar Sync Debug] 后端响应:', response);
+
+      if (response.success) {
+        console.log('🔧 [Avatar Sync Debug] 头像同步到后端成功');
+
+        // 强制刷新用户信息以确保数据一致性
+        try {
+          console.log('🔧 [Avatar Sync Debug] 准备触发用户信息同步...');
+
+          // 使用同步管理器触发手动同步
+          const { syncManager } = require('./sync-manager.js');
+          await syncManager.manualSyncUserInfo();
+
+          console.log('🔧 [Avatar Sync Debug] 用户信息同步完成');
+        } catch (refreshError) {
+          console.warn('🔧 [Avatar Sync Debug] 用户信息同步失败:', refreshError);
+        }
+      } else {
+        console.error('🔧 [Avatar Sync Debug] 头像同步到后端失败:', response.message);
+      }
+    } catch (error) {
+      console.error('🔧 [Avatar Sync Debug] 头像同步到后端异常:', error);
+      // 不抛出错误，避免影响用户体验
     }
   }
 

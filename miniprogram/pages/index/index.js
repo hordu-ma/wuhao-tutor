@@ -61,13 +61,23 @@ Page({
       await this.refreshData();
     }
 
-    // 添加调试：直接检查用户信息
+    // 添加调试：直接检查用户信息并更新页面数据
     if (isLoggedIn) {
       const userInfo = await authManager.getUserInfo();
       const role = await authManager.getUserRole();
       console.log('调试用户信息:', userInfo);
       console.log('调试用户角色:', role);
       console.log('当前页面数据:', this.data.userInfo, this.data.role);
+
+      // 重要：更新页面数据以反映最新的用户信息（包括头像）
+      if (userInfo && userInfo !== this.data.userInfo) {
+        console.log('🔄 [首页刷新] 用户信息有更新，刷新页面数据');
+        this.setData({
+          userInfo,
+          role,
+          hasUserInfo: true,
+        });
+      }
     }
   },
 

@@ -19,6 +19,8 @@
             class="avatar" 
             src="{{userInfo.avatarUrl || '/assets/images/default-avatar.png'}}" 
             mode="aspectFill"
+            binderror="onAvatarError"
+            bindload="onAvatarLoad"
           />
           <view class="avatar-edit-hint">
             <van-icon name="edit" size="24rpx" color="#fff" />
@@ -44,7 +46,7 @@
         </view>
         <view class="info-row" wx:if="{{userInfo.grade_level}}">
           <text class="label">年级</text>
-          <text class="value">{{userInfo.grade_level}}</text>
+          <text class="value">{{gradeDisplayText}}</text>
         </view>
         <view class="info-row" wx:if="{{userInfo.class_name}}">
           <text class="label">班级</text>

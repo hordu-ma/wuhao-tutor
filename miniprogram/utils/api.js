@@ -1072,7 +1072,7 @@ const api = {
     logout: () => apiClient.post('/auth/logout'),
     // 获取用户信息
     getUserInfo: () =>
-      apiClient.get('/auth/user-info', {}, { enableCache: true, cache: { ttl: 10 * 60 * 1000 } }),
+      apiClient.get('/auth/me', {}, { enableCache: true, cache: { ttl: 10 * 60 * 1000 } }),
     // 更新用户信息
     updateUserInfo: data => apiClient.put('/auth/profile', data),
   },
