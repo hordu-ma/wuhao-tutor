@@ -15,7 +15,7 @@ Page({
     loading: true,
     saving: false,
     uploadingAvatar: false,
-    
+
     // 表单数据
     formData: {
       name: '',
@@ -23,8 +23,8 @@ Page({
       school: '',
       grade_level: '',
       class_name: '',
-      parent_contact: '',
-      institution: ''
+      institution_name: '', // 机构名称
+      contact_info: '', // 联系方式
     },
 
     // 原始数据（用于检测变更）
@@ -34,8 +34,8 @@ Page({
     validation: {
       name: { valid: true, message: '' },
       nickname: { valid: true, message: '' },
-      phone: { valid: true, message: '' },
-      parent_contact: { valid: true, message: '' }
+      institution_name: { valid: true, message: '' },
+      contact_info: { valid: true, message: '' },
     },
 
     // 年级选项
@@ -51,13 +51,13 @@ Page({
       { value: 'junior_3', label: '初中三年级' },
       { value: 'senior_1', label: '高中一年级' },
       { value: 'senior_2', label: '高中二年级' },
-      { value: 'senior_3', label: '高中三年级' }
+      { value: 'senior_3', label: '高中三年级' },
     ],
 
     // 显示控制
     showGradePicker: false,
     focusField: '', // 来自页面参数，用于聚焦特定字段
-    hasChanges: false // 是否有未保存的更改
+    hasChanges: false, // 是否有未保存的更改
   },
 
   /**
@@ -87,7 +87,7 @@ Page({
     if (this.data.hasChanges) {
       wx.showToast({
         title: '有未保存的更改',
-        icon: 'none'
+        icon: 'none',
       });
     }
   },
@@ -111,7 +111,6 @@ Page({
 
       await this.loadUserInfo();
       this.initFormData();
-
     } catch (error) {
       console.error('初始化页面失败:', error);
       errorToast.show('页面加载失败，请稍后重试');
@@ -127,14 +126,13 @@ Page({
     try {
       const [userInfo, userRole] = await Promise.all([
         authManager.getUserInfo(),
-        authManager.getUserRole()
+        authManager.getUserRole(),
       ]);
 
       this.setData({
         userInfo,
-        userRole
+        userRole,
       });
-
     } catch (error) {
       console.error('加载用户信息失败:', error);
       throw error;
@@ -146,20 +144,20 @@ Page({
    */
   initFormData() {
     const { userInfo } = this.data;
-    
+
     const formData = {
       name: userInfo?.name || '',
       nickname: userInfo?.nickname || '',
       school: userInfo?.school || '',
       grade_level: userInfo?.grade_level || '',
       class_name: userInfo?.class_name || '',
-      parent_contact: userInfo?.parent_contact || '',
-      institution: userInfo?.institution || ''
+      institution_name: userInfo?.institution_name || userInfo?.institution || '', // 兼容旧字段
+      contact_info: userInfo?.contact_info || userInfo?.parent_contact || '', // 兼容旧字段
     };
 
     this.setData({
       formData,
-      originalData: { ...formData }
+      originalData: { ...formData },
     });
   },
 
@@ -172,7 +170,7 @@ Page({
 
     this.setData({
       [`formData.${field}`]: value,
-      hasChanges: true
+      hasChanges: true,
     });
 
     // 实时验证
@@ -208,16 +206,33 @@ Page({
         }
         break;
 
-      case 'parent_contact':
-        if (value && !/^1[3-9]\d{9}$/.test(value)) {
+      case 'institution_name':
+        if (value && value.length > 50) {
           valid = false;
-          message = '请输入正确的手机号码';
+          message = '机构名称不能超过50个字符';
+        }
+        break;
+
+      case 'contact_info':
+        if (value && value.length > 50) {
+          valid = false;
+          message = '联系方式不能超过50个字符';
+        }
+        // 可选：如果输入的是手机号，进行格式验证
+        if (value && /^1[3-9]\d{9}$/.test(value.replace(/\s|-/g, ''))) {
+          // 是手机号格式，无需额外验证
+        } else if (value && value.includes('@')) {
+          // 简单的邮箱格式验证
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+            valid = false;
+            message = '请输入正确的邮箱格式';
+          }
         }
         break;
     }
 
     this.setData({
-      [`validation.${field}`]: { valid, message }
+      [`validation.${field}`]: { valid, message },
     });
 
     return valid;
@@ -247,7 +262,7 @@ Page({
   detectChanges() {
     const { formData, originalData } = this.data;
     const hasChanges = JSON.stringify(formData) !== JSON.stringify(originalData);
-    
+
     this.setData({ hasChanges });
   },
 
@@ -261,11 +276,11 @@ Page({
   onGradePickerChange(e) {
     const { value } = e.detail;
     const selectedGrade = this.data.gradeOptions[value];
-    
+
     this.setData({
       'formData.grade_level': selectedGrade.value,
       showGradePicker: false,
-      hasChanges: true
+      hasChanges: true,
     });
 
     this.detectChanges();
@@ -295,7 +310,7 @@ Page({
     if (!this.validateForm()) {
       wx.showToast({
         title: '请检查输入信息',
-        icon: 'error'
+        icon: 'error',
       });
       return;
     }
@@ -310,9 +325,9 @@ Page({
         // 更新本地缓存
         const updatedUserInfo = {
           ...this.data.userInfo,
-          ...this.data.formData
+          ...this.data.formData,
         };
-        
+
         await authManager.updateUserInfo(updatedUserInfo);
 
         // 触发同步确保数据一致性
@@ -326,26 +341,24 @@ Page({
         // 重置变更状态
         this.setData({
           hasChanges: false,
-          originalData: { ...this.data.formData }
+          originalData: { ...this.data.formData },
         });
 
         wx.showToast({
           title: '保存成功',
-          icon: 'success'
+          icon: 'success',
         });
 
         // 延迟返回上一页
         setTimeout(() => {
           wx.navigateBack();
         }, 1500);
-
       } else {
         throw new Error(response.message || '保存失败');
       }
-
     } catch (error) {
       console.error('保存用户信息失败:', error);
-      
+
       // 使用专业的错误处理器
       const errorResult = await profileErrorHandler.handleUserInfoUpdateError(error, {
         operation: 'save',
@@ -354,25 +367,25 @@ Page({
           if (response.success) {
             const updatedUserInfo = {
               ...this.data.userInfo,
-              ...this.data.formData
+              ...this.data.formData,
             };
             await authManager.updateUserInfo(updatedUserInfo);
             return response;
           }
           throw new Error(response.message || '保存失败');
-        }
+        },
       });
 
       if (errorResult.success) {
         // 重试成功
         this.setData({
           hasChanges: false,
-          originalData: { ...this.data.formData }
+          originalData: { ...this.data.formData },
         });
 
         wx.showToast({
           title: '保存成功',
-          icon: 'success'
+          icon: 'success',
         });
 
         setTimeout(() => {
@@ -382,7 +395,6 @@ Page({
         // 需要重新登录
         return;
       }
-
     } finally {
       this.setData({ saving: false });
     }
@@ -409,45 +421,12 @@ Page({
       confirmText: '离开',
       cancelText: '继续编辑',
       confirmColor: '#f5222d',
-      success: (res) => {
+      success: res => {
         if (res.confirm) {
           this.setData({ hasChanges: false });
           wx.navigateBack();
         }
-      }
-    });
-  },
-
-  /**
-   * 重置表单
-   */
-  onReset() {
-    wx.showModal({
-      title: '重置表单',
-      content: '确定要重置所有更改吗？',
-      confirmText: '重置',
-      cancelText: '取消',
-      confirmColor: '#faad14',
-      success: (res) => {
-        if (res.confirm) {
-          this.setData({
-            formData: { ...this.data.originalData },
-            hasChanges: false
-          });
-
-          // 清除验证状态
-          Object.keys(this.data.validation).forEach(field => {
-            this.setData({
-              [`validation.${field}`]: { valid: true, message: '' }
-            });
-          });
-
-          wx.showToast({
-            title: '已重置',
-            icon: 'success'
-          });
-        }
-      }
+      },
     });
   },
 
@@ -456,10 +435,10 @@ Page({
    */
   onAvatarTap() {
     console.log('点击头像');
-    
+
     const itemList = ['查看大图', '更换头像'];
     const currentAvatarUrl = this.data.userInfo?.avatarUrl;
-    
+
     // 如果不是默认头像，添加删除选项
     if (currentAvatarUrl && !currentAvatarUrl.includes('default-avatar')) {
       itemList.push('删除头像');
@@ -467,7 +446,7 @@ Page({
 
     wx.showActionSheet({
       itemList,
-      success: (res) => {
+      success: res => {
         if (res.tapIndex === 0) {
           this.previewAvatar();
         } else if (res.tapIndex === 1) {
@@ -475,7 +454,7 @@ Page({
         } else if (res.tapIndex === 2 && itemList.length > 2) {
           this.deleteAvatar();
         }
-      }
+      },
     });
   },
 
@@ -499,22 +478,21 @@ Page({
       this.setData({ uploadingAvatar: true });
 
       const result = await avatarUploadManager.selectAndUploadAvatar();
-      
+
       if (result && result.success) {
         // 更新页面显示的用户信息
         const updatedUserInfo = {
           ...this.data.userInfo,
-          avatarUrl: result.avatarUrl
+          avatarUrl: result.avatarUrl,
         };
-        
-        this.setData({ 
+
+        this.setData({
           userInfo: updatedUserInfo,
-          hasChanges: true
+          hasChanges: true,
         });
 
         console.log('头像更换成功:', result.avatarUrl);
       }
-
     } catch (error) {
       console.error('更换头像失败:', error);
       // 错误处理已在 avatarUploadManager 中完成
@@ -533,28 +511,28 @@ Page({
       confirmText: '删除',
       cancelText: '取消',
       confirmColor: '#f5222d',
-      success: async (res) => {
+      success: async res => {
         if (res.confirm) {
           try {
             const success = await avatarUploadManager.deleteAvatar();
-            
+
             if (success) {
               // 更新页面显示的用户信息
               const updatedUserInfo = {
                 ...this.data.userInfo,
-                avatarUrl: '/assets/images/default-avatar.png'
+                avatarUrl: '/assets/images/default-avatar.png',
               };
-              
-              this.setData({ 
+
+              this.setData({
                 userInfo: updatedUserInfo,
-                hasChanges: true
+                hasChanges: true,
               });
             }
           } catch (error) {
             console.error('删除头像失败:', error);
           }
         }
-      }
+      },
     });
-  }
+  },
 });

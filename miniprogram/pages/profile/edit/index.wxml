@@ -116,40 +116,43 @@
           bindinput="onInput"
         />
       </view>
-
-      <!-- 机构（教师角色显示） -->
-      <view class="form-item" wx:if="{{userRole === 'teacher'}}">
-        <view class="form-label">所属机构</view>
-        <input 
-          class="form-input"
-          type="text"
-          value="{{formData.institution}}"
-          placeholder="请输入所属教育机构"
-          maxlength="50"
-          data-field="institution"
-          bindinput="onInput"
-        />
-      </view>
     </view>
 
-    <!-- 联系信息 -->
+    <!-- 机构信息 -->
     <view class="form-section">
-      <view class="section-title">联系信息</view>
+      <view class="section-title">机构信息</view>
       
-      <!-- 家长联系方式 -->
-      <view class="form-item" wx:if="{{userRole === 'student'}}">
-        <view class="form-label">家长联系方式</view>
+      <!-- 机构名称 -->
+      <view class="form-item">
+        <view class="form-label">机构名称</view>
         <input 
-          class="form-input {{!validation.parent_contact.valid ? 'error' : ''}}"
-          type="number"
-          value="{{formData.parent_contact}}"
-          placeholder="请输入家长手机号码"
-          maxlength="11"
-          data-field="parent_contact"
+          class="form-input {{!validation.institution_name.valid ? 'error' : ''}}"
+          type="text"
+          value="{{formData.institution_name}}"
+          placeholder="请输入所属机构名称"
+          maxlength="50"
+          data-field="institution_name"
           bindinput="onInput"
         />
-        <view class="error-message" wx:if="{{!validation.parent_contact.valid}}">
-          {{validation.parent_contact.message}}
+        <view class="error-message" wx:if="{{!validation.institution_name.valid}}">
+          {{validation.institution_name.message}}
+        </view>
+      </view>
+
+      <!-- 联系方式 -->
+      <view class="form-item">
+        <view class="form-label">联系方式</view>
+        <input 
+          class="form-input {{!validation.contact_info.valid ? 'error' : ''}}"
+          type="text"
+          value="{{formData.contact_info}}"
+          placeholder="请输入联系方式（手机号码或其他）"
+          maxlength="50"
+          data-field="contact_info"
+          bindinput="onInput"
+        />
+        <view class="error-message" wx:if="{{!validation.contact_info.valid}}">
+          {{validation.contact_info.message}}
         </view>
       </view>
     </view>
@@ -159,11 +162,11 @@
       <van-button 
         type="default" 
         size="large" 
-        bind:click="onReset"
-        disabled="{{!hasChanges}}"
-        custom-class="reset-button"
+        plain
+        bind:click="onCancel"
+        custom-class="cancel-button"
       >
-        重置
+        取消
       </van-button>
       
       <van-button 
@@ -175,19 +178,6 @@
         custom-class="save-button"
       >
         {{saving ? '保存中...' : '保存'}}
-      </van-button>
-    </view>
-
-    <!-- 取消按钮 -->
-    <view class="cancel-section">
-      <van-button 
-        type="default" 
-        size="large" 
-        plain
-        bind:click="onCancel"
-        custom-class="cancel-button"
-      >
-        取消
       </van-button>
     </view>
   </view>
