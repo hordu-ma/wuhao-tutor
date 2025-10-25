@@ -8,6 +8,7 @@ const { mcpService } = require('../../../utils/mcp-service.js');
 const api = require('../../../api/index.js');
 const config = require('../../../config/index.js');
 const utils = require('../../../utils/utils.js');
+const { parseMarkdown } = require('../../../utils/markdown-formatter.js');
 
 const pageObject = {
   data: {
@@ -507,6 +508,7 @@ const pageObject = {
             messages.push({
               id: item.answer.id || utils.generateId(),
               content: item.answer.content || '',
+              richContent: parseMarkdown(item.answer.content || ''), // 🎯 解析Markdown格式
               type: 'ai',
               sender: 'ai',
               timestamp: item.answer.created_at || Date.now(),
@@ -726,6 +728,7 @@ const pageObject = {
         const aiMessage = {
           id: response.answer.id,
           content: response.answer.content,
+          richContent: parseMarkdown(response.answer.content), // 🎯 解析Markdown格式
           type: 'text',
           sender: 'ai',
           timestamp: response.answer.created_at,
@@ -900,6 +903,8 @@ const pageObject = {
         const messageList = [...this.data.messageList];
         const lastMessage = messageList[messageList.length - 1];
         lastMessage.content = currentText;
+        // 实时解析当前已显示的内容
+        lastMessage.richContent = parseMarkdown(currentText);
 
         this.setData({ messageList });
         this.scrollToBottom();

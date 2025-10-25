@@ -241,6 +241,105 @@
   word-wrap: break-word;
 }
 
+/* Markdown富文本样式 */
+.rich-text {
+  display: block;
+}
+
+.md-paragraph {
+  margin-bottom: 16rpx;
+  line-height: 1.8;
+}
+
+.md-paragraph:last-child {
+  margin-bottom: 0;
+}
+
+.md-inline {
+  display: inline;
+}
+
+.md-bold {
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.md-italic {
+  font-style: italic;
+  color: #555;
+}
+
+.md-code {
+  display: inline;
+  padding: 2rpx 8rpx;
+  background-color: rgba(0, 0, 0, 0.06);
+  border-radius: 4rpx;
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 26rpx;
+  color: #d73a49;
+}
+
+.md-link {
+  color: #1890ff;
+  text-decoration: underline;
+}
+
+/* 标题样式 */
+.md-heading {
+  font-weight: 600;
+  margin-bottom: 12rpx;
+  line-height: 1.5;
+  color: #1a1a1a;
+}
+
+.md-h1 {
+  font-size: 36rpx;
+}
+.md-h2 {
+  font-size: 34rpx;
+}
+.md-h3 {
+  font-size: 32rpx;
+}
+.md-h4 {
+  font-size: 30rpx;
+}
+.md-h5 {
+  font-size: 29rpx;
+}
+.md-h6 {
+  font-size: 28rpx;
+}
+
+/* 代码块样式 */
+.md-code-block {
+  display: block;
+  padding: 20rpx;
+  margin: 16rpx 0;
+  background-color: #f6f8fa;
+  border-radius: 8rpx;
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 26rpx;
+  color: #24292e;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* 列表样式 */
+.md-list-item {
+  display: flex;
+  margin-bottom: 8rpx;
+  line-height: 1.8;
+}
+
+.md-list-marker {
+  flex-shrink: 0;
+  margin-right: 8rpx;
+  color: #666;
+}
+
 /* 消息中的图片列表 */
 .message-images {
   display: flex;
