@@ -1,0 +1,192 @@
+/**
+ * mistake-card 组件工具函数 (WXS)
+ * 用于 WXML 中的数据处理和格式化
+ */
+
+/**
+ * 格式化时间
+ */
+function formatTime(time) {
+  if (!time) return '';
+
+  var date = getDate(time);
+  var now = getDate();
+  var diffMs = now.getTime() - date.getTime();
+  var diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) {
+    return '今天 ' + formatTimeHHMM(date);
+  } else if (diffDays === 1) {
+    return '昨天 ' + formatTimeHHMM(date);
+  } else if (diffDays < 7) {
+    return diffDays + '天前';
+  } else if (diffDays < 30) {
+    return Math.floor(diffDays / 7) + '周前';
+  } else if (diffDays < 365) {
+    return Math.floor(diffDays / 30) + '月前';
+  } else {
+    return formatDate(date);
+  }
+}
+
+/**
+ * 格式化时间为 HH:MM
+ */
+function formatTimeHHMM(date) {
+  var hours = date.getHours();
+  var minutes = date.getMinutes();
+
+  var hoursStr = hours < 10 ? '0' + hours : '' + hours;
+  var minutesStr = minutes < 10 ? '0' + minutes : '' + minutes;
+
+  return hoursStr + ':' + minutesStr;
+}
+
+/**
+ * 格式化日期为 YYYY-MM-DD
+ */
+function formatDate(date) {
+  var year = date.getFullYear();
+  var month = date.getMonth() + 1;
+  var day = date.getDate();
+
+  var monthStr = month < 10 ? '0' + month : '' + month;
+  var dayStr = day < 10 ? '0' + day : '' + day;
+
+  return year + '-' + monthStr + '-' + dayStr;
+}
+
+/**
+ * 获取难度图标
+ */
+function getDifficultyIcon(level) {
+  if (level == 1) return 'smile-o';
+  if (level == 2) return 'flower-o';
+  if (level == 3) return 'fire-o';
+  return 'flower-o';
+}
+
+/**
+ * 获取难度文本
+ */
+function getDifficultyText(level) {
+  if (level == 1) return '简单';
+  if (level == 2) return '中等';
+  if (level == 3) return '困难';
+  return '未知';
+}
+
+/**
+ * 获取掌握状态文本
+ */
+function getMasteryStatusText(status) {
+  if (status == 'not_mastered') return '未掌握';
+  if (status == 'reviewing') return '复习中';
+  if (status == 'mastered') return '已掌握';
+  return '未知';
+}
+
+/**
+ * 获取内容预览（最多显示100个字符）
+ */
+function getContentPreview(content) {
+  if (!content) return '';
+  if (content.length > 100) {
+    return content.substring(0, 100) + '...';
+  }
+  return content;
+}
+
+/**
+ * 获取错题类型文本
+ */
+function getCategoryText(category) {
+  if (category == 'empty_question') return '不会做';
+  if (category == 'wrong_answer') return '答错了';
+  if (category == 'hard_question') return '有难度';
+  return '';
+}
+
+/**
+ * 获取来源图标
+ */
+function getSourceIcon(source) {
+  if (source == 'learning') return 'chat-o';
+  if (source == 'manual') return 'edit';
+  if (source == 'homework') return 'records-o';
+  return 'records-o';
+}
+
+/**
+ * 获取正确率样式类
+ */
+function getRateClass(rate) {
+  if (rate >= 80) return 'rate-high';
+  if (rate >= 50) return 'rate-medium';
+  return 'rate-low';
+}
+
+/**
+ * 获取下次复习时间文本
+ */
+function getNextReviewText(nextReviewDate) {
+  if (!nextReviewDate) return '';
+
+  var now = getDate();
+  var reviewDate = getDate(nextReviewDate);
+  var diffMs = reviewDate.getTime() - now.getTime();
+  var diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) {
+    return '需要复习';
+  } else if (diffDays === 0) {
+    return '今日复习';
+  } else if (diffDays === 1) {
+    return '明日复习';
+  } else {
+    return diffDays + '天后复习';
+  }
+}
+
+/**
+ * 获取下次复习时间样式类
+ */
+function getNextReviewClass(nextReviewDate) {
+  if (!nextReviewDate) return '';
+
+  var now = getDate();
+  var reviewDate = getDate(nextReviewDate);
+  var diffMs = reviewDate.getTime() - now.getTime();
+  var diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) return 'overdue';
+  if (diffDays === 0) return 'today';
+  return 'upcoming';
+}
+
+/**
+ * 判断是否需要复习
+ */
+function isNeedReview(nextReviewDate) {
+  if (!nextReviewDate) return false;
+
+  var now = getDate();
+  var reviewDate = getDate(nextReviewDate);
+
+  return reviewDate.getTime() <= now.getTime();
+}
+
+// 导出所有函数
+module.exports = {
+  formatTime: formatTime,
+  getDifficultyIcon: getDifficultyIcon,
+  getDifficultyText: getDifficultyText,
+  getMasteryStatusText: getMasteryStatusText,
+  getContentPreview: getContentPreview,
+  getCategoryText: getCategoryText,
+  getSourceIcon: getSourceIcon,
+  getRateClass: getRateClass,
+  getNextReviewText: getNextReviewText,
+  getNextReviewClass: getNextReviewClass,
+  isNeedReview: isNeedReview,
+};

@@ -29,6 +29,36 @@ Component({
   data: {},
 
   /**
+   * 生命周期函数
+   */
+  lifetimes: {
+    attached() {
+      // ✅ 调试：打印接收到的数据
+      console.log('[mistake-card] 组件加载', {
+        mistake: this.data.mistake,
+        created_at: this.data.mistake?.created_at,
+        updated_at: this.data.mistake?.updated_at,
+        mode: this.data.mode,
+      });
+    },
+  },
+
+  /**
+   * 监听属性变化
+   */
+  observers: {
+    mistake(newVal) {
+      // ✅ 调试：打印属性变化
+      console.log('[mistake-card] mistake属性变化', {
+        id: newVal?.id,
+        title: newVal?.title,
+        created_at: newVal?.created_at,
+        updated_at: newVal?.updated_at,
+      });
+    },
+  },
+
+  /**
    * 组件的方法列表
    */
   methods: {
@@ -257,6 +287,21 @@ Component({
 
       this.triggerEvent('delete', {
         mistake: mistake || this.data.mistake,
+      });
+    },
+
+    /**
+     * 图片预览
+     */
+    onImagePreview(e) {
+      e.stopPropagation();
+      const { urls, index } = e.currentTarget.dataset;
+
+      if (!urls || urls.length === 0) return;
+
+      wx.previewImage({
+        current: urls[index || 0],
+        urls: urls,
       });
     },
   },

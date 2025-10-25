@@ -1,4 +1,7 @@
 <!--components/mistake-card/index.wxml-->
+<!-- ✅ 引入 WXS 模块 -->
+<wxs src="./utils.wxs" module="utils" />
+
 <view class="mistake-card {{mode}}"
       bindtap="onCardTap"
       data-mistake="{{mistake}}">
@@ -10,35 +13,40 @@
         {{mistake.subject}}
       </view>
       <view class="difficulty-tag difficulty-{{mistake.difficulty_level}}">
-        <van-icon name="{{getDifficultyIcon(mistake.difficulty_level)}}" size="12" />
-        <text>{{getDifficultyText(mistake.difficulty_level)}}</text>
+        <van-icon name="{{utils.getDifficultyIcon(mistake.difficulty_level)}}" size="12" />
+        <text>{{utils.getDifficultyText(mistake.difficulty_level)}}</text>
       </view>
       <!-- 🎯 错题类型标签 -->
       <view class="category-tag category-{{mistake.category}}" wx:if="{{mistake.category}}">
-        <text>{{getCategoryText(mistake.category)}}</text>
+        <text>{{utils.getCategoryText(mistake.category)}}</text>
       </view>
     </view>
 
     <view class="status-info">
       <!-- 🎯 来源标识 -->
       <view class="source-tag source-{{mistake.source}}" wx:if="{{mistake.source}}">
-        <van-icon name="{{getSourceIcon(mistake.source)}}" size="10" />
+        <van-icon name="{{utils.getSourceIcon(mistake.source)}}" size="10" />
       </view>
       <!-- 🎯 AI分析徽章 -->
       <view class="ai-badge" wx:if="{{mistake.ai_analysis}}">
         <van-icon name="bulb-o" size="10" />
       </view>
       <view class="status-tag {{mistake.mastery_status}}">
-        {{getMasteryStatusText(mistake.mastery_status)}}
+        {{utils.getMasteryStatusText(mistake.mastery_status)}}
       </view>
     </view>
   </view>
 
   <!-- 卡片内容 -->
   <view class="card-content">
+    <!-- 题目标题 -->
+    <view class="question-title" wx:if="{{mistake.title}}">
+      {{mistake.title}}
+    </view>
+    
     <!-- 题目内容预览 -->
     <view class="question-content">
-      {{getContentPreview(mistake.question_content)}}
+      {{utils.getContentPreview(mistake.question_content) || '暂无题目内容，点击查看详情'}}
     </view>
 
     <!-- 知识点标签 -->
@@ -62,7 +70,7 @@
         <text>已复习 {{mistake.review_count}} 次</text>
       </view>
       <view class="progress-rate" wx:if="{{mistake.correct_rate}}">
-        <text class="rate-value {{getRateClass(mistake.correct_rate)}}">
+        <text class="rate-value {{utils.getRateClass(mistake.correct_rate)}}">
           正确率 {{mistake.correct_rate}}%
         </text>
       </view>
@@ -71,22 +79,44 @@
     <!-- 下次复习时间 -->
     <view class="next-review" wx:if="{{mistake.next_review_date && mode !== 'review'}}">
       <van-icon name="clock-o" size="12" />
-      <text class="{{getNextReviewClass(mistake.next_review_date)}}">
-        {{getNextReviewText(mistake.next_review_date)}}
+      <text class="{{utils.getNextReviewClass(mistake.next_review_date)}}">
+        {{utils.getNextReviewText(mistake.next_review_date)}}
       </text>
+    </view>
+    
+    <!-- 复习模式下显示复习轮次 -->
+    <view class="review-round-info" wx:if="{{mode === 'review' && mistake.review_count}}">
+      <van-icon name="replay" size="12" />
+      <text>第 {{mistake.review_count + 1}} 轮复习</text>
     </view>
   </view>
 
-  <!-- 时间信息 -->
-  <view class="time-info">
-    <view class="create-time">
+  <!-- 时间信息（非复习模式下显示，且有时间数据时才显示） -->
+  <view class="time-info" wx:if="{{mode !== 'review' && (mistake.created_at || mistake.updated_at)}}">
+    <view class="create-time" wx:if="{{mistake.created_at}}">
       <van-icon name="clock-o" size="12" />
-      <text>{{formatTime(mistake.created_at)}}</text>
+      <text>{{utils.formatTime(mistake.created_at)}}</text>
     </view>
 
     <view class="update-time" wx:if="{{mistake.updated_at && mistake.updated_at !== mistake.created_at}}">
       <van-icon name="edit" size="12" />
-      <text>更新于 {{formatTime(mistake.updated_at)}}</text>
+      <text>更新于 {{utils.formatTime(mistake.updated_at)}}</text>
+    </view>
+  </view>
+
+  <!-- 图片预览 -->
+  <view class="image-preview" wx:if="{{mistake.image_urls && mistake.image_urls.length > 0}}">
+    <image 
+      class="preview-image" 
+      src="{{mistake.image_urls[0]}}" 
+      mode="aspectFill"
+      bindtap="onImagePreview"
+      data-urls="{{mistake.image_urls}}"
+      data-index="0"
+    />
+    <view class="image-count" wx:if="{{mistake.image_urls.length > 1}}">
+      <van-icon name="photo-o" size="10" />
+      <text>{{mistake.image_urls.length}}张</text>
     </view>
   </view>
 
@@ -140,7 +170,7 @@
   </view>
 
   <!-- 需要复习标识 -->
-  <view class="need-review-badge" wx:if="{{isNeedReview(mistake.next_review_date)}}">
+  <view class="need-review-badge" wx:if="{{utils.isNeedReview(mistake.next_review_date)}}">
     <van-icon name="warning-o" size="12" />
     <text>需复习</text>
   </view>
