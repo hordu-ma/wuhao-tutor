@@ -355,6 +355,11 @@ class AuthManager {
           }
         : userInfo;
 
+      // 🔧 删除服务器端的蛇形命名字段，避免混淆
+      if (normalizedUserInfo && normalizedUserInfo.avatar_url) {
+        delete normalizedUserInfo.avatar_url;
+      }
+
       console.log('🔧 [字段转换] 原始userInfo:', userInfo);
       console.log('🔧 [字段转换] 转换后userInfo:', normalizedUserInfo);
       console.log(

@@ -3,6 +3,7 @@
   <!-- 头部区域 -->
   <view class="chat-header">
     <view class="header-content">
+      <!-- AI助手头像 -->
       <image class="ai-avatar" src="/assets/images/ai-avatar.png" mode="aspectFill" />
       <view class="header-info">
         <text class="ai-name">五好AI助手</text>
@@ -44,6 +45,7 @@
 
     <!-- 欢迎消息 -->
     <view class="welcome-message" wx:if="{{!messageList.length && !loading}}">
+      <!-- AI助手头像 -->
       <image class="welcome-avatar" src="/assets/images/ai-avatar.png" mode="aspectFill" />
       <view class="welcome-content">
         <text class="welcome-title">你好！我是五好AI助手</text>
@@ -69,7 +71,7 @@
         <!-- 头像 -->
         <view class="bubble-avatar">
           <image wx:if="{{item.sender === 'user'}}"
-                 src="{{userInfo.avatar_url || '/assets/images/default-avatar.png'}}"
+                 src="{{userInfo.avatarUrl || '/assets/images/default-avatar.png'}}"
                  binderror="onAvatarError"
                  mode="aspectFill" />
           <image wx:else

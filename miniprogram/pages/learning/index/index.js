@@ -164,7 +164,21 @@ const pageObject = {
   /**
    * 生命周期函数--监听页面显示
    */
-  onShow() {
+  async onShow() {
+    // 🔄 [修复] 刷新用户信息（从个人中心上传头像后返回时更新）
+    try {
+      const userInfo = await authManager.getUserInfo();
+      console.log('🔄 [问答页面 onShow] 刷新用户信息:', userInfo);
+      console.log('🔄 [问答页面 onShow] 头像URL:', userInfo?.avatarUrl);
+
+      if (userInfo && userInfo !== this.data.userInfo) {
+        console.log('🔄 [问答页面 onShow] 用户信息有更新，刷新页面数据');
+        this.setData({ userInfo });
+      }
+    } catch (error) {
+      console.error('🔄 [问答页面 onShow] 刷新用户信息失败:', error);
+    }
+
     // 恢复输入焦点
     if (this.data.canAsk) {
       this.setData({ inputFocus: true });
@@ -236,12 +250,16 @@ const pageObject = {
     try {
       const userInfo = await authManager.getUserInfo();
 
-      // 使用本地默认头像，避免服务器图片加载失败导致500错误
-      if (userInfo) {
-        userInfo.avatar_url = '/assets/images/default-avatar.png';
-      }
+      // 🔍 调试日志：检查头像字段
+      console.log('📸 [问答页面] 获取到的用户信息:', userInfo);
+      console.log('📸 [问答页面] 头像URL (avatarUrl):', userInfo?.avatarUrl);
+      console.log('📸 [问答页面] 头像URL (avatar_url):', userInfo?.avatar_url);
 
+      // ✅ 保留服务器返回的真实头像，authManager.getUserInfo() 已处理字段转换和降级
       this.setData({ userInfo });
+
+      console.log('📸 [问答页面] setData后的userInfo:', this.data.userInfo);
+      console.log('📸 [问答页面] setData后的avatarUrl:', this.data.userInfo?.avatarUrl);
 
       // 获取用户角色信息
       const userRole = await authManager.getUserRole();
@@ -2604,7 +2622,12 @@ const pageObject = {
    * 头像加载失败处理
    */
   onAvatarError(e) {
-    console.warn('头像加载失败，使用默认头像');
+    console.error('🖼️ [头像加载失败]', {
+      错误详情: e.detail,
+      当前头像URL: this.data.userInfo?.avatarUrl,
+      错误类型: e.type,
+      完整错误: e,
+    });
     // 图片加载失败时，WXML中已经设置了默认头像作为fallback
   },
 
