@@ -777,10 +777,15 @@ const pageObject = {
         };
 
         // 创建AI回复消息
+        const parsedContent = parseMarkdown(response.answer.content);
+        console.log('🔍 AI回复内容长度:', response.answer.content?.length);
+        console.log('🔍 解析后blocks数量:', parsedContent?.length);
+        console.log('🔍 解析后的richContent:', JSON.stringify(parsedContent).substring(0, 500));
+        
         const aiMessage = {
           id: response.answer.id,
           content: response.answer.content,
-          richContent: parseMarkdown(response.answer.content), // 🎯 解析Markdown格式
+          richContent: parsedContent, // 🎯 解析Markdown格式
           type: 'text',
           sender: 'ai',
           timestamp: response.answer.created_at,
