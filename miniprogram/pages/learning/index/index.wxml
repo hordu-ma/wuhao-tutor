@@ -122,12 +122,14 @@
                 <!-- 列表 -->
                 <view wx:elif="{{block.type === 'list'}}" class="md-list-item" style="padding-left: {{block.indent * 2}}rpx">
                   <text class="md-list-marker">{{block.ordered ? '• ' : '• '}}</text>
-                  <text wx:for="{{block.content}}" wx:for-item="inline" wx:key="index" class="md-inline">
-                    <text wx:if="{{inline.type === 'text'}}">{{inline.value}}</text>
-                    <text wx:elif="{{inline.type === 'bold'}}" class="md-bold">{{inline.value}}</text>
-                    <text wx:elif="{{inline.type === 'italic'}}" class="md-italic">{{inline.value}}</text>
-                    <text wx:elif="{{inline.type === 'code'}}" class="md-code">{{inline.value}}</text>
-                  </text>
+                  <view class="md-list-content">
+                    <text wx:for="{{block.content}}" wx:for-item="inline" wx:key="index" class="md-inline">
+                      <text wx:if="{{inline.type === 'text'}}">{{inline.value}}</text>
+                      <text wx:elif="{{inline.type === 'bold'}}" class="md-bold">{{inline.value}}</text>
+                      <text wx:elif="{{inline.type === 'italic'}}" class="md-italic">{{inline.value}}</text>
+                      <text wx:elif="{{inline.type === 'code'}}" class="md-code">{{inline.value}}</text>
+                    </text>
+                  </view>
                 </view>
               </block>
             </view>

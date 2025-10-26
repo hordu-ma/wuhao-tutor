@@ -374,6 +374,12 @@
   color: #666;
 }
 
+.md-list-content {
+  flex: 1;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
 /* 消息中的图片列表 */
 .message-images {
   display: flex;
