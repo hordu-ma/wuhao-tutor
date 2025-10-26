@@ -208,6 +208,12 @@ const pageObject = {
    * 页面相关事件处理函数--监听用户下拉动作
    */
   onPullDownRefresh() {
+    // 🎯 防抖：避免频繁刷新触发限流
+    if (this.data.refreshing) {
+      wx.stopPullDownRefresh();
+      return;
+    }
+
     this.refreshData().finally(() => {
       wx.stopPullDownRefresh();
     });
@@ -492,8 +498,9 @@ const pageObject = {
    */
   async loadHistoryMessages() {
     try {
-      if (!this.data.sessionId) {
-        console.log('没有会话ID，跳过历史消息加载');
+      // 🎯 提前检查：新会话或无sessionId直接返回，避免404错误
+      if (!this.data.sessionId || this.data.isNewSession) {
+        console.log('新会话或无sessionId，跳过历史消息加载');
         return;
       }
 
@@ -548,6 +555,14 @@ const pageObject = {
       }
     } catch (error) {
       console.error('加载历史消息失败:', error);
+      // 🎯 404 错误静默处理（可能是新会话），其他错误友好提示
+      if (error.statusCode !== 404) {
+        wx.showToast({
+          title: '加载历史失败',
+          icon: 'none',
+          duration: 2000,
+        });
+      }
     }
   },
 
@@ -616,12 +631,15 @@ const pageObject = {
     try {
       this.setData({ refreshing: true });
 
-      await Promise.all([
-        this.loadHistoryMessages(),
-        this.checkAIStatus(),
-        this.loadUserStats(),
-        this.loadRecommendedQuestions(),
-      ]);
+      // 🎯 只有非新会话才加载历史消息，避免404错误
+      const tasks = [this.checkAIStatus(), this.loadUserStats(), this.loadRecommendedQuestions()];
+
+      // 只有存在sessionId且非新会话才加载历史
+      if (this.data.sessionId && !this.data.isNewSession) {
+        tasks.unshift(this.loadHistoryMessages());
+      }
+
+      await Promise.all(tasks);
     } catch (error) {
       console.error('刷新数据失败:', error);
     } finally {
