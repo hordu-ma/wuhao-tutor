@@ -181,7 +181,7 @@
 
           <!-- 时间戳 -->
           <view class="bubble-time">
-            {{item.timestamp}}
+            {{item.formattedTime || item.timestamp}}
           </view>
         </view>
       </view>

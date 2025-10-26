@@ -10,6 +10,16 @@ const config = require('../../../config/index.js');
 const utils = require('../../../utils/utils.js');
 const { parseMarkdown } = require('../../../utils/markdown-formatter.js');
 
+/**
+ * 格式化消息时间为友好格式
+ * @param {string|number|Date} timestamp - 时间戳
+ * @returns {string} 格式化后的时间字符串
+ */
+const formatMessageTime = timestamp => {
+  if (!timestamp) return '';
+  return utils.formatTime.friendly(timestamp);
+};
+
 const pageObject = {
   data: {
     // API状态管理
@@ -524,6 +534,7 @@ const pageObject = {
           type: 'user',
           sender: 'user',
           timestamp: item.question?.created_at || Date.now(),
+          formattedTime: formatMessageTime(item.question?.created_at || Date.now()), // 🎯 添加格式化时间
           status: 'sent',
         }));
 
@@ -537,6 +548,7 @@ const pageObject = {
               type: 'ai',
               sender: 'ai',
               timestamp: item.answer.created_at || Date.now(),
+              formattedTime: formatMessageTime(item.answer.created_at || Date.now()), // 🎯 添加格式化时间
               status: 'received',
             });
           }
@@ -589,6 +601,7 @@ const pageObject = {
           type: msg.type,
           sender: msg.sender,
           timestamp: msg.created_at,
+          formattedTime: formatMessageTime(msg.created_at), // 🎯 添加格式化时间
           status: msg.status || 'sent',
         }));
 
@@ -705,13 +718,15 @@ const pageObject = {
       }
 
       // 2. 创建用户消息（包含文本和图片引用）
+      const currentTime = new Date();
       const userMessage = {
         id: this.generateMessageId(),
         content: inputText || '[图片]', // 如果没有文本，显示 [图片]
         richContent: parseMarkdown(inputText || '[图片]'), // ✅ 添加 richContent 用于显示
         type: 'text',
         sender: 'user',
-        timestamp: new Date().toISOString(),
+        timestamp: currentTime.toISOString(),
+        formattedTime: formatMessageTime(currentTime), // 🎯 添加格式化时间
         status: 'sending',
         images: this.data.uploadedImages.map(img => ({
           tempFilePath: img.tempFilePath,
@@ -769,6 +784,7 @@ const pageObject = {
           type: 'text',
           sender: 'ai',
           timestamp: response.answer.created_at,
+          formattedTime: formatMessageTime(response.answer.created_at), // 🎯 添加格式化时间
           status: 'received',
           confidence: response.answer.confidence_score || 0,
           sources: response.answer.sources || [],
