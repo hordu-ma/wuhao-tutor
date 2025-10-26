@@ -690,6 +690,7 @@ const pageObject = {
       const userMessage = {
         id: this.generateMessageId(),
         content: inputText || '[图片]', // 如果没有文本，显示 [图片]
+        richContent: parseMarkdown(inputText || '[图片]'), // ✅ 添加 richContent 用于显示
         type: 'text',
         sender: 'user',
         timestamp: new Date().toISOString(),
