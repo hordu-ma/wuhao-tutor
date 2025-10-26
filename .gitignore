@@ -108,3 +108,6 @@ nginx/*.bak
 # Git backup directory
 .git.backup/
 wuhao_tutor_dev.db
+
+# Production user reports (contains sensitive info)
+production_users_report.md
