@@ -80,6 +80,13 @@ const utils = {
       try {
         const date = new Date(timestamp);
         const now = new Date();
+
+        // 确保 date 是有效的
+        if (isNaN(date.getTime())) {
+          console.error('Invalid timestamp:', timestamp);
+          return '';
+        }
+
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
         const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
@@ -123,10 +130,12 @@ const utils = {
       const date = new Date(timestamp);
       const today = new Date();
 
-      return date.getDate() === today.getDate() &&
+      return (
+        date.getDate() === today.getDate() &&
         date.getMonth() === today.getMonth() &&
-        date.getFullYear() === today.getFullYear();
-    }
+        date.getFullYear() === today.getFullYear()
+      );
+    },
   },
 
   /**
@@ -149,8 +158,8 @@ const utils = {
      */
     uuid() {
       return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-        const r = Math.random() * 16 | 0;
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
         return v.toString(16);
       });
     },
@@ -182,7 +191,7 @@ const utils = {
      * 下划线转驼峰
      */
     snakeToCamel(str) {
-      return str.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
+      return str.replace(/_([a-z])/g, g => g[1].toUpperCase());
     },
 
     /**
@@ -201,10 +210,10 @@ const utils = {
         '<': '&lt;',
         '>': '&gt;',
         '"': '&quot;',
-        "'": '&#x27;'
+        "'": '&#x27;',
       };
-      return str.replace(/[&<>"']/g, (match) => htmlEscapes[match]);
-    }
+      return str.replace(/[&<>"']/g, match => htmlEscapes[match]);
+    },
   },
 
   /**
@@ -258,7 +267,7 @@ const utils = {
      */
     safeDivide(dividend, divisor, defaultValue = 0) {
       return divisor === 0 ? defaultValue : dividend / divisor;
-    }
+    },
   },
 
   /**
@@ -316,7 +325,7 @@ const utils = {
         page,
         pageSize,
         totalPages: Math.ceil(arr.length / pageSize),
-        hasMore: end < arr.length
+        hasMore: end < arr.length,
       };
     },
 
@@ -378,7 +387,7 @@ const utils = {
         const minValue = key ? min[key] : min;
         return value < minValue ? item : min;
       });
-    }
+    },
   },
 
   /**
@@ -492,7 +501,7 @@ const utils = {
         }
       }
       return params.join('&');
-    }
+    },
   },
 
   /**
@@ -560,7 +569,7 @@ const utils = {
      */
     age(age) {
       return Number.isInteger(age) && age >= 0 && age <= 150;
-    }
+    },
   },
 
   /**
@@ -603,7 +612,7 @@ const utils = {
       return {
         width: systemInfo.screenWidth,
         height: systemInfo.screenHeight,
-        pixelRatio: systemInfo.pixelRatio
+        pixelRatio: systemInfo.pixelRatio,
       };
     },
 
@@ -621,7 +630,7 @@ const utils = {
     pxToRpx(px) {
       const systemInfo = this.getSystemInfo();
       return (px * 750) / systemInfo.screenWidth;
-    }
+    },
   },
 
   /**
@@ -633,18 +642,20 @@ const utils = {
      */
     hexToRgb(hex) {
       const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-      return result ? {
-        r: parseInt(result[1], 16),
-        g: parseInt(result[2], 16),
-        b: parseInt(result[3], 16)
-      } : null;
+      return result
+        ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16),
+          }
+        : null;
     },
 
     /**
      * RGB转十六进制
      */
     rgbToHex(r, g, b) {
-      return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+      return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
     },
 
     /**
@@ -661,17 +672,13 @@ const utils = {
       const rgb = this.hexToRgb(hex);
       if (!rgb) return hex;
 
-      const adjust = (color) => {
-        const adjusted = Math.round(color * (100 + percent) / 100);
+      const adjust = color => {
+        const adjusted = Math.round((color * (100 + percent)) / 100);
         return Math.max(0, Math.min(255, adjusted));
       };
 
-      return this.rgbToHex(
-        adjust(rgb.r),
-        adjust(rgb.g),
-        adjust(rgb.b)
-      );
-    }
+      return this.rgbToHex(adjust(rgb.r), adjust(rgb.g), adjust(rgb.b));
+    },
   },
 
   /**
@@ -702,10 +709,10 @@ const utils = {
         if (!inThrottle) {
           func.apply(this, args);
           inThrottle = true;
-          setTimeout(() => inThrottle = false, limit);
+          setTimeout(() => (inThrottle = false), limit);
         }
       };
-    }
+    },
   },
 
   /**
@@ -742,7 +749,7 @@ const utils = {
       }
 
       throw lastError;
-    }
+    },
   },
 
   /**
@@ -789,7 +796,7 @@ const utils = {
      */
     clear() {
       this.memory.clear();
-    }
+    },
   },
 
   /**
@@ -831,7 +838,7 @@ const utils = {
       const existingParams = queryString ? this.parseQuery('?' + queryString) : {};
       const mergedParams = { ...existingParams, ...newParams };
       return this.build(base, mergedParams);
-    }
+    },
   },
 
   /**
@@ -845,7 +852,7 @@ const utils = {
       return new Promise((resolve, reject) => {
         wx.getImageInfo({
           src,
-          success: (res) => {
+          success: res => {
             const canvas = wx.createCanvasContext('imageCanvas');
             const { width, height } = res;
 
@@ -868,11 +875,11 @@ const utils = {
                 fileType: 'jpg',
                 quality,
                 success: resolve,
-                fail: reject
+                fail: reject,
               });
             });
           },
-          fail: reject
+          fail: reject,
         });
       });
     },
@@ -885,11 +892,11 @@ const utils = {
         wx.getImageInfo({
           src,
           success: resolve,
-          fail: reject
+          fail: reject,
         });
       });
-    }
-  }
+    },
+  },
 };
 
 module.exports = utils;

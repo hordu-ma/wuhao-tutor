@@ -17,19 +17,8 @@ const { parseMarkdown } = require('../../../utils/markdown-formatter.js');
  */
 const formatMessageTime = timestamp => {
   if (!timestamp) return '';
-  
-  // 🔍 调试：打印原始时间戳和格式化结果
-  const formatted = utils.formatTime.friendly(timestamp);
-  console.log('⏰ 时间格式化:', {
-    原始值: timestamp,
-    类型: typeof timestamp,
-    Date对象: new Date(timestamp).toISOString(),
-    格式化结果: formatted,
-  });
-  
-  return formatted;
+  return utils.formatTime.friendly(timestamp);
 };
-
 const pageObject = {
   data: {
     // API状态管理
