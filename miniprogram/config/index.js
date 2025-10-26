@@ -81,7 +81,7 @@ const config = {
       desc: '让学习更高效，让成长更快乐',
       imageUrl: '/assets/images/share-logo.png',
     },
-    // tabBar 配置
+    // tabBar 配置（注意：这些配置未被 app.json 实际引用）
     tabBar: {
       student: [
         {
@@ -90,15 +90,22 @@ const config = {
           iconPath: '/assets/icons/home.png',
           selectedIconPath: '/assets/icons/home-active.png',
         },
+        // 作业批改功能已移除，改用 learning（作业问答）模块
+        // {
+        //   pagePath: 'pages/homework/list/index',
+        //   text: '作业',
+        //   iconPath: '/assets/icons/homework.png',
+        //   selectedIconPath: '/assets/icons/homework-active.png',
+        // },
         {
-          pagePath: 'pages/homework/list/index',
-          text: '作业',
+          pagePath: 'pages/mistakes/list/index',
+          text: '错题本',
           iconPath: '/assets/icons/homework.png',
           selectedIconPath: '/assets/icons/homework-active.png',
         },
         {
-          pagePath: 'pages/chat/index/index',
-          text: '问答',
+          pagePath: 'pages/learning/index/index',
+          text: '作业问答',
           iconPath: '/assets/icons/chat.png',
           selectedIconPath: '/assets/icons/chat-active.png',
         },
@@ -128,12 +135,13 @@ const config = {
           iconPath: '/assets/icons/progress.png',
           selectedIconPath: '/assets/icons/progress-active.png',
         },
-        {
-          pagePath: 'pages/homework/list/index',
-          text: '作业',
-          iconPath: '/assets/icons/homework.png',
-          selectedIconPath: '/assets/icons/homework-active.png',
-        },
+        // 作业批改功能已移除
+        // {
+        //   pagePath: 'pages/homework/list/index',
+        //   text: '作业',
+        //   iconPath: '/assets/icons/homework.png',
+        //   selectedIconPath: '/assets/icons/homework-active.png',
+        // },
         {
           pagePath: 'pages/profile/index/index',
           text: '我的',
@@ -148,12 +156,13 @@ const config = {
           iconPath: '/assets/icons/home.png',
           selectedIconPath: '/assets/icons/home-active.png',
         },
-        {
-          pagePath: 'pages/homework/list/index',
-          text: '作业',
-          iconPath: '/assets/icons/homework.png',
-          selectedIconPath: '/assets/icons/homework-active.png',
-        },
+        // 作业批改功能已移除
+        // {
+        //   pagePath: 'pages/homework/list/index',
+        //   text: '作业',
+        //   iconPath: '/assets/icons/homework.png',
+        //   selectedIconPath: '/assets/icons/homework-active.png',
+        // },
         {
           pagePath: 'pages/analysis/report/index',
           text: '分析',

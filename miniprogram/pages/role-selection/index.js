@@ -11,17 +11,17 @@ Page({
     currentRole: '',
     selectedRole: '',
     loading: false,
-    roles: [] // 将由 roleManager 提供
+    roles: [], // 将由 roleManager 提供
   },
 
   async onLoad(options) {
     console.log('角色选择页面加载', options);
-    
+
     // 检查登录状态
     const isLoggedIn = await authManager.isLoggedIn();
     if (!isLoggedIn) {
       wx.redirectTo({
-        url: '/pages/login/index'
+        url: '/pages/login/index',
       });
       return;
     }
@@ -37,7 +37,7 @@ Page({
       // 获取用户信息和当前角色
       const [userInfo, currentRole] = await Promise.all([
         authManager.getUserInfo(),
-        authManager.getUserRole()
+        authManager.getUserRole(),
       ]);
 
       // 获取所有角色配置
@@ -47,11 +47,10 @@ Page({
         userInfo,
         currentRole,
         selectedRole: currentRole || 'student',
-        roles
+        roles,
       });
 
       console.log('角色选择页面初始化完成', { currentRole });
-      
     } catch (error) {
       console.error('初始化页面失败:', error);
       errorToast.show('页面加载失败，请重试');
@@ -63,14 +62,14 @@ Page({
    */
   onRoleSelect(e) {
     const { role } = e.currentTarget.dataset;
-    
+
     this.setData({
-      selectedRole: role
+      selectedRole: role,
     });
 
     // 添加触觉反馈
     wx.vibrateShort({
-      type: 'light'
+      type: 'light',
     });
 
     console.log('选择角色:', role);
@@ -94,10 +93,11 @@ Page({
 
       // 使用集成管理器执行角色切换（包含TabBar更新）
       const result = await roleTabBarIntegration.switchRole(this.data.selectedRole, {
-        showConfirmDialog: this.data.currentRole && this.data.currentRole !== this.data.selectedRole,
+        showConfirmDialog:
+          this.data.currentRole && this.data.currentRole !== this.data.selectedRole,
         showSuccessToast: true,
         autoNavigate: true,
-        updateTabBar: true
+        updateTabBar: true,
       });
 
       if (result.success && !result.cancelled) {
@@ -105,7 +105,6 @@ Page({
       } else if (result.cancelled) {
         console.log('用户取消角色切换');
       }
-
     } catch (error) {
       console.error('角色设置失败:', error);
       errorToast.show('角色设置失败，请重试');
@@ -119,16 +118,17 @@ Page({
    */
   navigateToHomePage() {
     const { selectedRole } = this.data;
-    
+
     // 根据角色跳转到不同页面
     let targetPage = '/pages/index/index';
-    
+
     if (selectedRole === 'parent') {
       // 家长优先看学情分析
       targetPage = '/pages/analysis/progress/index';
     } else if (selectedRole === 'teacher') {
-      // 教师优先看作业管理
-      targetPage = '/pages/homework/list/index';
+      // 教师角色跳转到首页（作业批改功能已移除）
+      // 原跳转: targetPage = '/pages/homework/list/index';
+      targetPage = '/pages/index/index';
     }
 
     // 使用 reLaunch 清空页面栈，确保用户无法返回角色选择页
@@ -137,9 +137,9 @@ Page({
       fail: () => {
         // 如果目标页面不存在，回到首页
         wx.reLaunch({
-          url: '/pages/index/index'
+          url: '/pages/index/index',
         });
-      }
+      },
     });
   },
 
@@ -163,9 +163,8 @@ Page({
 
       // 跳转到首页
       wx.reLaunch({
-        url: '/pages/index/index'
+        url: '/pages/index/index',
       });
-
     } catch (error) {
       console.error('使用默认角色失败:', error);
       errorToast.show('操作失败，请重试');
@@ -180,7 +179,7 @@ Page({
   onViewRoleDetails(e) {
     const { role } = e.currentTarget.dataset;
     const roleInfo = this.data.roles.find(r => r.key === role);
-    
+
     if (roleInfo) {
       const features = roleInfo.features.join('\n• ');
       errorToast.confirm(
@@ -188,8 +187,8 @@ Page({
         `${roleInfo.description}\n\n主要功能：\n• ${features}`,
         {
           confirmText: '我知道了',
-          showCancel: false
-        }
+          showCancel: false,
+        },
       );
     }
   },
@@ -201,7 +200,7 @@ Page({
     return {
       title: '五好伴学 - 选择您的角色',
       path: '/pages/role-selection/index',
-      imageUrl: '/assets/images/share-logo.png'
+      imageUrl: '/assets/images/share-logo.png',
     };
-  }
+  },
 });

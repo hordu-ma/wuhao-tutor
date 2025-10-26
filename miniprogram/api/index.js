@@ -1,7 +1,7 @@
 // api/index.js
 // 五好伴学小程序 - API 模块统一导出
 
-const homeworkAPI = require('./homework.js');
+// const homeworkAPI = require('./homework.js'); // 已备份至 backup/miniprogram/api/homework.js
 const learningAPI = require('./learning.js');
 const analysisAPI = require('./analysis.js');
 const userAPI = require('./user.js');
@@ -17,10 +17,10 @@ const api = {
   // 用户管理模块
   user: userAPI,
 
-  // 作业批改模块（兼容性保留）
-  homework: homeworkAPI,
+  // 作业批改模块（已移除，功能已由 learning 模块覆盖）
+  // homework: homeworkAPI,
 
-  // 学习问答模块（重新定位为作业问答）
+  // 学习问答模块（作业问答核心功能）
   learning: learningAPI,
 
   // chat 别名，兼容旧代码
@@ -29,7 +29,7 @@ const api = {
   // 学情分析模块
   analysis: analysisAPI,
 
-  // 错题手册模块（新增核心模块）
+  // 错题手册模块
   mistakes: mistakesAPI,
 
   // 文件上传模块
