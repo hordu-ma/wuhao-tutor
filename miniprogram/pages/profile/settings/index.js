@@ -1,5 +1,6 @@
 // 设置页面逻辑
 import { request } from '../../../utils/request';
+const { authManager } = require('../../../utils/auth.js');
 
 Page({
   data: {
@@ -460,28 +461,45 @@ Page({
   /**
    * 执行退出登录
    */
-  performLogout() {
+  async performLogout() {
     wx.showLoading({
       title: '退出中...',
     });
 
-    // 清除登录状态
-    wx.removeStorageSync('token');
-    wx.removeStorageSync('userInfo');
-    wx.removeStorageSync('userRole');
+    try {
+      // ✅ 调用 authManager 的完整退出流程
+      await authManager.logout();
 
-    wx.hideLoading();
+      wx.hideLoading();
 
-    wx.showToast({
-      title: '已退出登录',
-      icon: 'success',
-    });
-
-    // 跳转到登录页
-    setTimeout(() => {
-      wx.reLaunch({
-        url: '/pages/login/index',
+      wx.showToast({
+        title: '已退出登录',
+        icon: 'success',
       });
-    }, 1500);
+
+      // 跳转到登录页
+      setTimeout(() => {
+        wx.reLaunch({
+          url: '/pages/login/index',
+        });
+      }, 1500);
+    } catch (error) {
+      console.error('退出登录失败:', error);
+      wx.hideLoading();
+
+      // 即使出错也强制清理并跳转
+      wx.clearStorageSync();
+
+      wx.showToast({
+        title: '退出成功',
+        icon: 'success',
+      });
+
+      setTimeout(() => {
+        wx.reLaunch({
+          url: '/pages/login/index',
+        });
+      }, 1500);
+    }
   },
 });
