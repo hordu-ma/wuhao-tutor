@@ -49,8 +49,8 @@ function parseMarkdown(text) {
       continue;
     }
 
-    // 列表检测
-    const listMatch = line.match(/^(\s*)([-*+]|\d+\.)\s+(.+)$/);
+    // 列表检测（支持多种项目符号：-, *, +, •, ◦, ▪, ▫, 以及数字列表）
+    const listMatch = line.match(/^(\s*)([-*+•◦▪▫]|\d+\.)\s+(.+)$/);
     if (listMatch) {
       blocks.push({
         type: 'list',

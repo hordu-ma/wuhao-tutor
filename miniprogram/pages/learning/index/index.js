@@ -777,15 +777,10 @@ const pageObject = {
         };
 
         // 创建AI回复消息
-        const parsedContent = parseMarkdown(response.answer.content);
-        console.log('🔍 AI回复内容长度:', response.answer.content?.length);
-        console.log('🔍 解析后blocks数量:', parsedContent?.length);
-        console.log('🔍 解析后的richContent:', JSON.stringify(parsedContent).substring(0, 500));
-        
         const aiMessage = {
           id: response.answer.id,
           content: response.answer.content,
-          richContent: parsedContent, // 🎯 解析Markdown格式
+          richContent: parseMarkdown(response.answer.content), // 🎯 解析Markdown格式
           type: 'text',
           sender: 'ai',
           timestamp: response.answer.created_at,
@@ -793,9 +788,7 @@ const pageObject = {
           status: 'received',
           confidence: response.answer.confidence_score || 0,
           sources: response.answer.sources || [],
-        };
-
-        // 🎯 静默处理错题自动创建（无UI提示）
+        };        // 🎯 静默处理错题自动创建（无UI提示）
         if (response.mistake_created) {
           console.log('✅ 错题已自动加入复习本:', {
             category: response.mistake_info?.category,
