@@ -17,7 +17,17 @@ const { parseMarkdown } = require('../../../utils/markdown-formatter.js');
  */
 const formatMessageTime = timestamp => {
   if (!timestamp) return '';
-  return utils.formatTime.friendly(timestamp);
+  
+  // 🔍 调试：打印原始时间戳和格式化结果
+  const formatted = utils.formatTime.friendly(timestamp);
+  console.log('⏰ 时间格式化:', {
+    原始值: timestamp,
+    类型: typeof timestamp,
+    Date对象: new Date(timestamp).toISOString(),
+    格式化结果: formatted,
+  });
+  
+  return formatted;
 };
 
 const pageObject = {
@@ -788,7 +798,7 @@ const pageObject = {
           status: 'received',
           confidence: response.answer.confidence_score || 0,
           sources: response.answer.sources || [],
-        };        // 🎯 静默处理错题自动创建（无UI提示）
+        }; // 🎯 静默处理错题自动创建（无UI提示）
         if (response.mistake_created) {
           console.log('✅ 错题已自动加入复习本:', {
             category: response.mistake_info?.category,
