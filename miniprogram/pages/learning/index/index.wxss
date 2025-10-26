@@ -178,11 +178,27 @@
   align-items: flex-end;
 }
 
+/* ✅ AI 消息：纵向布局，头像在上方 */
+.chat-bubble.ai {
+  flex-direction: column;
+  align-items: flex-start; /* 左对齐 */
+  width: 100%; /* 占满父容器宽度 */
+}
+
 .chat-bubble.user {
   flex-direction: row-reverse;
 }
 
-.bubble-avatar {
+/* AI 消息的头像：在上方显示 */
+.chat-bubble.ai .bubble-avatar {
+  width: 48rpx;
+  height: 48rpx;
+  flex-shrink: 0;
+  margin: 0 0 12rpx 16rpx; /* 下边距 + 左边距 */
+}
+
+/* 用户消息的头像：在右侧显示 */
+.chat-bubble.user .bubble-avatar {
   width: 64rpx;
   height: 64rpx;
   flex-shrink: 0;
@@ -197,7 +213,13 @@
 
 .bubble-content {
   position: relative;
-  max-width: 70%;
+  max-width: 70%; /* 用户消息默认宽度 */
+}
+
+/* ✅ AI 消息内容：占满宽度，左右留小边距 */
+.chat-bubble.ai .bubble-content {
+  max-width: calc(100% - 32rpx); /* 左右各留 16rpx 边距 */
+  width: 100%;
 }
 
 .chat-bubble.user .bubble-content {
