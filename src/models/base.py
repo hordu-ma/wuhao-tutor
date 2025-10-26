@@ -56,7 +56,7 @@ class BaseModel(Base):
         DateTime(timezone=True) if not is_sqlite else String(50),  # type: ignore
         server_default=func.now() if not is_sqlite else None,
         default=lambda: (
-            datetime.utcnow() if not is_sqlite else datetime.utcnow().isoformat()
+            datetime.now() if not is_sqlite else datetime.now().isoformat()
         ),
         nullable=False,
         comment="创建时间",
@@ -68,7 +68,7 @@ class BaseModel(Base):
         server_default=func.now() if not is_sqlite else None,
         onupdate=func.now() if not is_sqlite else None,
         default=lambda: (
-            datetime.utcnow() if not is_sqlite else datetime.utcnow().isoformat()
+            datetime.now() if not is_sqlite else datetime.now().isoformat()
         ),
         nullable=False,
         comment="更新时间",
@@ -89,9 +89,9 @@ class BaseModel(Base):
     def update_timestamp(self):
         """更新时间戳"""
         if is_sqlite:
-            self.updated_at = datetime.utcnow().isoformat()
+            self.updated_at = datetime.now().isoformat()
         else:
-            self.updated_at = datetime.utcnow()
+            self.updated_at = datetime.now()
 
     def __repr__(self) -> str:
         """字符串表示"""
