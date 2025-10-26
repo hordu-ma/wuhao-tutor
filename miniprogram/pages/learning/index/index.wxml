@@ -172,12 +172,6 @@
             <view class="action-btn" bindtap="onCopyMessage" data-content="{{item.content}}">
               <van-icon name="copy" size="14" />
             </view>
-            <view wx:if="{{item.sender === 'ai'}}" class="action-btn"
-                  bindtap="onLikeMessage"
-                  data-message-id="{{item.id}}"
-                  data-liked="{{item.liked}}">
-              <van-icon name="{{item.liked ? 'like' : 'like-o'}}" size="14" color="{{item.liked ? '#1890ff' : '#999'}}" />
-            </view>
             <view wx:if="{{item.status === 'failed'}}" class="action-btn"
                   bindtap="onRetryMessage"
                   data-message-id="{{item.id}}">

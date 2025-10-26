@@ -2052,31 +2052,6 @@ const pageObject = {
   },
 
   /**
-   * 点赞消息
-   */
-  onLikeMessage(e) {
-    const { messageId, liked } = e.detail;
-
-    // 调用API记录点赞
-    api.chat
-      .likeMessage({
-        message_id: messageId,
-        liked: !liked,
-      })
-      .then(response => {
-        if (response.success) {
-          wx.showToast({
-            title: liked ? '已取消点赞' : '已点赞',
-            icon: 'success',
-          });
-        }
-      })
-      .catch(error => {
-        console.error('点赞失败:', error);
-      });
-  },
-
-  /**
    * 重新连接
    */
   reconnectIfNeeded() {
