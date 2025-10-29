@@ -82,6 +82,20 @@ class MistakeService:
                 return value  # SQLite中已经是字符串
             return value.isoformat()  # PostgreSQL中是datetime对象
 
+        def parse_json_field(value):
+            """解析JSON字段，兼容字符串和已解析的对象"""
+            if value is None:
+                return []
+            if isinstance(value, list):
+                return value  # 已经是列表
+            if isinstance(value, str):
+                try:
+                    parsed = json.loads(value)
+                    return parsed if isinstance(parsed, list) else []
+                except (json.JSONDecodeError, ValueError):
+                    return []
+            return []
+
         return MistakeListItem(
             id=UUID(extract_orm_uuid_str(mistake, "id")),
             title=extract_orm_str(mistake, "title") or "未命名错题",
@@ -97,7 +111,9 @@ class MistakeService:
             updated_at=to_iso_string(
                 getattr(mistake, "updated_at", None)
             ),  # ✅ 添加updated_at
-            knowledge_points=getattr(mistake, "knowledge_points", None) or [],
+            knowledge_points=parse_json_field(
+                getattr(mistake, "knowledge_points", None)
+            ),
         )
 
     def _to_detail_response(self, mistake: MistakeRecord) -> MistakeDetailResponse:
@@ -118,6 +134,20 @@ class MistakeService:
                 return value  # SQLite中已经是字符串
             return value.isoformat()  # PostgreSQL中是datetime对象
 
+        def parse_json_field(value):
+            """解析JSON字段，兼容字符串和已解析的对象"""
+            if value is None:
+                return []
+            if isinstance(value, list):
+                return value  # 已经是列表
+            if isinstance(value, str):
+                try:
+                    parsed = json.loads(value)
+                    return parsed if isinstance(parsed, list) else []
+                except (json.JSONDecodeError, ValueError):
+                    return []
+            return []
+
         # 🛠️ 使用extract_orm_*函数提取ORM对象的值
         return MistakeDetailResponse(
             id=UUID(extract_orm_uuid_str(mistake, "id")),
@@ -133,14 +163,16 @@ class MistakeService:
             correct_answer=extract_orm_str(mistake, "correct_answer")
             or None,  # 🛠️ 从数据库读取
             explanation=None,  # 模型中没有该字段，保持None
-            knowledge_points=getattr(mistake, "knowledge_points", None) or [],
+            knowledge_points=parse_json_field(
+                getattr(mistake, "knowledge_points", None)
+            ),
             mastery_status=extract_orm_str(mistake, "mastery_status"),
             correct_count=extract_orm_int(mistake, "correct_count") or 0,
             total_reviews=extract_orm_int(mistake, "review_count") or 0,
             next_review_date=to_iso_string(getattr(mistake, "next_review_at", None)),
             created_at=to_iso_string(getattr(mistake, "created_at", None)) or "",
             updated_at=to_iso_string(getattr(mistake, "updated_at", None)) or "",
-            image_urls=getattr(mistake, "image_urls", None) or [],
+            image_urls=parse_json_field(getattr(mistake, "image_urls", None)),
         )
 
     async def get_mistake_list(
