@@ -379,11 +379,10 @@ class KnowledgeContextBuilder:
                 time_preference.update({"9": 2, "14": 3, "19": 5, "20": 4})
 
             # 3. 分析难度偏好（基于作业难度分布）
+            # difficulty_level: 1=easy, 2=medium, 3=hard
             difficulty_query = (
                 select(
-                    func.coalesce(Homework.difficulty_level, "medium").label(
-                        "difficulty"
-                    ),
+                    func.coalesce(Homework.difficulty_level, 2).label("difficulty"),
                     func.count().label("count"),
                 )
                 .select_from(HomeworkSubmission.__table__.join(Homework.__table__))
@@ -400,10 +399,15 @@ class KnowledgeContextBuilder:
                 homework_count_list.append(getattr(row, "count", 0))
             total_homeworks = sum(homework_count_list) if homework_count_list else 0
 
+            # 难度级别映射: 1=easy, 2=medium, 3=hard
+            difficulty_level_map = {1: "easy", 2: "medium", 3: "hard"}
             difficulty_preference = {}
             if total_homeworks > 0:
                 for row in difficulty_rows:
-                    difficulty_level = getattr(row, "difficulty", None) or "medium"
+                    difficulty_int = getattr(row, "difficulty", None) or 2
+                    difficulty_level = difficulty_level_map.get(
+                        difficulty_int, "medium"
+                    )
                     count_val = getattr(row, "count", 0)
                     difficulty_preference[difficulty_level] = (
                         count_val / total_homeworks

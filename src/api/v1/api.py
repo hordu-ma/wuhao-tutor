@@ -11,8 +11,6 @@ from src.api.v1.endpoints import (
     file,
     goals,
     health,
-    homework,
-    homework_compatibility,
     learning,
     mistakes,
     user,
@@ -27,12 +25,6 @@ api_router.include_router(auth.router, prefix="/auth", tags=["认证"])
 api_router.include_router(user.router, prefix="/user", tags=["用户管理"])
 
 api_router.include_router(learning.router, prefix="/learning", tags=["学习问答"])
-
-# 作业相关路由
-api_router.include_router(homework.router, tags=["作业批改"])
-
-# 作业兼容性路由（前端兼容性）
-api_router.include_router(homework_compatibility.router, tags=["作业批改-兼容性"])
 
 api_router.include_router(analytics.router, tags=["学情分析"])
 

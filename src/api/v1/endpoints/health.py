@@ -7,18 +7,18 @@ import asyncio
 import logging
 import time
 from datetime import datetime
-from typing import Dict, Any
+from typing import Any, Dict
 
 from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.database import get_db
 from src.core.config import get_settings
+from src.core.database import get_db
 from src.core.monitoring import get_metrics_collector
 from src.core.security import get_rate_limiter
 from src.services.bailian_service import get_bailian_service
-from src.services.homework_service import get_homework_service
 from src.services.learning_service import get_learning_service
 from src.utils.cache import cache_manager
 
@@ -28,23 +28,17 @@ settings = get_settings()
 router = APIRouter(prefix="/health", tags=["健康检查"])
 
 
-@router.get(
-    "/",
-    summary="系统健康检查",
-    description="检查系统各组件的健康状态"
-)
-async def health_check(
-    db: AsyncSession = Depends(get_db)
-) -> JSONResponse:
+@router.get("/", summary="系统健康检查", description="检查系统各组件的健康状态")
+async def health_check(db: AsyncSession = Depends(get_db)) -> JSONResponse:
     """系统健康检查"""
     start_time = time.time()
 
     health_status = {
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
-        "version": getattr(settings, 'VERSION', '1.0.0'),
+        "version": getattr(settings, "VERSION", "1.0.0"),
         "environment": settings.ENVIRONMENT,
-        "services": {}
+        "services": {},
     }
 
     all_healthy = True
@@ -52,14 +46,15 @@ async def health_check(
     # 1. 数据库健康检查
     try:
         db_start = time.time()
-        homework_service = get_homework_service()
-        db_healthy = await homework_service.health_check(db)
+        # 执行简单的数据库查询测试连接
+        await db.execute(text("SELECT 1"))
+        db_healthy = True
         db_time = round((time.time() - db_start) * 1000, 2)
 
         health_status["services"]["database"] = {
             "status": "healthy" if db_healthy else "unhealthy",
             "response_time_ms": db_time,
-            "details": "PostgreSQL/SQLite connection test"
+            "details": "PostgreSQL/SQLite connection test",
         }
 
         if not db_healthy:
@@ -69,7 +64,7 @@ async def health_check(
         health_status["services"]["database"] = {
             "status": "unhealthy",
             "error": str(e),
-            "details": "Database connection failed"
+            "details": "Database connection failed",
         }
         all_healthy = False
 
@@ -84,7 +79,7 @@ async def health_check(
         health_status["services"]["ai_service"] = {
             "status": "healthy" if ai_healthy else "unhealthy",
             "response_time_ms": ai_time,
-            "details": "Bailian AI service availability check"
+            "details": "Bailian AI service availability check",
         }
 
         if not ai_healthy:
@@ -94,7 +89,7 @@ async def health_check(
         health_status["services"]["ai_service"] = {
             "status": "unhealthy",
             "error": str(e),
-            "details": "AI service check failed"
+            "details": "AI service check failed",
         }
         all_healthy = False
 
@@ -112,7 +107,7 @@ async def health_check(
         health_status["services"]["cache"] = {
             "status": "healthy" if cache_healthy else "unhealthy",
             "response_time_ms": cache_time,
-            "details": "Redis/Memory cache read/write test"
+            "details": "Redis/Memory cache read/write test",
         }
 
         if not cache_healthy:
@@ -122,19 +117,22 @@ async def health_check(
         health_status["services"]["cache"] = {
             "status": "unhealthy",
             "error": str(e),
-            "details": "Cache service check failed"
+            "details": "Cache service check failed",
         }
         all_healthy = False
 
     # 4. 文件存储健康检查
     try:
         import os
-        storage_healthy = os.path.exists(settings.UPLOAD_DIR) and os.access(settings.UPLOAD_DIR, os.W_OK)
+
+        storage_healthy = os.path.exists(settings.UPLOAD_DIR) and os.access(
+            settings.UPLOAD_DIR, os.W_OK
+        )
 
         health_status["services"]["storage"] = {
             "status": "healthy" if storage_healthy else "unhealthy",
             "details": f"File storage directory: {settings.UPLOAD_DIR}",
-            "writable": storage_healthy
+            "writable": storage_healthy,
         }
 
         if not storage_healthy:
@@ -144,49 +142,42 @@ async def health_check(
         health_status["services"]["storage"] = {
             "status": "unhealthy",
             "error": str(e),
-            "details": "Storage accessibility check failed"
+            "details": "Storage accessibility check failed",
         }
         all_healthy = False
 
     # 总体状态
     health_status["status"] = "healthy" if all_healthy else "unhealthy"
-    health_status["total_response_time_ms"] = round((time.time() - start_time) * 1000, 2)
-
-    # 根据健康状态返回对应的HTTP状态码
-    status_code = status.HTTP_200_OK if all_healthy else status.HTTP_503_SERVICE_UNAVAILABLE
-
-    return JSONResponse(
-        status_code=status_code,
-        content=health_status
+    health_status["total_response_time_ms"] = round(
+        (time.time() - start_time) * 1000, 2
     )
 
+    # 根据健康状态返回对应的HTTP状态码
+    status_code = (
+        status.HTTP_200_OK if all_healthy else status.HTTP_503_SERVICE_UNAVAILABLE
+    )
 
-@router.get(
-    "/readiness",
-    summary="就绪检查",
-    description="检查服务是否准备好接收请求"
-)
-async def readiness_check(
-    db: AsyncSession = Depends(get_db)
-) -> JSONResponse:
+    return JSONResponse(status_code=status_code, content=health_status)
+
+
+@router.get("/readiness", summary="就绪检查", description="检查服务是否准备好接收请求")
+async def readiness_check(db: AsyncSession = Depends(get_db)) -> JSONResponse:
     """就绪检查 - 快速检查关键服务"""
     start_time = time.time()
 
     try:
         # 快速数据库连接测试
         from sqlalchemy import text
+
         await db.execute(text("SELECT 1"))
 
         readiness_status = {
             "status": "ready",
             "timestamp": datetime.utcnow().isoformat(),
-            "response_time_ms": round((time.time() - start_time) * 1000, 2)
+            "response_time_ms": round((time.time() - start_time) * 1000, 2),
         }
 
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content=readiness_status
-        )
+        return JSONResponse(status_code=status.HTTP_200_OK, content=readiness_status)
 
     except Exception as e:
         logger.error(f"Readiness check failed: {e}")
@@ -195,20 +186,15 @@ async def readiness_check(
             "status": "not_ready",
             "timestamp": datetime.utcnow().isoformat(),
             "error": str(e),
-            "response_time_ms": round((time.time() - start_time) * 1000, 2)
+            "response_time_ms": round((time.time() - start_time) * 1000, 2),
         }
 
         return JSONResponse(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            content=readiness_status
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=readiness_status
         )
 
 
-@router.get(
-    "/liveness",
-    summary="活性检查",
-    description="检查应用程序是否正在运行"
-)
+@router.get("/liveness", summary="活性检查", description="检查应用程序是否正在运行")
 async def liveness_check() -> JSONResponse:
     """活性检查 - 最简单的存活检查"""
     return JSONResponse(
@@ -216,24 +202,20 @@ async def liveness_check() -> JSONResponse:
         content={
             "status": "alive",
             "timestamp": datetime.utcnow().isoformat(),
-            "uptime_seconds": time.time() - getattr(liveness_check, '_start_time', time.time())
-        }
+            "uptime_seconds": time.time()
+            - getattr(liveness_check, "_start_time", time.time()),
+        },
     )
 
 
-@router.get(
-    "/metrics",
-    summary="系统指标",
-    description="获取系统运行指标和性能数据"
-)
-async def get_metrics(
-    db: AsyncSession = Depends(get_db)
-) -> JSONResponse:
+@router.get("/metrics", summary="系统指标", description="获取系统运行指标和性能数据")
+async def get_metrics(db: AsyncSession = Depends(get_db)) -> JSONResponse:
     """获取系统指标"""
     try:
-        from sqlalchemy import text
-        import psutil
         import os
+
+        import psutil
+        from sqlalchemy import text
 
         # 获取性能监控数据
         metrics_collector = get_metrics_collector()
@@ -245,7 +227,7 @@ async def get_metrics(
             "database": {},
             "application": {},
             "performance": {},
-            "security": {}
+            "security": {},
         }
 
         # 系统指标
@@ -254,10 +236,10 @@ async def get_metrics(
             metrics["system"] = {
                 "cpu_percent": psutil.cpu_percent(interval=1),
                 "memory_percent": psutil.virtual_memory().percent,
-                "disk_usage_percent": psutil.disk_usage('/').percent,
-                "load_average": os.getloadavg() if hasattr(os, 'getloadavg') else None,
+                "disk_usage_percent": psutil.disk_usage("/").percent,
+                "load_average": os.getloadavg() if hasattr(os, "getloadavg") else None,
                 "active_connections": system_stats.get("active_connections", 0),
-                "uptime_seconds": system_stats.get("uptime_seconds", 0)
+                "uptime_seconds": system_stats.get("uptime_seconds", 0),
             }
         except Exception as e:
             metrics["system"] = {"error": f"Unable to collect system metrics: {str(e)}"}
@@ -265,36 +247,43 @@ async def get_metrics(
         # 数据库指标
         try:
             # 获取数据库连接数等信息
-            result = await db.execute(text("SELECT COUNT(*) as total_tables FROM information_schema.tables WHERE table_schema = 'public'"))
+            result = await db.execute(
+                text(
+                    "SELECT COUNT(*) as total_tables FROM information_schema.tables WHERE table_schema = 'public'"
+                )
+            )
             row = result.fetchone()
             metrics["database"] = {
                 "total_tables": row[0] if row else 0,
                 "connection_status": "connected",
-                "engine": str(db.bind.dialect.name) if hasattr(db.bind, 'dialect') else "unknown"
+                "engine": (
+                    str(db.bind.dialect.name)
+                    if hasattr(db.bind, "dialect")
+                    else "unknown"
+                ),
             }
         except Exception as e:
             # 尝试SQLite查询
             try:
-                result = await db.execute(text("SELECT COUNT(*) FROM sqlite_master WHERE type='table'"))
+                result = await db.execute(
+                    text("SELECT COUNT(*) FROM sqlite_master WHERE type='table'")
+                )
                 row = result.fetchone()
                 metrics["database"] = {
                     "total_tables": row[0] if row else 0,
                     "connection_status": "connected",
-                    "engine": "sqlite"
+                    "engine": "sqlite",
                 }
             except:
-                metrics["database"] = {
-                    "connection_status": "error",
-                    "error": str(e)
-                }
+                metrics["database"] = {"connection_status": "error", "error": str(e)}
 
         # 应用指标
         metrics["application"] = {
             "environment": settings.ENVIRONMENT,
-            "version": getattr(settings, 'VERSION', '1.0.0'),
+            "version": getattr(settings, "VERSION", "1.0.0"),
             "upload_directory": settings.UPLOAD_DIR,
             "upload_directory_exists": os.path.exists(settings.UPLOAD_DIR),
-            "debug_mode": settings.DEBUG
+            "debug_mode": settings.DEBUG,
         }
 
         # 性能指标
@@ -303,25 +292,26 @@ async def get_metrics(
             metrics["performance"] = {
                 "request_stats": performance_summary.get("request_stats", {}),
                 "slowest_endpoints": performance_summary.get("slowest_endpoints", []),
-                "error_endpoints": performance_summary.get("error_endpoints", [])
+                "error_endpoints": performance_summary.get("error_endpoints", []),
             }
         except Exception as e:
-            metrics["performance"] = {"error": f"Unable to collect performance metrics: {str(e)}"}
+            metrics["performance"] = {
+                "error": f"Unable to collect performance metrics: {str(e)}"
+            }
 
         # 安全指标
         try:
             metrics["security"] = {
                 "rate_limiter_status": "active",
                 "active_counters": len(rate_limiter.counters),
-                "active_buckets": len(rate_limiter.buckets)
+                "active_buckets": len(rate_limiter.buckets),
             }
         except Exception as e:
-            metrics["security"] = {"error": f"Unable to collect security metrics: {str(e)}"}
+            metrics["security"] = {
+                "error": f"Unable to collect security metrics: {str(e)}"
+            }
 
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content=metrics
-        )
+        return JSONResponse(status_code=status.HTTP_200_OK, content=metrics)
 
     except Exception as e:
         logger.error(f"Metrics collection failed: {e}")
@@ -330,15 +320,13 @@ async def get_metrics(
             content={
                 "error": "Failed to collect metrics",
                 "details": str(e),
-                "timestamp": datetime.utcnow().isoformat()
-            }
+                "timestamp": datetime.utcnow().isoformat(),
+            },
         )
 
 
 @router.get(
-    "/performance",
-    summary="性能监控",
-    description="获取详细的性能监控数据和统计信息"
+    "/performance", summary="性能监控", description="获取详细的性能监控数据和统计信息"
 )
 async def get_performance_metrics() -> JSONResponse:
     """获取详细性能指标"""
@@ -353,13 +341,10 @@ async def get_performance_metrics() -> JSONResponse:
             "last_5_minutes": metrics_collector.get_request_stats(minutes=5),
             "path_statistics": metrics_collector.get_path_stats(),
             "system_status": metrics_collector.get_system_stats(),
-            "summary": metrics_collector.get_performance_summary()
+            "summary": metrics_collector.get_performance_summary(),
         }
 
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content=performance_data
-        )
+        return JSONResponse(status_code=status.HTTP_200_OK, content=performance_data)
 
     except Exception as e:
         logger.error(f"Performance metrics collection failed: {e}")
@@ -368,15 +353,13 @@ async def get_performance_metrics() -> JSONResponse:
             content={
                 "error": "Failed to collect performance metrics",
                 "details": str(e),
-                "timestamp": datetime.utcnow().isoformat()
-            }
+                "timestamp": datetime.utcnow().isoformat(),
+            },
         )
 
 
 @router.get(
-    "/rate-limits",
-    summary="限流状态",
-    description="获取当前限流器状态和统计信息"
+    "/rate-limits", summary="限流状态", description="获取当前限流器状态和统计信息"
 )
 async def get_rate_limit_status() -> JSONResponse:
     """获取限流状态"""
@@ -394,16 +377,13 @@ async def get_rate_limit_status() -> JSONResponse:
                     "limit": rule.limit,
                     "window": rule.window,
                     "endpoint": rule.endpoint,
-                    "message": rule.message
+                    "message": rule.message,
                 }
                 for rule in rate_limiter.rules
-            ]
+            ],
         }
 
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content=rate_limit_data
-        )
+        return JSONResponse(status_code=status.HTTP_200_OK, content=rate_limit_data)
 
     except Exception as e:
         logger.error(f"Rate limit status collection failed: {e}")
@@ -412,8 +392,8 @@ async def get_rate_limit_status() -> JSONResponse:
             content={
                 "error": "Failed to collect rate limit status",
                 "details": str(e),
-                "timestamp": datetime.utcnow().isoformat()
-            }
+                "timestamp": datetime.utcnow().isoformat(),
+            },
         )
 
 

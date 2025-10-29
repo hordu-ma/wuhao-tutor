@@ -432,7 +432,7 @@ class LearningService:
             stmt = (
                 select(HomeworkSubmission)
                 .options(selectinload(HomeworkSubmission.reviews))
-                .where(HomeworkSubmission.user_id == user_id)
+                .where(HomeworkSubmission.student_id == user_id)
                 .order_by(desc(HomeworkSubmission.created_at))
                 .limit(5)
             )
