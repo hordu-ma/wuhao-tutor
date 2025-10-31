@@ -27,6 +27,7 @@ from src.models.learning import (
     ChatSession,
     LearningAnalytics,
     Question,
+    QuestionStatus,
     QuestionType,
     SessionStatus,
 )
@@ -296,7 +297,12 @@ class LearningService:
                 else:
                     message_dicts.append(msg)
 
-            # 5. 流式调用AI
+            # 4. 流式调用AI（支持图片和文本）
+            logger.info(
+                f"开始流式调用 - 消息数: {len(message_dicts)}, "
+                f"当前请求图片: {len(request.image_urls or [])}"
+            )
+
             async for chunk in self.bailian_service.chat_completion_stream(
                 messages=message_dicts,
                 context=ai_context,
@@ -304,6 +310,11 @@ class LearningService:
                 temperature=settings.AI_TEMPERATURE,
                 top_p=settings.AI_TOP_P,
             ):
+                # 🔧 防御性检查：确保 chunk 不为 None
+                if chunk is None:
+                    logger.warning("收到 None chunk，跳过处理")
+                    continue
+
                 # 累积完整内容
                 if chunk.get("content"):
                     full_answer_content = chunk.get("full_content", "")

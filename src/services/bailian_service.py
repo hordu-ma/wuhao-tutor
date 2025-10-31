@@ -204,32 +204,34 @@ class BailianService:
         """
         流式调用百炼API (SSE)
 
+        使用 OpenAI 兼容 API，支持多模态内容（图片）
+
         Args:
             payload: 请求载荷
 
         Yields:
             Dict: SSE 数据块
         """
-        model = payload.get("model", "")
+        # 使用 OpenAI 兼容端点，支持多模态流式
+        # base_url 可能包含 /api/v1，需要去掉后再拼接
+        base_domain = self.base_url.replace("/api/v1", "")
+        url = f"{base_domain}/compatible-mode/v1/chat/completions"
 
-        # VL模型使用OpenAI兼容模式 (暂不支持流式)
-        if self._is_vl_model(model):
-            raise BailianServiceError(
-                "VL模型暂不支持流式响应，请使用标准chat_completion方法"
-            )
+        logger.debug(f"流式API URL: {url}")
 
-        # 标准模型使用原生流式API
-        url = f"{self.base_url}/services/aigc/text-generation/generation"
+        # 转换为 OpenAI 格式
+        openai_payload = self._convert_to_openai_format(payload)
+        openai_payload["stream"] = True
+        openai_payload["stream_options"] = {"include_usage": True}
 
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
-            "Accept": "text/event-stream",  # SSE 格式
         }
 
         try:
             async with self.client.stream(
-                "POST", url, json=payload, headers=headers, timeout=120.0
+                "POST", url, json=openai_payload, headers=headers, timeout=120.0
             ) as response:
                 # 处理HTTP错误
                 if response.status_code == 401:
@@ -245,8 +247,10 @@ class BailianService:
                         f"HTTP错误 {response.status_code}: {error_text.decode('utf-8')}"
                     )
 
-                # 解析SSE流
+                # 解析SSE流 (OpenAI 格式)
                 full_content = ""
+                is_finished = False  # 🔧 标志：确保只发送一次 finish_reason="stop"
+
                 async for line in response.aiter_lines():
                     if not line or not line.strip():
                         continue
@@ -254,38 +258,69 @@ class BailianService:
                     # SSE格式: data: {json}
                     if line.startswith("data:"):
                         data_str = line[5:].strip()
+
+                        # 处理结束标记
+                        if data_str == "[DONE]":
+                            break
+
                         try:
                             data = json.loads(data_str)
 
-                            # 提取增量内容
-                            output = data.get("output", {})
-                            choices = output.get("choices", [])
+                            # 提取增量内容 (OpenAI 格式)
+                            choices = data.get("choices", [])
 
                             if choices:
-                                message = choices[0].get("message", {})
-                                content = message.get("content", "")
+                                delta = choices[0].get("delta", {})
+                                content = delta.get("content", "")
                                 finish_reason = choices[0].get("finish_reason")
 
-                                full_content += content
+                                if content:
+                                    full_content += content
+
+                                # 🔧 确保 usage 永远不为 None（.get() 默认值只在 key 不存在时生效）
+                                usage = data.get("usage") or {}
 
                                 # 返回数据块
                                 chunk = {
                                     "content": content,  # 增量内容
                                     "full_content": full_content,  # 完整内容（累积）
                                     "finish_reason": finish_reason,
-                                    "usage": data.get("usage", {}),
-                                    "request_id": data.get("request_id", ""),
-                                    "model": model,  # 添加模型名称
+                                    "usage": usage,
+                                    "request_id": data.get("id", ""),
+                                    "model": data.get("model", "qwen-vl-max"),
                                 }
 
                                 yield chunk
 
-                                # 如果完成，记录日志
+                                # 如果完成，记录日志并标记
                                 if finish_reason == "stop":
+                                    is_finished = True
                                     logger.info(
                                         f"流式响应完成: request_id={chunk['request_id']}, "
-                                        f"total_tokens={chunk['usage'].get('total_tokens', 0)}"
+                                        f"total_tokens={usage.get('total_tokens', 0)}"
                                     )
+
+                            elif data.get("usage") and not is_finished:
+                                # 🔧 修复：处理只包含 usage 的最后一个 chunk（choices 为空）
+                                # 只有在之前没有收到 finish_reason="stop" 时才处理
+                                usage = data.get("usage") or {}
+
+                                chunk = {
+                                    "content": "",
+                                    "full_content": full_content,
+                                    "finish_reason": "stop",  # 明确标记完成
+                                    "usage": usage,
+                                    "request_id": data.get("id", ""),
+                                    "model": data.get("model", "qwen-vl-max"),
+                                }
+
+                                yield chunk
+                                is_finished = True
+
+                                logger.info(
+                                    f"流式响应完成（usage-only chunk）: request_id={chunk['request_id']}, "
+                                    f"total_tokens={usage.get('total_tokens', 0)}"
+                                )
 
                         except json.JSONDecodeError as e:
                             logger.warning(f"SSE数据解析失败: {e}, line={line}")
@@ -590,6 +625,62 @@ class BailianService:
 
         return payload
 
+    def _convert_to_openai_format(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        将百炼原生格式转换为 OpenAI 兼容格式
+
+        Args:
+            payload: 百炼原生请求载荷
+
+        Returns:
+            Dict: OpenAI 格式载荷
+        """
+        messages = payload.get("input", {}).get("messages", [])
+        parameters = payload.get("parameters", {})
+
+        # 转换消息格式
+        openai_messages = []
+        for msg in messages:
+            role = msg.get("role", "user")
+            content = msg.get("content")
+
+            # 如果 content 是列表（多模态），需要转换格式
+            if isinstance(content, list):
+                openai_content = []
+                for item in content:
+                    if isinstance(item, dict):
+                        # 文本内容
+                        if "text" in item:
+                            openai_content.append(
+                                {"type": "text", "text": item["text"]}
+                            )
+                        # 图片内容 (image 或 image_url 格式)
+                        elif "image" in item:
+                            openai_content.append(
+                                {
+                                    "type": "image_url",
+                                    "image_url": {"url": item["image"]},
+                                }
+                            )
+                        elif item.get("type") == "image_url":
+                            openai_content.append(item)
+
+                openai_messages.append({"role": role, "content": openai_content})
+            else:
+                # 纯文本内容
+                openai_messages.append({"role": role, "content": content})
+
+        # 构建 OpenAI 格式载荷
+        openai_payload = {
+            "model": payload.get("model", "qwen-vl-max"),
+            "messages": openai_messages,
+            "max_tokens": parameters.get("max_tokens", 1500),
+            "temperature": parameters.get("temperature", 0.7),
+            "top_p": parameters.get("top_p", 0.8),
+        }
+
+        return openai_payload
+
     def _parse_response(
         self, response_data: Dict[str, Any], start_time: float
     ) -> ChatCompletionResponse:
@@ -748,6 +839,25 @@ class BailianService:
         """
         vl_models = ["qwen-vl-max", "qwen-vl-plus", "qwen-vl-max-latest"]
         return model in vl_models
+
+    def _has_multimodal_content(self, messages: List[Dict[str, Any]]) -> bool:
+        """
+        检查消息中是否包含多模态内容（图片）
+
+        Args:
+            messages: 消息列表
+
+        Returns:
+            bool: 是否包含多模态内容
+        """
+        for message in messages:
+            content = message.get("content")
+            # 检查content是否为数组（多模态格式）
+            if isinstance(content, list):
+                for item in content:
+                    if isinstance(item, dict) and item.get("type") == "image_url":
+                        return True
+        return False
 
     def _log_response(
         self, response: ChatCompletionResponse, context: Optional[AIContext]

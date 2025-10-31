@@ -46,6 +46,14 @@ class SessionStatus(enum.Enum):
     ARCHIVED = "archived"  # 已归档
 
 
+class QuestionStatus(enum.Enum):
+    """问题状态枚举"""
+
+    PENDING = "pending"  # 待回答
+    ANSWERED = "answered"  # 已回答
+    FAILED = "failed"  # 回答失败
+
+
 class ChatSession(BaseModel):
     """
     学习问答会话模型
