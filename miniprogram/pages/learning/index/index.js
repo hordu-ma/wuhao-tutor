@@ -976,8 +976,53 @@ const pageObject = {
             }
           },
         });
+      } else if (error.code === 'WS_CONNECT_ERROR' || error.code === 'WS_ERROR') {
+        // 🔧 网络连接错误 - 显示友好提示和重试选项
+        const retried = error.retried || 0;
+        let message = '网络不稳定，请检查网络连接后重试';
+
+        if (retried > 0) {
+          message = `已自动重试 ${retried} 次，仍然失败。\n请检查网络连接或稍后再试`;
+        }
+
+        wx.showModal({
+          title: '网络连接失败',
+          content: message,
+          confirmText: '重试',
+          cancelText: '取消',
+          success: res => {
+            if (res.confirm) {
+              // 用户点击重试，重新发送消息
+              console.log('[Retry] 用户选择重试发送消息');
+              // 重新发送最后一条失败的消息
+              const lastUserMsg = newMessageList.find(
+                msg => msg.sender === 'user' && msg.status === 'failed',
+              );
+              if (lastUserMsg) {
+                lastUserMsg.status = 'sending';
+                this.setData({ messageList: newMessageList });
+                // 稍后重试（给用户时间切换网络）
+                setTimeout(() => {
+                  this.sendMessage({
+                    content: lastUserMsg.content,
+                    type: lastUserMsg.type,
+                    images: lastUserMsg.images,
+                  });
+                }, 500);
+              }
+            }
+          },
+        });
+      } else if (error.code === 'WS_TIMEOUT' || error.code === 'WS_RESPONSE_TIMEOUT') {
+        // 🔧 超时错误
+        wx.showModal({
+          title: '请求超时',
+          content: '网络响应超时，建议:\n1. 检查网络连接\n2. 稍后再试\n3. 尝试简化问题内容',
+          confirmText: '知道了',
+          showCancel: false,
+        });
       } else {
-        // 显示重试选项
+        // 其他错误 - 显示重试选项
         this.showRetryOption(error.message || '发送失败，请重试');
       }
     } finally {

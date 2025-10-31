@@ -161,6 +161,11 @@ const learningAPI = {
       });
     }
 
+    // 🔧 重试配置
+    const retryCount = config._retryCount || 0;
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY = 1500; // 1.5秒延迟
+
     return new Promise((resolve, reject) => {
       const app = getApp();
       const token = app.globalData.token;
@@ -182,32 +187,103 @@ const learningAPI = {
         baseUrl.replace('https://', 'wss://').replace('http://', 'ws://') +
         '/api/v1/learning/ws/ask';
 
-      console.log('[WebSocket] 正在连接:', wsUrl);
+      console.log(
+        '[WebSocket] 正在连接:',
+        wsUrl,
+        retryCount > 0 ? `(重试 ${retryCount}/${MAX_RETRIES})` : '',
+      );
 
       let fullContent = '';
       let finalData = null;
       let hasError = false;
+      let connectionTimeout = null;
+      let hasReceivedData = false; // 🔧 标记是否收到过数据
+
+      // 🔧 连接超时检测（20秒，给图片上传和处理足够时间）
+      connectionTimeout = setTimeout(() => {
+        if (!hasError && !finalData && !hasReceivedData) {
+          console.warn('[WebSocket] 连接超时，未收到任何数据');
+          clearTimeout(connectionTimeout);
+          hasError = true;
+
+          if (socketTask) {
+            try {
+              socketTask.close();
+            } catch (e) {
+              console.error('[WebSocket] 关闭连接失败:', e);
+            }
+          }
+
+          // 尝试重试
+          if (retryCount < MAX_RETRIES) {
+            console.log(`[WebSocket] 正在重试... (${retryCount + 1}/${MAX_RETRIES})`);
+            setTimeout(() => {
+              config._retryCount = retryCount + 1;
+              this.askQuestionStreamWS(params, onChunk, config).then(resolve).catch(reject);
+            }, RETRY_DELAY);
+          } else {
+            reject({
+              code: 'WS_TIMEOUT',
+              message: '网络连接超时，请检查网络后重试',
+            });
+          }
+        }
+      }, 20000);
 
       // 创建 WebSocket 连接
       const socketTask = wx.connectSocket({
         url: wsUrl,
+        timeout: 15000, // 🔧 连接超时15秒
         success: () => {
           console.log('[WebSocket] 连接请求已发送');
         },
         fail: error => {
           console.error('[WebSocket] 连接失败:', error);
+          clearTimeout(connectionTimeout);
           hasError = true;
-          reject({
-            code: 'WS_CONNECT_ERROR',
-            message: '连接失败，请检查网络',
-            details: error,
-          });
+
+          // 🔧 自动重试逻辑
+          if (retryCount < MAX_RETRIES) {
+            console.log(`[WebSocket] 连接失败，正在重试... (${retryCount + 1}/${MAX_RETRIES})`);
+            setTimeout(() => {
+              config._retryCount = retryCount + 1;
+              this.askQuestionStreamWS(params, onChunk, config).then(resolve).catch(reject);
+            }, RETRY_DELAY);
+          } else {
+            reject({
+              code: 'WS_CONNECT_ERROR',
+              message: '网络不稳定，请检查网络连接',
+              details: error,
+              retried: retryCount,
+            });
+          }
         },
       });
 
       // 监听连接打开
       socketTask.onOpen(() => {
         console.log('[WebSocket] 连接已建立，发送请求...');
+        clearTimeout(connectionTimeout); // 🔧 清除连接超时
+
+        // 🔧 设置数据接收超时（2分钟，给AI处理足够时间）
+        connectionTimeout = setTimeout(() => {
+          if (!hasError && !finalData) {
+            console.warn('[WebSocket] 等待响应超时');
+            hasError = true;
+            clearTimeout(connectionTimeout);
+
+            if (socketTask) {
+              try {
+                socketTask.close();
+              } catch (e) {}
+            }
+
+            reject({
+              code: 'WS_RESPONSE_TIMEOUT',
+              message: 'AI 响应超时，请稍后重试',
+            });
+          }
+        }, 120000);
 
         // 发送请求数据
         socketTask.send({
@@ -220,12 +296,23 @@ const learningAPI = {
           },
           fail: error => {
             console.error('[WebSocket] 发送请求失败:', error);
+            clearTimeout(connectionTimeout);
             hasError = true;
-            reject({
-              code: 'WS_SEND_ERROR',
-              message: '发送请求失败',
-              details: error,
-            });
+
+            // 🔧 发送失败也尝试重试
+            if (retryCount < MAX_RETRIES) {
+              console.log(`[WebSocket] 发送失败，正在重试... (${retryCount + 1}/${MAX_RETRIES})`);
+              setTimeout(() => {
+                config._retryCount = retryCount + 1;
+                this.askQuestionStreamWS(params, onChunk, config).then(resolve).catch(reject);
+              }, RETRY_DELAY);
+            } else {
+              reject({
+                code: 'WS_SEND_ERROR',
+                message: '发送请求失败，请重试',
+                details: error,
+              });
+            }
           },
         });
       });
@@ -233,6 +320,7 @@ const learningAPI = {
       // 监听接收消息
       socketTask.onMessage(res => {
         try {
+          hasReceivedData = true; // 🔧 标记已收到数据
           const chunk = JSON.parse(res.data);
           console.log('[WebSocket] 收到消息:', {
             type: chunk.type,
@@ -243,6 +331,7 @@ const learningAPI = {
           // 处理错误
           if (chunk.type === 'error') {
             console.error('[WebSocket] 服务器错误:', chunk.message);
+            clearTimeout(connectionTimeout);
             hasError = true;
             reject({
               code: 'SERVER_ERROR',
@@ -273,6 +362,7 @@ const learningAPI = {
 
           // 保存最终数据
           if (chunk.type === 'done' || chunk.finish_reason === 'stop') {
+            clearTimeout(connectionTimeout); // 🔧 清除超时定时器
             finalData = {
               type: 'done',
               full_content: chunk.full_content || fullContent,
@@ -286,12 +376,14 @@ const learningAPI = {
           }
         } catch (error) {
           console.error('[WebSocket] 解析消息失败:', error, res.data);
+          // 🔧 解析失败不中断，继续接收后续消息
         }
       });
 
       // 监听连接关闭
       socketTask.onClose(res => {
         console.log('[WebSocket] 连接已关闭:', res);
+        clearTimeout(connectionTimeout); // 🔧 清除超时定时器
 
         if (hasError) {
           // 已经在错误处理中 reject，不再重复处理
@@ -314,13 +406,26 @@ const learningAPI = {
       // 监听连接错误
       socketTask.onError(error => {
         console.error('[WebSocket] 连接错误:', error);
+        clearTimeout(connectionTimeout); // 🔧 清除超时定时器
+
         if (!hasError) {
           hasError = true;
-          reject({
-            code: 'WS_ERROR',
-            message: 'WebSocket 连接错误',
-            details: error,
-          });
+
+          // 🔧 错误时也尝试重试
+          if (retryCount < MAX_RETRIES) {
+            console.log(`[WebSocket] 连接错误，正在重试... (${retryCount + 1}/${MAX_RETRIES})`);
+            setTimeout(() => {
+              config._retryCount = retryCount + 1;
+              this.askQuestionStreamWS(params, onChunk, config).then(resolve).catch(reject);
+            }, RETRY_DELAY);
+          } else {
+            reject({
+              code: 'WS_ERROR',
+              message: '网络连接错误，请检查网络后重试',
+              details: error,
+              retried: retryCount,
+            });
+          }
         }
       });
     });
