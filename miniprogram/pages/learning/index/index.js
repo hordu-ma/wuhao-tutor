@@ -1283,13 +1283,13 @@ const pageObject = {
       });
     });
 
-    // 开始录音（使用简化的配置，提高兼容性）
+    // 开始录音（使用 WAV 格式，与阿里云 ASR 兼容性最好）
     recorderManager.start({
       duration: 60000, // 最长录音60秒
-      sampleRate: 16000, // 采样率 16kHz
+      sampleRate: 16000, // 采样率 16kHz（阿里云 ASR 要求）
       numberOfChannels: 1, // 单声道
-      encodeBitRate: 96000, // 码率 96kbps（降低以提高兼容性）
-      format: 'mp3', // MP3格式
+      format: 'wav', // 🔧 WAV 格式（修复 ASR NO_VALID_AUDIO_ERROR）
+      frameSize: 50, // 帧大小，WAV 格式推荐参数
     });
   },
 
@@ -1393,8 +1393,9 @@ const pageObject = {
         });
       });
 
-      // 将转换的文字设置到输入框
-      if (uploadResult.text) {
+      // 🔧 [修复] 处理语音识别结果（包括空文本情况）
+      if (uploadResult.text && uploadResult.text.trim()) {
+        // 识别成功且有有效文本
         this.setData({
           inputText: uploadResult.text,
           recordStatus: 'idle',
@@ -1419,7 +1420,9 @@ const pageObject = {
           }
         }, 500);
       } else {
-        throw new Error('语音转换结果为空');
+        // 识别成功但文本为空（可能是录音时长太短或无有效语音）
+        this.setData({ recordStatus: 'idle' });
+        throw new Error('未识别到有效语音，请说话清晰或录音时间长一些');
       }
     } catch (error) {
       console.error('语音上传失败:', error);
