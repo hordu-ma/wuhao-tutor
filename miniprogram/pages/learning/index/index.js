@@ -211,6 +211,25 @@ const pageObject = {
     if (this.data.inputText.trim()) {
       wx.setStorageSync('chat_draft', this.data.inputText);
     }
+
+    // 🔧 [修复] 清理录音状态,避免页面返回后语音按钮失效
+    if (this.recorderManager) {
+      // 如果正在录音,强制停止
+      if (this.data.recordStatus === 'recording') {
+        this.recorderManager.stop();
+      }
+      // 清除计时器
+      if (this.recordTimer) {
+        clearInterval(this.recordTimer);
+        this.recordTimer = null;
+      }
+      // 重置状态
+      this.setData({
+        recordStatus: 'idle',
+        recordDuration: 0,
+        cancelVoice: false,
+      });
+    }
   },
 
   /**
