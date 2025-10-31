@@ -59,6 +59,30 @@
   word-break: break-all;
 }
 
+.placeholder-text {
+  font-size: 28rpx;
+  line-height: 1.8;
+  color: #999999;
+  font-style: italic;
+}
+
+/* 题目图片容器 */
+.image-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+  padding: 20rpx;
+  background-color: #fafafa;
+  border-radius: 12rpx;
+}
+
+.question-image {
+  width: 100%;
+  border-radius: 8rpx;
+  background-color: #ffffff;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
+}
+
 /* 错误答案样式 */
 .error-answer {
   background-color: #fff2f0;

@@ -111,6 +111,15 @@ const pageObject = {
       url: `/pages/mistakes/detail/index?id=${this.data.mistakeId}&mode=review`,
     });
   },
+
+  onPreviewImage(e) {
+    const url = e.currentTarget.dataset.url;
+    const urls = e.currentTarget.dataset.urls || [url];
+    wx.previewImage({
+      current: url,
+      urls: urls,
+    });
+  },
 };
 
 Page(createGuardedPage(pageObject, 'pages/mistakes/detail/index'));

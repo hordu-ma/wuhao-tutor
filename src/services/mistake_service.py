@@ -116,7 +116,7 @@ class MistakeService:
             ),
         )
 
-    def _to_detail_response(self, mistake: MistakeRecord) -> MistakeDetailResponse:
+    async def _to_detail_response(self, mistake: MistakeRecord) -> MistakeDetailResponse:
         """转换为详情响应"""
         from src.utils.type_converters import (
             extract_orm_int,
@@ -148,7 +148,136 @@ class MistakeService:
                     return []
             return []
 
-        # 🛠️ 使用extract_orm_*函数提取ORM对象的值
+        # 🔧 [修复] 解析AI反馈获取题目内容和解析
+        ai_feedback = getattr(mistake, "ai_feedback", None)
+        ai_feedback_dict = {}
+        ai_full_answer = None  # 完整的AI回答文本（来自answers表）
+        
+        if ai_feedback:
+            if isinstance(ai_feedback, dict):
+                ai_feedback_dict = ai_feedback
+            elif isinstance(ai_feedback, str):
+                try:
+                    parsed = json.loads(ai_feedback)
+                    ai_feedback_dict = parsed if isinstance(parsed, dict) else {}
+                except (json.JSONDecodeError, ValueError):
+                    pass
+        
+        # 🆕 [方案A优化] 如果来自learning模块，尝试从answers表获取完整AI回答
+        source = extract_orm_str(mistake, "source")
+        source_question_id = extract_orm_str(mistake, "source_question_id")
+        
+        if source == "learning" and source_question_id:
+            try:
+                from sqlalchemy import select
+                from src.models.learning import Answer
+                
+                # 查询answers表获取AI的完整回答
+                stmt = select(Answer.content).where(Answer.question_id == source_question_id)
+                result = await self.db.execute(stmt)
+                answer_row = result.scalar_one_or_none()
+                
+                if answer_row:
+                    ai_full_answer = answer_row
+                    logger.info(f"从answers表获取到完整AI回答，长度: {len(ai_full_answer)} 字符")
+            except Exception as e:
+                logger.warning(f"获取answers表数据失败: {e}")
+                # 降级处理，继续使用ai_feedback
+        
+        # 提取题目内容(优先OCR,其次AI分析)
+        question_content = extract_orm_str(mistake, "ocr_text") or ""
+        if not question_content and ai_feedback_dict:
+            question_content = (
+                ai_feedback_dict.get("question", "") 
+                or ai_feedback_dict.get("content", "")
+                or ai_feedback_dict.get("题目", "")
+            )
+        
+        # 提取解析/答案说明（优先使用完整AI回答）
+        explanation = ai_full_answer if ai_full_answer else None
+        
+        if not explanation and ai_feedback_dict:
+            explanation = (
+                ai_feedback_dict.get("analysis", "")
+                or ai_feedback_dict.get("explanation", "")
+                or ai_feedback_dict.get("解析", "")
+                or ai_feedback_dict.get("feedback", "")
+            )
+        
+        # 提取正确答案(优先数据库,其次AI反馈)
+        correct_answer = extract_orm_str(mistake, "correct_answer")
+        if not correct_answer and ai_feedback_dict:
+            # 尝试从多个可能的字段提取答案
+            correct_answer = (
+                ai_feedback_dict.get("correct_answer", "")
+                or ai_feedback_dict.get("answer", "")
+                or ai_feedback_dict.get("正确答案", "")
+                or ai_feedback_dict.get("参考答案", "")
+                or ai_feedback_dict.get("标准答案", "")
+                or ai_feedback_dict.get("solution", "")
+                or ai_feedback_dict.get("解答", "")
+            )
+        
+        # 🔧 [方案A] 智能答案提取与验证
+        if correct_answer:
+            correct_answer = correct_answer.strip()
+            
+            # 检查是否为无效占位符
+            is_invalid = (
+                not correct_answer  # 空字符串
+                or correct_answer in ["**", "*", "小**", "***", "？", "?", "-", "--"]  # 无意义符号
+                or (len(correct_answer) <= 3 and all(c in "*_-?？" for c in correct_answer))  # 纯符号
+            )
+            
+            if is_invalid and (explanation or ai_full_answer):
+                # 🆕 优先从完整AI回答中提取答案
+                text_to_extract = ai_full_answer if ai_full_answer else explanation
+                
+                # 尝试从文本中提取答案(使用正则匹配)
+                if text_to_extract:
+                    # 🔍 先检测是否为多小题题目
+                    multi_answer_pattern = r'✅\s*\*\*答案[：:]\s*'
+                    multi_answer_matches = re.findall(multi_answer_pattern, text_to_extract, re.MULTILINE)
+                    
+                    # 如果有多个答案标记（≥2个），说明是多小题，不提取单个答案
+                    if len(multi_answer_matches) >= 2:
+                        correct_answer = "📖 本题包含多个小题，答案请参考解析"
+                        is_invalid = False
+                    else:
+                        # 单小题，尝试提取答案
+                        patterns = [
+                            r'✅\s*\*\*答案[：:]\s*(.+?)\*\*',  # Markdown格式
+                            r'✅\s*答案[：:]\s*(.+?)(?:\n|$)',  # 带勾格式
+                            r'正确答案[：:是为]\s*[：:]?\s*(.+?)(?:[。\n；;]|$)',
+                            r'标准答案[：:是为]\s*[：:]?\s*(.+?)(?:[。\n；;]|$)',
+                            r'参考答案[：:是为]\s*[：:]?\s*(.+?)(?:[。\n；;]|$)',
+                            r'答案[：:是为]\s*[：:]?\s*(.+?)(?:[。\n；;]|$)',
+                        ]
+                        for pattern in patterns:
+                            matches = re.findall(pattern, text_to_extract, re.MULTILINE)
+                            if matches:
+                                # 取第一个匹配
+                                extracted = matches[0].strip()
+                                if extracted and len(extracted) > 0:
+                                    correct_answer = extracted
+                                    is_invalid = False
+                                    break
+            
+            # 如果仍然无效,根据题目类型决定提示文本
+            if is_invalid:
+                if ai_feedback_dict:
+                    category = ai_feedback_dict.get("category", "")
+                    # 对于空题目或主观题,给出友好提示
+                    if category == "empty_question":
+                        correct_answer = "📝 此题目暂无答案记录,请查看题目图片自行理解"
+                    elif category in ["subjective", "essay", "discussion"]:
+                        correct_answer = "💡 本题为主观题,无固定答案,请参考解析理解答题思路"
+                    else:
+                        correct_answer = "⚠️ 答案识别失败,建议查看解析或咨询老师"
+                else:
+                    correct_answer = "⚠️ 答案识别失败,建议查看解析或咨询老师"
+
+        # �🛠️ 使用extract_orm_*函数提取ORM对象的值
         return MistakeDetailResponse(
             id=UUID(extract_orm_uuid_str(mistake, "id")),
             title=extract_orm_str(mistake, "title") or "未命名错题",
@@ -157,12 +286,10 @@ class MistakeService:
             difficulty_level=extract_orm_int(mistake, "difficulty_level"),
             source=extract_orm_str(mistake, "source"),
             source_id=None,
-            question_content=extract_orm_str(mistake, "ocr_text") or "",
-            student_answer=extract_orm_str(mistake, "student_answer")
-            or None,  # 🛠️ 从数据库读取
-            correct_answer=extract_orm_str(mistake, "correct_answer")
-            or None,  # 🛠️ 从数据库读取
-            explanation=None,  # 模型中没有该字段，保持None
+            question_content=question_content or "暂无题目内容",
+            student_answer=extract_orm_str(mistake, "student_answer") or None,
+            correct_answer=correct_answer or None,
+            explanation=explanation,  # 🔧 从AI反馈提取
             knowledge_points=parse_json_field(
                 getattr(mistake, "knowledge_points", None)
             ),
@@ -230,7 +357,7 @@ class MistakeService:
         if not mistake or str(mistake.user_id) != str(user_id):
             raise NotFoundError(f"错题 {mistake_id} 不存在")
 
-        return self._to_detail_response(mistake)
+        return await self._to_detail_response(mistake)
 
     async def create_mistake(
         self, user_id: UUID, request: CreateMistakeRequest
@@ -266,7 +393,7 @@ class MistakeService:
 
         logger.info(f"Created mistake {mistake.id} for user {user_id}")
 
-        return self._to_detail_response(mistake)
+        return await self._to_detail_response(mistake)
 
     async def update_mistake(
         self, mistake_id: UUID, user_id: UUID, request: UpdateMistakeRequest
@@ -300,7 +427,7 @@ class MistakeService:
 
         logger.info(f"Updated mistake {mistake_id}")
 
-        return self._to_detail_response(mistake)
+        return await self._to_detail_response(mistake)
 
     async def delete_mistake(self, mistake_id: UUID, user_id: UUID) -> None:
         """
