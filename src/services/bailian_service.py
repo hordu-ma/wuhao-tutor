@@ -156,6 +156,146 @@ class BailianService:
 
             raise BailianServiceError(f"聊天补全调用失败: {str(e)}") from e
 
+    async def chat_completion_stream(
+        self,
+        messages: List[Union[Dict[str, Any], ChatMessage]],
+        context: Optional[AIContext] = None,
+        **kwargs,
+    ):
+        """
+        流式聊天补全接口 (SSE)
+
+        Args:
+            messages: 消息列表
+            context: 调用上下文
+            **kwargs: 其他参数（temperature, max_tokens等）
+
+        Yields:
+            Dict[str, Any]: SSE 数据块 {"content": str, "finish_reason": str, "usage": dict}
+
+        Raises:
+            BailianServiceError: 服务调用失败
+        """
+        start_time = time.time()
+
+        try:
+            # 标准化消息格式
+            formatted_messages = self._format_messages(messages)
+
+            # 构建请求载荷（启用流式）
+            payload = self._build_request_payload(formatted_messages, context, **kwargs)
+            payload["parameters"]["incremental_output"] = True  # 启用流式输出
+
+            # 记录请求日志
+            self._log_request(payload, context)
+
+            # 流式调用API
+            async for chunk in self._call_bailian_stream_api(payload):
+                yield chunk
+
+        except Exception as e:
+            logger.error(f"百炼流式API调用失败: {e}")
+            if context:
+                logger.error(f"调用上下文: {asdict(context)}")
+
+            raise BailianServiceError(f"流式聊天补全调用失败: {str(e)}") from e
+
+    async def _call_bailian_stream_api(self, payload: Dict[str, Any]):
+        """
+        流式调用百炼API (SSE)
+
+        Args:
+            payload: 请求载荷
+
+        Yields:
+            Dict: SSE 数据块
+        """
+        model = payload.get("model", "")
+
+        # VL模型使用OpenAI兼容模式 (暂不支持流式)
+        if self._is_vl_model(model):
+            raise BailianServiceError(
+                "VL模型暂不支持流式响应，请使用标准chat_completion方法"
+            )
+
+        # 标准模型使用原生流式API
+        url = f"{self.base_url}/services/aigc/text-generation/generation"
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "Accept": "text/event-stream",  # SSE 格式
+        }
+
+        try:
+            async with self.client.stream(
+                "POST", url, json=payload, headers=headers, timeout=120.0
+            ) as response:
+                # 处理HTTP错误
+                if response.status_code == 401:
+                    raise BailianAuthError("API密钥无效或过期")
+                elif response.status_code == 429:
+                    retry_after = response.headers.get("Retry-After", 60)
+                    raise BailianRateLimitError(
+                        f"API调用频率过高，请{retry_after}秒后重试"
+                    )
+                elif response.status_code >= 400:
+                    error_text = await response.aread()
+                    raise BailianServiceError(
+                        f"HTTP错误 {response.status_code}: {error_text.decode('utf-8')}"
+                    )
+
+                # 解析SSE流
+                full_content = ""
+                async for line in response.aiter_lines():
+                    if not line or not line.strip():
+                        continue
+
+                    # SSE格式: data: {json}
+                    if line.startswith("data:"):
+                        data_str = line[5:].strip()
+                        try:
+                            data = json.loads(data_str)
+
+                            # 提取增量内容
+                            output = data.get("output", {})
+                            choices = output.get("choices", [])
+
+                            if choices:
+                                message = choices[0].get("message", {})
+                                content = message.get("content", "")
+                                finish_reason = choices[0].get("finish_reason")
+
+                                full_content += content
+
+                                # 返回数据块
+                                chunk = {
+                                    "content": content,  # 增量内容
+                                    "full_content": full_content,  # 完整内容（累积）
+                                    "finish_reason": finish_reason,
+                                    "usage": data.get("usage", {}),
+                                    "request_id": data.get("request_id", ""),
+                                    "model": model,  # 添加模型名称
+                                }
+
+                                yield chunk
+
+                                # 如果完成，记录日志
+                                if finish_reason == "stop":
+                                    logger.info(
+                                        f"流式响应完成: request_id={chunk['request_id']}, "
+                                        f"total_tokens={chunk['usage'].get('total_tokens', 0)}"
+                                    )
+
+                        except json.JSONDecodeError as e:
+                            logger.warning(f"SSE数据解析失败: {e}, line={line}")
+                            continue
+
+        except httpx.TimeoutException:
+            raise BailianTimeoutError(f"API调用超时（{self.timeout}秒）")
+        except httpx.RequestError as e:
+            raise BailianServiceError(f"网络请求错误: {str(e)}") from e
+
     async def _call_bailian_api_with_retry(
         self, payload: Dict[str, Any]
     ) -> Dict[str, Any]:

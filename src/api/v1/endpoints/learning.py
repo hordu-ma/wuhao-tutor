@@ -3,12 +3,22 @@
 提供AI学习助手相关接口，包括提问、会话管理、历史查询等功能
 """
 
+import json
 import logging
 from datetime import datetime
 from typing import Any, Dict, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi import status as http_status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -128,6 +138,65 @@ async def ask_question(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="提问失败,请稍后重试",
         )
+
+
+@router.post("/ask-stream", summary="提问(流式响应)")
+async def ask_question_stream(
+    request: AskQuestionRequest,
+    current_user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    向AI学习助手提问(流式响应，SSE格式)
+
+    返回 Server-Sent Events (SSE) 流，客户端可以实时接收AI的回复。
+
+    - **content**: 问题内容
+    - **session_id**: 会话ID (可选)
+    - **use_context**: 是否使用学习上下文
+    - **include_history**: 是否包含历史对话
+
+    SSE 数据格式:
+    ```
+    data: {"type": "content", "content": "增量文本", "finish_reason": null}
+    data: {"type": "done", "question_id": "xxx", "answer_id": "xxx", "usage": {...}}
+    data: {"type": "error", "message": "错误信息"}
+    ```
+    """
+    from fastapi.responses import StreamingResponse
+
+    async def event_generator():
+        """SSE 事件生成器"""
+        try:
+            learning_service = get_learning_service(db)
+
+            # 流式调用
+            async for chunk in learning_service.ask_question_stream(
+                current_user_id, request
+            ):
+                # 转换为 SSE 格式
+                yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
+
+        except BailianServiceError as e:
+            error_data = {"type": "error", "message": f"AI服务暂时不可用: {str(e)}"}
+            yield f"data: {json.dumps(error_data, ensure_ascii=False)}\n\n"
+        except ValidationError as e:
+            error_data = {"type": "error", "message": str(e)}
+            yield f"data: {json.dumps(error_data, ensure_ascii=False)}\n\n"
+        except Exception as e:
+            logging.error(f"Stream ask question failed: {e}")
+            error_data = {"type": "error", "message": "提问失败,请稍后重试"}
+            yield f"data: {json.dumps(error_data, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # 禁用 Nginx 缓冲
+        },
+    )
 
 
 @router.post("/feedback", response_model=SuccessResponse, summary="提交反馈")
@@ -1077,3 +1146,146 @@ async def add_question_to_mistakes(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="加入错题本失败，请稍后重试",
         )
+
+
+# ========== WebSocket 流式问答 ==========
+
+
+@router.websocket("/ws/ask")
+async def websocket_ask_question(
+    websocket: WebSocket,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    WebSocket 流式问答端点
+
+    客户端发送格式:
+    {
+        "token": "Bearer xxx",
+        "params": {
+            "content": "问题内容",
+            "question_type": "concept",
+            "subject": "math",
+            ...
+        }
+    }
+
+    服务器返回格式 (流式):
+    {
+        "type": "content",
+        "content": "逐字内容",
+        "full_content": "累积内容"
+    }
+    {
+        "type": "done",
+        "question_id": "uuid",
+        "answer_id": "uuid",
+        "session_id": "uuid",
+        "usage": {...}
+    }
+    {
+        "type": "error",
+        "message": "错误信息"
+    }
+    """
+    await websocket.accept()
+    logger.info("WebSocket 连接已建立")
+
+    try:
+        # 1. 接收客户端请求
+        request_data = await websocket.receive_json()
+        logger.info(f"WebSocket 收到请求: {request_data.keys()}")
+
+        # 2. 验证 token
+        token = request_data.get("token", "")
+        if not token:
+            await websocket.send_json({"type": "error", "message": "缺少 token"})
+            await websocket.close()
+            return
+
+        # 移除 "Bearer " 前缀
+        if token.startswith("Bearer "):
+            token = token[7:]
+
+        # 验证 token 并获取用户 ID
+        import jwt
+
+        from src.core.config import get_settings
+
+        settings = get_settings()
+
+        try:
+            payload = jwt.decode(
+                token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+            )
+            user_id = payload.get("sub")
+            if not user_id:
+                raise ValueError("Token 中缺少用户 ID")
+        except jwt.ExpiredSignatureError:
+            logger.error("Token 已过期")
+            await websocket.send_json(
+                {"type": "error", "message": "登录已过期，请重新登录"}
+            )
+            await websocket.close()
+            return
+        except jwt.InvalidTokenError as e:
+            logger.error(f"Token 无效: {e}")
+            await websocket.send_json(
+                {"type": "error", "message": "认证失败，请重新登录"}
+            )
+            await websocket.close()
+            return
+        except Exception as e:
+            logger.error(f"Token 验证失败: {e}")
+            await websocket.send_json(
+                {"type": "error", "message": "认证失败，请重新登录"}
+            )
+            await websocket.close()
+            return
+
+        # 3. 解析请求参数
+        params = request_data.get("params", {})
+        try:
+            ask_request = AskQuestionRequest(**params)
+        except Exception as e:
+            logger.error(f"请求参数验证失败: {e}")
+            await websocket.send_json(
+                {"type": "error", "message": f"请求参数错误: {str(e)}"}
+            )
+            await websocket.close()
+            return
+
+        # 4. 调用流式服务
+        learning_service = get_learning_service(db)
+
+        async for chunk in learning_service.ask_question_stream(user_id, ask_request):
+            # 发送数据块到客户端
+            await websocket.send_json(chunk)
+            logger.debug(f"WebSocket 发送块: {chunk.get('type', 'unknown')}")
+
+        logger.info("WebSocket 流式响应完成")
+
+    except WebSocketDisconnect:
+        logger.info("WebSocket 客户端主动断开连接")
+    except BailianServiceError as e:
+        logger.error(f"百炼服务错误: {e}")
+        try:
+            await websocket.send_json(
+                {"type": "error", "message": f"AI 服务错误: {str(e)}"}
+            )
+        except:
+            pass
+    except Exception as e:
+        logger.error(f"WebSocket 错误: {e}", exc_info=True)
+        try:
+            await websocket.send_json(
+                {"type": "error", "message": f"服务器错误: {str(e)}"}
+            )
+        except:
+            pass
+    finally:
+        try:
+            await websocket.close()
+            logger.info("WebSocket 连接已关闭")
+        except:
+            pass

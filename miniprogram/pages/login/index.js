@@ -177,7 +177,16 @@ Page({
           response.session_id,
         );
 
-        console.log('登录成功:', { userId: response.user?.id, role: response.user?.role });
+        // 🔧 [修复] 立即同步到 app.globalData
+        const app = getApp();
+        app.globalData.token = response.access_token;
+        app.globalData.userInfo = response.user;
+
+        console.log('登录成功并同步到 globalData:', {
+          userId: response.user?.id,
+          role: response.user?.role,
+          hasToken: !!app.globalData.token,
+        });
 
         // 显示登录成功提示
         wx.showToast({

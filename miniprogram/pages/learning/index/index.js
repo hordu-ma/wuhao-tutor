@@ -764,7 +764,7 @@ const pageObject = {
       // 滚动到底部
       this.scrollToBottom();
 
-      // 4. 调用API - 包含图片 URLs（与 Web 前端对齐）
+      // 4. 准备请求参数
       const requestParams = {
         content: inputText || '请分析这张图片中的内容，如果是学习相关的题目，请详细解答。',
         session_id: this.data.sessionId,
@@ -779,81 +779,207 @@ const pageObject = {
         requestParams.image_urls = imageUrls;
       }
 
-      console.log('发送请求参数:', requestParams);
+      console.log('发送流式请求参数:', requestParams);
 
-      const response = await api.learning.askQuestion(requestParams);
+      // 5. 创建 AI 消息占位符（用于流式更新）
+      const aiMessageId = this.generateMessageId();
+      const aiMessage = {
+        id: aiMessageId,
+        content: '', // 初始为空，流式累积
+        richContent: '', // Markdown 渲染内容
+        type: 'text',
+        sender: 'ai',
+        timestamp: new Date().toISOString(),
+        formattedTime: formatMessageTime(new Date()),
+        status: 'streaming', // 流式状态
+        confidence: 0,
+        sources: [],
+      };
 
-      // 后端返回格式: { question: {...}, answer: {...}, session: {...} }
-      console.log('API响应:', response);
+      // 添加 AI 消息占位符到列表
+      this.setData({
+        messageList: [...this.data.messageList, aiMessage],
+      });
 
-      if (response && response.answer && response.answer.content) {
-        // 更新用户消息状态
-        const updatedUserMessage = {
-          ...userMessage,
-          status: 'sent',
-          id: response.question.id,
-        };
+      let fullContent = ''; // 累积的完整内容
+      let questionId = null;
+      let answerId = null;
 
-        // 创建AI回复消息
-        const aiMessage = {
-          id: response.answer.id,
-          content: response.answer.content,
-          richContent: parseMarkdown(response.answer.content), // 🎯 解析Markdown格式
-          type: 'text',
-          sender: 'ai',
-          timestamp: response.answer.created_at,
-          formattedTime: formatMessageTime(response.answer.created_at), // 🎯 添加格式化时间
-          status: 'received',
-          confidence: response.answer.confidence_score || 0,
-          sources: response.answer.sources || [],
-        }; // 🎯 静默处理错题自动创建（无UI提示）
-        if (response.mistake_created) {
-          console.log('✅ 错题已自动加入复习本:', {
-            category: response.mistake_info?.category,
-            mistakeId: response.mistake_info?.id,
-            nextReview: response.mistake_info?.next_review_date,
-          });
-          // AI在后台默默工作，不打断用户学习流程
+      // 6. 调用 WebSocket 流式 API
+      const response = await api.learning.askQuestionStreamWS(requestParams, chunk => {
+        console.log('[WebSocket Stream Chunk]', {
+          type: chunk.type,
+          contentLength: chunk.content ? chunk.content.length : 0,
+        });
+
+        // 累积内容
+        if (chunk.content) {
+          fullContent += chunk.content;
+        } else if (chunk.full_content) {
+          fullContent = chunk.full_content;
         }
 
-        // 更新消息列表
+        // 实时更新 AI 消息
         const newMessageList = [...this.data.messageList];
-        newMessageList[newMessageList.length - 1] = updatedUserMessage;
-        newMessageList.push(aiMessage);
+        const aiMsgIndex = newMessageList.findIndex(msg => msg.id === aiMessageId);
+
+        if (aiMsgIndex !== -1) {
+          newMessageList[aiMsgIndex] = {
+            ...newMessageList[aiMsgIndex],
+            content: fullContent,
+            richContent: parseMarkdown(fullContent), // 实时渲染 Markdown
+          };
+
+          this.setData({
+            messageList: newMessageList,
+          });
+
+          // 滚动到底部（流式显示时）
+          this.scrollToBottom();
+        }
+      });
+
+      console.log('[Stream Complete]', response);
+
+      // 7. 流式完成后，更新最终状态
+      // 🔧 [修复] 兼容多种响应格式
+      const hasQuestionId = response && response.question_id;
+      const hasContent = fullContent && fullContent.length > 0;
+
+      if (hasQuestionId || (response && response.type === 'done') || hasContent) {
+        questionId = response?.question_id || null;
+        answerId = response?.answer_id || null;
+
+        console.log('[Stream Update] 更新消息状态:', {
+          questionId,
+          answerId,
+          contentLength: fullContent.length,
+        });
+
+        // 更新用户消息状态
+        const newMessageList = [...this.data.messageList];
+        const userMsgIndex = newMessageList.findIndex(msg => msg.id === userMessage.id);
+
+        if (userMsgIndex !== -1) {
+          newMessageList[userMsgIndex] = {
+            ...newMessageList[userMsgIndex],
+            status: 'sent',
+            id: questionId,
+          };
+        }
+
+        // 更新 AI 消息最终状态
+        const aiMsgIndex = newMessageList.findIndex(msg => msg.id === aiMessageId);
+        if (aiMsgIndex !== -1) {
+          newMessageList[aiMsgIndex] = {
+            ...newMessageList[aiMsgIndex],
+            id: answerId || aiMessageId,
+            status: 'received',
+            confidence: 0, // 流式响应暂无 confidence_score
+            sources: [],
+          };
+        }
 
         this.setData({
           messageList: newMessageList,
           isAITyping: false,
         });
 
-        // 🎯 直接显示完整内容，不使用打字机效果（避免截断）
-        this.scrollToBottom();
+        // 🎯 静默处理错题自动创建（无UI提示）
+        if (response.mistake_created) {
+          console.log('✅ 错题已自动加入复习本:', {
+            category: response.mistake_info?.category,
+            mistakeId: response.mistake_info?.id,
+            nextReview: response.mistake_info?.next_review_date,
+          });
+        }
 
         // 更新对话上下文
-        this.updateConversationContext(userMessage, aiMessage);
+        this.updateConversationContext(userMessage, newMessageList[aiMsgIndex]);
 
         // 更新统计
         this.updateQuestionStats();
+
+        console.log('✅ 流式响应处理完成');
+      } else if (!hasContent) {
+        // 只有在完全没有内容时才报错
+        console.error('流式响应无内容:', {
+          response,
+          fullContent,
+          fullContentLength: fullContent.length,
+        });
+        console.error('预期: 至少包含 question_id 或 full_content');
+        throw new Error('AI回复无内容');
       } else {
-        console.error('AI回复格式错误，响应数据:', response);
-        throw new Error('AI回复格式错误');
+        // 有内容但没有 question_id，可能是网络问题导致 done 事件丢失
+        console.warn('⚠️ 流式响应缺少元数据，但有内容:', {
+          contentLength: fullContent.length,
+          response,
+        });
+
+        // 仍然更新 UI，显示已接收的内容
+        const newMessageList = [...this.data.messageList];
+        const aiMsgIndex = newMessageList.findIndex(msg => msg.id === aiMessageId);
+
+        if (aiMsgIndex !== -1) {
+          newMessageList[aiMsgIndex] = {
+            ...newMessageList[aiMsgIndex],
+            status: 'received',
+          };
+        }
+
+        this.setData({
+          messageList: newMessageList,
+          isAITyping: false,
+        });
       }
     } catch (error) {
-      console.error('发送消息失败:', error);
+      console.error('发送消息失败:', {
+        error: error,
+        code: error.code,
+        message: error.message,
+      });
 
       // 更新用户消息状态为失败
       const newMessageList = [...this.data.messageList];
-      const lastMessage = newMessageList[newMessageList.length - 1];
-      lastMessage.status = 'failed';
-      lastMessage.error = error.message;
+      const lastUserMessage = newMessageList.find(
+        msg => msg.sender === 'user' && msg.status === 'sending',
+      );
+
+      if (lastUserMessage) {
+        lastUserMessage.status = 'failed';
+        lastUserMessage.error = error.message;
+      }
+
+      // 移除 AI 占位符消息（如果存在）
+      const streamingMsgIndex = newMessageList.findIndex(msg => msg.status === 'streaming');
+      if (streamingMsgIndex !== -1) {
+        newMessageList.splice(streamingMsgIndex, 1);
+      }
 
       this.setData({
         messageList: newMessageList,
         isAITyping: false,
       });
 
-      // 显示重试选项
-      this.showRetryOption(error.message);
+      // 根据错误类型显示不同提示
+      if (error.code === 'AUTH_ERROR') {
+        wx.showModal({
+          title: '登录已过期',
+          content: '请重新登录后继续使用',
+          confirmText: '去登录',
+          success: res => {
+            if (res.confirm) {
+              wx.reLaunch({
+                url: '/pages/login/index',
+              });
+            }
+          },
+        });
+      } else {
+        // 显示重试选项
+        this.showRetryOption(error.message || '发送失败，请重试');
+      }
     } finally {
       this.setData({ sending: false });
     }

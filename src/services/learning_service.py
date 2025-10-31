@@ -237,6 +237,143 @@ class LearningService:
 
             raise ServiceError(f"提问处理失败: {str(e)}") from e
 
+    async def ask_question_stream(self, user_id: str, request: AskQuestionRequest):
+        """
+        流式提问功能
+
+        Args:
+            user_id: 用户ID
+            request: 提问请求
+
+        Yields:
+            dict: SSE 格式的增量响应
+                - type: "content" | "done" | "error"
+                - content: 增量文本内容
+                - full_content: 累积的完整内容
+                - finish_reason: 完成原因 (null | "stop")
+                - question_id: 问题ID (仅在 type="done" 时)
+                - answer_id: 答案ID (仅在 type="done" 时)
+                - usage: token使用情况 (仅在 type="done" 时)
+        """
+        question = None
+        session = None
+        full_answer_content = ""
+
+        try:
+            # 1. 获取或创建会话
+            session = await self._get_or_create_session(user_id, request)
+            session_id = extract_orm_uuid_str(session, "id")
+
+            # 2. 保存问题（状态为未处理）
+            question = await self._save_question(user_id, session_id, request)
+            question_id = extract_orm_uuid_str(question, "id")
+
+            # 3. 构建AI上下文
+            ai_context = await self._build_ai_context(
+                user_id, session, request.use_context
+            )
+
+            # 4. 构建对话消息
+            messages = await self._build_conversation_messages(
+                session_id,
+                request,
+                ai_context,
+                request.include_history,
+                request.max_history,
+            )
+
+            # 转换为字典格式
+            message_dicts = []
+            for msg in messages:
+                if hasattr(msg, "role") and hasattr(msg, "content"):
+                    msg_dict: Dict[str, Any] = {
+                        "role": msg.role.value,
+                        "content": msg.content,
+                    }
+                    if hasattr(msg, "image_urls") and msg.image_urls:
+                        msg_dict["image_urls"] = msg.image_urls
+                    message_dicts.append(msg_dict)
+                else:
+                    message_dicts.append(msg)
+
+            # 5. 流式调用AI
+            async for chunk in self.bailian_service.chat_completion_stream(
+                messages=message_dicts,
+                context=ai_context,
+                max_tokens=settings.AI_MAX_TOKENS,
+                temperature=settings.AI_TEMPERATURE,
+                top_p=settings.AI_TOP_P,
+            ):
+                # 累积完整内容
+                if chunk.get("content"):
+                    full_answer_content = chunk.get("full_content", "")
+
+                # 发送增量内容
+                yield {
+                    "type": "content",
+                    "content": chunk.get("content", ""),
+                    "full_content": full_answer_content,
+                    "finish_reason": chunk.get("finish_reason"),
+                }
+
+                # 流式完成后保存数据
+                if chunk.get("finish_reason") == "stop":
+                    # 6. 保存答案
+                    answer_data = {
+                        "question_id": question_id,
+                        "content": full_answer_content,
+                        "tokens_used": chunk.get("usage", {}).get("total_tokens", 0),
+                        "model_name": chunk.get(
+                            "model", "qwen-turbo"
+                        ),  # 使用实际调用的模型
+                    }
+                    answer = await self.answer_repo.create(answer_data)
+                    answer_id = extract_orm_uuid_str(answer, "id")
+
+                    # 7. 更新问题状态
+                    await self.question_repo.update(
+                        question_id,
+                        {"is_processed": True},
+                    )
+
+                    # 8. 更新会话统计
+                    tokens_used = chunk.get("usage", {}).get("total_tokens", 0)
+                    await self._update_session_stats(session_id, tokens_used)
+
+                    # 9. 更新学习分析（后台任务，不阻塞响应）
+                    try:
+                        await self._update_learning_analytics(user_id, question, answer)
+                    except Exception as e:
+                        logger.warning(f"更新学习分析失败: {e}")
+
+                    # 10. 发送完成事件
+                    yield {
+                        "type": "done",
+                        "question_id": question_id,
+                        "answer_id": answer_id,
+                        "session_id": session_id,
+                        "usage": chunk.get("usage", {}),
+                        "full_content": full_answer_content,
+                    }
+
+        except BailianServiceError as e:
+            logger.error(f"AI服务调用失败: {e}")
+            yield {"type": "error", "message": f"AI服务暂时不可用: {str(e)}"}
+        except Exception as e:
+            logger.error(f"流式提问处理失败: {e}", exc_info=True)
+
+            # 更新问题状态为失败
+            if question:
+                try:
+                    await self.question_repo.update(
+                        extract_orm_uuid_str(question, "id"),
+                        {"is_processed": False},
+                    )
+                except:
+                    pass
+
+            yield {"type": "error", "message": f"提问处理失败: {str(e)}"}
+
     async def _get_or_create_session(
         self, user_id: str, request: AskQuestionRequest
     ) -> ChatSession:

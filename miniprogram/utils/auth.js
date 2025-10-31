@@ -393,6 +393,21 @@ class AuthManager {
 
       await Promise.all(savePromises);
 
+      // 🔧 [修复] 同步到 app.globalData
+      try {
+        const app = getApp();
+        if (app && app.globalData) {
+          app.globalData.token = accessToken;
+          app.globalData.userInfo = normalizedUserInfo;
+          console.log('✅ 已同步到 app.globalData', {
+            hasToken: !!app.globalData.token,
+            userId: app.globalData.userInfo?.id,
+          });
+        }
+      } catch (appError) {
+        console.warn('⚠️ 同步到 app.globalData 失败（可能在 App 初始化前）:', appError);
+      }
+
       console.log('✅ 用户会话保存成功', {
         userId: userInfo?.id,
         role,
