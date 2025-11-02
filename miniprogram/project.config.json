@@ -147,6 +147,7 @@
   "cloudfunctionTemplateRoot": "cloudfunctionTemplate/",
   "downloadDomain": ["https://t.alicdn.com", "https://at.alicdn.com"],
   "requestDomain": ["https://www.horsduroot.com"],
+  "uploadFileDomain": ["https://www.horsduroot.com"],
   "network": {
     "request": {
       "timeout": 10000

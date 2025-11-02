@@ -30,7 +30,7 @@
                refresher-triggered="{{refreshing}}"
                bindrefresherrefresh="onPullDownRefresh"
                bindscrolltoupper="onLoadMore"
-               bindscroll="onScroll">
+               bindscroll="onScrollOptimized">
 
     <!-- 历史消息加载 -->
     <view class="load-history" wx:if="{{hasMore && messageList.length > 0}}">
@@ -289,9 +289,9 @@
     <text>网络连接已断开</text>
   </view>
 
-  <!-- 滚动到底部按钮 -->
-  <view class="scroll-to-bottom" wx:if="{{showScrollToBottom}}" bindtap="onClickScrollToBottom">
-    <van-icon name="arrow-down" size="16" />
+  <!-- 🔧 [修改] 返回顶部按钮 - 在底部时显示 -->
+  <view class="scroll-to-bottom" wx:if="{{showScrollToTop}}" bindtap="onClickScrollToTop">
+    <van-icon name="arrow-up" size="16" />
   </view>
 
   <!-- 语音录制状态遮罩 -->

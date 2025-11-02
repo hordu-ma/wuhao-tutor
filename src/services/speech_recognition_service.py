@@ -58,7 +58,7 @@ class SpeechRecognitionService:
         """
         使用 AccessKey 获取临时 Token
 
-        Token 有效期为 24 小时，自动缓存和刷新
+        Token 有效期为 24 小时,自动缓存和刷新
 
         Returns:
             str: 访问令牌
@@ -67,13 +67,15 @@ class SpeechRecognitionService:
             SpeechRecognitionError: Token 获取失败
         """
         try:
-            # 检查缓存的 Token 是否有效（提前 1 小时刷新）
+            # 🔧 [修复] 检查缓存的 Token 是否有效（提前 2 小时刷新，避免边界情况）
             current_time = time.time()
-            if self._access_token and current_time < self._token_expire_time - 3600:
-                logger.debug("使用缓存的 Token")
+            if self._access_token and current_time < self._token_expire_time - 7200:
+                logger.debug(
+                    f"使用缓存的 Token（剩余有效期: {(self._token_expire_time - current_time) / 3600:.1f} 小时）"
+                )
                 return self._access_token
 
-            logger.info("正在获取阿里云 NLS Token...")
+            logger.info("Token 即将过期或不存在，正在获取新的阿里云 NLS Token...")
 
             # 使用阿里云POP API的CreateToken接口
             # 构造请求参数

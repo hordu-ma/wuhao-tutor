@@ -108,9 +108,10 @@ const pageObject = {
     currentSubject: 'all',
 
     // 页面配置
-    showScrollToBottom: false, // 显示滚动到底部按钮
+    showScrollToTop: false, // 🔧 [修改] 显示返回顶部按钮（在底部时显示）
     hasMore: false, // 是否有更多历史消息
     loadingHistory: false, // 加载历史消息状态
+    scrollViewHeight: 0, // 🔧 [优化] 滚动视图高度（初始化时计算一次）
 
     // 权限状态
     canAsk: true,
@@ -175,7 +176,41 @@ const pageObject = {
   },
 
   /**
-   * 🔧 [新增] 监听滚动事件 - 检测用户是否正在主动浏览
+   * 🔧 [新增] 防抖函数 - 滚动停止后才执行
+   * @param {Function} func - 需要防抖的函数
+   * @param {number} wait - 等待时间（毫秒）
+   */
+  debounce(func, wait) {
+    let timeout;
+    return function (...args) {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        func.apply(this, args);
+      }, wait);
+    };
+  },
+
+  /**
+   * 🔧 [优化] 计算滚动视图高度 - 仅在初始化时调用一次
+   */
+  async calculateScrollViewHeight() {
+    return new Promise(resolve => {
+      const query = wx.createSelectorQuery();
+      query
+        .select('.chat-messages')
+        .boundingClientRect(rect => {
+          if (rect) {
+            this.setData({ scrollViewHeight: rect.height });
+            console.log('📐 视图高度已计算:', rect.height);
+          }
+          resolve();
+        })
+        .exec();
+    });
+  },
+
+  /**
+   * 🔧 [废弃] 原始 onScroll - 保留用于回滚
    */
   onScroll(e) {
     const { scrollTop, scrollHeight } = e.detail;
@@ -197,7 +232,7 @@ const pageObject = {
           lastScrollTop: scrollTop,
           isUserScrolling: isScrollingUp && !isNearBottom,
           autoScrollEnabled: isNearBottom, // 在底部时允许自动滚动
-          showScrollToBottom: distanceToBottom > 300, // 距离底部超过300px时显示按钮
+          showScrollToTop: isNearBottom, // 🔧 [修改] 在底部时显示"返回顶部"按钮
         });
 
         console.log('📜 滚动状态:', {
@@ -211,6 +246,71 @@ const pageObject = {
   },
 
   /**
+   * 🔧 [优化] 优化版滚动监听 - 内置节流 + 纯计算 + 智能 setData
+   */
+  onScrollOptimized(e) {
+    // ⚡ 内置节流：200ms 内的滚动事件直接丢弃
+    const now = Date.now();
+    if (!this._lastScrollTime) this._lastScrollTime = 0;
+    if (now - this._lastScrollTime < 200) {
+      return; // 直接返回，不处理高频事件
+    }
+    this._lastScrollTime = now;
+
+    const { scrollTop, scrollHeight } = e.detail;
+    const { scrollViewHeight, lastScrollTop } = this.data;
+
+    // 🛡️ 防御性检查：视图高度未初始化时跳过计算
+    if (!scrollViewHeight || scrollViewHeight === 0) {
+      console.warn('⚠️ scrollViewHeight 未初始化，跳过滚动计算');
+      return;
+    }
+
+    // ⚡ 纯计算，无异步操作
+    const distanceToBottom = scrollHeight - scrollTop - scrollViewHeight;
+    const isScrollingUp = scrollTop < lastScrollTop;
+    const isNearBottom = distanceToBottom < 100;
+
+    // 🎯 智能 setData - 只在状态真正变化时更新
+    const newState = {};
+
+    if (scrollTop !== lastScrollTop) {
+      newState.lastScrollTop = scrollTop;
+    }
+
+    const newIsUserScrolling = isScrollingUp && !isNearBottom;
+    if (newIsUserScrolling !== this.data.isUserScrolling) {
+      newState.isUserScrolling = newIsUserScrolling;
+    }
+
+    const newAutoScrollEnabled = isNearBottom;
+    if (newAutoScrollEnabled !== this.data.autoScrollEnabled) {
+      newState.autoScrollEnabled = newAutoScrollEnabled;
+    }
+
+    // 🔧 [修改] 在底部时显示"返回顶部"按钮
+    const newShowScrollToTop = isNearBottom;
+    if (newShowScrollToTop !== this.data.showScrollToTop) {
+      newState.showScrollToTop = newShowScrollToTop;
+    }
+
+    // ✅ 仅在有状态变化时才调用 setData
+    if (Object.keys(newState).length > 0) {
+      this.setData(newState);
+      console.log('📜 滚动状态更新:', {
+        scrollTop,
+        distanceToBottom,
+        isNearBottom,
+        showScrollToTop:
+          newState.showScrollToTop !== undefined
+            ? newState.showScrollToTop
+            : this.data.showScrollToTop,
+        changedFields: Object.keys(newState),
+      });
+    }
+  },
+
+  /**
    * 生命周期函数--监听页面加载
    */
   async onLoad(options) {
@@ -219,11 +319,18 @@ const pageObject = {
     // 🔧 [初始化] 初始化节流滚动函数
     this.scrollToBottomThrottled = this.throttle(this.scrollToBottomSmart, 500);
 
+    // 🔧 [优化] 初始化滚动节流状态（内置节流，不用高阶函数）
+    this._lastScrollTime = 0;
+
+    // 🔧 [修复] 初始化录音管理器（一次性绑定监听器）
+    this.initRecorderManager();
+
     try {
       await this.initUserInfo();
       await this.initPermissions();
       await this.initSession();
       // await this.initMCPContext(); // 暂时禁用MCP功能
+
       await this.initChat();
       this.initNetworkMonitor();
       await this.loadRecommendedQuestions();
@@ -242,6 +349,20 @@ const pageObject = {
     } catch (error) {
       console.error('页面初始化失败:', error);
       this.showError('页面加载失败');
+    }
+  },
+
+  /**
+   * 🔧 [新增] 生命周期函数--监听页面初次渲染完成
+   * 在 DOM 渲染完成后计算视图高度
+   */
+  async onReady() {
+    try {
+      // DOM 已渲染，安全计算滚动视图高度
+      await this.calculateScrollViewHeight();
+      console.log('✅ 页面渲染完成，视图高度:', this.data.scrollViewHeight);
+    } catch (error) {
+      console.error('❌ 计算视图高度失败:', error);
     }
   },
 
@@ -305,6 +426,34 @@ const pageObject = {
         cancelVoice: false,
       });
     }
+  },
+
+  /**
+   * 🔧 [新增] 生命周期函数--监听页面卸载
+   */
+  onUnload() {
+    console.log('📤 页面卸载，清理资源...');
+
+    // 清理录音管理器
+    if (this.recorderManager) {
+      if (this.data.recordStatus === 'recording') {
+        this.recorderManager.stop();
+      }
+    }
+
+    // 清理计时器
+    if (this.recordTimer) {
+      clearInterval(this.recordTimer);
+      this.recordTimer = null;
+    }
+
+    // 清理 WebSocket 连接
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
+
+    console.log('✅ 页面资源已清理');
   },
 
   /**
@@ -1289,15 +1438,26 @@ const pageObject = {
   },
 
   /**
-   * 🔧 [新增] 点击"回到底部"按钮
-   * 用户主动点击时，重置滚动状态并滚动到底部
+   * 🔧 [修改] 点击"返回顶部"按钮
+   * 快速滚动到对话开始位置
+   */
+  onClickScrollToTop() {
+    console.log('🔼 用户点击返回顶部按钮');
+    this.setData({
+      scrollTop: 0, // 滚动到顶部
+      showScrollToTop: false, // 隐藏按钮
+    });
+  },
+
+  /**
+   * 🔧 [废弃] 点击"回到底部"按钮 - 保留用于回滚
    */
   onClickScrollToBottom() {
     console.log('🔽 用户点击回到底部按钮');
     this.setData({
       isUserScrolling: false,
       autoScrollEnabled: true,
-      showScrollToBottom: false,
+      showScrollToTop: false,
     });
     this.scrollToBottom();
   },
@@ -1462,22 +1622,16 @@ const pageObject = {
   },
 
   /**
-   * 开始录音
+   * 🔧 [新增] 初始化录音管理器
+   * 在页面加载时调用一次，避免重复绑定监听器
    */
-  startVoiceRecord() {
-    if (this.data.recordStatus !== 'idle') return;
-
-    this.setData({
-      recordStatus: 'recording',
-      recordDuration: 0,
-    });
-
+  initRecorderManager() {
     const recorderManager = wx.getRecorderManager();
     this.recorderManager = recorderManager;
 
     // 录音开始
     recorderManager.onStart(() => {
-      console.log('开始录音');
+      console.log('✅ 录音开始');
 
       // 开始计时
       this.recordTimer = setInterval(() => {
@@ -1493,10 +1647,9 @@ const pageObject = {
 
     // 录音结束
     recorderManager.onStop(res => {
-      console.log('===== 录音结束回调触发 =====');
+      console.log('===== 录音结束 =====');
       console.log('录音结果:', res);
       console.log('当前录音时长:', this.data.recordDuration, '秒');
-      console.log('当前状态:', this.data.recordStatus);
 
       // 清除计时器
       if (this.recordTimer) {
@@ -1507,7 +1660,7 @@ const pageObject = {
 
       // 录音时长不足1秒，提示
       if (this.data.recordDuration < 1) {
-        console.log('录音时间太短，不上传');
+        console.log('⚠️ 录音时间太短，不上传');
         this.setData({ recordStatus: 'idle' });
         wx.showToast({
           title: '录音时间太短',
@@ -1517,15 +1670,14 @@ const pageObject = {
       }
 
       // 上传语音文件
-      console.log('开始上传语音文件...');
+      console.log('📤 开始上传语音文件...');
       this.setData({ recordStatus: 'uploading' });
       this.uploadVoiceFile(res.tempFilePath);
     });
 
     // 录音错误
     recorderManager.onError(err => {
-      console.error('===== 录音错误 =====');
-      console.error('错误对象:', err);
+      console.error('❌ 录音错误:', err);
       console.error('错误码:', err.errCode);
       console.error('错误信息:', err.errMsg);
 
@@ -1537,15 +1689,13 @@ const pageObject = {
       this.setData({ recordStatus: 'idle' });
 
       // 根据错误码显示不同提示
-      let errorMsg = '录音失败，请重试';
+      let errorMsg = '录音启动失败，请再试一次';
       if (err.errMsg) {
         const msg = err.errMsg.toLowerCase();
         if (msg.includes('系统') || msg.includes('system') || msg.includes('busy')) {
           errorMsg = '系统繁忙，请稍后再试';
         } else if (msg.includes('权限') || msg.includes('auth') || msg.includes('permission')) {
           errorMsg = '没有录音权限，请在设置中开启';
-        } else if (msg.includes('fail')) {
-          errorMsg = '录音启动失败，请再试一次';
         }
       }
 
@@ -1557,7 +1707,6 @@ const pageObject = {
         confirmText: '再试',
         success: res => {
           if (res.confirm) {
-            // 用户点击再试，提示重新长按
             wx.showToast({
               title: '请再次长按语音按钮',
               icon: 'none',
@@ -1567,12 +1716,26 @@ const pageObject = {
       });
     });
 
-    // 开始录音（使用 WAV 格式，与阿里云 ASR 兼容性最好）
-    recorderManager.start({
+    console.log('✅ 录音管理器初始化完成');
+  },
+
+  /**
+   * 🔧 [简化] 开始录音 - 使用已初始化的 recorderManager
+   */
+  startVoiceRecord() {
+    if (this.data.recordStatus !== 'idle') return;
+
+    this.setData({
+      recordStatus: 'recording',
+      recordDuration: 0,
+    });
+
+    // 🔧 [修复] 直接使用已初始化的 recorderManager，不再重复绑定监听器
+    this.recorderManager.start({
       duration: 60000, // 最长录音60秒
       sampleRate: 16000, // 采样率 16kHz（阿里云 ASR 要求）
       numberOfChannels: 1, // 单声道
-      format: 'wav', // 🔧 WAV 格式（修复 ASR NO_VALID_AUDIO_ERROR）
+      format: 'wav', // WAV 格式（修复 ASR NO_VALID_AUDIO_ERROR）
       frameSize: 50, // 帧大小，WAV 格式推荐参数
     });
   },
@@ -1656,6 +1819,14 @@ const pageObject = {
               console.log('解析后的data:', data);
               console.log('data.success:', data.success);
               console.log('data.data:', data.data);
+
+              // 🔧 [修复] 兼容 FastAPI 错误响应格式
+              if (res.statusCode !== 200) {
+                const errorMsg = data.detail || data.message || '语音转换失败';
+                console.error('服务器返回错误 (HTTP ' + res.statusCode + '):', errorMsg);
+                reject(new Error(errorMsg));
+                return;
+              }
 
               if (data.success) {
                 resolve(data.data);
