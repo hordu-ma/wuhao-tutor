@@ -246,32 +246,37 @@ const pageObject = {
   },
 
   /**
-   * 🔧 [优化] 优化版滚动监听 - 内置节流 + 纯计算 + 智能 setData
+   * 🔧 [极简版] 滚动监听 - 移除节流避免微信误判
    */
   onScrollOptimized(e) {
-    // ⚡ 内置节流：200ms 内的滚动事件直接丢弃
-    const now = Date.now();
-    if (!this._lastScrollTime) this._lastScrollTime = 0;
-    if (now - this._lastScrollTime < 200) {
-      return; // 直接返回，不处理高频事件
-    }
-    this._lastScrollTime = now;
-
     const { scrollTop, scrollHeight } = e.detail;
     const { scrollViewHeight, lastScrollTop } = this.data;
 
-    // 🛡️ 防御性检查：视图高度未初始化时跳过计算
+    // 🛡️ 防御性处理：scrollViewHeight 未初始化时异步重试计算
     if (!scrollViewHeight || scrollViewHeight === 0) {
-      console.warn('⚠️ scrollViewHeight 未初始化，跳过滚动计算');
-      return;
+      console.warn('⚠️ scrollViewHeight 未初始化，异步重新计算');
+      // 触发异步重新计算，不阻止当前滚动事件
+      this.calculateScrollViewHeight().catch(err => {
+        console.error('❌ 异步计算 scrollViewHeight 失败:', err);
+      });
+
+      // 🔧 使用简化逻辑处理滚动，确保滚动事件被正常处理
+      const simpleShowScrollToTop = scrollTop > 200;
+      if (simpleShowScrollToTop !== this.data.showScrollToTop) {
+        this.setData({
+          showScrollToTop: simpleShowScrollToTop,
+          lastScrollTop: scrollTop,
+        });
+      }
+      return; // 本次滚动已处理，等待下次重新计算完成
     }
 
     // ⚡ 纯计算，无异步操作
     const distanceToBottom = scrollHeight - scrollTop - scrollViewHeight;
     const isScrollingUp = scrollTop < lastScrollTop;
-    const isNearBottom = distanceToBottom < 100;
+    const isNearBottom = distanceToBottom < 100; // 距离底部 < 100px
 
-    // 🎯 智能 setData - 只在状态真正变化时更新
+    // ✅ 移除节流逻辑，每次滚动都处理（避免微信误判为未响应）
     const newState = {};
 
     if (scrollTop !== lastScrollTop) {
@@ -288,8 +293,8 @@ const pageObject = {
       newState.autoScrollEnabled = newAutoScrollEnabled;
     }
 
-    // 🔧 [修改] 在底部时显示"返回顶部"按钮
-    const newShowScrollToTop = isNearBottom;
+    // 🔧 [修复] 不在底部时显示"返回顶部"按钮（滚动超过 200px）
+    const newShowScrollToTop = scrollTop > 200;
     if (newShowScrollToTop !== this.data.showScrollToTop) {
       newState.showScrollToTop = newShowScrollToTop;
     }
@@ -297,16 +302,6 @@ const pageObject = {
     // ✅ 仅在有状态变化时才调用 setData
     if (Object.keys(newState).length > 0) {
       this.setData(newState);
-      console.log('📜 滚动状态更新:', {
-        scrollTop,
-        distanceToBottom,
-        isNearBottom,
-        showScrollToTop:
-          newState.showScrollToTop !== undefined
-            ? newState.showScrollToTop
-            : this.data.showScrollToTop,
-        changedFields: Object.keys(newState),
-      });
     }
   },
 
@@ -324,6 +319,10 @@ const pageObject = {
 
     // 🔧 [修复] 初始化录音管理器（一次性绑定监听器）
     this.initRecorderManager();
+
+    // 🔧 [新增] 初始化会话缓存变量
+    this._sessionsCache = null; // 会话列表缓存
+    this._sessionsCacheTime = 0; // 缓存时间戳
 
     try {
       await this.initUserInfo();
@@ -1033,6 +1032,10 @@ const pageObject = {
       let questionId = null;
       let answerId = null;
 
+      // 🔧 [新增] 流式更新节流器 - 避免 setData 过于频繁
+      let streamUpdateTimer = null;
+      let pendingUpdate = false;
+
       // 6. 调用 WebSocket 流式 API
       const response = await api.learning.askQuestionStreamWS(requestParams, chunk => {
         console.log('[WebSocket Stream Chunk]', {
@@ -1047,7 +1050,51 @@ const pageObject = {
           fullContent = chunk.full_content;
         }
 
-        // 实时更新 AI 消息
+        // 🔧 [修复] 节流更新 UI（300ms 内的多次 chunk 合并成一次 setData）
+        pendingUpdate = true;
+
+        if (!streamUpdateTimer) {
+          streamUpdateTimer = setTimeout(() => {
+            if (pendingUpdate) {
+              // 实时更新 AI 消息
+              const newMessageList = [...this.data.messageList];
+              const aiMsgIndex = newMessageList.findIndex(msg => msg.id === aiMessageId);
+
+              if (aiMsgIndex !== -1) {
+                newMessageList[aiMsgIndex] = {
+                  ...newMessageList[aiMsgIndex],
+                  content: fullContent,
+                  richContent: parseMarkdown(fullContent), // 实时渲染 Markdown
+                };
+
+                this.setData({
+                  messageList: newMessageList,
+                });
+
+                console.log('🔄 [节流更新] setData 执行，内容长度:', fullContent.length);
+
+                // 🔧 [修复] 使用节流智能滚动，避免强制锁定用户滚动
+                this.scrollToBottomThrottled();
+              }
+
+              pendingUpdate = false;
+            }
+
+            streamUpdateTimer = null;
+          }, 300); // 300ms 节流（降低 setData 频率从每 100ms 到每 300ms）
+        }
+      });
+
+      console.log('[Stream Complete]', response);
+
+      // 🔧 [新增] 清理流式更新定时器，确保最后一次更新执行
+      if (streamUpdateTimer) {
+        clearTimeout(streamUpdateTimer);
+        streamUpdateTimer = null;
+      }
+
+      // 🔧 [新增] 立即执行最后一次更新（如果有挂起的更新）
+      if (pendingUpdate) {
         const newMessageList = [...this.data.messageList];
         const aiMsgIndex = newMessageList.findIndex(msg => msg.id === aiMessageId);
 
@@ -1055,19 +1102,18 @@ const pageObject = {
           newMessageList[aiMsgIndex] = {
             ...newMessageList[aiMsgIndex],
             content: fullContent,
-            richContent: parseMarkdown(fullContent), // 实时渲染 Markdown
+            richContent: parseMarkdown(fullContent),
           };
 
           this.setData({
             messageList: newMessageList,
           });
 
-          // 🔧 [修复] 使用节流智能滚动，避免强制锁定用户滚动
-          this.scrollToBottomThrottled();
+          console.log('✅ [流式完成] 最终 setData 执行，内容长度:', fullContent.length);
         }
-      });
 
-      console.log('[Stream Complete]', response);
+        pendingUpdate = false;
+      }
 
       // 7. 流式完成后，更新最终状态
       // 🔧 [修复] 兼容多种响应格式
@@ -1428,13 +1474,20 @@ const pageObject = {
 
   /**
    * 滚动到底部
+   * 🔧 [优化] 减少 setData 频率，使用更大的随机值避免缓存
    */
   scrollToBottom() {
-    setTimeout(() => {
-      this.setData({
-        scrollTop: 999999,
-      });
-    }, 100);
+    // 🔧 [优化] 只在非流式回复时执行（流式回复期间已有节流逻辑）
+    if (!this._scrollBottomLock) {
+      this._scrollBottomLock = true;
+
+      setTimeout(() => {
+        this.setData({
+          scrollTop: 999999 + Math.random(), // 加随机数避免微信优化导致不滚动
+        });
+        this._scrollBottomLock = false;
+      }, 100);
+    }
   },
 
   /**
@@ -2674,10 +2727,25 @@ const pageObject = {
   },
 
   /**
-   * 加载最近的会话列表
+   * 🔧 [新增] 加载最近的会话列表（带缓存优化）
    */
   async loadRecentSessions() {
+    // 🔧 [优化] 5秒内使用缓存，避免重复请求触发限流
+    const now = Date.now();
+    const CACHE_TTL = 5000; // 5秒缓存
+
+    if (this._sessionsCache && this._sessionsCacheTime) {
+      const cacheAge = now - this._sessionsCacheTime;
+      if (cacheAge < CACHE_TTL) {
+        console.log(`📦 使用缓存的会话列表（缓存${Math.round(cacheAge / 1000)}秒前）`);
+        this.setData({ recentSessions: this._sessionsCache });
+        return;
+      }
+    }
+
     try {
+      console.log('🔄 从后端加载会话列表...');
+
       // 调用后端API获取历史会话
       const response = await api.learning.getSessions({
         page: 1,
@@ -2699,13 +2767,25 @@ const pageObject = {
         timeText: this.formatSessionTime(new Date(session.last_active_at || session.updated_at)),
       }));
 
-      console.log(`加载了 ${sessions.length} 个会话`);
+      console.log(`✅ 加载了 ${sessions.length} 个会话`);
+
+      // 🔧 [优化] 更新缓存
+      this._sessionsCache = sessions;
+      this._sessionsCacheTime = now;
 
       this.setData({
         recentSessions: sessions,
       });
     } catch (error) {
       console.error('加载最近会话失败:', error);
+
+      // 🔧 [优化] 如果有缓存，即使过期也使用（降级策略）
+      if (this._sessionsCache) {
+        console.log('⚠️ API失败，使用过期缓存');
+        this.setData({ recentSessions: this._sessionsCache });
+        return;
+      }
+
       // 失败时使用模拟数据作为降级方案
       const mockSessions = this.generateMockSessions();
       this.setData({

@@ -79,9 +79,13 @@
 
 /* 聊天消息区域 */
 .chat-messages {
-  flex: 1;
+  /* ✅ 关键修复：scroll-view 必须有明确的高度才能滚动 */
+  height: 100%;
+  width: 100%;
   padding-top: calc(120rpx + env(safe-area-inset-top));
   padding-bottom: 200rpx;
+  /* 确保滚动容器占满父容器 */
+  box-sizing: border-box;
 }
 
 /* 历史消息加载 */
