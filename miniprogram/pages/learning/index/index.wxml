@@ -29,7 +29,8 @@
                refresher-enabled="{{true}}"
                refresher-triggered="{{refreshing}}"
                bindrefresherrefresh="onPullDownRefresh"
-               bindscrolltoupper="onLoadMore">
+               bindscrolltoupper="onLoadMore"
+               bindscroll="onScroll">
 
     <!-- 历史消息加载 -->
     <view class="load-history" wx:if="{{hasMore && messageList.length > 0}}">
@@ -289,7 +290,7 @@
   </view>
 
   <!-- 滚动到底部按钮 -->
-  <view class="scroll-to-bottom" wx:if="{{showScrollToBottom}}" bindtap="scrollToBottom">
+  <view class="scroll-to-bottom" wx:if="{{showScrollToBottom}}" bindtap="onClickScrollToBottom">
     <van-icon name="arrow-down" size="16" />
   </view>
 

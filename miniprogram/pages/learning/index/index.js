@@ -60,6 +60,11 @@ const pageObject = {
     refreshing: false,
     scrollTop: 0, // 滚动位置
 
+    // 🔧 [新增] 智能滚动控制
+    isUserScrolling: false, // 用户正在主动滚动
+    lastScrollTop: 0, // 上次滚动位置
+    autoScrollEnabled: true, // 自动滚动开关（用户可在底部时启用）
+
     // 功能状态
     recordStatus: 'idle', // 录音状态: idle, recording, uploading
     recordDuration: 0, // 录音时长（秒）
@@ -139,10 +144,80 @@ const pageObject = {
   },
 
   /**
+   * 🔧 [新增] 节流函数工具
+   * @param {Function} func - 需要节流的函数
+   * @param {number} wait - 等待时间（毫秒）
+   * @returns {Function} 节流后的函数
+   */
+  throttle(func, wait) {
+    let timeout = null;
+    let previous = 0;
+
+    return function (...args) {
+      const now = Date.now();
+      const remaining = wait - (now - previous);
+
+      if (remaining <= 0) {
+        if (timeout) {
+          clearTimeout(timeout);
+          timeout = null;
+        }
+        previous = now;
+        func.apply(this, args);
+      } else if (!timeout) {
+        timeout = setTimeout(() => {
+          previous = Date.now();
+          timeout = null;
+          func.apply(this, args);
+        }, remaining);
+      }
+    };
+  },
+
+  /**
+   * 🔧 [新增] 监听滚动事件 - 检测用户是否正在主动浏览
+   */
+  onScroll(e) {
+    const { scrollTop, scrollHeight } = e.detail;
+    const query = wx.createSelectorQuery();
+
+    query
+      .select('.chat-messages')
+      .boundingClientRect(rect => {
+        if (!rect) return;
+
+        const scrollViewHeight = rect.height;
+        const distanceToBottom = scrollHeight - scrollTop - scrollViewHeight;
+
+        // 用户向上滚动（浏览历史）时禁用自动滚动
+        const isScrollingUp = scrollTop < this.data.lastScrollTop;
+        const isNearBottom = distanceToBottom < 100; // 距离底部小于100px
+
+        this.setData({
+          lastScrollTop: scrollTop,
+          isUserScrolling: isScrollingUp && !isNearBottom,
+          autoScrollEnabled: isNearBottom, // 在底部时允许自动滚动
+          showScrollToBottom: distanceToBottom > 300, // 距离底部超过300px时显示按钮
+        });
+
+        console.log('📜 滚动状态:', {
+          scrollTop,
+          distanceToBottom,
+          isUserScrolling: this.data.isUserScrolling,
+          autoScrollEnabled: this.data.autoScrollEnabled,
+        });
+      })
+      .exec();
+  },
+
+  /**
    * 生命周期函数--监听页面加载
    */
   async onLoad(options) {
     console.log('AI问答页面加载', options);
+
+    // 🔧 [初始化] 初始化节流滚动函数
+    this.scrollToBottomThrottled = this.throttle(this.scrollToBottomSmart, 500);
 
     try {
       await this.initUserInfo();
@@ -761,7 +836,11 @@ const pageObject = {
         isAITyping: true,
       });
 
-      // 滚动到底部
+      // 🔧 [优化] 发送消息后立即滚动（用户主动操作，重置滚动状态）
+      this.setData({
+        isUserScrolling: false,
+        autoScrollEnabled: true,
+      });
       this.scrollToBottom();
 
       // 4. 准备请求参数
@@ -834,8 +913,8 @@ const pageObject = {
             messageList: newMessageList,
           });
 
-          // 滚动到底部（流式显示时）
-          this.scrollToBottom();
+          // 🔧 [修复] 使用节流智能滚动，避免强制锁定用户滚动
+          this.scrollToBottomThrottled();
         }
       });
 
@@ -1157,7 +1236,8 @@ const pageObject = {
         lastMessage.richContent = parseMarkdown(currentText);
 
         this.setData({ messageList });
-        this.scrollToBottom();
+        // 🔧 [修复] 打字机效果使用节流滚动
+        this.scrollToBottomThrottled();
 
         index++;
       } else {
@@ -1207,6 +1287,39 @@ const pageObject = {
       });
     }, 100);
   },
+
+  /**
+   * 🔧 [新增] 点击"回到底部"按钮
+   * 用户主动点击时，重置滚动状态并滚动到底部
+   */
+  onClickScrollToBottom() {
+    console.log('🔽 用户点击回到底部按钮');
+    this.setData({
+      isUserScrolling: false,
+      autoScrollEnabled: true,
+      showScrollToBottom: false,
+    });
+    this.scrollToBottom();
+  },
+
+  /**
+   * 🔧 [新增] 智能滚动到底部 - 只在用户未主动滚动时执行
+   */
+  scrollToBottomSmart() {
+    // 检查是否允许自动滚动
+    if (!this.data.autoScrollEnabled || this.data.isUserScrolling) {
+      console.log('⏸️ 用户正在浏览历史，跳过自动滚动');
+      return;
+    }
+
+    this.scrollToBottom();
+  },
+
+  /**
+   * 🔧 [新增] 节流版滚动到底部 - 用于流式响应
+   * 减少频繁的 setData 调用，避免性能问题和触发限流
+   */
+  scrollToBottomThrottled: null, // 在 onLoad 中初始化
 
   /**
    * 显示重试选项
