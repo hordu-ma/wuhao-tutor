@@ -215,89 +215,72 @@ class UserKnowledgeGraphSnapshot(BaseModel):
 
     period_type = Column(
         String(20),
-        nullable=False,
+        nullable=True,
+        default="manual",
         comment="周期类型（daily/weekly/monthly/manual）",
     )
 
-    # 知识图谱数据
-    graph_data = Column(
+    # 知识图谱数据 - 使用现有生产环境表的字段名
+    knowledge_points = Column(
         JSON,
-        nullable=False,
-        comment="知识图谱结构数据（节点+边的JSON）",
+        nullable=True,
+        comment="知识图谱节点数据（知识点列表）",
     )
 
-    mastery_distribution = Column(
-        JSON,
-        nullable=False,
-        comment="掌握度分布统计（各掌握度区间的知识点数量）",
-    )
-
-    weak_knowledge_chains = Column(
+    weak_chains = Column(
         JSON,
         nullable=True,
         comment="识别的薄弱知识链列表",
     )
 
-    # 统计指标
-    total_knowledge_points = Column(
-        Integer,
-        default=0,
-        nullable=False,
-        comment="知识点总数",
-    )
-
-    mastered_count = Column(
-        Integer,
-        default=0,
-        nullable=False,
-        comment="已掌握知识点数",
-    )
-
-    learning_count = Column(
-        Integer,
-        default=0,
-        nullable=False,
-        comment="学习中知识点数",
-    )
-
-    weak_count = Column(
-        Integer,
-        default=0,
-        nullable=False,
-        comment="薄弱知识点数",
-    )
-
-    # AI分析结果
-    ai_analysis = Column(
+    strong_areas = Column(
         JSON,
         nullable=True,
-        comment="AI学情分析结果（学习画像、建议等）",
+        comment="优势知识领域",
     )
 
+    # 统计指标 - 使用现有表字段
+    total_mistakes = Column(
+        Integer,
+        default=0,
+        nullable=True,
+        comment="错题总数",
+    )
+
+    average_mastery = Column(
+        Numeric(3, 2),
+        nullable=True,
+        comment="平均掌握度",
+    )
+
+    improvement_trend = Column(
+        String(20),
+        nullable=True,
+        comment="进步趋势（improving/stable/declining）",
+    )
+
+    # AI分析结果 - 使用现有表字段
     learning_profile = Column(
-        JSON,
+        Text,
         nullable=True,
-        comment="学习画像（优势/劣势/学习特点等）",
+        comment="学习画像文本",
     )
 
-    recommended_focus = Column(
-        JSON,
+    ai_recommendations = Column(
+        Text,
         nullable=True,
-        comment="推荐重点学习的知识点列表",
+        comment="AI推荐建议文本",
     )
 
-    # 进步追踪
-    previous_snapshot_id = Column(
-        String(36) if is_sqlite else UUID(as_uuid=True),  # type: ignore[arg-type]
-        nullable=True,
-        comment="上一次快照ID（用于进步对比）",
-    )
-
-    progress_metrics = Column(
+    # 新增字段（通过ALTER TABLE添加）
+    graph_data = Column(
         JSON,
         nullable=True,
-        comment="进步指标（相比上次快照的变化）",
+        comment="完整知识图谱结构数据（用于AI分析）",
     )
+
+    # 重写基类字段 - 适配生产环境表结构（没有updated_at）
+    updated_at = None  # type: ignore
 
     def __repr__(self) -> str:
         return f"<UserKnowledgeGraphSnapshot(user_id='{self.user_id}', subject='{self.subject}', snapshot_date='{self.snapshot_date}')>"

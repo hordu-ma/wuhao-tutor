@@ -1,0 +1,18 @@
+[Unit]
+Description=五好伴学 - 每日知识图谱快照任务
+Documentation=https://github.com/yourusername/wuhao-tutor
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/wuhao-tutor
+EnvironmentFile=/opt/wuhao-tutor/.env.production
+Environment="PATH=/opt/wuhao-tutor/venv/bin:/usr/local/bin:/usr/bin"
+Environment="PYTHONPATH=/opt/wuhao-tutor"
+ExecStart=/opt/wuhao-tutor/venv/bin/python3 /opt/wuhao-tutor/scripts/daily_snapshot.py
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=wuhao-snapshot
+
+[Install]
+WantedBy=multi-user.target

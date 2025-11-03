@@ -326,6 +326,36 @@ async def get_learning_curve(
         )
 
 
+# ========== 智能复习推荐 ==========
+
+
+@router.get(
+    "/review/recommendations",
+    response_model=list,
+    summary="获取智能复习推荐",
+    description="基于用户学情、遗忘曲线、前置知识点等多维度推荐复习路径",
+)
+async def get_review_recommendations(
+    subject: str = Query(..., description="学科"),
+    limit: int = Query(10, ge=1, le=50, description="推荐数量"),
+    user_id: UUID = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取智能复习推荐"""
+    try:
+        service = KnowledgeGraphService(db)
+        recommendations = await service.recommend_review_path(user_id, subject, limit)
+
+        return recommendations
+
+    except Exception as e:
+        logger.error(f"获取复习推荐失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取复习推荐失败: {str(e)}",
+        )
+
+
 # ========== 知识点掌握度 ==========
 
 

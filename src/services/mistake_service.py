@@ -116,7 +116,9 @@ class MistakeService:
             ),
         )
 
-    async def _to_detail_response(self, mistake: MistakeRecord) -> MistakeDetailResponse:
+    async def _to_detail_response(
+        self, mistake: MistakeRecord
+    ) -> MistakeDetailResponse:
         """转换为详情响应"""
         from src.utils.type_converters import (
             extract_orm_int,
@@ -152,7 +154,7 @@ class MistakeService:
         ai_feedback = getattr(mistake, "ai_feedback", None)
         ai_feedback_dict = {}
         ai_full_answer = None  # 完整的AI回答文本（来自answers表）
-        
+
         if ai_feedback:
             if isinstance(ai_feedback, dict):
                 ai_feedback_dict = ai_feedback
@@ -162,40 +164,45 @@ class MistakeService:
                     ai_feedback_dict = parsed if isinstance(parsed, dict) else {}
                 except (json.JSONDecodeError, ValueError):
                     pass
-        
+
         # 🆕 [方案A优化] 如果来自learning模块，尝试从answers表获取完整AI回答
         source = extract_orm_str(mistake, "source")
         source_question_id = extract_orm_str(mistake, "source_question_id")
-        
+
         if source == "learning" and source_question_id:
             try:
                 from sqlalchemy import select
+
                 from src.models.learning import Answer
-                
+
                 # 查询answers表获取AI的完整回答
-                stmt = select(Answer.content).where(Answer.question_id == source_question_id)
+                stmt = select(Answer.content).where(
+                    Answer.question_id == source_question_id
+                )
                 result = await self.db.execute(stmt)
                 answer_row = result.scalar_one_or_none()
-                
+
                 if answer_row:
                     ai_full_answer = answer_row
-                    logger.info(f"从answers表获取到完整AI回答，长度: {len(ai_full_answer)} 字符")
+                    logger.info(
+                        f"从answers表获取到完整AI回答，长度: {len(ai_full_answer)} 字符"
+                    )
             except Exception as e:
                 logger.warning(f"获取answers表数据失败: {e}")
                 # 降级处理，继续使用ai_feedback
-        
+
         # 提取题目内容(优先OCR,其次AI分析)
         question_content = extract_orm_str(mistake, "ocr_text") or ""
         if not question_content and ai_feedback_dict:
             question_content = (
-                ai_feedback_dict.get("question", "") 
+                ai_feedback_dict.get("question", "")
                 or ai_feedback_dict.get("content", "")
                 or ai_feedback_dict.get("题目", "")
             )
-        
+
         # 提取解析/答案说明（优先使用完整AI回答）
         explanation = ai_full_answer if ai_full_answer else None
-        
+
         if not explanation and ai_feedback_dict:
             explanation = (
                 ai_feedback_dict.get("analysis", "")
@@ -203,7 +210,7 @@ class MistakeService:
                 or ai_feedback_dict.get("解析", "")
                 or ai_feedback_dict.get("feedback", "")
             )
-        
+
         # 提取正确答案(优先数据库,其次AI反馈)
         correct_answer = extract_orm_str(mistake, "correct_answer")
         if not correct_answer and ai_feedback_dict:
@@ -217,28 +224,34 @@ class MistakeService:
                 or ai_feedback_dict.get("solution", "")
                 or ai_feedback_dict.get("解答", "")
             )
-        
+
         # 🔧 [方案A] 智能答案提取与验证
         if correct_answer:
             correct_answer = correct_answer.strip()
-            
+
             # 检查是否为无效占位符
             is_invalid = (
                 not correct_answer  # 空字符串
-                or correct_answer in ["**", "*", "小**", "***", "？", "?", "-", "--"]  # 无意义符号
-                or (len(correct_answer) <= 3 and all(c in "*_-?？" for c in correct_answer))  # 纯符号
+                or correct_answer
+                in ["**", "*", "小**", "***", "？", "?", "-", "--"]  # 无意义符号
+                or (
+                    len(correct_answer) <= 3
+                    and all(c in "*_-?？" for c in correct_answer)
+                )  # 纯符号
             )
-            
+
             if is_invalid and (explanation or ai_full_answer):
                 # 🆕 优先从完整AI回答中提取答案
                 text_to_extract = ai_full_answer if ai_full_answer else explanation
-                
+
                 # 尝试从文本中提取答案(使用正则匹配)
                 if text_to_extract:
                     # 🔍 先检测是否为多小题题目
-                    multi_answer_pattern = r'✅\s*\*\*答案[：:]\s*'
-                    multi_answer_matches = re.findall(multi_answer_pattern, text_to_extract, re.MULTILINE)
-                    
+                    multi_answer_pattern = r"✅\s*\*\*答案[：:]\s*"
+                    multi_answer_matches = re.findall(
+                        multi_answer_pattern, text_to_extract, re.MULTILINE
+                    )
+
                     # 如果有多个答案标记（≥2个），说明是多小题，不提取单个答案
                     if len(multi_answer_matches) >= 2:
                         correct_answer = "📖 本题包含多个小题，答案请参考解析"
@@ -246,12 +259,12 @@ class MistakeService:
                     else:
                         # 单小题，尝试提取答案
                         patterns = [
-                            r'✅\s*\*\*答案[：:]\s*(.+?)\*\*',  # Markdown格式
-                            r'✅\s*答案[：:]\s*(.+?)(?:\n|$)',  # 带勾格式
-                            r'正确答案[：:是为]\s*[：:]?\s*(.+?)(?:[。\n；;]|$)',
-                            r'标准答案[：:是为]\s*[：:]?\s*(.+?)(?:[。\n；;]|$)',
-                            r'参考答案[：:是为]\s*[：:]?\s*(.+?)(?:[。\n；;]|$)',
-                            r'答案[：:是为]\s*[：:]?\s*(.+?)(?:[。\n；;]|$)',
+                            r"✅\s*\*\*答案[：:]\s*(.+?)\*\*",  # Markdown格式
+                            r"✅\s*答案[：:]\s*(.+?)(?:\n|$)",  # 带勾格式
+                            r"正确答案[：:是为]\s*[：:]?\s*(.+?)(?:[。\n；;]|$)",
+                            r"标准答案[：:是为]\s*[：:]?\s*(.+?)(?:[。\n；;]|$)",
+                            r"参考答案[：:是为]\s*[：:]?\s*(.+?)(?:[。\n；;]|$)",
+                            r"答案[：:是为]\s*[：:]?\s*(.+?)(?:[。\n；;]|$)",
                         ]
                         for pattern in patterns:
                             matches = re.findall(pattern, text_to_extract, re.MULTILINE)
@@ -262,7 +275,7 @@ class MistakeService:
                                     correct_answer = extracted
                                     is_invalid = False
                                     break
-            
+
             # 如果仍然无效,根据题目类型决定提示文本
             if is_invalid:
                 if ai_feedback_dict:
@@ -271,11 +284,69 @@ class MistakeService:
                     if category == "empty_question":
                         correct_answer = "📝 此题目暂无答案记录,请查看题目图片自行理解"
                     elif category in ["subjective", "essay", "discussion"]:
-                        correct_answer = "💡 本题为主观题,无固定答案,请参考解析理解答题思路"
+                        correct_answer = (
+                            "💡 本题为主观题,无固定答案,请参考解析理解答题思路"
+                        )
                     else:
                         correct_answer = "⚠️ 答案识别失败,建议查看解析或咨询老师"
                 else:
                     correct_answer = "⚠️ 答案识别失败,建议查看解析或咨询老师"
+
+        # 【新增】查询知识点关联信息
+        knowledge_point_associations = []
+        try:
+            from src.models.knowledge_graph import MistakeKnowledgePoint
+            from src.models.study import KnowledgeMastery
+            from src.repositories.base_repository import BaseRepository
+            from src.repositories.knowledge_graph_repository import (
+                MistakeKnowledgePointRepository,
+            )
+
+            mkp_repo = MistakeKnowledgePointRepository(MistakeKnowledgePoint, self.db)
+            km_repo = BaseRepository(KnowledgeMastery, self.db)
+
+            # 查询错题的知识点关联
+            mistake_id = UUID(extract_orm_uuid_str(mistake, "id"))
+            associations = await mkp_repo.find_by_mistake(mistake_id)
+
+            # 构建知识点关联详情
+            for assoc in associations:
+                # 查询对应的知识点掌握度信息
+                kp_id = UUID(str(getattr(assoc, "knowledge_point_id")))
+                mastery = await km_repo.get_by_id(str(kp_id))
+
+                knowledge_point_associations.append(
+                    {
+                        "association_id": str(getattr(assoc, "id")),
+                        "knowledge_point_id": str(kp_id),
+                        "knowledge_point_name": (
+                            getattr(mastery, "knowledge_point", "未知知识点")
+                            if mastery
+                            else "未知知识点"
+                        ),
+                        "relevance_score": float(
+                            str(getattr(assoc, "relevance_score", 0.0))
+                        ),
+                        "is_primary": getattr(assoc, "is_primary", False),
+                        "error_type": getattr(assoc, "error_type", ""),
+                        "error_reason": getattr(assoc, "error_reason"),
+                        "mastery_level": (
+                            float(str(getattr(mastery, "mastery_level", 0.0)))
+                            if mastery
+                            else 0.0
+                        ),
+                        "mastered": getattr(assoc, "mastered_after_review", False),
+                        "review_count": getattr(assoc, "review_count", 0),
+                        "last_review_result": getattr(assoc, "last_review_result"),
+                    }
+                )
+
+            logger.debug(
+                f"为错题 {mistake_id} 附加了 {len(knowledge_point_associations)} 个知识点关联"
+            )
+        except Exception as e:
+            # 知识点关联查询失败不影响错题详情返回
+            logger.warning(f"查询知识点关联失败: {e}")
 
         # �🛠️ 使用extract_orm_*函数提取ORM对象的值
         return MistakeDetailResponse(
@@ -300,6 +371,7 @@ class MistakeService:
             created_at=to_iso_string(getattr(mistake, "created_at", None)) or "",
             updated_at=to_iso_string(getattr(mistake, "updated_at", None)) or "",
             image_urls=parse_json_field(getattr(mistake, "image_urls", None)),
+            knowledge_point_associations=knowledge_point_associations,  # 🔧 新增字段
         )
 
     async def get_mistake_list(
@@ -316,21 +388,45 @@ class MistakeService:
             user_id: 用户ID
             page: 页码
             page_size: 每页数量
-            filters: 筛选条件（subject, mastery_status等）
+            filters: 筛选条件（subject, mastery_status, knowledge_point_id等）
 
         Returns:
             错题列表响应
         """
         subject = filters.get("subject") if filters else None
         mastery_status = filters.get("mastery_status") if filters else None
+        knowledge_point_id = filters.get("knowledge_point_id") if filters else None
 
-        items, total = await self.mistake_repo.find_by_user(
-            user_id=user_id,
-            subject=subject,
-            mastery_status=mastery_status,
-            page=page,
-            page_size=page_size,
-        )
+        # 【新增】如果指定了 knowledge_point_id，使用新的查询方法
+        if knowledge_point_id:
+            try:
+                items, total = await self.mistake_repo.find_by_knowledge_point_id(
+                    user_id=user_id,
+                    knowledge_point_id=UUID(knowledge_point_id),
+                    subject=subject,
+                    mastery_status=mastery_status,
+                    page=page,
+                    page_size=page_size,
+                )
+            except Exception as e:
+                logger.warning(f"按知识点筛选失败: {e}，降级到普通查询")
+                # 降级处理：如果知识点筛选失败，使用普通查询
+                items, total = await self.mistake_repo.find_by_user(
+                    user_id=user_id,
+                    subject=subject,
+                    mastery_status=mastery_status,
+                    page=page,
+                    page_size=page_size,
+                )
+        else:
+            # 普通查询
+            items, total = await self.mistake_repo.find_by_user(
+                user_id=user_id,
+                subject=subject,
+                mastery_status=mastery_status,
+                page=page,
+                page_size=page_size,
+            )
 
         return MistakeListResponse(
             items=[self._to_list_item(item) for item in items],
@@ -392,6 +488,35 @@ class MistakeService:
         mistake = await self.mistake_repo.create(data)
 
         logger.info(f"Created mistake {mistake.id} for user {user_id}")
+
+        # 【新增】自动关联知识点
+        try:
+            from src.services.knowledge_graph_service import KnowledgeGraphService
+
+            kg_service = KnowledgeGraphService(self.db, self.bailian_service)
+
+            # 构建 AI 反馈（用于知识点提取）
+            ai_feedback = {
+                "knowledge_points": request.knowledge_points or [],
+                "question": request.question_content,
+                "explanation": request.explanation,
+            }
+
+            # 调用知识图谱服务分析并关联知识点
+            await kg_service.analyze_and_associate_knowledge_points(
+                mistake_id=UUID(str(getattr(mistake, "id"))),
+                user_id=user_id,
+                subject=request.subject,
+                ocr_text=request.question_content,
+                ai_feedback=(
+                    ai_feedback if ai_feedback.get("knowledge_points") else None
+                ),
+            )
+
+            logger.info(f"已为错题 {mistake.id} 自动关联知识点")
+        except Exception as e:
+            # 知识点关联失败不影响错题创建
+            logger.warning(f"知识点自动关联失败: {e}")
 
         return await self._to_detail_response(mistake)
 
@@ -586,6 +711,24 @@ class MistakeService:
 
         await self.mistake_repo.update(str(mistake_id), update_data)
 
+        # 【新增】更新知识点掌握度
+        try:
+            from src.services.knowledge_graph_service import KnowledgeGraphService
+
+            kg_service = KnowledgeGraphService(self.db, self.bailian_service)
+
+            # 调用知识图谱服务更新掌握度
+            await kg_service.update_knowledge_mastery_after_review(
+                mistake_id=mistake_id,
+                review_result=request.review_result,
+                confidence_level=request.confidence_level,
+            )
+
+            logger.info(f"已更新错题 {mistake_id} 关联的知识点掌握度")
+        except Exception as e:
+            # 知识点掌握度更新失败不影响复习流程
+            logger.warning(f"知识点掌握度更新失败: {e}")
+
         logger.info(
             f"Completed review for mistake {mistake_id}, mastery: {current_mastery}, next review: {next_review}"
         )
@@ -753,7 +896,7 @@ class MistakeService:
 
     async def analyze_mistake_with_ai(self, mistake_id: UUID, user_id: UUID) -> Dict:
         """
-        使用AI分析错题
+        使用AI分析错题（带学情上下文）
 
         Args:
             mistake_id: 错题ID
@@ -784,8 +927,15 @@ class MistakeService:
             difficulty_text = str(difficulty) if difficulty else "未知"
             ocr_text = extract_orm_str(mistake, "ocr_text") or "无题目内容"
 
-            # 构造分析提示词
-            analysis_prompt = f"""请分析以下错题，提取关键信息并给出学习建议。
+            # 【新增】构建学情上下文
+            learning_context = await self._build_learning_context_for_ai(
+                user_id, subject
+            )
+
+            # 构造分析提示词（加入学情上下文）
+            analysis_prompt = f"""请分析以下错题，结合学生的学情数据，提取关键信息并给出个性化学习建议。
+
+{learning_context}
 
 【题目信息】
 学科：{subject}
@@ -795,26 +945,49 @@ class MistakeService:
 
 【任务要求】
 请以JSON格式返回分析结果，包含以下字段：
-1. knowledge_points: 知识点列表（数组，3-5个核心知识点）
-2. error_reason: 错误原因分析（字符串，100字以内）
-3. suggestions: 学习建议（字符串，150字以内，给出具体可行的学习建议）
+1. knowledge_points: 知识点列表（数组，3-5个核心知识点，每个知识点需包含:
+   - name: 知识点名称
+   - relevance: 相关性 (0.0-1.0)
+   - error_type: 错误类型 (concept_misunderstanding/calculation_error/formula_misuse/logic_error/knowledge_gap/method_confusion/other)
+   - error_reason: 错误原因（简洁描述）
+   - suggestions: 改进建议（数组，2-3条具体建议）
+)
+2. error_reason: 本次错题的主要错误原因分析（字符串，100字以内）
+3. suggestions: 学习建议（字符串，150字以内，结合学生薄弱知识点给出针对性建议）
+4. personalized_insight: 个性化洞察（字符串，基于学生历史学情的特别提示，如果是初次使用可省略）
 
 示例格式：
 {{
-    "knowledge_points": ["一元二次方程", "配方法", "判别式"],
+    "knowledge_points": [
+        {{
+            "name": "一元二次方程",
+            "relevance": 0.9,
+            "error_type": "concept_misunderstanding",
+            "error_reason": "对判别式的计算理解有误",
+            "suggestions": ["复习判别式b²-4ac的定义", "做5道判别式专项练习"]
+        }},
+        {{
+            "name": "配方法",
+            "relevance": 0.7,
+            "error_type": "method_confusion",
+            "error_reason": "配方步骤出现错误",
+            "suggestions": ["重新学习配方法步骤", "对比配方法与公式法的区别"]
+        }}
+    ],
     "error_reason": "对判别式的计算理解有误，导致解题思路错误。",
-    "suggestions": "建议复习判别式的定义和应用，多做相关练习题，重点掌握b²-4ac的计算方法。可以从简单题目入手，逐步提升难度。"
+    "suggestions": "建议复习判别式的定义和应用，多做相关练习题，重点掌握b²-4ac的计算方法。结合你在'一元二次方程'上的薄弱情况，建议从基础例题入手，逐步提升难度。",
+    "personalized_insight": "你在一元二次方程相关题目上已经出现3次错误，这是需要重点突破的知识点。"
 }}
 
 请严格按照JSON格式返回，不要包含其他内容。"""
 
             # 调用百炼AI服务
-            logger.info(f"开始AI分析错题: {mistake_id}")
+            logger.info(f"开始AI分析错题（带学情上下文）: {mistake_id}")
 
             messages = [
                 {
                     "role": "system",
-                    "content": "你是一位经验丰富的学科教师，擅长分析学生的错题，找出知识盲点并给出针对性建议。",
+                    "content": "你是一位经验丰富的学科教师，擅长分析学生的错题，找出知识盲点并给出针对性建议。你会根据学生的历史学情数据，提供个性化的学习指导。",
                 },
                 {"role": "user", "content": analysis_prompt},
             ]
@@ -823,7 +996,7 @@ class MistakeService:
                 messages=messages,
                 stream=False,
                 temperature=0.7,  # 适中的创造性
-                max_tokens=1000,  # 足够的token用于详细分析
+                max_tokens=1500,  # 增加token以支持更详细的分析
             )
 
             if not response.success:
@@ -843,19 +1016,32 @@ class MistakeService:
                 # 如果无法提取JSON，尝试直接解析
                 analysis_result = json.loads(ai_content)
 
+            # 【新增】标准化知识点格式
+            knowledge_points = self._standardize_knowledge_points(
+                analysis_result.get("knowledge_points", [])
+            )
+
             # 验证和标准化返回结果
             result = {
-                "knowledge_points": analysis_result.get("knowledge_points", []),
+                "knowledge_points": knowledge_points,
                 "error_reason": analysis_result.get("error_reason", ""),
                 "suggestions": analysis_result.get("suggestions", ""),
+                "personalized_insight": analysis_result.get("personalized_insight", ""),
                 "ai_tokens_used": response.tokens_used,
                 "analysis_time": response.processing_time,
+                "has_learning_context": bool(
+                    learning_context and "初次使用系统" not in learning_context
+                ),
             }
 
             # 更新错题记录中的AI分析结果（可选）
             update_data = {}
             if result["knowledge_points"]:
-                update_data["knowledge_points"] = result["knowledge_points"]
+                # 只存储知识点名称列表（向后兼容）
+                update_data["knowledge_points"] = [
+                    kp.get("name", kp) if isinstance(kp, dict) else kp
+                    for kp in knowledge_points
+                ]
 
             if update_data:
                 await self.mistake_repo.update(str(mistake_id), update_data)
@@ -865,7 +1051,8 @@ class MistakeService:
             logger.info(
                 f"AI分析完成: {mistake_id}, "
                 f"知识点数量: {len(result['knowledge_points'])}, "
-                f"Token使用: {response.tokens_used}"
+                f"Token使用: {response.tokens_used}, "
+                f"学情上下文: {result['has_learning_context']}"
             )
 
             return result
@@ -880,6 +1067,71 @@ class MistakeService:
             logger.error(f"AI分析错题失败: {e}", exc_info=True)
             # 降级方案：返回基础信息
             return self._fallback_analysis(mistake)
+
+    async def _build_learning_context_for_ai(self, user_id: UUID, subject: str) -> str:
+        """
+        构建学情上下文（供AI分析使用）
+
+        Args:
+            user_id: 用户ID
+            subject: 学科
+
+        Returns:
+            学情上下文文本
+        """
+        try:
+            from src.services.knowledge_graph_service import KnowledgeGraphService
+
+            kg_service = KnowledgeGraphService(self.db, self.bailian_service)
+            learning_context = await kg_service.build_learning_context(user_id, subject)
+
+            return learning_context
+
+        except Exception as e:
+            logger.warning(f"构建学情上下文失败: {e}")
+            return "学生是初次使用系统，尚无历史学情数据。"
+
+    def _standardize_knowledge_points(self, knowledge_points: List) -> List[Dict]:
+        """
+        标准化知识点格式
+
+        将AI返回的知识点列表转换为统一的字典格式
+
+        Args:
+            knowledge_points: AI返回的知识点列表
+
+        Returns:
+            标准化的知识点列表
+        """
+        standardized = []
+
+        for kp in knowledge_points:
+            # 如果是字符串，转换为字典
+            if isinstance(kp, str):
+                standardized.append(
+                    {
+                        "name": kp,
+                        "relevance": 0.8,
+                        "error_type": "other",
+                        "error_reason": "",
+                        "suggestions": [],
+                    }
+                )
+            elif isinstance(kp, dict):
+                # 确保必要字段存在
+                standardized.append(
+                    {
+                        "name": kp.get("name", kp.get("knowledge_point", "未知知识点")),
+                        "relevance": kp.get("relevance", 0.8),
+                        "error_type": kp.get("error_type", "other"),
+                        "error_reason": kp.get("error_reason", ""),
+                        "suggestions": kp.get("suggestions", []),
+                    }
+                )
+            else:
+                logger.warning(f"未知的知识点格式: {type(kp)}")
+
+        return standardized
 
     def _fallback_analysis(self, mistake) -> Dict:
         """

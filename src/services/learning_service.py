@@ -1334,6 +1334,28 @@ class LearningService:
                 f"从学习问答创建错题: question_id={question_id}, mistake_id={mistake.id}"
             )
 
+            # 【新增】自动关联知识点
+            try:
+                from uuid import UUID
+
+                from src.services.knowledge_graph_service import KnowledgeGraphService
+
+                kg_service = KnowledgeGraphService(self.db, self.bailian_service)
+
+                # 调用知识图谱服务分析并关联知识点
+                await kg_service.analyze_and_associate_knowledge_points(
+                    mistake_id=UUID(str(getattr(mistake, "id"))),
+                    user_id=UUID(user_id),
+                    subject=mistake_data.get("subject", "math"),
+                    ocr_text=question_content,
+                    ai_feedback=mistake_data.get("ai_feedback"),
+                )
+
+                logger.info(f"已为错题 {mistake.id} 自动关联知识点")
+            except Exception as e:
+                # 知识点关联失败不影响错题创建
+                logger.warning(f"知识点自动关联失败: {e}")
+
             # 7. 转换为响应格式
             return {
                 "id": str(mistake.id),

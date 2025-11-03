@@ -536,6 +536,401 @@ class KnowledgeGraphService:
 
         return chains
 
+    async def build_learning_context(self, user_id: UUID, subject: str) -> str:
+        """
+        构建学情上下文提示词（供AI分析时使用）
+
+        生成一段自然语言描述，包含用户的知识掌握情况、薄弱知识链等信息
+
+        Args:
+            user_id: 用户ID
+            subject: 学科
+
+        Returns:
+            学情上下文提示词
+        """
+        try:
+            from sqlalchemy import and_, select
+
+            # 1. 获取最新快照(如果有)
+            latest_snapshot = await self.snapshot_repo.find_latest_by_user(
+                user_id=user_id, subject=subject
+            )
+
+            # 2. 查询知识点掌握度
+            stmt = select(KnowledgeMastery).where(
+                and_(
+                    KnowledgeMastery.user_id == str(user_id),
+                    KnowledgeMastery.subject == subject,
+                )
+            )
+            result = await self.db.execute(stmt)
+            kms = result.scalars().all()
+
+            if not kms:
+                return "学生是初次使用系统，尚无历史学情数据。"
+
+            # 3. 分析掌握度分布
+            weak_points = []  # 掌握度 < 0.4
+            learning_points = []  # 掌握度 0.4-0.7
+            mastered_points = []  # 掌握度 >= 0.7
+
+            for km in kms:
+                mastery_value = getattr(km, "mastery_level", None)
+                mastery = float(str(mastery_value)) if mastery_value else 0.0
+                kp_name = getattr(km, "knowledge_point", "")
+                mistake_cnt = getattr(km, "mistake_count", 0)
+
+                if mastery < 0.4:
+                    weak_points.append(
+                        {
+                            "name": kp_name,
+                            "mastery": mastery,
+                            "mistakes": int(mistake_cnt) if mistake_cnt else 0,
+                        }
+                    )
+                elif mastery < 0.7:
+                    learning_points.append({"name": kp_name, "mastery": mastery})
+                else:
+                    mastered_points.append({"name": kp_name, "mastery": mastery})
+
+            # 4. 构建上下文提示词
+            context_parts = []
+
+            # 总体概况
+            context_parts.append(f"【{subject}学科学情概况】")
+            context_parts.append(
+                f"学生已学习 {len(kms)} 个知识点，"
+                f"其中已掌握 {len(mastered_points)} 个，"
+                f"学习中 {len(learning_points)} 个，"
+                f"薄弱 {len(weak_points)} 个。"
+            )
+
+            # 薄弱知识点（前5个）
+            if weak_points:
+                context_parts.append("\n【薄弱知识点】")
+                # 按错题数量排序
+                weak_sorted = sorted(
+                    weak_points, key=lambda x: x["mistakes"], reverse=True
+                )
+                for idx, point in enumerate(weak_sorted[:5], 1):
+                    context_parts.append(
+                        f"{idx}. {point['name']} - "
+                        f"掌握度 {point['mastery']:.1%}，错题 {point['mistakes']} 次"
+                    )
+
+            # 学习中的知识点（前3个）
+            if learning_points:
+                context_parts.append("\n【正在学习】")
+                for idx, point in enumerate(learning_points[:3], 1):
+                    context_parts.append(
+                        f"{idx}. {point['name']} - 掌握度 {point['mastery']:.1%}"
+                    )
+
+            # 已掌握的知识点（前3个，仅展示名称）
+            if mastered_points:
+                mastered_names = [p["name"] for p in mastered_points[:3]]
+                context_parts.append(
+                    f"\n【已掌握】{', '.join(mastered_names)}"
+                    + (
+                        f" 等{len(mastered_points)}个"
+                        if len(mastered_points) > 3
+                        else ""
+                    )
+                )
+
+            # 薄弱知识链（如果有快照）
+            if latest_snapshot:
+                # 使用生产环境表字段名
+                weak_chains_data = getattr(latest_snapshot, "weak_chains", None)
+                if weak_chains_data and isinstance(weak_chains_data, list):
+                    context_parts.append("\n【薄弱知识链】")
+                    for idx, chain in enumerate(weak_chains_data[:3], 1):
+                        if isinstance(chain, dict):
+                            kp_name = chain.get("knowledge_point", "未知知识点")
+                            error_type = chain.get("error_type", "")
+                            context_parts.append(
+                                f"{idx}. {kp_name}"
+                                + (f" (常见错误: {error_type})" if error_type else "")
+                            )
+
+            # 个性化建议方向
+            context_parts.append("\n【分析建议】")
+            if weak_points:
+                context_parts.append(
+                    "学生在上述薄弱知识点上需要重点辅导，"
+                    "分析错题时请结合这些薄弱环节，给出针对性建议。"
+                )
+            elif learning_points:
+                context_parts.append(
+                    "学生整体学习进展良好，可适当提升题目难度，"
+                    "巩固正在学习的知识点。"
+                )
+            else:
+                context_parts.append(
+                    "学生掌握情况优秀，可引导其进行知识拓展和综合应用训练。"
+                )
+
+            return "\n".join(context_parts)
+
+        except Exception as e:
+            logger.error(f"构建学情上下文失败: {e}", exc_info=True)
+            # 返回降级提示
+            return "无法获取学生历史学情，请根据当前错题进行分析。"
+
+    async def recommend_review_path(
+        self, user_id: UUID, subject: str, limit: int = 10
+    ) -> List[Dict[str, Any]]:
+        """
+        推荐复习路径
+
+        优先级算法：
+        priority = (
+            (1 - mastery_level) * 0.4 +      # 掌握度低的优先
+            prerequisite_weight * 0.3 +      # 前置知识点优先
+            forgetting_risk * 0.2 +          # 遗忘风险高的优先
+            related_chain_weak * 0.1         # 关联链薄弱的优先
+        )
+
+        Args:
+            user_id: 用户ID
+            subject: 学科
+            limit: 推荐数量
+
+        Returns:
+            推荐复习路径列表
+        """
+        try:
+            from datetime import datetime, timedelta
+
+            from sqlalchemy import and_, select
+
+            # 1. 获取用户所有知识点掌握度
+            stmt = select(KnowledgeMastery).where(
+                and_(
+                    KnowledgeMastery.user_id == str(user_id),
+                    KnowledgeMastery.subject == subject,
+                )
+            )
+            result = await self.db.execute(stmt)
+            kms = result.scalars().all()
+
+            if not kms:
+                return []
+
+            # 2. 计算每个知识点的夏习优先级
+            recommendations = []
+            now = datetime.now()
+
+            for km in kms:
+                # 安全提取值
+                mastery_value = getattr(km, "mastery_level", None)
+                mastery_level = float(str(mastery_value)) if mastery_value else 0.0
+
+                mistake_count = getattr(km, "mistake_count", 0)
+                total_attempts = getattr(km, "total_attempts", 0)
+                last_practiced = getattr(km, "last_practiced_at", None)
+
+                # 跳过已经完全掌握的知识点
+                if mastery_level >= 0.9:
+                    continue
+
+                # 2.1 计算掌握度因子 (0-1, 掌握度越低分数越高)
+                mastery_factor = 1.0 - mastery_level
+
+                # 2.2 计算遗忘风险因子 (0-1, 基于艾宾浩斯遗忘曲线)
+                forgetting_risk = self._calculate_forgetting_risk(
+                    mastery_level, last_practiced, now
+                )
+
+                # 2.3 计算前置知识点权重 (0-1)
+                # 如果有较多错误且掌握度低，可能是前置知识不牢固
+                prerequisite_weight = 0.0
+                if mistake_count > 0 and total_attempts > 0:
+                    error_rate = mistake_count / total_attempts
+                    if error_rate > 0.5 and mastery_level < 0.5:
+                        prerequisite_weight = 0.8  # 高优先级
+                    elif error_rate > 0.3:
+                        prerequisite_weight = 0.5  # 中优先级
+
+                # 2.4 计算关联链薄弱因子 (0-1)
+                # 查询该知识点的错题关联
+                km_id = getattr(km, "id", None)
+                related_chain_weak = 0.0
+                related_mistakes = []
+                if km_id:
+                    related_mistakes = await self.mkp_repo.find_by_knowledge_point(
+                        UUID(str(km_id))
+                    )
+                    if related_mistakes:
+                        # 如果有多个错题关联，说明该知识点薄弱
+                        related_chain_weak = min(len(related_mistakes) * 0.1, 1.0)
+
+                # 2.5 计算总优先级
+                priority = (
+                    mastery_factor * 0.4
+                    + prerequisite_weight * 0.3
+                    + forgetting_risk * 0.2
+                    + related_chain_weak * 0.1
+                )
+
+                # 2.6 构建推荐项
+                kp_name = getattr(km, "knowledge_point", "")
+                recommendations.append(
+                    {
+                        "knowledge_point_id": str(km_id) if km_id else "",
+                        "knowledge_point": str(kp_name),
+                        "priority": priority,
+                        "mastery_level": mastery_level,
+                        "mistake_count": int(mistake_count) if mistake_count else 0,
+                        "forgetting_risk": forgetting_risk,
+                        "reason": self._generate_review_reason(
+                            mastery_level,
+                            mistake_count,
+                            forgetting_risk,
+                            prerequisite_weight,
+                        ),
+                        "estimated_time": self._estimate_review_time(
+                            mastery_level, mistake_count
+                        ),
+                        "related_mistakes_count": (
+                            len(related_mistakes) if km_id and related_mistakes else 0
+                        ),
+                    }
+                )
+
+            # 3. 按优先级排序
+            recommendations.sort(key=lambda x: x["priority"], reverse=True)
+
+            # 4. 返回前 N 个推荐
+            return recommendations[:limit]
+
+        except Exception as e:
+            logger.error(f"生成复习推荐失败: {e}", exc_info=True)
+            return []
+
+    def _calculate_forgetting_risk(
+        self,
+        mastery_level: float,
+        last_practiced: Optional[datetime],
+        now: datetime,
+    ) -> float:
+        """
+        计算遗忘风险
+
+        基于艾宾浩斯遗忘曲线：
+        - 1天内：遗忘56%
+        - 1周内：遗忘77%
+        - 1个月：遗忘79%
+
+        掌握度越高，遗忘速度越慢
+
+        Args:
+            mastery_level: 掌握度
+            last_practiced: 上次练习时间
+            now: 当前时间
+
+        Returns:
+            遗忘风险 (0.0-1.0)
+        """
+        if not last_practiced:
+            # 从未练习过，风险较低
+            return 0.3
+
+        from datetime import timedelta
+
+        # 计算距离上次练习的天数
+        days_since_practice = (now - last_practiced).days
+
+        # 根据掌握度调整遗忘速度
+        # 掌握度高的知识点遗忘较慢
+        mastery_factor = 1.0 - mastery_level * 0.5
+
+        # 基于艾宾浩斯曲线计算遗忘率
+        if days_since_practice <= 1:
+            forgetting_rate = 0.56
+        elif days_since_practice <= 2:
+            forgetting_rate = 0.66
+        elif days_since_practice <= 7:
+            forgetting_rate = 0.77
+        elif days_since_practice <= 14:
+            forgetting_rate = 0.85
+        elif days_since_practice <= 30:
+            forgetting_rate = 0.79
+        else:
+            forgetting_rate = 0.90
+
+        # 结合掌握度因子
+        risk = forgetting_rate * mastery_factor
+
+        return min(risk, 1.0)
+
+    def _generate_review_reason(
+        self,
+        mastery_level: float,
+        mistake_count: int,
+        forgetting_risk: float,
+        prerequisite_weight: float,
+    ) -> str:
+        """
+        生成复习理由
+
+        Args:
+            mastery_level: 掌握度
+            mistake_count: 错误次数
+            forgetting_risk: 遗忘风险
+            prerequisite_weight: 前置知识点权重
+
+        Returns:
+            复习理由
+        """
+        reasons = []
+
+        if mastery_level < 0.4:
+            reasons.append("掌握度较低，需要重点复习")
+        elif mastery_level < 0.7:
+            reasons.append("正在学习中，需要巩固")
+
+        if mistake_count > 5:
+            reasons.append(f"已出现{mistake_count}次错误")
+        elif mistake_count > 0:
+            reasons.append("有错误记录")
+
+        if forgetting_risk > 0.7:
+            reasons.append("遗忘风险高")
+        elif forgetting_risk > 0.5:
+            reasons.append("有遗忘风险")
+
+        if prerequisite_weight > 0.5:
+            reasons.append("前置知识可能不牢固")
+
+        return "，".join(reasons) if reasons else "建议定期复习"
+
+    def _estimate_review_time(self, mastery_level: float, mistake_count: int) -> int:
+        """
+        估算复习时间（分钟）
+
+        Args:
+            mastery_level: 掌握度
+            mistake_count: 错误次数
+
+        Returns:
+            估计复习时间（分钟）
+        """
+        # 基础时间：10分钟
+        base_time = 10
+
+        # 掌握度越低，需要的时间越多
+        mastery_time = int((1.0 - mastery_level) * 20)
+
+        # 错误次数越多，需要的时间越多
+        mistake_time = min(mistake_count * 2, 20)
+
+        total_time = base_time + mastery_time + mistake_time
+
+        # 限制在 5-60 分钟范围内
+        return max(5, min(total_time, 60))
+
     async def create_knowledge_graph_snapshot(
         self, user_id: UUID, subject: str, period_type: str = "manual"
     ) -> UserKnowledgeGraphSnapshot:

@@ -271,6 +271,11 @@ class MistakeDetailResponse(BaseModel):
         default_factory=list, description="图片URL列表"
     )
 
+    # 【新增】知识点关联信息
+    knowledge_point_associations: Optional[List[Dict[str, Any]]] = Field(
+        default_factory=list, description="知识点关联详情"
+    )
+
     class Config:
         json_schema_extra = {
             "example": {

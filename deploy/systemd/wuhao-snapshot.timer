@@ -1,0 +1,14 @@
+[Unit]
+Description=五好伴学 - 每日知识图谱快照定时器
+Documentation=https://github.com/yourusername/wuhao-tutor
+Requires=wuhao-snapshot.service
+
+[Timer]
+# 每天凌晨3点执行
+OnCalendar=daily
+OnCalendar=*-*-* 03:00:00
+Persistent=true
+Unit=wuhao-snapshot.service
+
+[Install]
+WantedBy=timers.target

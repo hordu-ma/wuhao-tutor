@@ -57,7 +57,9 @@ class MistakeRepository(BaseRepository[MistakeRecord]):
             conditions.append(MistakeRecord.mastery_status == mastery_status)
 
         # 查询总数
-        count_stmt = select(func.count()).select_from(MistakeRecord).where(and_(*conditions))
+        count_stmt = (
+            select(func.count()).select_from(MistakeRecord).where(and_(*conditions))
+        )
         result = await self.db.execute(count_stmt)
         total = result.scalar() or 0
 
@@ -121,7 +123,7 @@ class MistakeRepository(BaseRepository[MistakeRecord]):
         self, user_id: UUID, knowledge_point: str
     ) -> List[MistakeRecord]:
         """
-        查询包含特定知识点的错题
+        查询包含特定知识点的错题（旧的JSON字段查询方式）
 
         使用 JSON 查询，兼容 SQLite 和 PostgreSQL
 
@@ -159,6 +161,79 @@ class MistakeRepository(BaseRepository[MistakeRecord]):
         )
 
         return list(items)
+
+    async def find_by_knowledge_point_id(
+        self,
+        user_id: UUID,
+        knowledge_point_id: UUID,
+        subject: Optional[str] = None,
+        mastery_status: Optional[str] = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> Tuple[List[MistakeRecord], int]:
+        """
+        通过知识点ID查询错题列表（基于知识图谱关联表）
+
+        Args:
+            user_id: 用户ID
+            knowledge_point_id: 知识点ID
+            subject: 学科筛选（可选）
+            mastery_status: 掌握状态筛选（可选）
+            page: 页码
+            page_size: 每页数量
+
+        Returns:
+            (错题列表, 总数)
+        """
+        from src.models.knowledge_graph import MistakeKnowledgePoint
+
+        # 构建基础查询条件
+        conditions = [
+            MistakeRecord.user_id == str(user_id),
+            MistakeKnowledgePoint.knowledge_point_id == str(knowledge_point_id),
+        ]
+
+        if subject:
+            conditions.append(MistakeRecord.subject == subject)
+
+        if mastery_status:
+            conditions.append(MistakeRecord.mastery_status == mastery_status)
+
+        # 查询总数
+        count_stmt = (
+            select(func.count())
+            .select_from(MistakeRecord)
+            .join(
+                MistakeKnowledgePoint,
+                MistakeRecord.id == MistakeKnowledgePoint.mistake_id,
+            )
+            .where(and_(*conditions))
+        )
+        result = await self.db.execute(count_stmt)
+        total = result.scalar() or 0
+
+        # 查询数据
+        offset = (page - 1) * page_size
+        stmt = (
+            select(MistakeRecord)
+            .join(
+                MistakeKnowledgePoint,
+                MistakeRecord.id == MistakeKnowledgePoint.mistake_id,
+            )
+            .where(and_(*conditions))
+            .order_by(MistakeRecord.created_at.desc())
+            .offset(offset)
+            .limit(page_size)
+        )
+
+        result = await self.db.execute(stmt)
+        items = result.scalars().all()
+
+        logger.debug(
+            f"Found {len(items)} mistakes for user {user_id}, knowledge_point_id {knowledge_point_id}, page {page}, total {total}"
+        )
+
+        return list(items), total
 
     async def update_mastery_status(
         self, mistake_id: UUID, mastery_status: str, next_review_at: datetime
@@ -235,9 +310,7 @@ class MistakeRepository(BaseRepository[MistakeRecord]):
 
         # 按学科统计
         subject_stmt = (
-            select(
-                MistakeRecord.subject, func.count(MistakeRecord.id).label("count")
-            )
+            select(MistakeRecord.subject, func.count(MistakeRecord.id).label("count"))
             .where(MistakeRecord.user_id == str(user_id))
             .group_by(MistakeRecord.subject)
         )
@@ -346,12 +419,10 @@ class MistakeRepository(BaseRepository[MistakeRecord]):
         )
         result = await self.db.execute(total_stmt)
         row = result.first()
-        total_reviews = row[0] or 0
-        total_correct = row[1] or 0
+        total_reviews = row[0] if row and row[0] is not None else 0
+        total_correct = row[1] if row and row[1] is not None else 0
         accuracy = (
-            round(total_correct / total_reviews * 100, 2)
-            if total_reviews > 0
-            else 0.0
+            round(total_correct / total_reviews * 100, 2) if total_reviews > 0 else 0.0
         )
 
         summary = {
@@ -450,13 +521,13 @@ class MistakeRepository(BaseRepository[MistakeRecord]):
             except Exception as e:
                 logger.warning(f"Failed to update mistake {mistake_id}: {e}")
 
-        logger.debug(f"Bulk updated {count} mistakes with next_review_at {next_review_at}")
+        logger.debug(
+            f"Bulk updated {count} mistakes with next_review_at {next_review_at}"
+        )
 
         return count
 
-    async def get_knowledge_point_distribution(
-        self, user_id: UUID
-    ) -> Dict[str, int]:
+    async def get_knowledge_point_distribution(self, user_id: UUID) -> Dict[str, int]:
         """
         获取知识点分布统计
 
