@@ -400,21 +400,26 @@ class KnowledgeGraphService:
 
                 # 5. 更新关联记录
                 mastered = review_result == "correct" and mastery_after >= 0.8
-                await self.mkp_repo.update_review_result(
-                    UUID(assoc.id), review_result, mastered
-                )
+                assoc_id_str = getattr(assoc, "id", None)
+                if assoc_id_str:
+                    await self.mkp_repo.update_review_result(
+                        UUID(str(assoc_id_str)), review_result, mastered
+                    )
 
                 # 6. 记录学习轨迹
-                await self._record_learning_track(
-                    user_id=UUID(km.user_id),
-                    knowledge_point_id=UUID(km.id),
-                    mistake_id=mistake_id,
-                    activity_type="review",
-                    result=review_result,
-                    mastery_before=mastery_before,
-                    mastery_after=mastery_after,
-                    confidence_level=confidence_level,
-                )
+                km_user_id_str = getattr(km, "user_id", None)
+                km_id_str = getattr(km, "id", None)
+                if km_user_id_str and km_id_str:
+                    await self._record_learning_track(
+                        user_id=UUID(str(km_user_id_str)),
+                        knowledge_point_id=UUID(str(km_id_str)),
+                        mistake_id=mistake_id,
+                        activity_type="review",
+                        result=review_result,
+                        mastery_before=mastery_before,
+                        mastery_after=mastery_after,
+                        confidence_level=confidence_level,
+                    )
 
             await self.db.commit()
             logger.info(
@@ -501,18 +506,31 @@ class KnowledgeGraphService:
 
         chains = []
         for assoc in weak_assocs:
-            km = await self._get_knowledge_mastery_by_id(UUID(assoc.knowledge_point_id))
+            kp_id_str = getattr(assoc, "knowledge_point_id", None)
+            if not kp_id_str:
+                continue
+
+            km = await self._get_knowledge_mastery_by_id(UUID(str(kp_id_str)))
             if not km:
                 continue
+
+            # 安全地转换掌握度为float
+            mastery_value = getattr(km, "mastery_level", None)
+            mastery_level = float(str(mastery_value)) if mastery_value else 0.0
+
+            mistake_count = getattr(km, "mistake_count", 0)
+            review_count = getattr(assoc, "review_count", 0)
+            error_type = getattr(assoc, "error_type", "")
+            suggestions = getattr(assoc, "improvement_suggestions", None) or []
 
             chains.append(
                 {
                     "knowledge_point": km.knowledge_point,
-                    "mastery_level": float(km.mastery_level or 0),
-                    "mistake_count": km.mistake_count,
-                    "review_count": assoc.review_count,
-                    "error_type": assoc.error_type,
-                    "suggestions": assoc.improvement_suggestions or [],
+                    "mastery_level": mastery_level,
+                    "mistake_count": int(mistake_count) if mistake_count else 0,
+                    "review_count": int(review_count) if review_count else 0,
+                    "error_type": str(error_type),
+                    "suggestions": suggestions,
                 }
             )
 
@@ -554,14 +572,22 @@ class KnowledgeGraphService:
             }
 
             for km in kms:
-                mastery = float(km.mastery_level or 0)
+                # 安全地转换掌握度为float
+                mastery_value = getattr(km, "mastery_level", None)
+                mastery = float(str(mastery_value)) if mastery_value else 0.0
+
+                km_id = getattr(km, "id", "")
+                kp_name = getattr(km, "knowledge_point", "")
+                mistake_cnt = getattr(km, "mistake_count", 0)
+                correct_cnt = getattr(km, "correct_count", 0)
+
                 graph_data["nodes"].append(
                     {
-                        "id": str(km.id),
-                        "name": km.knowledge_point,
+                        "id": str(km_id),
+                        "name": str(kp_name),
                         "mastery": mastery,
-                        "mistake_count": km.mistake_count,
-                        "correct_count": km.correct_count,
+                        "mistake_count": int(mistake_cnt) if mistake_cnt else 0,
+                        "correct_count": int(correct_cnt) if correct_cnt else 0,
                     }
                 )
 
