@@ -72,10 +72,45 @@ def upgrade() -> None:
         ),
     )
 
+    # 添加时间信息字段
+    op.add_column(
+        "mistake_knowledge_points",
+        sa.Column(
+            "first_error_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+            comment="首次出错时间",
+        ),
+    )
+
+    op.add_column(
+        "mistake_knowledge_points",
+        sa.Column(
+            "last_review_at",
+            sa.DateTime(timezone=True),
+            nullable=True,
+            comment="最后复习时间",
+        ),
+    )
+
+    op.add_column(
+        "mistake_knowledge_points",
+        sa.Column(
+            "mastered_at",
+            sa.DateTime(timezone=True),
+            nullable=True,
+            comment="掌握时间",
+        ),
+    )
+
 
 def downgrade() -> None:
     """Downgrade schema."""
-    # 删除添加的字段
+    # 删除添加的字段（按添加的相反顺序删除）
+    op.drop_column("mistake_knowledge_points", "mastered_at")
+    op.drop_column("mistake_knowledge_points", "last_review_at")
+    op.drop_column("mistake_knowledge_points", "first_error_at")
     op.drop_column("mistake_knowledge_points", "last_review_result")
     op.drop_column("mistake_knowledge_points", "review_count")
     op.drop_column("mistake_knowledge_points", "mastered_after_review")
