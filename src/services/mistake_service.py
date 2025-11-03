@@ -62,8 +62,8 @@ class MistakeService:
         except Exception:
             return default
 
-    def _to_list_item(self, mistake: MistakeRecord) -> MistakeListItem:
-        """转换为列表项"""
+    async def _to_list_item(self, mistake: MistakeRecord) -> MistakeListItem:
+        """转换为列表项（包含知识点关联信息）"""
         from uuid import UUID as UUIDType
 
         from src.utils.type_converters import (
@@ -96,6 +96,53 @@ class MistakeService:
                     return []
             return []
 
+        # 🎯 查询知识点关联信息（用于列表页显示掌握度）
+        knowledge_point_associations = []
+        try:
+            from src.models.knowledge_graph import MistakeKnowledgePoint
+            from src.models.study import KnowledgeMastery
+            from src.repositories.base_repository import BaseRepository
+            from src.repositories.knowledge_graph_repository import (
+                MistakeKnowledgePointRepository,
+            )
+
+            mkp_repo = MistakeKnowledgePointRepository(MistakeKnowledgePoint, self.db)
+            km_repo = BaseRepository(KnowledgeMastery, self.db)
+
+            # 查询错题的知识点关联
+            mistake_id = UUID(extract_orm_uuid_str(mistake, "id"))
+            associations = await mkp_repo.find_by_mistake(mistake_id)
+
+            # 只取前3个知识点（列表页不需要全部显示）
+            for assoc in associations[:3]:
+                kp_id = UUID(str(getattr(assoc, "knowledge_point_id")))
+                mastery = await km_repo.get_by_id(str(kp_id))
+
+                knowledge_point_associations.append(
+                    {
+                        "association_id": str(getattr(assoc, "id")),
+                        "knowledge_point_id": str(kp_id),
+                        "knowledge_point_name": (
+                            getattr(mastery, "knowledge_point", "未知知识点")
+                            if mastery
+                            else "未知知识点"
+                        ),
+                        "relevance_score": float(
+                            str(getattr(assoc, "relevance_score", 0.0))
+                        ),
+                        "is_primary": getattr(assoc, "is_primary", False),
+                        "mastery_level": (
+                            float(str(getattr(mastery, "mastery_level", 0.0)))
+                            if mastery
+                            else 0.0
+                        ),
+                    }
+                )
+
+        except Exception as e:
+            # 知识点关联查询失败不影响列表返回
+            logger.warning(f"查询错题 {mistake.id} 的知识点关联失败: {e}")
+
         return MistakeListItem(
             id=UUID(extract_orm_uuid_str(mistake, "id")),
             title=extract_orm_str(mistake, "title") or "未命名错题",
@@ -114,6 +161,7 @@ class MistakeService:
             knowledge_points=parse_json_field(
                 getattr(mistake, "knowledge_points", None)
             ),
+            knowledge_point_associations=knowledge_point_associations,  # 🎯 添加关联信息
         )
 
     async def _to_detail_response(
@@ -463,8 +511,14 @@ class MistakeService:
                 page_size=page_size,
             )
 
+        # 🎯 异步转换列表项（包含知识点关联查询）
+        list_items = []
+        for item in items:
+            list_item = await self._to_list_item(item)
+            list_items.append(list_item)
+
         return MistakeListResponse(
-            items=[self._to_list_item(item) for item in items],
+            items=list_items,
             total=total,
             page=page,
             page_size=page_size,

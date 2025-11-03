@@ -203,7 +203,10 @@ class MistakeListItem(BaseModel):
     created_at: str = Field(..., description="创建时间")
     updated_at: Optional[str] = Field(None, description="更新时间")  # ✅ 添加更新时间
     knowledge_points: Optional[List[str]] = Field(
-        default_factory=list, description="知识点列表"
+        default_factory=list, description="知识点列表（简单字符串数组）"
+    )
+    knowledge_point_associations: Optional[List[Dict[str, Any]]] = Field(
+        default_factory=list, description="知识点关联详情（包含掌握度等信息）"
     )
 
     class Config:

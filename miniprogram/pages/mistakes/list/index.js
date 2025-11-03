@@ -183,10 +183,32 @@ const pageObject = {
         min_count: 1,
       });
 
-      if (response && response.success !== false) {
-        const knowledgePoints = response.data || response || [];
+      console.log('知识点列表API响应', response);
 
-        // 添加“全部”选项
+      if (response && response.success !== false) {
+        // 修复：正确解析API响应
+        // 后端返回格式: { subject, knowledge_points: [...], total_count }
+        let knowledgePoints = [];
+
+        if (response.knowledge_points && Array.isArray(response.knowledge_points)) {
+          // 直接返回的响应对象
+          knowledgePoints = response.knowledge_points;
+        } else if (
+          response.data &&
+          response.data.knowledge_points &&
+          Array.isArray(response.data.knowledge_points)
+        ) {
+          // 嵌套在data中的响应
+          knowledgePoints = response.data.knowledge_points;
+        } else if (Array.isArray(response)) {
+          // 兼容旧格式：直接返回数组
+          knowledgePoints = response;
+        } else if (response.data && Array.isArray(response.data)) {
+          // 兼容旧格式：data是数组
+          knowledgePoints = response.data;
+        }
+
+        // 添加"全部"选项
         const options = [{ name: '全部知识点', mistake_count: 0 }, ...knowledgePoints];
 
         this.setData({
@@ -195,6 +217,10 @@ const pageObject = {
       }
     } catch (error) {
       console.error('加载知识点列表失败', error);
+      // 发生错误时重置选项
+      this.setData({
+        knowledgePointOptions: [],
+      });
     }
   },
 
