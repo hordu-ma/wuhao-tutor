@@ -244,6 +244,11 @@ class KnowledgeGraphService:
         """
         查询或创建知识点掌握度记录
 
+        改进逻辑：
+        1. 尝试在 knowledge_nodes 表中查找标准化的知识点
+        2. 如果找到，使用标准名称和编码
+        3. 查询或创建 knowledge_mastery 记录
+
         Args:
             user_id: 用户ID
             subject: 学科
@@ -252,27 +257,66 @@ class KnowledgeGraphService:
         Returns:
             知识点掌握度记录
         """
-        from sqlalchemy import and_, select
+        from sqlalchemy import and_, or_, select
 
-        # 查询是否已存在
-        stmt = select(KnowledgeMastery).where(
-            and_(
-                KnowledgeMastery.user_id == str(user_id),
-                KnowledgeMastery.subject == subject,
-                KnowledgeMastery.knowledge_point == knowledge_point,
+        from src.models.knowledge import KnowledgeNode
+
+        # 1. 尝试标准化知识点名称（查找 knowledge_nodes）
+        standardized_name = knowledge_point
+        knowledge_point_code = None
+
+        # 查找匹配的知识点节点（名称精确匹配或模糊匹配）
+        node_stmt = (
+            select(KnowledgeNode)
+            .where(
+                and_(
+                    KnowledgeNode.subject == subject,
+                    or_(
+                        KnowledgeNode.name == knowledge_point,
+                        KnowledgeNode.name.ilike(f"%{knowledge_point}%"),
+                    ),
+                )
             )
+            .limit(1)
         )
+
+        node_result = await self.db.execute(node_stmt)
+        knowledge_node = node_result.scalar_one_or_none()
+
+        if knowledge_node:
+            standardized_name = knowledge_node.name
+            knowledge_point_code = knowledge_node.code
+            logger.debug(
+                f"找到标准化知识点: {standardized_name} (code: {knowledge_point_code})"
+            )
+
+        # 2. 查询是否已存在掌握度记录
+        conditions = [
+            KnowledgeMastery.user_id == str(user_id),
+            KnowledgeMastery.subject == subject,
+        ]
+
+        # 优先按编码查找，其次按名称
+        if knowledge_point_code:
+            conditions.append(
+                KnowledgeMastery.knowledge_point_code == knowledge_point_code
+            )
+        else:
+            conditions.append(KnowledgeMastery.knowledge_point == standardized_name)
+
+        stmt = select(KnowledgeMastery).where(and_(*conditions))
         result = await self.db.execute(stmt)
         km = result.scalar_one_or_none()
 
         if km:
             return km
 
-        # 创建新记录
+        # 3. 创建新记录
         km = KnowledgeMastery(
             user_id=str(user_id),
             subject=subject,
-            knowledge_point=knowledge_point,
+            knowledge_point=standardized_name,
+            knowledge_point_code=knowledge_point_code,
             mastery_level=0.0,
             confidence_level=0.5,
             mistake_count=0,
@@ -282,7 +326,9 @@ class KnowledgeGraphService:
         self.db.add(km)
         await self.db.flush()
 
-        logger.info(f"创建新知识点掌握度记录: {knowledge_point}")
+        logger.info(
+            f"创建新知识点掌握度记录: {standardized_name} (code: {knowledge_point_code})"
+        )
         return km
 
     async def _record_learning_track(

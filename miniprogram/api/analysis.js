@@ -410,6 +410,54 @@ const analysisAPI = {
       message: '功能开发中，敬请期待',
     });
   },
+
+  /**
+   * 获取知识图谱
+   * @param {Object} params - 查询参数
+   * @param {string} params.subject - 学科
+   * @param {number} [params.days=30] - 统计天数
+   * @param {Object} [config] - 请求配置
+   * @returns {Promise<Object>} 知识图谱数据
+   */
+  getKnowledgeGraph(params, config = {}) {
+    const { subject, days = 30 } = params;
+
+    if (!subject) {
+      return Promise.reject({
+        code: 'INVALID_PARAMS',
+        message: '学科参数不能为空',
+      });
+    }
+
+    return request.get(
+      'knowledge-graph',
+      { subject, days },
+      {
+        showLoading: true,
+        ...config,
+      },
+    );
+  },
+
+  /**
+   * 获取学情画像
+   * @param {Object} params - 查询参数
+   * @param {number} [params.days=30] - 统计天数
+   * @param {Object} [config] - 请求配置
+   * @returns {Promise<Object>} 学情画像数据
+   */
+  getLearningProfile(params = {}, config = {}) {
+    const { days = 30 } = params;
+
+    return request.get(
+      'knowledge-graph/learning-profile',
+      { days },
+      {
+        showLoading: false,
+        ...config,
+      },
+    );
+  },
 };
 
 module.exports = analysisAPI;

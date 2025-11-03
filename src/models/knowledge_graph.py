@@ -272,15 +272,25 @@ class UserKnowledgeGraphSnapshot(BaseModel):
         comment="AI推荐建议文本",
     )
 
-    # 新增字段（通过ALTER TABLE添加）
+    # 新增字段
     graph_data = Column(
         JSON,
         nullable=True,
         comment="完整知识图谱结构数据（用于AI分析）",
     )
 
-    # 重写基类字段 - 适配生产环境表结构（没有updated_at）
-    updated_at = None  # type: ignore
+    if is_sqlite:
+        previous_snapshot_id = Column(
+            String(36),
+            nullable=True,
+            comment="上一个快照ID（用于对比）",
+        )
+    else:
+        previous_snapshot_id = Column(
+            UUID(as_uuid=True),
+            nullable=True,
+            comment="上一个快照ID（用于对比）",
+        )
 
     def __repr__(self) -> str:
         return f"<UserKnowledgeGraphSnapshot(user_id='{self.user_id}', subject='{self.subject}', snapshot_date='{self.snapshot_date}')>"

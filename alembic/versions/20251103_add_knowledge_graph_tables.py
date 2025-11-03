@@ -74,7 +74,7 @@ def upgrade() -> None:
             ["mistake_id"], ["mistake_records.id"], ondelete="CASCADE"
         ),
         sa.ForeignKeyConstraint(
-            ["knowledge_point_id"], ["knowledge_nodes.id"], ondelete="CASCADE"
+            ["knowledge_point_id"], ["knowledge_mastery.id"], ondelete="CASCADE"
         ),
         # 唯一约束
         sa.UniqueConstraint(
@@ -123,6 +123,10 @@ def upgrade() -> None:
             "average_mastery", sa.Numeric(3, 2), nullable=False, server_default="0.0"
         ),
         sa.Column("improvement_trend", sa.String(20), nullable=True),
+        # 新增字段
+        sa.Column("graph_data", postgresql.JSON(astext_type=sa.Text()), nullable=True),
+        sa.Column("previous_snapshot_id", postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column("period_type", sa.String(20), nullable=True, server_default="manual"),
         # 元数据
         sa.Column(
             "created_at",
@@ -197,7 +201,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(
-            ["knowledge_point_id"], ["knowledge_nodes.id"], ondelete="CASCADE"
+            ["knowledge_point_id"], ["knowledge_mastery.id"], ondelete="CASCADE"
         ),
         # 唯一约束
         sa.UniqueConstraint(
@@ -235,16 +239,34 @@ def upgrade() -> None:
             ),
         )
 
+        # 添加复合索引以优化查询性能
+        op.create_index(
+            "idx_km_user_subject_kp",
+            "knowledge_mastery",
+            ["user_id", "subject", "knowledge_point"],
+        )
+
+        # 添加知识点编码索引
+        op.create_index(
+            "idx_km_kp_code",
+            "knowledge_mastery",
+            ["knowledge_point_code"],
+        )
+
     print("✅ 知识图谱表结构创建成功!")
 
 
 def downgrade() -> None:
     """回滚数据库结构"""
 
-    # 删除扩展字段
+    # 删除扩展字段和索引
     conn = op.get_bind()
     inspector = sa.inspect(conn)
     if "knowledge_mastery" in inspector.get_table_names():
+        # 删除索引
+        op.drop_index("idx_km_kp_code", table_name="knowledge_mastery")
+        op.drop_index("idx_km_user_subject_kp", table_name="knowledge_mastery")
+        # 删除字段
         op.drop_column("knowledge_mastery", "related_mistakes")
 
     op.drop_column("mistake_records", "knowledge_graph_snapshot")
