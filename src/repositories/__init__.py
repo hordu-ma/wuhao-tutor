@@ -5,8 +5,16 @@
 
 from .base_repository import BaseRepository
 from .learning_repository import LearningRepository
+from .knowledge_graph_repository import (
+    MistakeKnowledgePointRepository,
+    UserKnowledgeGraphSnapshotRepository,
+    KnowledgePointLearningTrackRepository,
+)
 
 __all__ = [
     "BaseRepository",
     "LearningRepository",
+    "MistakeKnowledgePointRepository",
+    "UserKnowledgeGraphSnapshotRepository",
+    "KnowledgePointLearningTrackRepository",
 ]
