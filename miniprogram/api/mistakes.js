@@ -338,6 +338,30 @@ const mistakesAPI = {
   // ===== 知识图谱相关 API =====
 
   /**
+   * 获取错题的知识点分析
+   * @param {string} mistakeId - 错题ID
+   * @param {Object} [config] - 请求配置
+   * @returns {Promise<Object>} 知识点分析数据
+   */
+  getMistakeKnowledgePoints(mistakeId, config = {}) {
+    if (!mistakeId) {
+      return Promise.reject({
+        code: 'VALIDATION_ERROR',
+        message: '错题ID不能为空',
+      });
+    }
+
+    return request.get(
+      `knowledge-graph/mistakes/${mistakeId}/knowledge-points`,
+      {},
+      {
+        showLoading: false,
+        ...config,
+      },
+    );
+  },
+
+  /**
    * 获取知识点列表（用于筛选）
    * @param {Object} params - 查询参数
    * @param {string} params.subject - 学科

@@ -84,8 +84,73 @@
       </view>
     </view>
 
-    <!-- 知识点 -->
-    <view class="detail-section" wx:if="{{mistakeDetail.knowledge_points && mistakeDetail.knowledge_points.length}}">
+    <!-- 知识点分析（新版 - 来自知识图谱） -->
+    <view class="detail-section" wx:if="{{knowledgeAnalysis && knowledgeAnalysis.knowledge_points && knowledgeAnalysis.knowledge_points.length}}">
+      <view class="section-title">
+        📚 知识点分析
+        <van-tag type="primary" plain size="small" style="margin-left: 8px;">
+          共 {{knowledgeAnalysis.total_count}} 个
+        </van-tag>
+      </view>
+      
+      <view class="knowledge-points-list">
+        <view class="knowledge-point-item" 
+              wx:for="{{knowledgeAnalysis.knowledge_points}}" 
+              wx:key="id">
+          <view class="kp-header">
+            <view class="kp-name-wrapper">
+              <text class="kp-name">{{item.knowledge_point_name}}</text>
+              <van-tag 
+                type="primary" 
+                plain 
+                size="mini"
+                wx:if="{{item.is_primary}}">
+                主要
+              </van-tag>
+            </view>
+            <van-tag 
+              type="{{item.mastery_level >= 0.7 ? 'success' : item.mastery_level >= 0.4 ? 'warning' : 'danger'}}" 
+              plain>
+              掌握度: {{utils.toPercent(item.mastery_level)}}%
+            </van-tag>
+          </view>
+          
+          <view class="kp-info">
+            <view class="info-row" wx:if="{{item.error_type}}">
+              <van-icon name="warning-o" size="14px" color="#faad14" />
+              <text class="info-label">错误类型:</text>
+              <text class="info-value">{{item.error_type}}</text>
+            </view>
+            
+            <view class="info-row" wx:if="{{item.relevance_score}}">
+              <van-icon name="star" size="14px" color="#1890ff" />
+              <text class="info-label">相关度:</text>
+              <text class="info-value">{{utils.toPercent(item.relevance_score)}}%</text>
+            </view>
+            
+            <view class="info-row" wx:if="{{item.review_count > 0}}">
+              <van-icon name="replay" size="14px" color="#52c41a" />
+              <text class="info-label">复习次数:</text>
+              <text class="info-value">{{item.review_count}} 次</text>
+            </view>
+          </view>
+          
+          <view class="kp-error-reason" wx:if="{{item.error_reason}}">
+            <text class="reason-label">❌ 错误原因:</text>
+            <text class="reason-text">{{item.error_reason}}</text>
+          </view>
+          
+          <view class="kp-status" wx:if="{{item.mastered}}">
+            <van-tag type="success" size="small">
+              <van-icon name="checked" size="12px" /> 已掌握
+            </van-tag>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 知识点（旧版 - 兼容旧数据） -->
+    <view class="detail-section" wx:elif="{{mistakeDetail.knowledge_points && mistakeDetail.knowledge_points.length}}">
       <view class="section-title">相关知识点</view>
       
       <!-- 简单字符串格式（旧数据） -->

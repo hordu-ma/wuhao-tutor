@@ -6,6 +6,7 @@ const pageObject = {
   data: {
     mistakeId: '',
     mistakeDetail: null,
+    knowledgeAnalysis: null, // 知识点分析数据
     loading: false,
     mode: 'view', // view | review
   },
@@ -20,6 +21,8 @@ const pageObject = {
       });
 
       await this.loadMistakeDetail();
+      // 加载知识点分析
+      await this.loadKnowledgeAnalysis();
     }
   },
 
@@ -45,6 +48,25 @@ const pageObject = {
       });
     } finally {
       this.setData({ loading: false });
+    }
+  },
+
+  /**
+   * 加载知识点分析
+   */
+  async loadKnowledgeAnalysis() {
+    try {
+      const response = await mistakesApi.getMistakeKnowledgePoints(this.data.mistakeId);
+
+      if (response && response.knowledge_points) {
+        this.setData({
+          knowledgeAnalysis: response,
+        });
+        console.log('知识点分析数据:', response);
+      }
+    } catch (error) {
+      console.error('加载知识点分析失败', error);
+      // 静默失败，不影响主要功能
     }
   },
 
