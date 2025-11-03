@@ -491,10 +491,15 @@ class KnowledgePointLearningTrackRepository(
 
         curve = []
         for track in reversed(tracks):  # 从最早到最新
+            # 安全地转换 Decimal 类型为 float
+            mastery_value = 0.0
+            if track.mastery_after is not None:
+                mastery_value = float(str(track.mastery_after))
+
             curve.append(
                 {
                     "date": track.activity_date,
-                    "mastery_after": float(track.mastery_after) if track.mastery_after else 0.0,
+                    "mastery_after": mastery_value,
                     "result": track.result,
                     "activity_type": track.activity_type,
                     "improvement": track.improvement_detected,
@@ -525,8 +530,11 @@ class KnowledgePointLearningTrackRepository(
             return False
 
         # 检查最近的记录是否有连续正确或掌握度提升
-        recent_correct_tracks = [t for t in tracks if t.result == "correct"]
-        recent_correct = len(recent_correct_tracks)
+        # 使用 getattr 避免 SQLAlchemy 类型检查问题
+        recent_correct = 0
+        for track in tracks:
+            if getattr(track, "result", None) == "correct":
+                recent_correct += 1
 
         # 如果最近记录中有50%以上正确，认为有进步
         improvement = recent_correct >= (len(tracks) * 0.5)

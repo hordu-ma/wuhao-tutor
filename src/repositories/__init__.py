@@ -4,12 +4,12 @@
 """
 
 from .base_repository import BaseRepository
-from .learning_repository import LearningRepository
 from .knowledge_graph_repository import (
+    KnowledgePointLearningTrackRepository,
     MistakeKnowledgePointRepository,
     UserKnowledgeGraphSnapshotRepository,
-    KnowledgePointLearningTrackRepository,
 )
+from .learning_repository import LearningRepository
 
 __all__ = [
     "BaseRepository",
