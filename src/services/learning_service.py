@@ -357,6 +357,27 @@ class LearningService:
                     except Exception as e:
                         logger.warning(f"更新学习分析失败: {e}")
 
+                    # 🎯 9.5 智能错题自动创建（不阻塞流式响应）
+                    mistake_created = False
+                    mistake_info = None
+                    try:
+                        mistake_result = await self._auto_create_mistake_if_needed(
+                            user_id, question, answer, request
+                        )
+                        if mistake_result:
+                            mistake_created = True
+                            mistake_info = mistake_result
+                            logger.info(
+                                f"✅ [流式] 错题自动创建成功: user_id={user_id}, "
+                                f"mistake_id={mistake_info.get('id')}, "
+                                f"category={mistake_info.get('category')}, "
+                                f"confidence={mistake_info.get('confidence')}"
+                            )
+                    except Exception as mistake_err:
+                        logger.warning(
+                            f"[流式] 错题创建失败，但不影响问答: {str(mistake_err)}"
+                        )
+
                     # 10. 发送完成事件
                     yield {
                         "type": "done",
@@ -365,6 +386,8 @@ class LearningService:
                         "session_id": session_id,
                         "usage": chunk.get("usage", {}),
                         "full_content": full_answer_content,
+                        "mistake_created": mistake_created,  # 🎯 新增
+                        "mistake_info": mistake_info,  # 🎯 新增
                     }
 
         except BailianServiceError as e:
