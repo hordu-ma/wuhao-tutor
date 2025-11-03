@@ -1408,6 +1408,310 @@ class LearningService:
         return ai_answer[:100] if len(ai_answer) > 100 else ai_answer
 
     # 🎯 错题自动创建逻辑（简化规则版）
+    # ========== 智能错题识别辅助方法 ==========
+
+    def _detect_mistake_keywords(self, question_content: str) -> Dict[str, Any]:
+        """
+        策略1：关键词检测
+
+        Args:
+            question_content: 用户提问内容
+
+        Returns:
+            {
+                'is_mistake': bool,
+                'confidence': float (0.0-1.0),
+                'mistake_type': str,
+                'reason': str,
+                'matched_keywords': List[str]
+            }
+        """
+        HIGH_CONFIDENCE_KEYWORDS = [
+            "不会做",
+            "不会",
+            "不懂",
+            "不理解",
+            "不明白",
+            "不清楚",
+            "怎么做",
+            "如何解答",
+            "怎么解",
+            "怎么算",
+            "做错了",
+            "答错了",
+            "错在哪",
+            "错了",
+            "看不懂",
+            "求解",
+            "求答案",
+            "帮我做",
+            "帮我看看",
+        ]
+
+        MEDIUM_CONFIDENCE_KEYWORDS = [
+            "这道题",
+            "这个题",
+            "题目怎么",
+            "这题",
+            "解题步骤",
+            "解题思路",
+            "解题过程",
+            "难题",
+            "有难度",
+            "解不出",
+            "没学过",
+        ]
+
+        matched_high = [kw for kw in HIGH_CONFIDENCE_KEYWORDS if kw in question_content]
+        matched_medium = [
+            kw for kw in MEDIUM_CONFIDENCE_KEYWORDS if kw in question_content
+        ]
+
+        # 判断错题类型
+        mistake_type = "hard_question"  # 默认
+        if any(kw in question_content for kw in ["错", "做错", "答错"]):
+            mistake_type = "wrong_answer"
+        elif any(kw in question_content for kw in ["不会", "不懂", "看不懂"]):
+            mistake_type = "empty_question"
+
+        # 高置信度关键词
+        if matched_high:
+            return {
+                "is_mistake": True,
+                "confidence": 0.9,
+                "mistake_type": mistake_type,
+                "reason": f'检测到高置信度关键词: {", ".join(matched_high[:2])}',
+                "matched_keywords": matched_high,
+            }
+
+        # 中置信度关键词（需要多个）
+        if len(matched_medium) >= 2:
+            return {
+                "is_mistake": True,
+                "confidence": 0.75,
+                "mistake_type": mistake_type,
+                "reason": f'检测到多个中置信度关键词: {", ".join(matched_medium[:2])}',
+                "matched_keywords": matched_medium,
+            }
+
+        # 单个中置信度关键词
+        if matched_medium:
+            return {
+                "is_mistake": True,
+                "confidence": 0.6,
+                "mistake_type": mistake_type,
+                "reason": f"检测到中置信度关键词: {matched_medium[0]}",
+                "matched_keywords": matched_medium,
+            }
+
+        return {
+            "is_mistake": False,
+            "confidence": 0.3,
+            "mistake_type": None,
+            "reason": "未检测到错题关键词",
+            "matched_keywords": [],
+        }
+
+    def _extract_ai_mistake_metadata(self, answer_content: str) -> Dict[str, Any]:
+        """
+        策略2：AI意图识别
+
+        从AI回答中提取元数据（如果AI输出了结构化信息）
+
+        Args:
+            answer_content: AI回答内容
+
+        Returns:
+            {
+                'is_mistake': Optional[bool],
+                'confidence': float,
+                'mistake_type': Optional[str],
+                'knowledge_points': List[str],
+                'reason': str
+            }
+        """
+        try:
+            # 尝试从回答末尾提取JSON元数据
+            # 格式：```json\n{...}\n```
+            import re
+
+            json_pattern = r"```json\s*(\{.*?\})\s*```"
+            match = re.search(json_pattern, answer_content, re.DOTALL)
+
+            if match:
+                metadata = json.loads(match.group(1))
+                return {
+                    "is_mistake": metadata.get("is_mistake_question"),
+                    "confidence": metadata.get("confidence", 0.8),
+                    "mistake_type": metadata.get("mistake_type"),
+                    "knowledge_points": metadata.get("knowledge_points", []),
+                    "reason": "AI元数据提取成功",
+                }
+        except Exception as e:
+            logger.debug(f"AI元数据提取失败: {e}")
+
+        # 启发式分析：检查AI回答中的关键短语
+        if any(
+            phrase in answer_content
+            for phrase in ["这道题", "题目", "解题步骤", "解答如下"]
+        ):
+            return {
+                "is_mistake": True,
+                "confidence": 0.7,
+                "mistake_type": "hard_question",
+                "knowledge_points": [],
+                "reason": "AI回答包含解题内容",
+            }
+
+        return {
+            "is_mistake": None,
+            "confidence": 0.5,
+            "mistake_type": None,
+            "knowledge_points": [],
+            "reason": "AI意图不明确",
+        }
+
+    async def _analyze_question_images(
+        self, image_urls: List[str], question_content: str
+    ) -> Dict[str, Any]:
+        """
+        策略3：图片内容分析
+
+        利用Qwen-vl-max的视觉能力判断图片是否为空白题/错题
+
+        Args:
+            image_urls: 图片URL列表
+            question_content: 用户提问文本
+
+        Returns:
+            {
+                'is_mistake': Optional[bool],
+                'confidence': float,
+                'has_answer': Optional[bool],
+                'is_question_image': bool,
+                'reason': str
+            }
+        """
+        if not image_urls:
+            return {
+                "is_mistake": None,
+                "confidence": 0.5,
+                "has_answer": None,
+                "is_question_image": False,
+                "reason": "无图片上传",
+            }
+
+        try:
+            # 使用简化的启发式规则（避免额外AI调用）
+            # 规则：有图片 + 提问文本很短 = 很可能是拍照提问
+            is_short_question = len(question_content.strip()) < 20
+
+            if is_short_question:
+                return {
+                    "is_mistake": True,
+                    "confidence": 0.85,
+                    "has_answer": False,  # 假设空白题
+                    "is_question_image": True,
+                    "reason": "检测到图片上传且提问文本简短，推测为拍照题目",
+                }
+            else:
+                return {
+                    "is_mistake": True,
+                    "confidence": 0.7,
+                    "has_answer": None,
+                    "is_question_image": True,
+                    "reason": "检测到图片上传，可能为题目",
+                }
+
+        except Exception as e:
+            logger.warning(f"图片分析失败: {e}")
+            return {
+                "is_mistake": None,
+                "confidence": 0.5,
+                "has_answer": None,
+                "is_question_image": False,
+                "reason": f"图片分析异常: {str(e)}",
+            }
+
+    def _combine_mistake_analysis(
+        self,
+        keyword_result: Dict[str, Any],
+        ai_intent_result: Dict[str, Any],
+        image_result: Dict[str, Any],
+    ) -> Tuple[bool, Dict[str, Any]]:
+        """
+        策略4：综合判断
+
+        综合关键词、AI意图、图片分析的结果，做出最终判断
+
+        Args:
+            keyword_result: 关键词检测结果
+            ai_intent_result: AI意图识别结果
+            image_result: 图片分析结果
+
+        Returns:
+            (is_mistake, metadata)
+        """
+        evidences = []
+        total_confidence = 0
+        vote_for_mistake = 0
+        vote_total = 0
+
+        # 收集证据
+        if keyword_result["is_mistake"] is not None:
+            vote_total += 1
+            if keyword_result["is_mistake"]:
+                vote_for_mistake += 1
+                total_confidence += keyword_result["confidence"]
+                evidences.append(f"关键词({keyword_result['confidence']:.2f})")
+
+        if ai_intent_result["is_mistake"] is not None:
+            vote_total += 1
+            if ai_intent_result["is_mistake"]:
+                vote_for_mistake += 1
+                total_confidence += ai_intent_result["confidence"]
+                evidences.append(f"AI意图({ai_intent_result['confidence']:.2f})")
+
+        if image_result["is_mistake"] is not None:
+            vote_total += 1
+            if image_result["is_mistake"]:
+                vote_for_mistake += 1
+                total_confidence += image_result["confidence"]
+                evidences.append(f"图片({image_result['confidence']:.2f})")
+
+        # 计算平均置信度
+        avg_confidence = (
+            total_confidence / vote_for_mistake if vote_for_mistake > 0 else 0
+        )
+
+        # 最终判断：多数投票 + 置信度阈值
+        is_mistake = False
+        if vote_total > 0:
+            # 至少有一个证据支持 + 平均置信度>=0.7
+            if vote_for_mistake >= 1 and avg_confidence >= 0.7:
+                is_mistake = True
+            # 或者多数投票支持（>=2个）
+            elif vote_for_mistake >= 2:
+                is_mistake = True
+
+        # 确定错题类型（优先级：关键词 > AI意图 > 图片）
+        mistake_type = (
+            keyword_result.get("mistake_type")
+            or ai_intent_result.get("mistake_type")
+            or image_result.get("mistake_type")
+            or "empty_question"
+        )
+
+        return is_mistake, {
+            "is_mistake": is_mistake,
+            "confidence": avg_confidence,
+            "mistake_type": mistake_type,
+            "reason": f'综合判断: {vote_for_mistake}/{vote_total} 投票支持, 证据=[{", ".join(evidences)}]',
+            "evidences": evidences,
+            "vote_for_mistake": vote_for_mistake,
+            "vote_total": vote_total,
+        }
+
     async def _auto_create_mistake_if_needed(
         self,
         user_id: str,
@@ -1416,72 +1720,107 @@ class LearningService:
         request: AskQuestionRequest,
     ) -> Optional[Dict[str, Any]]:
         """
-        智能判断是否需要创建错题
+        智能判断是否需要创建错题（增强版 - 4策略综合）
 
-        简化规则：
-        1. 有图片上传 -> 可能是题目
-        2. 包含关键词："不会做"、"不懂"、"不知道"、"错了"
-        3. 问题类型为 problem_solving
+        策略：
+        1. 关键词检测：高/中置信度关键词匹配
+        2. AI意图识别：从AI回答中提取元数据
+        3. 图片分析：利用Qwen-vl-max视觉能力
+        4. 综合判断：多维度证据融合
+
+        保持向后兼容：新逻辑失败时降级到简化规则
         """
         try:
             content = extract_orm_str(question, "content") or ""
             answer_content = extract_orm_str(answer, "content") or ""
             has_images = bool(request.image_urls and len(request.image_urls) > 0)
 
-            # 关键词列表（扩展版 - 覆盖更多口语化表达）
-            mistake_keywords = [
-                # === 核心关键词（高优先级）===
-                "不会",  # 🎯 新增，覆盖"999+999这道题不会"
-                "不懂",
-                "不知道",
-                "不明白",  # 🎯 新增
-                "不清楚",  # 🎯 新增
-                # === 扩展关键词 ===
-                "不会做",
-                "不太会",  # 🎯 新增
-                "不太懂",  # 🎯 新增
-                "看不懂",  # 🎯 新增
-                # === 错误相关 ===
-                "错了",
-                "做错",
-                "答错",
-                # === 难度相关 ===
-                "难题",
-                "有难度",  # 🎯 新增
-                "解不出",
-                # === 请求帮助 ===
-                "没学过",
-                "不理解",
-                "帮我看看",  # 🎯 新增
-                "帮我做",  # 🎯 新增
-                "怎么做",  # 🎯 新增
-                "怎么解",  # 🎯 新增
-                "想问",  # 🎯 新增
-            ]
+            # ========== 4策略综合判断 ==========
+            try:
+                # 策略1：关键词检测
+                keyword_result = self._detect_mistake_keywords(content)
 
-            # 判断是否需要创建错题
-            should_create = False
-            category = "empty_question"  # 默认类型
+                # 策略2：AI意图识别
+                ai_intent_result = self._extract_ai_mistake_metadata(answer_content)
 
-            # 规则01：有图片上传（很可能是题目）
-            if has_images:
-                should_create = True
+                # 策略3：图片分析
+                image_result = await self._analyze_question_images(
+                    request.image_urls or [], content
+                )
+
+                # 策略4：综合判断
+                should_create, analysis_meta = self._combine_mistake_analysis(
+                    keyword_result, ai_intent_result, image_result
+                )
+
+                category = analysis_meta.get("mistake_type", "empty_question")
+                confidence = analysis_meta.get("confidence", 0.0)
+
+                logger.info(
+                    f"🧠 智能错题识别: should_create={should_create}, "
+                    f"confidence={confidence:.2f}, category={category}, "
+                    f"reason={analysis_meta.get('reason')}"
+                )
+
+                # 置信度阈值检查（从配置读取，默认0.7）
+                min_confidence = getattr(settings, "AUTO_MISTAKE_MIN_CONFIDENCE", 0.7)
+                if not should_create or confidence < min_confidence:
+                    logger.info(
+                        f"❌ 不满足错题创建条件: should_create={should_create}, "
+                        f"confidence={confidence:.2f} < {min_confidence}"
+                    )
+                    return None
+
+            except Exception as strategy_error:
+                # 新策略失败时降级到原有简化规则
+                logger.warning(f"⚠️ 4策略综合判断失败，降级到简化规则: {strategy_error}")
+
+                # === 降级：原有简化规则（向后兼容）===
+                mistake_keywords = [
+                    "不会",
+                    "不懂",
+                    "不知道",
+                    "不明白",
+                    "不清楚",
+                    "不会做",
+                    "不太会",
+                    "不太懂",
+                    "看不懂",
+                    "错了",
+                    "做错",
+                    "答错",
+                    "难题",
+                    "有难度",
+                    "解不出",
+                    "没学过",
+                    "不理解",
+                    "帮我看看",
+                    "帮我做",
+                    "怎么做",
+                    "怎么解",
+                    "想问",
+                ]
+
+                should_create = False
                 category = "empty_question"
-                logger.info(f"🖼️ 检测到图片上传，自动创建错题")
 
-            # 规则02：包含关键词
-            elif any(keyword in content for keyword in mistake_keywords):
-                should_create = True
-                if "错" in content or "做错" in content or "答错" in content:
-                    category = "wrong_answer"
-                elif "难" in content or "解不出" in content:
-                    category = "hard_question"
-                else:
+                if has_images:
+                    should_create = True
                     category = "empty_question"
-                logger.info(f"🔑 检测到关键词，自动创建错题: category={category}")
+                    logger.info(f"🖼️ [降级规则] 检测到图片上传，自动创建错题")
+                elif any(keyword in content for keyword in mistake_keywords):
+                    should_create = True
+                    if "错" in content or "做错" in content or "答错" in content:
+                        category = "wrong_answer"
+                    elif "难" in content or "解不出" in content:
+                        category = "hard_question"
+                    else:
+                        category = "empty_question"
+                    logger.info(f"🔑 [降级规则] 检测到关键词，category={category}")
 
-            if not should_create:
-                return None
+                if not should_create:
+                    return None
+                # === 降级规则结束 ===
 
             # 创建错题记录
             from src.models.study import MistakeRecord
