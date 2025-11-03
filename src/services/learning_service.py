@@ -1449,13 +1449,40 @@ class LearningService:
                 'matched_keywords': List[str]
             }
         """
+        # 🛡️ 排除关键词：明确的非错题场景（纯知识查询、闲聊）
+        EXCLUSION_KEYWORDS = [
+            "告诉我",
+            "什么是",
+            "介绍一下",
+            "讲解一下",
+            "说说",
+            "解释一下",
+            "最长的",
+            "最短的",
+            "最大的",
+            "最小的",
+            "有哪些",
+            "举例",
+            "比如",
+            "区别",
+            "联系",
+            "关系",
+            "定义",
+            "概念",
+            "特点",
+            "优点",
+            "缺点",
+            "好处",
+            "坏处",
+        ]
+
+        # 🎯 高置信度关键词：强烈暗示错题的词汇
         HIGH_CONFIDENCE_KEYWORDS = [
             "不会做",
             "不会",
             "不懂",
             "不理解",
             "不明白",
-            "不清楚",
             "怎么做",
             "如何解答",
             "怎么解",
@@ -1463,29 +1490,47 @@ class LearningService:
             "做错了",
             "答错了",
             "错在哪",
-            "错了",
             "看不懂",
             "求解",
             "求答案",
             "帮我做",
-            "帮我看看",
+            "帮我看看这道题",  # 更具体，避免误判
         ]
 
+        # 🔸 中置信度关键词：可能是错题，但需要更多证据（需要≥2个或与图片结合）
         MEDIUM_CONFIDENCE_KEYWORDS = [
-            "这道题",
-            "这个题",
-            "题目怎么",
-            "这题",
             "解题步骤",
             "解题思路",
             "解题过程",
+            "解题方法",
             "难题",
             "有难度",
             "解不出",
             "没学过",
         ]
 
-        matched_high = [kw for kw in HIGH_CONFIDENCE_KEYWORDS if kw in question_content]
+        # 🛡️ 1. 先检查排除关键词（优先级最高）
+        matched_exclusion = [
+            kw for kw in EXCLUSION_KEYWORDS if kw in question_content
+        ]
+        if matched_exclusion:
+            logger.info(
+                f"🛡️ 检测到非错题关键词，跳过错题识别: {matched_exclusion[:2]}"
+            )
+            return {
+                "is_mistake": False,
+                "confidence": 0.2,
+                "mistake_type": None,
+                "reason": f'检测到非错题关键词: {", ".join(matched_exclusion[:2])}',
+                "matched_keywords": [],
+            }
+
+        # 2. 检查高置信度关键词
+        matched_high = [
+            kw for kw in HIGH_CONFIDENCE_KEYWORDS if kw in question_content
+        ]
+
+        # 3. 检查中置信度关键词
         matched_medium = [
             kw for kw in MEDIUM_CONFIDENCE_KEYWORDS if kw in question_content
         ]
@@ -1497,7 +1542,7 @@ class LearningService:
         elif any(kw in question_content for kw in ["不会", "不懂", "看不懂"]):
             mistake_type = "empty_question"
 
-        # 高置信度关键词
+        # 🎯 高置信度关键词 → 直接判定为错题
         if matched_high:
             return {
                 "is_mistake": True,
@@ -1507,23 +1552,23 @@ class LearningService:
                 "matched_keywords": matched_high,
             }
 
-        # 中置信度关键词（需要多个）
+        # 🔸 多个中置信度关键词（≥2个）→ 判定为错题（但置信度较低）
         if len(matched_medium) >= 2:
             return {
                 "is_mistake": True,
-                "confidence": 0.75,
+                "confidence": 0.7,  # 降低置信度，从0.75降到0.7
                 "mistake_type": mistake_type,
                 "reason": f'检测到多个中置信度关键词: {", ".join(matched_medium[:2])}',
                 "matched_keywords": matched_medium,
             }
 
-        # 单个中置信度关键词
+        # 🔸 单个中置信度关键词 → 不确定（返回None，需要其他证据）
         if matched_medium:
             return {
-                "is_mistake": True,
-                "confidence": 0.6,
-                "mistake_type": mistake_type,
-                "reason": f"检测到中置信度关键词: {matched_medium[0]}",
+                "is_mistake": None,  # ✅ 修复：单个中置信度关键词不足以判定
+                "confidence": 0.5,  # 降低置信度，从0.6降到0.5
+                "mistake_type": None,
+                "reason": f"检测到单个中置信度关键词（不足以判定）: {matched_medium[0]}",
                 "matched_keywords": matched_medium,
             }
 
@@ -1661,10 +1706,10 @@ class LearningService:
 
         综合关键词、AI意图、图片分析的结果，做出最终判断
 
-        🎯 判断标准（提高门槛，避免误判）：
-        - 单个高置信度证据(≥0.85) 可判定为错题
-        - 或者 多个证据(≥2) 且平均置信度≥0.75
-        - 降低了对单一证据的依赖，减少误判
+        🎯 判断标准（优化后，避免误判）：
+        - 关键词高置信度证据(≥0.9) 可判定为错题
+        - 或者 图片高置信度(≥0.85) + 关键词中等置信度
+        - 或者 多个高置信度证据(≥2) 且平均置信度≥0.8
 
         Args:
             keyword_result: 关键词检测结果
@@ -1678,6 +1723,7 @@ class LearningService:
         total_confidence = 0
         vote_for_mistake = 0
         vote_total = 0
+        high_confidence_count = 0  # 高置信度证据数量
 
         # 收集证据
         if keyword_result["is_mistake"] is not None:
@@ -1686,6 +1732,9 @@ class LearningService:
                 vote_for_mistake += 1
                 total_confidence += keyword_result["confidence"]
                 evidences.append(f"关键词({keyword_result['confidence']:.2f})")
+                # 统计高置信度证据（≥0.85）
+                if keyword_result["confidence"] >= 0.85:
+                    high_confidence_count += 1
 
         if ai_intent_result["is_mistake"] is not None:
             vote_total += 1
@@ -1693,6 +1742,8 @@ class LearningService:
                 vote_for_mistake += 1
                 total_confidence += ai_intent_result["confidence"]
                 evidences.append(f"AI意图({ai_intent_result['confidence']:.2f})")
+                if ai_intent_result["confidence"] >= 0.85:
+                    high_confidence_count += 1
 
         if image_result["is_mistake"] is not None:
             vote_total += 1
@@ -1700,21 +1751,46 @@ class LearningService:
                 vote_for_mistake += 1
                 total_confidence += image_result["confidence"]
                 evidences.append(f"图片({image_result['confidence']:.2f})")
+                if image_result["confidence"] >= 0.85:
+                    high_confidence_count += 1
 
         # 计算平均置信度
         avg_confidence = (
             total_confidence / vote_for_mistake if vote_for_mistake > 0 else 0
         )
 
-        # 🎯 最终判断（提高阈值）：
+        # 🎯 最终判断（提高门槛，降低误判率）：
         is_mistake = False
-        if vote_total > 0:
-            # 场景1：单个高置信度证据(≥0.85)
-            if vote_for_mistake >= 1 and avg_confidence >= 0.85:
+        decision_reason = ""
+
+        if vote_total > 0 and vote_for_mistake > 0:
+            # 场曯1：关键词高置信度（≥0.9）→ 直接判定
+            if keyword_result.get("is_mistake") and keyword_result.get("confidence", 0) >= 0.9:
                 is_mistake = True
-            # 场景2：多个证据(≥2) 且平均置信度≥0.75
-            elif vote_for_mistake >= 2 and avg_confidence >= 0.75:
+                decision_reason = "关键词高置信度（≥0.9）"
+
+            # 场曯2：图片高置信度(≥0.85) + 关键词中等置信度(≥0.6)
+            elif (
+                image_result.get("is_mistake")
+                and image_result.get("confidence", 0) >= 0.85
+                and keyword_result.get("is_mistake") is not False  # 允许None
+                and keyword_result.get("confidence", 0) >= 0.6
+            ):
                 is_mistake = True
+                decision_reason = "图片高置信度 + 关键词支持"
+
+            # 场曯3：多个高置信度证据(≥2) 且平均置信度≥0.8
+            elif high_confidence_count >= 2 and avg_confidence >= 0.8:
+                is_mistake = True
+                decision_reason = f"多个高置信度证据({high_confidence_count}个)"
+
+            # 场曯4：图片 + AI意图 + 关键词 都支持，且平均置信度≥0.75
+            elif vote_for_mistake >= 3 and avg_confidence >= 0.75:
+                is_mistake = True
+                decision_reason = "多维度证据支持（≥3个）"
+
+            else:
+                decision_reason = f"证据不足：高置信度证据{high_confidence_count}个，平均置信度{avg_confidence:.2f}"
 
         # 确定错题类型（优先级：关键词 > AI意图 > 图片）
         mistake_type = (
@@ -1728,10 +1804,11 @@ class LearningService:
             "is_mistake": is_mistake,
             "confidence": avg_confidence,
             "mistake_type": mistake_type,
-            "reason": f'综合判断: {vote_for_mistake}/{vote_total} 投票支持, 证据=[{", ".join(evidences)}]',
+            "reason": f'综合判断: {decision_reason}, 证据=[{", ".join(evidences)}]',
             "evidences": evidences,
             "vote_for_mistake": vote_for_mistake,
             "vote_total": vote_total,
+            "high_confidence_count": high_confidence_count,
         }
 
     async def _auto_create_mistake_if_needed(
