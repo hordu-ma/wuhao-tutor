@@ -153,7 +153,9 @@ class Settings(BaseSettings):
 
     # 自动错题识别配置
     AUTO_MISTAKE_DETECTION_ENABLED: bool = True  # 是否启用自动错题识别
-    AUTO_MISTAKE_MIN_CONFIDENCE: float = 0.7  # 自动识别置信度阈值（0.0-1.0）
+    AUTO_MISTAKE_MIN_CONFIDENCE: float = (
+        0.80  # 🛠️ 提高阈值：自动识别置信度阈值（0.0-1.0）避免误判
+    )
     AUTO_MISTAKE_REQUIRE_IMAGE: bool = False  # 是否要求必须有图片才创建错题
 
     # 加密配置

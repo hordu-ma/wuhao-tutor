@@ -42,10 +42,41 @@ const pageObject = {
       }
     } catch (error) {
       console.error('加载错题详情失败', error);
-      wx.showToast({
-        title: error.message || '加载失败',
-        icon: 'error',
-      });
+
+      // 🔧 检查是否是404错误（资源不存在）
+      const isNotFound =
+        error.message?.includes('不存在') ||
+        error.message?.includes('404') ||
+        error.statusCode === 404;
+
+      if (isNotFound) {
+        // 错题已被删除，提示后返回列表页
+        wx.showModal({
+          title: '提示',
+          content: '该错题已被删除',
+          showCancel: false,
+          success: res => {
+            if (res.confirm) {
+              // 标记需要刷新列表
+              const pages = getCurrentPages();
+              if (pages.length >= 2) {
+                const prevPage = pages[pages.length - 2];
+                if (prevPage.route === 'pages/mistakes/list/index') {
+                  prevPage.setData({ needRefresh: true });
+                }
+              }
+              // 返回上一页
+              wx.navigateBack();
+            }
+          },
+        });
+      } else {
+        // 其他错误，只显示提示
+        wx.showToast({
+          title: error.message || '加载失败',
+          icon: 'error',
+        });
+      }
     } finally {
       this.setData({ loading: false });
     }
@@ -109,6 +140,15 @@ const pageObject = {
           title: '删除成功',
           icon: 'success',
         });
+
+        // 🔧 标记列表页需要刷新
+        const pages = getCurrentPages();
+        if (pages.length >= 2) {
+          const prevPage = pages[pages.length - 2];
+          if (prevPage.route === 'pages/mistakes/list/index') {
+            prevPage.setData({ needRefresh: true });
+          }
+        }
 
         setTimeout(() => {
           wx.navigateBack();
