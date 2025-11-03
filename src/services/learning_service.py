@@ -1343,7 +1343,7 @@ class LearningService:
                 "student_answer": student_answer,
                 "correct_answer": correct_answer,
                 # 复习相关（使用艾宾浩斯算法）
-                "mastery_status": "learning",
+                "mastery_status": "not_mastered",  # 🔧 修复：使用正确的枚举值
                 "next_review_at": datetime.now()
                 + timedelta(days=1),  # 第一次复习：1天后
                 "review_count": 0,
