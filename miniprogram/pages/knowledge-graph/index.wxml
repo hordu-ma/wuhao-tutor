@@ -1,4 +1,22 @@
 <!--pages/knowledge-graph/index.wxml-->
+<wxs module="utils">
+  var toPercent = function(value) {
+    if (!value) return 0;
+    return Math.round(value * 100);
+  };
+  
+  var getProgressColor = function(mastery) {
+    if (mastery >= 0.7) return '#52c41a';
+    if (mastery >= 0.4) return '#faad14';
+    return '#f5222d';
+  };
+  
+  module.exports = {
+    toPercent: toPercent,
+    getProgressColor: getProgressColor
+  };
+</wxs>
+
 <view class="knowledge-graph-container">
   <!-- 科目选择器 -->
   <view class="subject-selector">
@@ -36,7 +54,7 @@
           <text class="stat-label">涉及知识点</text>
         </view>
         <view class="stat-item">
-          <text class="stat-value">{{snapshot.average_mastery ? (snapshot.average_mastery * 100).toFixed(0) : 0}}%</text>
+          <text class="stat-value">{{utils.toPercent(snapshot.average_mastery)}}%</text>
           <text class="stat-label">平均掌握度</text>
         </view>
       </view>
@@ -62,7 +80,7 @@
             </view>
             <view class="info-item" wx:if="{{item.avg_mastery_level !== undefined}}">
               <van-icon name="chart-trending-o" size="14px" />
-              <text>掌握度: {{(item.avg_mastery_level * 100).toFixed(0)}}%</text>
+              <text>掌握度: {{utils.toPercent(item.avg_mastery_level)}}%</text>
             </view>
           </view>
           <view class="chain-reason" wx:if="{{item.common_error_type}}">
@@ -88,7 +106,7 @@
               <van-tag 
                 type="{{item.mastery_level >= 0.7 ? 'success' : item.mastery_level >= 0.4 ? 'warning' : 'danger'}}" 
                 plain>
-                {{(item.mastery_level * 100).toFixed(0)}}%
+                {{utils.toPercent(item.mastery_level)}}%
               </van-tag>
             </view>
           </view>
@@ -101,7 +119,7 @@
           <!-- 掌握度进度条 -->
           <view class="kp-progress">
             <view class="progress-bar" 
-                  style="width: {{(item.mastery_level * 100).toFixed(0)}}%; background-color: {{item.mastery_level >= 0.7 ? '#52c41a' : item.mastery_level >= 0.4 ? '#faad14' : '#f5222d'}};"></view>
+                  style="width: {{utils.toPercent(item.mastery_level)}}%; background-color: {{utils.getProgressColor(item.mastery_level)}};"></view>
           </view>
         </view>
       </view>

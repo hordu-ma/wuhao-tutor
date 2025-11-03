@@ -1,4 +1,21 @@
 <!--pages/mistakes/detail/index.wxml-->
+<wxs module="utils">
+  var toPercent = function(value) {
+    if (!value) return 0;
+    return Math.round(value * 100);
+  };
+  
+  var isStringArray = function(arr) {
+    if (!arr || arr.length === 0) return false;
+    return typeof arr[0] === 'string';
+  };
+  
+  module.exports = {
+    toPercent: toPercent,
+    isStringArray: isStringArray
+  };
+</wxs>
+
 <view class="mistake-detail-container">
   <!-- 加载状态 -->
   <loading wx:if="{{loading}}" />
@@ -72,7 +89,7 @@
       <view class="section-title">相关知识点</view>
       
       <!-- 简单字符串格式（旧数据） -->
-      <view class="knowledge-tags" wx:if="{{typeof mistakeDetail.knowledge_points[0] === 'string'}}">
+      <view class="knowledge-tags" wx:if="{{utils.isStringArray(mistakeDetail.knowledge_points)}}">
         <van-tag wx:for="{{mistakeDetail.knowledge_points}}" wx:key="*this" plain>
           {{item}}
         </van-tag>
@@ -89,12 +106,12 @@
               type="{{item.mastery_level >= 0.7 ? 'success' : item.mastery_level >= 0.4 ? 'warning' : 'danger'}}" 
               plain 
               wx:if="{{item.mastery_level !== undefined}}">
-              掌握度: {{(item.mastery_level * 100).toFixed(0)}}%
+              掌握度: {{utils.toPercent(item.mastery_level)}}%
             </van-tag>
           </view>
           <view class="kp-relevance" wx:if="{{item.relevance}}">
             <van-icon name="star" size="12px" />
-            <text>相关度: {{(item.relevance * 100).toFixed(0)}}%</text>
+            <text>相关度: {{utils.toPercent(item.relevance)}}%</text>
           </view>
           <view class="kp-suggestions" wx:if="{{item.suggestions && item.suggestions.length}}">
             <view class="suggestion-title">💡 学习建议：</view>

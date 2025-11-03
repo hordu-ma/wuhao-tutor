@@ -1,4 +1,15 @@
 <!--pages/review-recommendations/index.wxml-->
+<wxs module="utils">
+  var toPercent = function(value) {
+    if (!value) return 0;
+    return Math.round(value * 100);
+  };
+  
+  module.exports = {
+    toPercent: toPercent
+  };
+</wxs>
+
 <view class="review-recommendations-container">
   <!-- 科目选择器 -->
   <view class="subject-selector">
@@ -55,7 +66,7 @@
           <view class="item-stats">
             <view class="stat-chip">
               <van-icon name="chart-trending-o" size="14px" />
-              <text>掌握度 {{(item.mastery_level * 100).toFixed(0)}}%</text>
+              <text>掌握度 {{utils.toPercent(item.mastery_level)}}%</text>
             </view>
             <view class="stat-chip">
               <van-icon name="warning-o" size="14px" />
