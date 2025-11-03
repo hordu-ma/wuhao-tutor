@@ -143,6 +143,21 @@
           </view>
         </view>
 
+        <!-- 知识点筛选 -->
+        <view class="filter-group" wx:if="{{knowledgePointOptions.length > 0}}">
+          <text class="filter-label">知识点</text>
+          <view class="filter-options">
+            <view class="filter-option {{selectedKnowledgePoint === item.name ? 'selected' : ''}}"
+                  wx:for="{{knowledgePointOptions}}"
+                  wx:key="name"
+                  bindtap="onKnowledgePointSelect"
+                  data-knowledge-point="{{item.name}}">
+              {{item.name}}
+              <text class="option-count" wx:if="{{item.mistake_count > 0}}">({{item.mistake_count}})</text>
+            </view>
+          </view>
+        </view>
+
         <!-- 难度筛选 -->
         <view class="filter-group">
           <text class="filter-label">难度</text>

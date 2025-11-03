@@ -8,6 +8,8 @@
     "pages/mistakes/detail/index",
     "pages/mistakes/add/index",
     "pages/mistakes/today-review/index",
+    "pages/knowledge-graph/index",
+    "pages/review-recommendations/index",
     "pages/learning/index/index",
     "pages/learning/detail/index",
     "pages/analysis/report/index",

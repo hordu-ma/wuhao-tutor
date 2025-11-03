@@ -74,6 +74,10 @@ const pageObject = {
     // 搜索关键词
     searchKeyword: '',
 
+    // 知识点筛选
+    selectedKnowledgePoint: '',
+    knowledgePointOptions: [], // 从 API 加载
+
     // 错误状态
     error: null,
   },
@@ -97,8 +101,21 @@ const pageObject = {
       });
     }
 
+    // 🔧 处理知识点筛选参数
+    if (options.knowledge_point) {
+      const knowledgePoint = decodeURIComponent(options.knowledge_point);
+      this.setData({
+        selectedKnowledgePoint: knowledgePoint,
+      });
+    }
+
     // 加载错题列表
     this.loadMistakesList(true);
+
+    // 加载知识点列表（如果有科目）
+    if (this.data.selectedSubject && this.data.selectedSubject !== '全部') {
+      this.loadKnowledgePoints();
+    }
   },
 
   /**
@@ -147,6 +164,41 @@ const pageObject = {
   },
 
   /**
+   * 加载知识点列表
+   */
+  async loadKnowledgePoints() {
+    const { selectedSubject } = this.data;
+
+    if (!selectedSubject || selectedSubject === '全部') {
+      this.setData({
+        knowledgePointOptions: [],
+        selectedKnowledgePoint: '',
+      });
+      return;
+    }
+
+    try {
+      const response = await mistakesApi.getKnowledgePointList({
+        subject: selectedSubject,
+        min_count: 1,
+      });
+
+      if (response && response.success !== false) {
+        const knowledgePoints = response.data || response || [];
+
+        // 添加“全部”选项
+        const options = [{ name: '全部知识点', mistake_count: 0 }, ...knowledgePoints];
+
+        this.setData({
+          knowledgePointOptions: options,
+        });
+      }
+    } catch (error) {
+      console.error('加载知识点列表失败', error);
+    }
+  },
+
+  /**
    * 加载错题列表
    */
   async loadMistakesList(reset = false) {
@@ -183,6 +235,11 @@ const pageObject = {
         // 🎯 智能筛选参数
         category: this.data.selectedCategory || undefined,
         source: this.data.selectedSource || undefined,
+        // 知识点筛选
+        knowledge_point:
+          this.data.selectedKnowledgePoint && this.data.selectedKnowledgePoint !== '全部知识点'
+            ? this.data.selectedKnowledgePoint
+            : undefined,
       };
 
       console.log('加载错题列表请求参数', params);
@@ -557,6 +614,27 @@ const pageObject = {
 
     this.setData({
       selectedSubject: subject,
+      selectedKnowledgePoint: '', // 重置知识点筛选
+    });
+
+    // 加载该科目的知识点列表
+    if (subject && subject !== '全部') {
+      this.loadKnowledgePoints();
+    } else {
+      this.setData({
+        knowledgePointOptions: [],
+      });
+    }
+  },
+
+  /**
+   * 选择知识点
+   */
+  onKnowledgePointSelect(e) {
+    const { knowledgePoint } = e.currentTarget.dataset;
+
+    this.setData({
+      selectedKnowledgePoint: knowledgePoint,
     });
   },
 
@@ -580,6 +658,8 @@ const pageObject = {
       selectedDifficulty: '',
       selectedCategory: '',
       selectedSource: '',
+      selectedKnowledgePoint: '',
+      knowledgePointOptions: [],
     });
   },
 

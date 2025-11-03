@@ -1,0 +1,103 @@
+<!--pages/review-recommendations/index.wxml-->
+<view class="review-recommendations-container">
+  <!-- 科目选择器 -->
+  <view class="subject-selector">
+    <van-dropdown-menu>
+      <van-dropdown-item 
+        value="{{selectedSubject}}" 
+        options="{{subjectOptions}}" 
+        bind:change="onSubjectChange" />
+    </van-dropdown-menu>
+  </view>
+
+  <!-- 加载状态 -->
+  <loading wx:if="{{loading && !recommendations.length}}" />
+
+  <!-- 错误提示 -->
+  <view class="error-tip" wx:if="{{error && !recommendations.length}}">
+    <van-icon name="warning-o" size="40px" color="#faad14" />
+    <text class="error-text">{{error}}</text>
+    <van-button type="primary" size="small" bindtap="loadRecommendations">重试</van-button>
+  </view>
+
+  <!-- 推荐列表 -->
+  <scroll-view class="recommendations-scroll" scroll-y="{{true}}" wx:if="{{!loading || recommendations.length}}">
+    
+    <!-- 提示说明 -->
+    <view class="tips-card" wx:if="{{recommendations.length > 0}}">
+      <van-icon name="bulb-o" size="20px" color="#1890ff" />
+      <text class="tips-text">基于遗忘曲线和知识点关联度，为你推荐以下复习内容</text>
+    </view>
+
+    <!-- 推荐项列表 -->
+    <view class="recommendations-list">
+      <view class="recommendation-item" 
+            wx:for="{{recommendations}}" 
+            wx:key="knowledge_point"
+            bindtap="onKnowledgePointTap"
+            data-knowledge-point="{{item.knowledge_point}}">
+        
+        <!-- 优先级标签 -->
+        <view class="priority-badge" style="background-color: {{getPriorityLevel(item.priority).color}}">
+          {{index + 1}}
+        </view>
+
+        <view class="item-content">
+          <!-- 标题栏 -->
+          <view class="item-header">
+            <text class="kp-name">{{item.knowledge_point}}</text>
+            <van-tag type="{{getPriorityLevel(item.priority).type}}" plain>
+              {{getPriorityLevel(item.priority).text}}
+            </van-tag>
+          </view>
+
+          <!-- 统计信息 -->
+          <view class="item-stats">
+            <view class="stat-chip">
+              <van-icon name="chart-trending-o" size="14px" />
+              <text>掌握度 {{(item.mastery_level * 100).toFixed(0)}}%</text>
+            </view>
+            <view class="stat-chip">
+              <van-icon name="warning-o" size="14px" />
+              <text>错题 {{item.mistake_count}} 道</text>
+            </view>
+            <view class="stat-chip" wx:if="{{item.forgetting_risk > 0.5}}">
+              <van-icon name="clock-o" size="14px" />
+              <text>遗忘风险高</text>
+            </view>
+          </view>
+
+          <!-- 推荐原因 -->
+          <view class="item-reasons">
+            <view class="reason-item" wx:if="{{item.mastery_level < 0.4}}">
+              📌 掌握度较低，需要重点加强
+            </view>
+            <view class="reason-item" wx:if="{{item.has_prerequisite}}">
+              🔗 是其他知识点的前置基础
+            </view>
+            <view class="reason-item" wx:if="{{item.forgetting_risk > 0.5}}">
+              ⏰ 距上次练习时间较长，建议尽快复习
+            </view>
+            <view class="reason-item" wx:if="{{item.related_weak_count > 0}}">
+              🎯 关联了 {{item.related_weak_count}} 个薄弱知识点
+            </view>
+          </view>
+
+          <!-- 操作按钮 -->
+          <view class="item-action">
+            <van-button type="primary" size="small" plain>
+              查看相关错题
+            </van-button>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 空状态 -->
+    <empty-state 
+      wx:if="{{!loading && recommendations.length === 0}}"
+      type="default"
+      text="暂无推荐"
+      description="该科目还没有需要复习的内容" />
+  </scroll-view>
+</view>

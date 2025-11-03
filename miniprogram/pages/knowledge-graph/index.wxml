@@ -1,0 +1,124 @@
+<!--pages/knowledge-graph/index.wxml-->
+<view class="knowledge-graph-container">
+  <!-- 科目选择器 -->
+  <view class="subject-selector">
+    <van-dropdown-menu>
+      <van-dropdown-item 
+        value="{{selectedSubject}}" 
+        options="{{subjectOptions}}" 
+        bind:change="onSubjectChange" />
+    </van-dropdown-menu>
+  </view>
+
+  <!-- 加载状态 -->
+  <loading wx:if="{{snapshotLoading && !snapshot}}" />
+
+  <!-- 错误提示 -->
+  <view class="error-tip" wx:if="{{error && !snapshot}}">
+    <van-icon name="warning-o" size="40px" color="#faad14" />
+    <text class="error-text">{{error}}</text>
+    <van-button type="primary" size="small" bindtap="loadData">重试</van-button>
+  </view>
+
+  <!-- 知识图谱内容 -->
+  <scroll-view class="kg-scroll" scroll-y="{{true}}" wx:if="{{!snapshotLoading || snapshot}}">
+    
+    <!-- 整体统计卡片 -->
+    <view class="stats-card" wx:if="{{snapshot}}">
+      <view class="card-title">📊 学情概览</view>
+      <view class="stats-grid">
+        <view class="stat-item">
+          <text class="stat-value">{{snapshot.total_mistakes || 0}}</text>
+          <text class="stat-label">错题总数</text>
+        </view>
+        <view class="stat-item">
+          <text class="stat-value">{{snapshot.knowledge_points ? snapshot.knowledge_points.length : 0}}</text>
+          <text class="stat-label">涉及知识点</text>
+        </view>
+        <view class="stat-item">
+          <text class="stat-value">{{snapshot.average_mastery ? (snapshot.average_mastery * 100).toFixed(0) : 0}}%</text>
+          <text class="stat-label">平均掌握度</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 薄弱知识链 -->
+    <view class="weak-chains-card" wx:if="{{weakChains.length > 0}}">
+      <view class="card-title">⚠️ 需要重点关注</view>
+      <view class="weak-chains-list">
+        <view class="weak-chain-item" 
+              wx:for="{{weakChains}}" 
+              wx:key="knowledge_point"
+              bindtap="onKnowledgePointTap"
+              data-knowledge-point="{{item.knowledge_point}}">
+          <view class="chain-header">
+            <text class="chain-name">{{item.knowledge_point}}</text>
+            <van-tag type="danger" plain>待加强</van-tag>
+          </view>
+          <view class="chain-info">
+            <view class="info-item">
+              <van-icon name="warning-o" size="14px" />
+              <text>错题数: {{item.mistake_count}}</text>
+            </view>
+            <view class="info-item" wx:if="{{item.avg_mastery_level !== undefined}}">
+              <van-icon name="chart-trending-o" size="14px" />
+              <text>掌握度: {{(item.avg_mastery_level * 100).toFixed(0)}}%</text>
+            </view>
+          </view>
+          <view class="chain-reason" wx:if="{{item.common_error_type}}">
+            <text class="reason-label">常见错误:</text>
+            <text class="reason-text">{{item.common_error_type}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 知识点掌握度列表 -->
+    <view class="knowledge-points-card" wx:if="{{snapshot && snapshot.knowledge_points}}">
+      <view class="card-title">📚 知识点掌握情况</view>
+      <view class="kp-list">
+        <view class="kp-item" 
+              wx:for="{{snapshot.knowledge_points}}" 
+              wx:key="name"
+              bindtap="onKnowledgePointTap"
+              data-knowledge-point="{{item.name}}">
+          <view class="kp-main">
+            <text class="kp-name">{{item.name}}</text>
+            <view class="kp-mastery">
+              <van-tag 
+                type="{{item.mastery_level >= 0.7 ? 'success' : item.mastery_level >= 0.4 ? 'warning' : 'danger'}}" 
+                plain>
+                {{(item.mastery_level * 100).toFixed(0)}}%
+              </van-tag>
+            </view>
+          </view>
+          <view class="kp-details">
+            <text class="detail-text">错题 {{item.mistake_count}} 题</text>
+            <text class="detail-text" wx:if="{{item.last_practiced}}">
+              最近练习: {{item.last_practiced}}
+            </text>
+          </view>
+          <!-- 掌握度进度条 -->
+          <view class="kp-progress">
+            <view class="progress-bar" 
+                  style="width: {{(item.mastery_level * 100).toFixed(0)}}%; background-color: {{item.mastery_level >= 0.7 ? '#52c41a' : item.mastery_level >= 0.4 ? '#faad14' : '#f5222d'}};"></view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 空状态 -->
+    <empty-state 
+      wx:if="{{!snapshot && !snapshotLoading}}"
+      type="default"
+      text="暂无数据"
+      description="该科目还没有错题记录" />
+
+    <!-- 底部操作区 -->
+    <view class="bottom-actions" wx:if="{{snapshot}}">
+      <van-button type="primary" block bindtap="onViewRecommendations">
+        查看智能复习推荐
+      </van-button>
+    </view>
+  </scroll-view>
+</view>

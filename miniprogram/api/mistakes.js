@@ -334,6 +334,114 @@ const mistakesAPI = {
       ...config,
     });
   },
+
+  // ===== 知识图谱相关 API =====
+
+  /**
+   * 获取知识点列表（用于筛选）
+   * @param {Object} params - 查询参数
+   * @param {string} params.subject - 学科
+   * @param {number} [params.min_count=1] - 最小错题数量
+   * @param {Object} [config] - 请求配置
+   * @returns {Promise<Array>} 知识点列表
+   */
+  getKnowledgePointList(params, config = {}) {
+    if (!params || !params.subject) {
+      return Promise.reject({
+        code: 'VALIDATION_ERROR',
+        message: '学科不能为空',
+      });
+    }
+
+    const queryParams = {
+      subject: params.subject,
+    };
+    if (params.min_count) queryParams.min_count = params.min_count;
+
+    return request.get('knowledge-graph/knowledge-points', queryParams, {
+      showLoading: false,
+      ...config,
+    });
+  },
+
+  /**
+   * 获取知识图谱快照
+   * @param {Object} params - 查询参数
+   * @param {string} params.subject - 学科
+   * @param {Object} [config] - 请求配置
+   * @returns {Promise<Object>} 知识图谱快照数据
+   */
+  getKnowledgeGraphSnapshot(params, config = {}) {
+    if (!params || !params.subject) {
+      return Promise.reject({
+        code: 'VALIDATION_ERROR',
+        message: '学科不能为空',
+      });
+    }
+
+    return request.get(
+      'knowledge-graph/snapshot',
+      { subject: params.subject },
+      {
+        showLoading: false,
+        ...config,
+      },
+    );
+  },
+
+  /**
+   * 获取薄弱知识链
+   * @param {Object} params - 查询参数
+   * @param {string} params.subject - 学科
+   * @param {number} [params.limit=5] - 返回数量
+   * @param {Object} [config] - 请求配置
+   * @returns {Promise<Array>} 薄弱知识链列表
+   */
+  getWeakKnowledgeChains(params, config = {}) {
+    if (!params || !params.subject) {
+      return Promise.reject({
+        code: 'VALIDATION_ERROR',
+        message: '学科不能为空',
+      });
+    }
+
+    const queryParams = {
+      subject: params.subject,
+      limit: params.limit || 5,
+    };
+
+    return request.get('knowledge-graph/weak-chains', queryParams, {
+      showLoading: false,
+      ...config,
+    });
+  },
+
+  /**
+   * 获取智能复习推荐
+   * @param {Object} params - 查询参数
+   * @param {string} params.subject - 学科
+   * @param {number} [params.limit=10] - 推荐数量
+   * @param {Object} [config] - 请求配置
+   * @returns {Promise<Array>} 复习推荐列表
+   */
+  getReviewRecommendations(params, config = {}) {
+    if (!params || !params.subject) {
+      return Promise.reject({
+        code: 'VALIDATION_ERROR',
+        message: '学科不能为空',
+      });
+    }
+
+    const queryParams = {
+      subject: params.subject,
+      limit: params.limit || 10,
+    };
+
+    return request.get('knowledge-graph/review/recommendations', queryParams, {
+      showLoading: false,
+      ...config,
+    });
+  },
 };
 
 module.exports = mistakesAPI;
