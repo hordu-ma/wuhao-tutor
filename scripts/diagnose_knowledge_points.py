@@ -9,18 +9,28 @@
 """
 
 import asyncio
+import os
 import sys
 from pathlib import Path
 
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from dotenv import load_dotenv
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-# 生产数据库连接
-DATABASE_URL = "postgresql+asyncpg://postgres:lkj1006@pgm-bp1ce0sp88j6ha90.pg.rds.aliyuncs.com:5432/wuhao_tutor"
+# 加载环境变量（优先使用 .env.production）
+env_file = Path(__file__).parent.parent / ".env.production"
+if not env_file.exists():
+    env_file = Path(__file__).parent.parent / ".env"
+load_dotenv(env_file)
+
+# 从环境变量获取数据库连接
+DATABASE_URL = os.getenv("SQLALCHEMY_DATABASE_URI")
+if not DATABASE_URL:
+    raise ValueError("未找到数据库配置 SQLALCHEMY_DATABASE_URI")
 
 
 async def diagnose():
@@ -37,7 +47,7 @@ async def diagnose():
         print("\n📊 数据统计:")
 
         # 错题总数
-        result = await session.execute(text("SELECT COUNT(*) FROM mistakes"))
+        result = await session.execute(text("SELECT COUNT(*) FROM mistake_records"))
         mistake_count = result.scalar()
         print(f"   错题总数: {mistake_count}")
 
@@ -62,7 +72,7 @@ async def diagnose():
             SELECT 
                 COUNT(DISTINCT m.id) as total,
                 COUNT(DISTINCT mkp.mistake_id) as with_kp
-            FROM mistakes m
+            FROM mistake_records m
             LEFT JOIN mistake_knowledge_points mkp ON m.id = mkp.mistake_id
         """
             )
@@ -84,7 +94,7 @@ async def diagnose():
                     m.subject, 
                     m.title,
                     COUNT(mkp.id) as kp_count
-                FROM mistakes m
+                FROM mistake_records m
                 INNER JOIN mistake_knowledge_points mkp ON m.id = mkp.mistake_id
                 GROUP BY m.id, m.subject, m.title
                 ORDER BY m.created_at DESC
@@ -137,7 +147,7 @@ async def diagnose():
                     m.title,
                     SUBSTRING(m.ocr_text, 1, 50) as content_preview,
                     m.created_at
-                FROM mistakes m
+                FROM mistake_records m
                 LEFT JOIN mistake_knowledge_points mkp ON m.id = mkp.mistake_id
                 WHERE mkp.id IS NULL
                 ORDER BY m.created_at DESC
@@ -161,7 +171,7 @@ async def diagnose():
                 m.subject,
                 COUNT(DISTINCT m.id) as total_mistakes,
                 COUNT(DISTINCT mkp.mistake_id) as with_kp
-            FROM mistakes m
+            FROM mistake_records m
             LEFT JOIN mistake_knowledge_points mkp ON m.id = mkp.mistake_id
             GROUP BY m.subject
             ORDER BY total_mistakes DESC

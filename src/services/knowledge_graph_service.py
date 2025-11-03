@@ -208,14 +208,12 @@ class KnowledgeGraphService:
 - other: 其他
 """
 
-            response = await self.bailian_service.chat(
-                user_input=prompt,
-                user_id="system",
-                session_id="kg_analysis",
+            response = await self.bailian_service.chat_completion(
+                messages=[{"role": "user", "content": prompt}]
             )
 
-            # 解析响应
-            result = self._parse_ai_response(response.get("content", ""))
+            # 解析响应（ChatCompletionResponse.content）
+            result = self._parse_ai_response(response.content)
             return result.get("knowledge_points", [])
 
         except Exception as e:

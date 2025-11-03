@@ -12,6 +12,7 @@
 """
 
 import asyncio
+import os
 import sys
 from pathlib import Path
 
@@ -21,17 +22,28 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 import logging
 from uuid import UUID
 
+from dotenv import load_dotenv
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from src.core.config import settings
+# 加载环境变量（优先使用 .env.production）
+env_file = Path(__file__).parent.parent / ".env.production"
+if not env_file.exists():
+    env_file = Path(__file__).parent.parent / ".env"
+load_dotenv(env_file)
+
 from src.models.knowledge_graph import MistakeKnowledgePoint
 from src.models.mistake import MistakeRecord
 from src.services.bailian_service import BailianService
 from src.services.knowledge_graph_service import KnowledgeGraphService
 
 logger = logging.getLogger(__name__)
+
+# 从环境变量获取数据库连接
+DATABASE_URL = os.getenv("SQLALCHEMY_DATABASE_URI")
+if not DATABASE_URL:
+    raise ValueError("未找到数据库配置 SQLALCHEMY_DATABASE_URI")
 
 
 async def backfill_knowledge_points(limit: int = None, dry_run: bool = False):
@@ -43,7 +55,7 @@ async def backfill_knowledge_points(limit: int = None, dry_run: bool = False):
         dry_run: 只检查不执行（测试模式）
     """
     # 创建数据库连接
-    engine = create_async_engine(settings.DATABASE_URL, echo=False)
+    engine = create_async_engine(DATABASE_URL, echo=False)
     async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
     print("=" * 60)
