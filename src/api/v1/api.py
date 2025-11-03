@@ -11,6 +11,7 @@ from src.api.v1.endpoints import (
     file,
     goals,
     health,
+    knowledge_graph,
     learning,
     mistakes,
     user,
@@ -30,6 +31,11 @@ api_router.include_router(analytics.router, tags=["学情分析"])
 
 # 错题手册路由
 api_router.include_router(mistakes.router, prefix="/mistakes", tags=["错题手册"])
+
+# 知识图谱路由
+api_router.include_router(
+    knowledge_graph.router, prefix="/knowledge-graph", tags=["知识图谱"]
+)
 
 # 每日目标路由
 api_router.include_router(goals.router, tags=["每日目标"])
