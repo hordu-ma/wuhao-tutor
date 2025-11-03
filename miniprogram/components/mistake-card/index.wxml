@@ -49,8 +49,22 @@
       {{utils.getContentPreview(mistake.question_content) || '暂无题目内容，点击查看详情'}}
     </view>
 
-    <!-- 知识点标签 -->
-    <view class="knowledge-points" wx:if="{{mistake.knowledge_points && mistake.knowledge_points.length > 0}}">
+    <!-- 知识点标签（优先显示关联数据，否则显示简单列表） -->
+    <view class="knowledge-points" wx:if="{{mistake.knowledge_point_associations && mistake.knowledge_point_associations.length > 0}}">
+      <van-tag
+        wx:for="{{mistake.knowledge_point_associations.slice(0, 3)}}"
+        wx:key="association_id"
+        type="{{item.mastery_level >= 0.7 ? 'success' : item.mastery_level >= 0.4 ? 'warning' : 'danger'}}"
+        plain
+        size="small">
+        {{item.knowledge_point_name}}
+        <text wx:if="{{item.is_primary}}" class="primary-mark">⭐</text>
+      </van-tag>
+      <van-tag wx:if="{{mistake.knowledge_point_associations.length > 3}}" plain size="small">
+        +{{mistake.knowledge_point_associations.length - 3}}
+      </van-tag>
+    </view>
+    <view class="knowledge-points" wx:elif="{{mistake.knowledge_points && mistake.knowledge_points.length > 0}}">
       <van-tag
         wx:for="{{mistake.knowledge_points.slice(0, 3)}}"
         wx:key="*this"

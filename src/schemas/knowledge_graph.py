@@ -68,6 +68,43 @@ class MistakeKnowledgePointsResponse(BaseModel):
         }
 
 
+class KnowledgePointItem(BaseModel):
+    """知识点列表项（用于筛选）"""
+
+    name: str = Field(..., description="知识点名称")
+    mistake_count: int = Field(..., description="错题数量")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "name": "二次函数图像",
+                "mistake_count": 5,
+            }
+        }
+
+
+class KnowledgePointListResponse(BaseModel):
+    """知识点列表响应（用于筛选）"""
+
+    subject: str = Field(..., description="学科")
+    knowledge_points: List[KnowledgePointItem] = Field(
+        default_factory=list, description="知识点列表"
+    )
+    total_count: int = Field(..., description="知识点总数")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "subject": "math",
+                "knowledge_points": [
+                    {"name": "二次函数图像", "mistake_count": 5},
+                    {"name": "三角函数", "mistake_count": 3},
+                ],
+                "total_count": 2,
+            }
+        }
+
+
 # ============================================================================
 # 薄弱知识链相关 Schema
 # ============================================================================

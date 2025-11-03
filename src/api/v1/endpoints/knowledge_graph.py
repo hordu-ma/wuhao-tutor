@@ -16,6 +16,7 @@ from src.core.exceptions import NotFoundError, ServiceError, ValidationError
 from src.schemas.knowledge_graph import (
     CreateSnapshotRequest,
     KnowledgeGraphSnapshot,
+    KnowledgePointListResponse,
     LearningCurveResponse,
     MistakeKnowledgePointsResponse,
     UserKnowledgeMasteryResponse,
@@ -28,6 +29,68 @@ logger = logging.getLogger(__name__)
 
 
 # ========== 知识点关联 ==========
+
+
+@router.get(
+    "/knowledge-points",
+    response_model=KnowledgePointListResponse,
+    summary="获取知识点列表（用于筛选）",
+    description="获取用户在指定学科的所有知识点及错题数量，用于错题列表页筛选",
+)
+async def get_knowledge_points_for_filter(
+    subject: str = Query(..., description="学科"),
+    min_count: int = Query(1, ge=0, description="最小错题数"),
+    user_id: UUID = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> KnowledgePointListResponse:
+    """获取知识点列表（用于筛选）"""
+    try:
+        from sqlalchemy import and_, func, select
+
+        from src.models.study import KnowledgeMastery
+
+        # 查询用户在该学科的所有知识点及错题数量
+        stmt = (
+            select(
+                KnowledgeMastery.knowledge_point,
+                KnowledgeMastery.mistake_count,
+            )
+            .where(
+                and_(
+                    KnowledgeMastery.user_id == str(user_id),
+                    KnowledgeMastery.subject == subject,
+                    KnowledgeMastery.mistake_count >= min_count,
+                )
+            )
+            .order_by(KnowledgeMastery.mistake_count.desc())
+        )
+
+        result = await db.execute(stmt)
+        rows = result.all()
+
+        # 构建响应
+        from src.schemas.knowledge_graph import KnowledgePointItem
+
+        knowledge_points = [
+            KnowledgePointItem(
+                name=str(row[0]),
+                mistake_count=int(row[1]),
+            )
+            for row in rows
+        ]
+
+        return KnowledgePointListResponse(
+            subject=subject,
+            knowledge_points=knowledge_points,
+            total_count=len(knowledge_points),
+        )
+
+    except Exception as e:
+        logger.error(f"获取知识点列表失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取知识点列表失败: {str(e)}",
+        )
 
 
 @router.get(

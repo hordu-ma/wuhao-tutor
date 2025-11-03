@@ -177,6 +177,13 @@
   margin-bottom: 15rpx;
 }
 
+/* 知识点主要标记 */
+.knowledge-points .primary-mark {
+  margin-left: 4rpx;
+  font-size: 20rpx;
+  color: #faad14;
+}
+
 .review-progress {
   display: flex;
   justify-content: space-between;

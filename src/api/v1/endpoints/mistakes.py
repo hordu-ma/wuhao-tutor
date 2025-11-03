@@ -36,13 +36,14 @@ logger = logging.getLogger(__name__)
     "/",
     response_model=MistakeListResponse,
     summary="获取错题列表",
-    description="分页查询用户的错题列表,支持按学科、掌握状态、关键词筛选",
+    description="分页查询用户的错题列表,支持按学科、掌握状态、知识点、关键词筛选",
 )
 async def get_mistake_list(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页数量"),
     subject: Optional[str] = Query(None, description="学科筛选"),
     mastery_status: Optional[str] = Query(None, description="掌握状态筛选"),
+    knowledge_point: Optional[str] = Query(None, description="知识点筛选"),
     search: Optional[str] = Query(None, description="关键词搜索"),
     user_id: UUID = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
@@ -57,6 +58,8 @@ async def get_mistake_list(
             filters["subject"] = subject
         if mastery_status:
             filters["mastery_status"] = mastery_status
+        if knowledge_point:
+            filters["knowledge_point"] = knowledge_point
         if search:
             filters["search"] = search
 

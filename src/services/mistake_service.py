@@ -388,14 +388,49 @@ class MistakeService:
             user_id: 用户ID
             page: 页码
             page_size: 每页数量
-            filters: 筛选条件（subject, mastery_status, knowledge_point_id等）
+            filters: 筛选条件（subject, mastery_status, knowledge_point等）
 
         Returns:
             错题列表响应
         """
         subject = filters.get("subject") if filters else None
         mastery_status = filters.get("mastery_status") if filters else None
+        knowledge_point = filters.get("knowledge_point") if filters else None
         knowledge_point_id = filters.get("knowledge_point_id") if filters else None
+
+        # 【新增】如果指定了 knowledge_point（名称），先查询对应的 knowledge_point_id
+        if knowledge_point and not knowledge_point_id:
+            try:
+                from sqlalchemy import and_, select
+
+                from src.models.study import KnowledgeMastery
+
+                # 查询该用户该学科该知识点的掌握度记录
+                stmt = select(KnowledgeMastery.id).where(
+                    and_(
+                        KnowledgeMastery.user_id == str(user_id),
+                        KnowledgeMastery.knowledge_point == knowledge_point,
+                    )
+                )
+                if subject:
+                    stmt = stmt.where(KnowledgeMastery.subject == subject)
+
+                result = await self.db.execute(stmt)
+                kp_id = result.scalar_one_or_none()
+
+                if kp_id:
+                    knowledge_point_id = str(kp_id)
+                else:
+                    # 如果找不到该知识点，返回空列表
+                    logger.info(
+                        f"用户 {user_id} 在学科 {subject} 中未找到知识点 {knowledge_point}"
+                    )
+                    return MistakeListResponse(
+                        items=[], total=0, page=page, page_size=page_size
+                    )
+            except Exception as e:
+                logger.warning(f"查询知识点ID失败: {e}，降级到普通查询")
+                knowledge_point_id = None
 
         # 【新增】如果指定了 knowledge_point_id，使用新的查询方法
         if knowledge_point_id:
