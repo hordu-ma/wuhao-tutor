@@ -1,6 +1,7 @@
 /* components/towxml-renderer/index.wxss */
-/* Towxml 样式 */
-@import '/miniprogram_npm/towxml/style/main.wxss';
+/* Towxml 样式已内联在 JS 中，无需单独导入 */
+
+/* 容器样式 */
 
 .towxml-renderer {
   width: 100%;

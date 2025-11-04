@@ -1,6 +1,6 @@
 // 学习进度页面逻辑
 import { request } from '../../../utils/request';
-import * as echarts from '../../../components/ec-canvas/echarts';
+import * as echarts from '../components/ec-canvas/echarts';
 
 let trendChart = null;
 
