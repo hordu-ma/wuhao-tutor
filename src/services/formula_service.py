@@ -3,9 +3,11 @@
 将LaTeX格式的数学公式转换为图片URL，适配微信小程序显示
 """
 
+import asyncio
 import hashlib
 import logging
 import re
+import time
 from typing import Any, Dict, List, Optional
 from urllib.parse import quote
 
@@ -13,6 +15,7 @@ import httpx
 
 from src.core.config import get_settings
 from src.core.exceptions import ServiceError
+from src.core.monitoring import get_formula_metrics
 from src.utils.file_upload import get_ai_image_access_service
 
 logger = logging.getLogger(__name__)
@@ -25,6 +28,9 @@ class FormulaService:
     def __init__(self):
         self.ai_image_service = get_ai_image_access_service()
         self.client = httpx.AsyncClient(timeout=30.0)
+
+        # 监控指标
+        self.metrics = get_formula_metrics()
 
         # QuickLaTeX配置
         self.quicklatex_api = "https://quicklatex.com/latex3.f"
@@ -170,23 +176,125 @@ class FormulaService:
         return hashlib.md5(text_to_hash.encode("utf-8")).hexdigest()
 
     async def _get_cached_formula_url(self, cache_key: str) -> Optional[str]:
-        """检查公式缓存"""
-        try:
-            # 构建缓存文件路径，优先检查PNG
-            png_path = f"{self.cache_prefix}{cache_key}.png"
-            svg_path = f"{self.cache_prefix}{cache_key}.svg"
+        """
+        检查公式缓存（多层缓存策略）
 
-            # 检查OSS中是否存在（这里暂时返回None，因为检查文件存在需要特殊处理）
-            # TODO: 实现OSS文件存在检查
+        优先级：
+        1. 数据库缓存（最快）
+        2. OSS 文件存在检查
+
+        Returns:
+            缓存的图片 URL 或 None
+        """
+        try:
+            # 1. 先查数据库缓存
+            from src.core.database import get_db
+            from src.repositories.formula_cache_repository import FormulaCacheRepository
+
+            async with get_db() as db:
+                cache_repo = FormulaCacheRepository(db)
+                cached = await cache_repo.get_by_hash(cache_key)
+
+                if cached and cached.image_url:
+                    logger.debug(f"✅ 数据库缓存命中: {cache_key[:8]}...")
+
+                    # 验证 URL 是否仍然有效（可选，增加一次网络请求）
+                    if await self._verify_url(cached.image_url):
+                        # 数据库缓存有效，更新命中计数（异步，不等待）
+                        try:
+                            await cache_repo.increment_hit_count(cache_key)
+                        except Exception as e:
+                            logger.debug(f"更新命中计数失败（不影响主流程）: {e}")
+                        return cached.image_url
+                    else:
+                        logger.warning(
+                            f"缓存 URL 已失效，将重新渲染: {cache_key[:8]}..."
+                        )
+                        return None
+
+            # 2. 数据库中没有，尝试检查 OSS（备用方案）
+            logger.debug(f"数据库缓存未命中: {cache_key[:8]}...")
+
+            # OSS 文件存在检查（如果 OSS 有 head_object 方法）
+            # 由于 file_exists 可能未实现，这里使用 try-except 包裹
+            try:
+                png_path = f"{self.cache_prefix}{cache_key}.png"
+                svg_path = f"{self.cache_prefix}{cache_key}.svg"
+
+                # 检查 PNG 文件
+                if hasattr(self.ai_image_service, "file_exists"):
+                    if await self.ai_image_service.file_exists(png_path):
+                        url = await self.ai_image_service.get_url(png_path)
+                        logger.info(f"OSS 缓存命中（PNG）: {cache_key[:8]}...")
+                        # 回写到数据库缓存
+                        await self._save_to_db_cache(cache_key, "", url, "inline")
+                        return url
+
+                    # 检查 SVG 文件
+                    if await self.ai_image_service.file_exists(svg_path):
+                        url = await self.ai_image_service.get_url(svg_path)
+                        logger.info(f"OSS 缓存命中（SVG）: {cache_key[:8]}...")
+                        await self._save_to_db_cache(cache_key, "", url, "inline")
+                        return url
+            except Exception as oss_err:
+                logger.debug(f"OSS 检查失败（可能不支持）: {oss_err}")
+
             return None
+
+        except Exception as e:
+            logger.error(f"缓存检查失败: {e}")
+            return None
+
+    async def _verify_url(self, url: str, timeout: float = 3.0) -> bool:
+        """
+        验证 URL 是否有效（HTTP HEAD 请求）
+
+        Args:
+            url: 要验证的 URL
+            timeout: 超时时间（秒）
+
+        Returns:
+            URL 是否有效
+        """
+        try:
+            response = await self.client.head(url, timeout=timeout)
+            return response.status_code == 200
         except Exception:
-            return None
+            return False
+
+    async def _save_to_db_cache(
+        self, latex_hash: str, latex_content: str, image_url: str, formula_type: str
+    ) -> None:
+        """
+        保存到数据库缓存
+
+        Args:
+            latex_hash: LaTeX 哈希
+            latex_content: 原始内容
+            image_url: 图片 URL
+            formula_type: 公式类型
+        """
+        try:
+            from src.core.database import get_db
+            from src.repositories.formula_cache_repository import FormulaCacheRepository
+
+            async with get_db() as db:
+                cache_repo = FormulaCacheRepository(db)
+                await cache_repo.create_cache(
+                    latex_hash=latex_hash,
+                    latex_content=latex_content,
+                    image_url=image_url,
+                    formula_type=formula_type,
+                )
+                logger.debug(f"已保存到数据库缓存: {latex_hash[:8]}...")
+        except Exception as e:
+            logger.warning(f"保存数据库缓存失败（不影响主流程）: {e}")
 
     async def _render_single_formula(
         self, content: str, formula_type: str, cache_key: str
     ) -> Optional[str]:
         """
-        渲染单个公式
+        渲染单个公式（带降级策略）
 
         Args:
             content: LaTeX公式内容
@@ -196,16 +304,117 @@ class FormulaService:
         Returns:
             图片URL或None
         """
+        start_time = time.time()
         try:
+            # 记录请求
+            self.metrics.record_request(formula_type)
+
             # 1. 准备LaTeX代码
             latex_code = self._prepare_latex_code(content, formula_type)
 
-            # 2. 调用QuickLaTeX API
-            image_content = await self._call_quicklatex_api(latex_code)
+            # 2. 调用QuickLaTeX API（带降级）
+            image_content = await self._call_quicklatex_api_with_fallback(
+                latex_code, content, formula_type
+            )
+
             if not image_content:
+                logger.warning(f"公式渲染失败，使用降级方案: {content[:50]}...")
+                self.metrics.record_failure("quicklatex", f"Formula: {content[:50]}")
                 return None
 
             # 3. 保存到OSS
+            image_url = await self._upload_to_oss(
+                image_content, cache_key, formula_type
+            )
+
+            if not image_url:
+                self.metrics.record_failure("oss_upload", f"Formula: {content[:50]}")
+                return None
+
+            # 4. 保存到数据库缓存
+            await self._save_to_db_cache(
+                latex_hash=cache_key,
+                latex_content=content,
+                image_url=image_url,
+                formula_type=formula_type,
+            )
+
+            # 记录成功
+            response_time = time.time() - start_time
+            self.metrics.record_success(response_time, formula_type)
+
+            logger.info(f"✅ 公式渲染成功: {cache_key[:8]}... -> {image_url[:50]}...")
+            return image_url
+
+        except Exception as e:
+            logger.error(f"渲染公式失败: {content[:50]}... - {e}")
+            self.metrics.record_failure("unexpected", str(e))
+            return None
+
+    async def _call_quicklatex_api_with_fallback(
+        self, latex_code: str, original_content: str, formula_type: str
+    ) -> Optional[str]:
+        """
+        调用 QuickLaTeX API（带降级策略）
+
+        降级策略：
+        1. 首次调用失败 -> 重试 1 次
+        2. 仍失败 -> 返回 None（上层处理）
+
+        Args:
+            latex_code: 完整 LaTeX 代码
+            original_content: 原始公式内容
+            formula_type: 公式类型
+
+        Returns:
+            图片内容或 None
+        """
+        max_retries = 2
+        retry_delay = 1.0  # 秒
+
+        for attempt in range(max_retries):
+            try:
+                result = await self._call_quicklatex_api(latex_code)
+
+                if result:
+                    if attempt > 0:
+                        logger.info(f"QuickLaTeX 重试成功（第 {attempt + 1} 次）")
+                    return result
+
+                # API 返回 None，等待后重试
+                if attempt < max_retries - 1:
+                    logger.warning(f"QuickLaTeX 失败，{retry_delay}秒后重试...")
+                    await asyncio.sleep(retry_delay)
+
+            except Exception as e:
+                logger.error(
+                    f"QuickLaTeX API 调用异常（尝试 {attempt + 1}/{max_retries}）: {e}"
+                )
+
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(retry_delay)
+
+        # 所有重试都失败
+        logger.error(
+            f"QuickLaTeX 最终失败，已尝试 {max_retries} 次: {original_content[:50]}..."
+        )
+        return None
+
+    async def _upload_to_oss(
+        self, image_content: str, cache_key: str, formula_type: str
+    ) -> Optional[str]:
+        """
+        上传图片到 OSS
+
+        Args:
+            image_content: 图片内容（base64 或 SVG）
+            cache_key: 缓存键
+            formula_type: 公式类型
+
+        Returns:
+            OSS URL 或 None
+        """
+        try:
             if image_content.startswith("data:image/png;base64,"):
                 # PNG格式，保存为PNG文件
                 import base64
@@ -214,32 +423,29 @@ class FormulaService:
                 image_bytes = base64.b64decode(base64_data)
 
                 cache_path = f"{self.cache_prefix}{cache_key}.png"
-                try:
-                    image_url = await self.ai_image_service.upload_file(
-                        file_data=image_bytes,
-                        object_name=cache_path,
-                        content_type="image/png",
-                    )
-                    return image_url
-                except Exception as e:
-                    logger.warning(f"上传PNG到OSS失败: {e}")
-                    return None
+
+                image_url = await self.ai_image_service.upload_file(
+                    file_data=image_bytes,
+                    object_name=cache_path,
+                    content_type="image/png",
+                )
+                logger.debug(f"PNG 已上传到 OSS: {cache_path}")
+                return image_url
+
             else:
                 # SVG格式
                 cache_path = f"{self.cache_prefix}{cache_key}.svg"
-                try:
-                    image_url = await self.ai_image_service.upload_file(
-                        file_data=image_content.encode("utf-8"),
-                        object_name=cache_path,
-                        content_type="image/svg+xml",
-                    )
-                    return image_url
-                except Exception as e:
-                    logger.warning(f"上传SVG到OSS失败: {e}")
-                    return None
+
+                image_url = await self.ai_image_service.upload_file(
+                    file_data=image_content.encode("utf-8"),
+                    object_name=cache_path,
+                    content_type="image/svg+xml",
+                )
+                logger.debug(f"SVG 已上传到 OSS: {cache_path}")
+                return image_url
 
         except Exception as e:
-            logger.error(f"渲染公式失败: {content} - {e}")
+            logger.error(f"上传到 OSS 失败: {e}")
             return None
 
     def _prepare_latex_code(self, content: str, formula_type: str) -> str:

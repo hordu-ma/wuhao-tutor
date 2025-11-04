@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import get_settings
 from src.core.database import get_db
-from src.core.monitoring import get_metrics_collector
+from src.core.monitoring import get_formula_metrics, get_metrics_collector
 from src.core.security import get_rate_limiter
 from src.services.bailian_service import get_bailian_service
 from src.services.learning_service import get_learning_service
@@ -399,3 +399,41 @@ async def get_rate_limit_status() -> JSONResponse:
 
 # 初始化启动时间
 liveness_check._start_time = time.time()
+
+
+@router.get(
+    "/formula-metrics",
+    summary="公式渲染监控指标",
+    description="获取公式渲染服务的详细监控指标",
+)
+async def get_formula_render_metrics() -> JSONResponse:
+    """
+    获取公式渲染服务的监控指标
+
+    包括：
+    - 总请求数、缓存命中率
+    - 渲染成功率、响应时间
+    - 错误分类统计
+    - 最近错误记录
+    """
+    try:
+        formula_metrics = get_formula_metrics()
+        stats = formula_metrics.get_stats()
+
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "timestamp": datetime.utcnow().isoformat(),
+                "metrics": stats,
+            },
+        )
+    except Exception as e:
+        logger.error(f"获取公式渲染指标失败: {e}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "error": "Failed to collect formula metrics",
+                "details": str(e),
+                "timestamp": datetime.utcnow().isoformat(),
+            },
+        )
