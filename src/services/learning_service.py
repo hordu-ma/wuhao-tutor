@@ -54,6 +54,7 @@ from src.services.bailian_service import (
     MessageRole,
     get_bailian_service,
 )
+from src.services.formula_service import FormulaService
 from src.utils.cache import cache_key, cache_result
 from src.utils.type_converters import (
     extract_orm_bool,
@@ -74,6 +75,7 @@ class LearningService:
     def __init__(self, db: AsyncSession):
         self.db = db
         self.bailian_service = get_bailian_service()
+        self.formula_service = FormulaService()  # 初始化公式服务
 
         # 初始化仓储
         self.session_repo = BaseRepository(ChatSession, db)
@@ -330,6 +332,22 @@ class LearningService:
 
                 # 流式完成后保存数据
                 if chunk.get("finish_reason") == "stop":
+                    # 🎯 5.5 增强答案内容（处理数学公式）
+                    try:
+                        enhanced_content = await self.formula_service.enhance_content(
+                            full_answer_content
+                        )
+                        # 如果公式处理成功，使用增强后的内容
+                        if enhanced_content:
+                            full_answer_content = enhanced_content
+                            logger.info(
+                                f"✅ 公式增强成功，内容长度: {len(enhanced_content)}"
+                            )
+                    except Exception as formula_err:
+                        logger.warning(
+                            f"公式增强失败，使用原始内容: {str(formula_err)}"
+                        )
+
                     # 6. 保存答案
                     answer_data = {
                         "question_id": question_id,

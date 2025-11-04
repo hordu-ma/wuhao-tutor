@@ -50,6 +50,7 @@ class TowxmlAdapter {
       const result = this._towxml(markdown, 'markdown', {
         base: options.base || '',
         theme: options.theme || 'light',
+        highlight: false, // 禁用代码高亮，避免加载 languages 模块
       });
 
       console.log('[TowxmlAdapter] 解析成功');
