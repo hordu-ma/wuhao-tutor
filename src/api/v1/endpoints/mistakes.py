@@ -44,14 +44,33 @@ async def get_mistake_list(
     subject: Optional[str] = Query(None, description="学科筛选"),
     mastery_status: Optional[str] = Query(None, description="掌握状态筛选"),
     knowledge_point: Optional[str] = Query(None, description="知识点筛选"),
-    category: Optional[str] = Query(None, description="错题分类筛选(empty_question/wrong_answer/hard_question)"),
-    source: Optional[str] = Query(None, description="来源筛选(learning_empty/learning_wrong/learning_hard/manual)"),
+    category: Optional[str] = Query(
+        None, description="错题分类筛选(empty_question/wrong_answer/hard_question)"
+    ),
+    source: Optional[str] = Query(
+        None, description="来源筛选(learning_empty/learning_wrong/learning_hard/manual)"
+    ),
     search: Optional[str] = Query(None, description="关键词搜索"),
     user_id: UUID = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ) -> MistakeListResponse:
     """获取错题列表"""
     try:
+        # 🔍 临时调试日志 - 记录所有筛选参数
+        logger.info(
+            f"""
+=== 错题列表筛选参数 ===
+user_id: {user_id}
+subject: {subject}
+mastery_status: {mastery_status}  
+knowledge_point: {knowledge_point}
+category: {category}
+source: {source}
+search: {search}
+===========================
+        """
+        )
+
         service = MistakeService(db)
 
         # 构建筛选条件
