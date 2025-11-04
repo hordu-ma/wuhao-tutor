@@ -3,8 +3,6 @@
  * 用于将 AI 返回的 Markdown（含数学公式图片）渲染为小程序富文本
  */
 
-const Towxml = require('towxml');
-
 /**
  * 初始化 Towxml 实例
  */
@@ -21,7 +19,8 @@ class TowxmlAdapter {
   _ensureInitialized() {
     if (!this._initialized) {
       try {
-        this._towxml = new Towxml();
+        const Towxml = require('../miniprogram_npm/towxml/index');
+        this._towxml = Towxml;
         this._initialized = true;
         console.log('[TowxmlAdapter] Towxml 初始化成功');
       } catch (error) {
@@ -46,27 +45,14 @@ class TowxmlAdapter {
     }
 
     try {
-      // Towxml 配置
-      const config = {
-        base: options.base || '', // 相对路径基础地址
-        theme: options.theme || 'light', // 主题：light/dark
-        events: {
-          // 图片点击事件
-          tap: e => {
-            if (e.currentTarget.dataset.data) {
-              const data = e.currentTarget.dataset.data;
-              console.log('[TowxmlAdapter] 图片点击:', data);
-              // 可以在这里添加图片预览逻辑
-            }
-          },
-        },
-      };
-
       // 使用 Towxml 解析 Markdown
-      // 注意：Towxml 支持 HTML 混排，所以数学公式 <img> 标签会被正确处理
-      const result = this._towxml.toJson(markdown, 'markdown', config);
+      // Towxml 导出的是一个函数，直接调用
+      const result = this._towxml(markdown, 'markdown', {
+        base: options.base || '',
+        theme: options.theme || 'light',
+      });
 
-      console.log('[TowxmlAdapter] 解析成功，节点数:', result?.child?.length || 0);
+      console.log('[TowxmlAdapter] 解析成功');
       return result;
     } catch (error) {
       console.error('[TowxmlAdapter] 解析失败:', error);
