@@ -16,7 +16,6 @@ import httpx
 from src.core.config import get_settings
 from src.core.exceptions import ServiceError
 from src.core.monitoring import get_formula_metrics
-from src.utils.file_upload import get_ai_image_access_service
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -26,7 +25,10 @@ class FormulaService:
     """数学公式渲染服务"""
 
     def __init__(self):
-        self.ai_image_service = get_ai_image_access_service()
+        # 延迟导入避免循环依赖
+        from src.services.ai_image_service import AIImageAccessService
+
+        self.ai_image_service = AIImageAccessService()
         self.client = httpx.AsyncClient(timeout=30.0)
 
         # 监控指标
