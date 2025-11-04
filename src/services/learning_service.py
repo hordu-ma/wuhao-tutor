@@ -1928,6 +1928,31 @@ class LearningService:
             mistake_repo = BaseRepository(MistakeRecord, self.db)
 
             # 🛠️ 生成错题数据（只使用数据库中存在的字段）
+            # 🎯 从 AI answer 中提取知识点信息
+            ai_feedback_data = {
+                "category": category,
+                "auto_created": True,
+                "classification": {
+                    "category": category,
+                    "confidence": 0.8,  # 简化规则置信度
+                    "reasoning": f"基于规则判断：{'has_images' if has_images else 'keyword_match'}",
+                },
+                "auto_created_at": datetime.now().isoformat(),
+            }
+            
+            # 🎯 尝试从 AI 回答中提取知识点
+            try:
+                knowledge_points_from_ai = self._extract_knowledge_points_from_answer(
+                    answer_content, extract_orm_str(question, "subject") or "其他"
+                )
+                if knowledge_points_from_ai:
+                    ai_feedback_data["knowledge_points"] = knowledge_points_from_ai
+                    ai_feedback_data["knowledge_points_extracted"] = True
+                    logger.info(f"✅ 从AI回答中提取到 {len(knowledge_points_from_ai)} 个知识点")
+            except Exception as kp_err:
+                logger.warning(f"从AI回答提取知识点失败: {kp_err}")
+                ai_feedback_data["knowledge_points"] = []
+            
             mistake_data = {
                 "user_id": user_id,
                 "source": "learning",
@@ -1939,19 +1964,8 @@ class LearningService:
                 "image_urls": (
                     json.dumps(request.image_urls) if request.image_urls else None
                 ),
-                # AI分析信息（使用ai_feedback字段存储category信息）
-                "ai_feedback": json.dumps(
-                    {
-                        "category": category,  # 🎯 将category信息存储在ai_feedback中
-                        "auto_created": True,
-                        "classification": {
-                            "category": category,
-                            "confidence": 0.8,  # 简化规则置信度
-                            "reasoning": f"基于规则判断：{'has_images' if has_images else 'keyword_match'}",
-                        },
-                        "auto_created_at": datetime.now().isoformat(),
-                    }
-                ),
+                # AI分析信息（包含知识点）
+                "ai_feedback": json.dumps(ai_feedback_data),
                 # 学生答案（可选）
                 "student_answer": None,  # 先为None，后续可增加
                 "correct_answer": self._extract_correct_answer(answer_content),
@@ -1965,6 +1979,20 @@ class LearningService:
 
             # 创建错题
             mistake = await mistake_repo.create(mistake_data)
+            
+            # 🎯 创建错题后立即关联知识点
+            try:
+                mistake_id = mistake.id if hasattr(mistake, 'id') else UUID(extract_orm_uuid_str(mistake, "id"))
+                await self._trigger_knowledge_association(
+                    mistake_id=mistake_id,
+                    user_id=UUID(user_id),
+                    subject=mistake_data["subject"],
+                    ocr_text=content,
+                    ai_feedback=ai_feedback_data,
+                )
+                logger.info(f"🔗 知识点关联已触发: mistake_id={mistake_id}")
+            except Exception as ka_err:
+                logger.warning(f"触发知识点关联失败，但不影响错题创建: {ka_err}")
 
             # 返回错题信息
             return {
@@ -1979,6 +2007,127 @@ class LearningService:
             logger.error(f"错题自动创建失败: {str(e)}", exc_info=True)
             return None
 
+
+    def _extract_knowledge_points_from_answer(
+        self, answer_content: str, subject: str
+    ) -> List[Dict[str, Any]]:
+        """
+        从 AI 回答中提取知识点
+        
+        策略：
+        1. 关键词匹配：查找常见知识点关键词
+        2. 模式匹配：提取“涉及知识点”、“考查”等后面的内容
+        3. 学科特定知识点库
+        """
+        knowledge_points = []
+        
+        # 学科知识点库（可扩展）
+        knowledge_keywords_db = {
+            "数学": [
+                "函数", "方程", "不等式", "几何", "三角形", "圆", 
+                "二次函数", "一次函数", "一元二次方程", "因式分解",
+                "平面直角坐标系", "直线", "圆的方程", "解三角形",
+                "概率", "统计", "勾股定理", "相似三角形", "全等三角形",
+                "二次函数图像", "对称轴", "顶点坐标", "二次函数性质"
+            ],
+            "英语": [
+                "语法", "词汇", "阅读理解", "写作", "听力", "口语",
+                "时态", "从句", "非谓语动词", "定语从句"
+            ],
+            "语文": [
+                "阅读理解", "作文", "古诗词", "文言文", "语法",
+                "修辞手法", "词语积累", "语句理解"
+            ],
+            "物理": [
+                "力学", "电学", "光学", "热学", "机械运动",
+                "牛顿运动定律", "欧姆定律", "电路分析"
+            ],
+            "化学": [
+                "化学方程式", "氧化还原", "酸碱盐", "元素周期表",
+                "化学键", "有机化学", "化学平衡"
+            ],
+        }
+        
+        keywords = knowledge_keywords_db.get(subject, [])
+        
+        # 策略 1：关键词匹配
+        for keyword in keywords:
+            if keyword in answer_content:
+                knowledge_points.append({
+                    "name": keyword,
+                    "relevance": 0.8,
+                    "error_type": "concept_misunderstanding",
+                    "extraction_method": "keyword_match"
+                })
+        
+        # 策略 2：模式匹配
+        import re
+        patterns = [
+            r"涉及[知识点到了]?[:：]?([^。，，、\n]+)",
+            r"考查[知识点到了]?[:：]?([^。，，、\n]+)",
+            r"使用[知识点到了]?[:：]?([^。，，、\n]+)",
+            r"应用[知识点到了]?[:：]?([^。，，、\n]+)",
+        ]
+        
+        for pattern in patterns:
+            matches = re.findall(pattern, answer_content)
+            for match in matches:
+                # 清理提取的文本
+                kp_name = match.strip()
+                if len(kp_name) > 2 and len(kp_name) < 20:  # 过滤太短或太长的
+                    knowledge_points.append({
+                        "name": kp_name,
+                        "relevance": 0.9,
+                        "error_type": "concept_misunderstanding",
+                        "extraction_method": "pattern_match"
+                    })
+        
+        # 去重（根据 name 字段）
+        seen = set()
+        unique_kps = []
+        for kp in knowledge_points:
+            if kp["name"] not in seen:
+                seen.add(kp["name"])
+                unique_kps.append(kp)
+        
+        return unique_kps[:5]  # 最多迕回 5 个知识点
+
+    async def _trigger_knowledge_association(
+        self,
+        mistake_id: UUID,
+        user_id: UUID,
+        subject: str,
+        ocr_text: Optional[str],
+        ai_feedback: Dict[str, Any],
+    ) -> None:
+        """
+        触发知识图谱服务进行知识点关联
+        """
+        try:
+            from src.services.knowledge_graph_service import KnowledgeGraphService
+            
+            kg_service = KnowledgeGraphService(self.db, self.bailian_service)
+            
+            # 调用知识图谱服务进行关联
+            associations = await kg_service.analyze_and_associate_knowledge_points(
+                mistake_id=mistake_id,
+                user_id=user_id,
+                subject=subject,
+                ocr_text=ocr_text,
+                ai_feedback=ai_feedback,
+            )
+            
+            if associations:
+                logger.info(
+                    f"✅ 知识点关联成功: mistake_id={mistake_id}, "
+                    f"关联数量={len(associations)}"
+                )
+            else:
+                logger.warning(f"⚠️ 未能为错题 {mistake_id} 关联知识点")
+                
+        except Exception as e:
+            logger.error(f"知识点关联失败: {e}", exc_info=True)
+            raise
 
 # 依赖注入函数
 def get_learning_service(db: AsyncSession) -> LearningService:
