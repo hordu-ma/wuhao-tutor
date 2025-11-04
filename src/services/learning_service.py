@@ -9,6 +9,7 @@ import logging
 import time
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
+from uuid import UUID
 
 from sqlalchemy import and_, desc, func, join, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
