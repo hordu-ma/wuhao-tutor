@@ -9,7 +9,7 @@
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
@@ -1041,18 +1041,35 @@ class KnowledgeGraphService:
             # 3. 识别薄弱知识链
             weak_chains = await self.get_weak_knowledge_chains(user_id, subject)
 
-            # 4. 创建快照
+            # 4. 计算统计指标
+            total_mistakes_count = sum(
+                int(getattr(km, "mistake_count", 0) or 0) for km in kms
+            )
+            avg_mastery = (
+                sum(float(str(getattr(km, "mastery_level", 0) or 0)) for km in kms)
+                / len(kms)
+                if kms
+                else 0.0
+            )
+
+            # 5. 创建快照（仅包含模型字段）
             snapshot_data = {
                 "user_id": str(user_id),
                 "subject": subject,
+                "snapshot_date": datetime.now(timezone.utc),  # 必需字段
                 "period_type": period_type,
-                "graph_data": graph_data,
-                "mastery_distribution": mastery_distribution,
-                "weak_knowledge_chains": weak_chains,
-                "total_knowledge_points": len(kms),
-                "mastered_count": mastery_distribution["mastered"],
-                "learning_count": mastery_distribution["learning"],
-                "weak_count": mastery_distribution["weak"],
+                # JSON 字段
+                "knowledge_points": graph_data["nodes"],  # 节点列表
+                "weak_chains": weak_chains,  # 薄弱链
+                "strong_areas": [],  # TODO: 待实现强项领域识别
+                "graph_data": graph_data,  # 完整图谱
+                # 统计指标
+                "total_mistakes": total_mistakes_count,
+                "average_mastery": round(avg_mastery, 2),
+                "improvement_trend": None,  # TODO: 需要对比历史快照才能计算
+                # AI分析（可选）
+                "learning_profile": None,  # TODO: 待集成AI生成学习画像
+                "ai_recommendations": None,  # TODO: 待集成AI生成推荐
             }
 
             snapshot = await self.snapshot_repo.create_snapshot(snapshot_data)

@@ -57,7 +57,7 @@ class MistakeRepository(BaseRepository[MistakeRecord]):
 
         if mastery_status:
             conditions.append(MistakeRecord.mastery_status == mastery_status)
-        
+
         # 🎯 Week 2: 支持错题分类筛选
         if category:
             # category 映射到 source 字段
@@ -69,7 +69,7 @@ class MistakeRepository(BaseRepository[MistakeRecord]):
             mapped_source = category_source_mapping.get(category)
             if mapped_source:
                 conditions.append(MistakeRecord.source == mapped_source)
-        
+
         if source:
             conditions.append(MistakeRecord.source == source)
 
@@ -79,6 +79,21 @@ class MistakeRepository(BaseRepository[MistakeRecord]):
         )
         result = await self.db.execute(count_stmt)
         total = result.scalar() or 0
+
+        # 🔍 临时调试日志
+        logger.info(
+            f"""
+=== Repository查询调试 ===
+user_id: {user_id}
+subject: {subject}
+mastery_status: {mastery_status}
+category: {category}
+source: {source}
+查询条件数量: {len(conditions)}
+数据库总记录数: {total}
+===========================
+        """
+        )
 
         # 查询数据
         offset = (page - 1) * page_size
@@ -92,6 +107,8 @@ class MistakeRepository(BaseRepository[MistakeRecord]):
 
         result = await self.db.execute(stmt)
         items = result.scalars().all()
+
+        logger.info(f"实际返回记录数: {len(items)}")
 
         logger.debug(
             f"Found {len(items)} mistakes for user {user_id}, page {page}, total {total}"

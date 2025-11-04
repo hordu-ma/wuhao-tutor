@@ -1511,13 +1511,9 @@ class LearningService:
         ]
 
         # 🛡️ 1. 先检查排除关键词（优先级最高）
-        matched_exclusion = [
-            kw for kw in EXCLUSION_KEYWORDS if kw in question_content
-        ]
+        matched_exclusion = [kw for kw in EXCLUSION_KEYWORDS if kw in question_content]
         if matched_exclusion:
-            logger.info(
-                f"🛡️ 检测到非错题关键词，跳过错题识别: {matched_exclusion[:2]}"
-            )
+            logger.info(f"🛡️ 检测到非错题关键词，跳过错题识别: {matched_exclusion[:2]}")
             return {
                 "is_mistake": False,
                 "confidence": 0.2,
@@ -1527,9 +1523,7 @@ class LearningService:
             }
 
         # 2. 检查高置信度关键词
-        matched_high = [
-            kw for kw in HIGH_CONFIDENCE_KEYWORDS if kw in question_content
-        ]
+        matched_high = [kw for kw in HIGH_CONFIDENCE_KEYWORDS if kw in question_content]
 
         # 3. 检查中置信度关键词
         matched_medium = [
@@ -1766,7 +1760,10 @@ class LearningService:
 
         if vote_total > 0 and vote_for_mistake > 0:
             # 场曯1：关键词高置信度（≥0.9）→ 直接判定
-            if keyword_result.get("is_mistake") and keyword_result.get("confidence", 0) >= 0.9:
+            if (
+                keyword_result.get("is_mistake")
+                and keyword_result.get("confidence", 0) >= 0.9
+            ):
                 is_mistake = True
                 decision_reason = "关键词高置信度（≥0.9）"
 
@@ -1940,7 +1937,7 @@ class LearningService:
                 },
                 "auto_created_at": datetime.now().isoformat(),
             }
-            
+
             # 🎯 尝试从 AI 回答中提取知识点
             try:
                 knowledge_points_from_ai = self._extract_knowledge_points_from_answer(
@@ -1949,29 +1946,39 @@ class LearningService:
                 if knowledge_points_from_ai:
                     ai_feedback_data["knowledge_points"] = knowledge_points_from_ai
                     ai_feedback_data["knowledge_points_extracted"] = True
-                    logger.info(f"✅ 从AI回答中提取到 {len(knowledge_points_from_ai)} 个知识点")
+                    logger.info(
+                        f"✅ 从AI回答中提取到 {len(knowledge_points_from_ai)} 个知识点"
+                    )
             except Exception as kp_err:
                 logger.warning(f"从AI回答提取知识点失败: {kp_err}")
                 ai_feedback_data["knowledge_points"] = []
-            
+
             # 🎯 根据错题类型确定 source 字段值
             source_mapping = {
                 "empty_question": "learning_empty",  # 不会做的题
-                "wrong_answer": "learning_wrong",   # 答错的题
-                "hard_question": "learning_hard",   # 有难度的题
+                "wrong_answer": "learning_wrong",  # 答错的题
+                "hard_question": "learning_hard",  # 有难度的题
             }
             source = source_mapping.get(category, "learning")  # 默认 learning
-            
-            logger.info(
-                f"📋 错题分类: category={category}, source={source}"
-            )
-            
+
+            logger.info(f"📋 错题分类: category={category}, source={source}")
+
+            # 🔧 [修复] 智能推断科目，避免默认"其他"导致筛选失败
+            question_subject = extract_orm_str(question, "subject")
+            if not question_subject:
+                # 尝试从内容推断科目
+                inferred_subject = self._infer_subject_from_content(content)
+                logger.info(
+                    f"📚 科目推断: question.subject为空，从内容推断为 '{inferred_subject}'"
+                )
+                question_subject = inferred_subject
+
             mistake_data = {
                 "user_id": user_id,
                 "source": source,  # 🎯 动态设置 source
                 "source_question_id": str(extract_orm_uuid_str(question, "id")),
                 # 基本信息
-                "subject": extract_orm_str(question, "subject") or "其他",
+                "subject": question_subject,
                 "title": self._generate_mistake_title(content),
                 "ocr_text": content,
                 "image_urls": (
@@ -1992,10 +1999,14 @@ class LearningService:
 
             # 创建错题
             mistake = await mistake_repo.create(mistake_data)
-            
+
             # 🎯 创建错题后立即关联知识点
             try:
-                mistake_id = mistake.id if hasattr(mistake, 'id') else UUID(extract_orm_uuid_str(mistake, "id"))
+                mistake_id = (
+                    mistake.id
+                    if hasattr(mistake, "id")
+                    else UUID(extract_orm_uuid_str(mistake, "id"))
+                )
                 await self._trigger_knowledge_association(
                     mistake_id=mistake_id,
                     user_id=UUID(user_id),
@@ -2020,81 +2031,128 @@ class LearningService:
             logger.error(f"错题自动创建失败: {str(e)}", exc_info=True)
             return None
 
-
     def _extract_knowledge_points_from_answer(
         self, answer_content: str, subject: str
     ) -> List[Dict[str, Any]]:
         """
         从 AI 回答中提取知识点
-        
+
         策略：
         1. 关键词匹配：查找常见知识点关键词
         2. 模式匹配：提取“涉及知识点”、“考查”等后面的内容
         3. 学科特定知识点库
         """
         knowledge_points = []
-        
+
         # 学科知识点库（可扩展）
         knowledge_keywords_db = {
             "数学": [
-                "函数", "方程", "不等式", "几何", "三角形", "圆", 
-                "二次函数", "一次函数", "一元二次方程", "因式分解",
-                "平面直角坐标系", "直线", "圆的方程", "解三角形",
-                "概率", "统计", "勾股定理", "相似三角形", "全等三角形",
-                "二次函数图像", "对称轴", "顶点坐标", "二次函数性质"
+                "函数",
+                "方程",
+                "不等式",
+                "几何",
+                "三角形",
+                "圆",
+                "二次函数",
+                "一次函数",
+                "一元二次方程",
+                "因式分解",
+                "平面直角坐标系",
+                "直线",
+                "圆的方程",
+                "解三角形",
+                "概率",
+                "统计",
+                "勾股定理",
+                "相似三角形",
+                "全等三角形",
+                "二次函数图像",
+                "对称轴",
+                "顶点坐标",
+                "二次函数性质",
             ],
             "英语": [
-                "语法", "词汇", "阅读理解", "写作", "听力", "口语",
-                "时态", "从句", "非谓语动词", "定语从句"
+                "语法",
+                "词汇",
+                "阅读理解",
+                "写作",
+                "听力",
+                "口语",
+                "时态",
+                "从句",
+                "非谓语动词",
+                "定语从句",
             ],
             "语文": [
-                "阅读理解", "作文", "古诗词", "文言文", "语法",
-                "修辞手法", "词语积累", "语句理解"
+                "阅读理解",
+                "作文",
+                "古诗词",
+                "文言文",
+                "语法",
+                "修辞手法",
+                "词语积累",
+                "语句理解",
             ],
             "物理": [
-                "力学", "电学", "光学", "热学", "机械运动",
-                "牛顿运动定律", "欧姆定律", "电路分析"
+                "力学",
+                "电学",
+                "光学",
+                "热学",
+                "机械运动",
+                "牛顿运动定律",
+                "欧姆定律",
+                "电路分析",
             ],
             "化学": [
-                "化学方程式", "氧化还原", "酸碱盐", "元素周期表",
-                "化学键", "有机化学", "化学平衡"
+                "化学方程式",
+                "氧化还原",
+                "酸碱盐",
+                "元素周期表",
+                "化学键",
+                "有机化学",
+                "化学平衡",
             ],
         }
-        
+
         keywords = knowledge_keywords_db.get(subject, [])
-        
+
         # 策略 1：关键词匹配
         for keyword in keywords:
             if keyword in answer_content:
-                knowledge_points.append({
-                    "name": keyword,
-                    "relevance": 0.8,
-                    "error_type": "concept_misunderstanding",
-                    "extraction_method": "keyword_match"
-                })
-        
+                knowledge_points.append(
+                    {
+                        "name": keyword,
+                        "relevance": 0.8,
+                        "error_type": "concept_misunderstanding",
+                        "extraction_method": "keyword_match",
+                    }
+                )
+
         # 策略 2：模式匹配
         import re
+
         patterns = [
             r"涉及[知识点到了]?[:：]?([^。，，、\n]+)",
             r"考查[知识点到了]?[:：]?([^。，，、\n]+)",
             r"使用[知识点到了]?[:：]?([^。，，、\n]+)",
             r"应用[知识点到了]?[:：]?([^。，，、\n]+)",
         ]
-        
+
         for pattern in patterns:
             matches = re.findall(pattern, answer_content)
             for match in matches:
                 # 清理提取的文本
                 kp_name = match.strip()
                 if len(kp_name) > 2 and len(kp_name) < 20:  # 过滤太短或太长的
-                    knowledge_points.append({
-                        "name": kp_name,
-                        "relevance": 0.9,
-                        "error_type": "concept_misunderstanding",
-                        "extraction_method": "pattern_match"
-                    })
-        
+                    knowledge_points.append(
+                        {
+                            "name": kp_name,
+                            "relevance": 0.9,
+                            "error_type": "concept_misunderstanding",
+                            "extraction_method": "pattern_match",
+                        }
+                    )
+
         # 去重（根据 name 字段）
         seen = set()
         unique_kps = []
@@ -2102,7 +2160,7 @@ class LearningService:
             if kp["name"] not in seen:
                 seen.add(kp["name"])
                 unique_kps.append(kp)
-        
+
         return unique_kps[:5]  # 最多迕回 5 个知识点
 
     async def _trigger_knowledge_association(
@@ -2118,9 +2176,9 @@ class LearningService:
         """
         try:
             from src.services.knowledge_graph_service import KnowledgeGraphService
-            
+
             kg_service = KnowledgeGraphService(self.db, self.bailian_service)
-            
+
             # 调用知识图谱服务进行关联
             associations = await kg_service.analyze_and_associate_knowledge_points(
                 mistake_id=mistake_id,
@@ -2129,7 +2187,7 @@ class LearningService:
                 ocr_text=ocr_text,
                 ai_feedback=ai_feedback,
             )
-            
+
             if associations:
                 logger.info(
                     f"✅ 知识点关联成功: mistake_id={mistake_id}, "
@@ -2137,10 +2195,212 @@ class LearningService:
                 )
             else:
                 logger.warning(f"⚠️ 未能为错题 {mistake_id} 关联知识点")
-                
+
         except Exception as e:
             logger.error(f"知识点关联失败: {e}", exc_info=True)
             raise
+
+    def _infer_subject_from_content(self, content: str) -> str:
+        """
+        从内容智能推断科目
+
+        基于关键词匹配推断，默认数学（K12最常见科目）
+
+        Args:
+            content: OCR识别的问题内容
+
+        Returns:
+            推断的科目名称
+        """
+        if not content:
+            return "数学"
+
+        content_lower = content.lower()
+
+        # 科目关键词库
+        subject_keywords = {
+            "数学": [
+                "方程",
+                "函数",
+                "几何",
+                "三角",
+                "代数",
+                "微积分",
+                "导数",
+                "积分",
+                "圆",
+                "直线",
+                "抛物线",
+                "椭圆",
+                "双曲线",
+                "正弦",
+                "余弦",
+                "正切",
+                "sin",
+                "cos",
+                "tan",
+                "x",
+                "y",
+                "z",
+                "f(x)",
+                "π",
+                "∫",
+                "∑",
+                "求解",
+                "计算",
+                "证明",
+                "面积",
+                "体积",
+                "长度",
+                "球",
+                "圆柱",
+                "棱锥",
+                "立方体",
+            ],
+            "物理": [
+                "力",
+                "速度",
+                "加速度",
+                "质量",
+                "能量",
+                "功",
+                "功率",
+                "牛顿",
+                "焦耳",
+                "瓦特",
+                "欧姆",
+                "伏特",
+                "安培",
+                "电路",
+                "磁场",
+                "电场",
+                "电流",
+                "电压",
+                "电阻",
+                "光",
+                "波",
+                "声",
+                "热",
+                "温度",
+                "压强",
+                "F=",
+                "W=",
+                "P=",
+                "E=",
+                "v=",
+                "a=",
+            ],
+            "化学": [
+                "化学式",
+                "化学反应",
+                "分子",
+                "原子",
+                "离子",
+                "元素",
+                "氧化",
+                "还原",
+                "酸",
+                "碱",
+                "盐",
+                "pH",
+                "H₂O",
+                "CO₂",
+                "O₂",
+                "H₂",
+                "Na",
+                "Cl",
+                "摩尔",
+                "溶液",
+                "浓度",
+                "质量分数",
+                "反应方程式",
+                "化合物",
+                "单质",
+            ],
+            "英语": [
+                "grammar",
+                "vocabulary",
+                "tense",
+                "sentence",
+                "translate",
+                "reading",
+                "writing",
+                "speaking",
+                "verb",
+                "noun",
+                "adjective",
+                "adverb",
+                "past",
+                "present",
+                "future",
+                "passive",
+                "what",
+                "where",
+                "when",
+                "who",
+                "how",
+                "why",
+            ],
+            "语文": [
+                "作文",
+                "阅读理解",
+                "古诗",
+                "文言文",
+                "现代文",
+                "作者",
+                "主题",
+                "手法",
+                "修辞",
+                "比喻",
+                "拟人",
+                "段落",
+                "中心思想",
+                "写作",
+                "文章",
+                "朗诵",
+                "背诵",
+                "默写",
+                "古文",
+                "诗词",
+            ],
+            "生物": [
+                "细胞",
+                "基因",
+                "遗传",
+                "染色体",
+                "DNA",
+                "RNA",
+                "光合作用",
+                "呼吸作用",
+                "新陈代谢",
+                "生态",
+                "环境",
+                "物种",
+                "进化",
+                "器官",
+                "组织",
+                "系统",
+                "血液",
+                "神经",
+            ],
+        }
+
+        # 统计每个科目的关键词匹配数
+        scores = {}
+        for subject, keywords in subject_keywords.items():
+            count = sum(1 for kw in keywords if kw in content_lower)
+            if count > 0:
+                scores[subject] = count
+
+        # 返回匹配最多的科目，如果没有匹配则默认数学
+        if scores:
+            inferred = max(scores, key=scores.get)
+            logger.debug(f"科目推断: {inferred} (匹配分数: {scores})")
+            return inferred
+
+        logger.debug("科目推断: 无明显关键词，默认数学")
+        return "数学"
+
 
 # 依赖注入函数
 def get_learning_service(db: AsyncSession) -> LearningService:
