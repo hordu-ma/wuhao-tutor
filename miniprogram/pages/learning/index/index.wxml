@@ -93,25 +93,55 @@
           <view class="bubble-main">
             <!-- 文本消息 - 富文本渲染 -->
             <view wx:if="{{item.type === 'text'}}" class="bubble-text rich-text" selectable="{{true}}">
-              <block wx:for="{{item.richContent || []}}" wx:for-item="block" wx:key="index">
+              <!-- 🔧 新增：如果包含HTML标签（如数学公式图片），使用rich-text组件 -->
+              <rich-text wx:if="{{item.hasHtmlContent}}" 
+                         nodes="{{item.content}}" 
+                         class="rich-text-content"
+                         bindtap="onRichTextTap"></rich-text>
+              
+              <!-- 原有的Markdown解析渲染（用于纯文本内容） -->
+              <block wx:else>
+                <block wx:for="{{item.richContent || []}}" 
+                       wx:for-item="block" 
+                       wx:key="index">
                 <!-- 段落 -->
                 <view wx:if="{{block.type === 'paragraph'}}" class="md-paragraph">
-                  <text wx:for="{{block.content}}" wx:for-item="inline" wx:key="index" class="md-inline">
+                  <text wx:for="{{block.content}}" 
+                        wx:for-item="inline" 
+                        wx:key="index" 
+                        class="md-inline">
                     <text wx:if="{{inline.type === 'text'}}">{{inline.value}}</text>
                     <text wx:elif="{{inline.type === 'bold'}}" class="md-bold">{{inline.value}}</text>
                     <text wx:elif="{{inline.type === 'italic'}}" class="md-italic">{{inline.value}}</text>
                     <text wx:elif="{{inline.type === 'code'}}" class="md-code">{{inline.value}}</text>
                     <text wx:elif="{{inline.type === 'link'}}" class="md-link">{{inline.value.text}}</text>
+                    <!-- 🔧 新增：数学公式支持 -->
+                    <image wx:elif="{{inline.type === 'math-formula'}}" 
+                           class="math-formula-{{inline.value.type}}"
+                           src="{{inline.value.src}}" 
+                           alt="{{inline.value.alt}}"
+                           mode="{{inline.value.type === 'block' ? 'widthFix' : 'aspectFit'}}"
+                           bindtap="onFormulaImageTap"
+                           data-alt="{{inline.value.alt}}" />
                   </text>
                 </view>
                 
                 <!-- 标题 -->
                 <view wx:elif="{{block.type === 'heading'}}" class="md-heading md-h{{block.level}}">
-                  <text wx:for="{{block.content}}" wx:for-item="inline" wx:key="index" class="md-inline">
+                  <text wx:for="{{block.content}}" 
+                        wx:for-item="inline" 
+                        wx:key="index" 
+                        class="md-inline">
                     <text wx:if="{{inline.type === 'text'}}">{{inline.value}}</text>
                     <text wx:elif="{{inline.type === 'bold'}}" class="md-bold">{{inline.value}}</text>
                     <text wx:elif="{{inline.type === 'italic'}}" class="md-italic">{{inline.value}}</text>
                     <text wx:elif="{{inline.type === 'code'}}" class="md-code">{{inline.value}}</text>
+                    <!-- 🔧 新增：标题中的数学公式支持 -->
+                    <image wx:elif="{{inline.type === 'math-formula'}}" 
+                           class="math-formula-{{inline.value.type}}"
+                           src="{{inline.value.src}}" 
+                           alt="{{inline.value.alt}}"
+                           mode="aspectFit" />
                   </text>
                 </view>
                 
@@ -124,14 +154,24 @@
                 <view wx:elif="{{block.type === 'list'}}" class="md-list-item" style="padding-left: {{block.indent * 2}}rpx">
                   <text class="md-list-marker">{{block.ordered ? '• ' : '• '}}</text>
                   <view class="md-list-content">
-                    <text wx:for="{{block.content}}" wx:for-item="inline" wx:key="index" class="md-inline">
+                    <text wx:for="{{block.content}}" 
+                          wx:for-item="inline" 
+                          wx:key="index" 
+                          class="md-inline">
                       <text wx:if="{{inline.type === 'text'}}">{{inline.value}}</text>
                       <text wx:elif="{{inline.type === 'bold'}}" class="md-bold">{{inline.value}}</text>
                       <text wx:elif="{{inline.type === 'italic'}}" class="md-italic">{{inline.value}}</text>
                       <text wx:elif="{{inline.type === 'code'}}" class="md-code">{{inline.value}}</text>
+                      <!-- 🔧 新增：列表中的数学公式支持 -->
+                      <image wx:elif="{{inline.type === 'math-formula'}}" 
+                             class="math-formula-{{inline.value.type}}"
+                             src="{{inline.value.src}}" 
+                             alt="{{inline.value.alt}}"
+                             mode="aspectFit" />
                     </text>
                   </view>
                 </view>
+              </block>
               </block>
             </view>
 

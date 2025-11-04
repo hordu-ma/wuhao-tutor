@@ -1,6 +1,6 @@
 /**
  * 简单的Markdown格式化工具
- * 使用正则替换实现基础格式：粗体、斜体、代码等
+ * 使用正则替换实现基础格式：粗体、斜体、代码、数学公式等
  */
 
 /**
@@ -72,7 +72,7 @@ function parseMarkdown(text) {
 }
 
 /**
- * 解析行内样式（粗体、斜体、代码、链接等）
+ * 解析行内样式（粗体、斜体、代码、链接、数学公式等）
  * @param {string} text - 文本内容
  * @returns {Array} 行内元素数组
  */
@@ -80,8 +80,25 @@ function parseInlineStyles(text) {
   const parts = [];
   let currentPos = 0;
 
-  // 正则模式优先级：代码 > 粗体 > 斜体 > 链接
+  // 正则模式优先级：数学公式 > 代码 > 粗体 > 斜体 > 链接
   const patterns = [
+    // 🔧 新增：数学公式图片标签 <img class="math-formula-*" ... />
+    {
+      regex:
+        /<img\s+class="math-formula-(block|inline)"[^>]*src="([^"]+)"[^>]*alt="([^"]*)"[^>]*\/?>(?:<\/img>)?/g,
+      type: 'math-formula',
+      getValue: match => ({
+        type: match[1], // block 或 inline
+        src: match[2],
+        alt: match[3] || '数学公式',
+      }),
+    },
+    // 🔧 新增：数学公式块级容器 <div class="math-formula-block">...</div>
+    {
+      regex: /<div\s+class="math-formula-block"[^>]*>(.*?)<\/div>/g,
+      type: 'math-formula-block',
+      getValue: match => match[1], // 内部的img标签
+    },
     // 行内代码: `code`
     {
       regex: /`([^`]+)`/g,

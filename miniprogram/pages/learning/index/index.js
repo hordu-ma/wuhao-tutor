@@ -1061,17 +1061,26 @@ const pageObject = {
               const aiMsgIndex = newMessageList.findIndex(msg => msg.id === aiMessageId);
 
               if (aiMsgIndex !== -1) {
+                // 🔧 使用增强的消息内容处理
+                const enhancedContent = this.enhanceMessageContent(fullContent);
+
                 newMessageList[aiMsgIndex] = {
                   ...newMessageList[aiMsgIndex],
-                  content: fullContent,
-                  richContent: parseMarkdown(fullContent), // 实时渲染 Markdown
+                  content: enhancedContent.content,
+                  hasHtmlContent: enhancedContent.hasHtmlContent,
+                  richContent: enhancedContent.richContent,
                 };
 
                 this.setData({
                   messageList: newMessageList,
                 });
 
-                console.log('🔄 [节流更新] setData 执行，内容长度:', fullContent.length);
+                console.log(
+                  '🔄 [节流更新] setData 执行，内容长度:',
+                  fullContent.length,
+                  '包含HTML:',
+                  enhancedContent.hasHtmlContent,
+                );
 
                 // 🔧 [修复] 使用节流智能滚动，避免强制锁定用户滚动
                 this.scrollToBottomThrottled();
@@ -1099,17 +1108,26 @@ const pageObject = {
         const aiMsgIndex = newMessageList.findIndex(msg => msg.id === aiMessageId);
 
         if (aiMsgIndex !== -1) {
+          // 🔧 使用增强的消息内容处理
+          const enhancedContent = this.enhanceMessageContent(fullContent);
+
           newMessageList[aiMsgIndex] = {
             ...newMessageList[aiMsgIndex],
-            content: fullContent,
-            richContent: parseMarkdown(fullContent),
+            content: enhancedContent.content,
+            hasHtmlContent: enhancedContent.hasHtmlContent,
+            richContent: enhancedContent.richContent,
           };
 
           this.setData({
             messageList: newMessageList,
           });
 
-          console.log('✅ [流式完成] 最终 setData 执行，内容长度:', fullContent.length);
+          console.log(
+            '✅ [流式完成] 最终 setData 执行，内容长度:',
+            fullContent.length,
+            '包含HTML:',
+            enhancedContent.hasHtmlContent,
+          );
         }
 
         pendingUpdate = false;
@@ -3204,6 +3222,74 @@ const pageObject = {
       icon: 'error',
       duration: 2000,
     });
+  },
+
+  /**
+   * 🔧 新增：检测文本是否包含HTML内容（如数学公式图片）
+   */
+  hasHtmlContent(text) {
+    if (!text) return false;
+
+    // 检测HTML标签
+    const htmlPattern = /<[^>]+>/;
+    return htmlPattern.test(text);
+  },
+
+  /**
+   * 🔧 新增：处理富文本点击事件
+   */
+  onRichTextTap(e) {
+    console.log('富文本点击:', e);
+    // 可以在这里处理链接点击等事件
+  },
+
+  /**
+   * 🔧 新增：数学公式图片点击事件
+   */
+  onFormulaImageTap(e) {
+    const { alt } = e.currentTarget.dataset;
+    const src = e.currentTarget.dataset.src || e.detail.src;
+
+    if (src) {
+      // 预览公式图片
+      wx.previewImage({
+        current: src,
+        urls: [src],
+      });
+    } else if (alt) {
+      // 显示公式内容
+      wx.showModal({
+        title: '数学公式',
+        content: alt,
+        showCancel: false,
+      });
+    }
+  },
+
+  /**
+   * 🔧 新增：增强消息内容处理，支持数学公式
+   */
+  enhanceMessageContent(content) {
+    if (!content) return { content: '', hasHtmlContent: false, richContent: [] };
+
+    // 检查是否包含HTML标签（特别是数学公式图片）
+    const hasHtml = this.hasHtmlContent(content);
+
+    if (hasHtml) {
+      // 包含HTML，直接使用rich-text组件显示
+      return {
+        content: content,
+        hasHtmlContent: true,
+        richContent: [],
+      };
+    } else {
+      // 纯文本，使用Markdown解析
+      return {
+        content: content,
+        hasHtmlContent: false,
+        richContent: parseMarkdown(content),
+      };
+    }
   },
 };
 

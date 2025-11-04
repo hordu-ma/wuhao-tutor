@@ -6,6 +6,7 @@
 - 错误处理和重试机制
 - 请求/响应日志记录
 - 成本监控（Token使用量）
+- 数学公式渲染处理
 """
 
 import asyncio
@@ -93,6 +94,9 @@ class BailianService:
             },
         )
 
+        # 懒加载公式服务，避免循环导入
+        self._formula_service = None
+
         logger.info(f"百炼服务初始化成功: {self.application_id[:8]}...")
 
     async def chat_completion(
@@ -130,8 +134,8 @@ class BailianService:
             # 调用API（带重试）
             response_data = await self._call_bailian_api_with_retry(payload)
 
-            # 解析响应
-            response = self._parse_response(response_data, start_time)
+            # 解析响应（支持公式处理）
+            response = await self._parse_response_async(response_data, start_time)
 
             # 记录响应日志
             self._log_response(response, context)
@@ -726,6 +730,138 @@ class BailianService:
             request_id=request_id,
             success=True,
         )
+
+    async def _parse_response_async(
+        self, response_data: Dict[str, Any], start_time: float
+    ) -> ChatCompletionResponse:
+        """
+        解析API响应（异步版本，支持公式处理）
+
+        Args:
+            response_data: API响应数据
+            start_time: 请求开始时间
+
+        Returns:
+            ChatCompletionResponse: 解析后的响应
+        """
+        processing_time = time.time() - start_time
+
+        # 提取响应内容
+        output = response_data.get("output", {})
+        choices = output.get("choices", [])
+
+        if not choices:
+            raise BailianServiceError("API响应中没有生成内容")
+
+        # 获取第一个选择的内容
+        first_choice = choices[0]
+        message = first_choice.get("message", {})
+        content = message.get("content", "")
+
+        # 🔧 新增：处理数学公式
+        processed_content = await self._process_math_formulas(content)
+
+        # 提取使用统计
+        usage = response_data.get("usage", {})
+        tokens_used = usage.get("total_tokens", 0)
+
+        # 提取请求ID
+        request_id = response_data.get("request_id", "")
+
+        # 提取模型信息
+        model = response_data.get("model", "unknown")
+
+        return ChatCompletionResponse(
+            content=processed_content,
+            tokens_used=tokens_used,
+            processing_time=processing_time,
+            model=model,
+            request_id=request_id,
+            success=True,
+        )
+
+    async def _process_math_formulas(self, content: str) -> str:
+        """
+        处理文本中的数学公式
+
+        Args:
+            content: 原始文本内容
+
+        Returns:
+            处理后的文本内容
+        """
+        if not content or not self._should_process_formulas(content):
+            return content
+
+        try:
+            # 懒加载公式服务
+            if self._formula_service is None:
+                from src.services.formula_service import get_formula_service
+
+                self._formula_service = get_formula_service()
+
+            # 处理公式
+            processed_content = await self._formula_service.process_text_with_formulas(
+                content
+            )
+
+            logger.debug(
+                f"公式处理完成: 原文长度={len(content)}, 处理后长度={len(processed_content)}"
+            )
+            return processed_content
+
+        except Exception as e:
+            logger.warning(f"公式处理失败，返回原文: {e}")
+            return content
+
+    def _should_process_formulas(self, content: str) -> bool:
+        """
+        判断是否需要处理公式
+
+        Args:
+            content: 文本内容
+
+        Returns:
+            是否包含可能的LaTeX公式
+        """
+        if not content:
+            return False
+
+        # 检查是否包含LaTeX公式标记
+        import re
+
+        # 检查块级公式 $$...$$
+        if re.search(r"\$\$.*?\$\$", content, re.DOTALL):
+            return True
+
+        # 检查行内公式 $...$
+        if re.search(r"(?<!\$)\$[^$\n]+\$(?!\$)", content):
+            return True
+
+        # 检查数学相关关键词
+        math_keywords = [
+            "V = ",
+            "= π",
+            "π",
+            "∑",
+            "∫",
+            "√",
+            "²",
+            "³",
+            "frac{",
+            "sqrt{",
+            "pi",
+            "theta",
+            "alpha",
+            "beta",
+        ]
+
+        content_lower = content.lower()
+        for keyword in math_keywords:
+            if keyword.lower() in content_lower:
+                return True
+
+        return False
 
     def _log_request(
         self, payload: Dict[str, Any], context: Optional[AIContext]
