@@ -145,7 +145,11 @@
   "packNpmManually": false,
   "packNpmRelationList": [],
   "cloudfunctionTemplateRoot": "cloudfunctionTemplate/",
-  "downloadDomain": ["https://t.alicdn.com", "https://at.alicdn.com"],
+  "downloadDomain": [
+    "https://t.alicdn.com",
+    "https://at.alicdn.com",
+    "https://wuhao-tutor-prod.oss-cn-hangzhou.aliyuncs.com"
+  ],
   "requestDomain": ["https://www.horsduroot.com"],
   "uploadFileDomain": ["https://www.horsduroot.com"],
   "network": {
