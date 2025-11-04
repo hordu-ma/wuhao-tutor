@@ -53,6 +53,16 @@ const config = {
     staticDataTTL: 60 * 60 * 1000, // 1小时
   },
 
+  // Markdown 渲染配置
+  markdown: {
+    // 使用 Towxml 渲染器（AB 测试开关）
+    useTowxml: true, // true: 使用 Towxml, false: 使用旧的 markdown-formatter
+    // 降级策略：Towxml 失败时自动降级到旧渲染器
+    enableFallback: true,
+    // Towxml 主题
+    towxmlTheme: 'light', // light | dark
+  },
+
   // 用户认证配置
   auth: {
     // Access Token 存储键名

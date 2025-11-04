@@ -4,6 +4,7 @@
   "backgroundTextStyle": "light",
   "usingComponents": {
     "loading": "/components/loading/index",
-    "empty-state": "/components/empty-state/index"
+    "empty-state": "/components/empty-state/index",
+    "towxml-renderer": "/components/towxml-renderer/index"
   }
 }

@@ -1,0 +1,145 @@
+/* components/towxml-renderer/index.wxss */
+@import '/miniprogram_npm/towxml/style/main.wxss';
+
+.towxml-renderer {
+  width: 100%;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* 降级模式样式（与原有样式保持一致） */
+.markdown-fallback {
+  width: 100%;
+}
+
+.md-paragraph {
+  margin: 12rpx 0;
+  line-height: 1.6;
+  font-size: 28rpx;
+  color: #333;
+}
+
+.md-heading {
+  margin: 20rpx 0 12rpx;
+  font-weight: bold;
+  color: #1a1a1a;
+}
+
+.md-h1 {
+  font-size: 40rpx;
+}
+.md-h2 {
+  font-size: 36rpx;
+}
+.md-h3 {
+  font-size: 32rpx;
+}
+.md-h4 {
+  font-size: 30rpx;
+}
+.md-h5 {
+  font-size: 28rpx;
+}
+.md-h6 {
+  font-size: 26rpx;
+}
+
+.md-code-block {
+  background-color: #f5f5f5;
+  border-radius: 8rpx;
+  padding: 16rpx;
+  margin: 12rpx 0;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 24rpx;
+  color: #d63384;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.md-list-item {
+  display: flex;
+  margin: 8rpx 0;
+  line-height: 1.6;
+  font-size: 28rpx;
+}
+
+.md-list-marker {
+  flex-shrink: 0;
+  margin-right: 8rpx;
+  color: #666;
+}
+
+.md-list-content {
+  flex: 1;
+}
+
+.md-inline {
+  display: inline;
+}
+
+.md-bold {
+  font-weight: bold;
+  color: #1a1a1a;
+}
+
+.md-italic {
+  font-style: italic;
+}
+
+.md-code {
+  background-color: #f0f0f0;
+  padding: 2rpx 8rpx;
+  border-radius: 4rpx;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 24rpx;
+  color: #d63384;
+}
+
+.md-link {
+  color: #1890ff;
+  text-decoration: underline;
+}
+
+/* 数学公式图片样式 */
+.math-formula-inline {
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: middle;
+  margin: 0 4rpx;
+}
+
+.math-formula-block {
+  display: block;
+  max-width: 100%;
+  margin: 16rpx auto;
+}
+
+/* 错误状态 */
+.render-error {
+  padding: 32rpx;
+  text-align: center;
+  color: #999;
+}
+
+.error-hint {
+  font-size: 26rpx;
+}
+
+/* Towxml 自定义样式覆盖 */
+.towxml-renderer towxml {
+  font-size: 28rpx !important;
+  line-height: 1.6 !important;
+}
+
+/* 公式图片在 Towxml 中的样式 */
+.towxml-renderer towxml image.math-formula-inline {
+  vertical-align: middle !important;
+  max-width: 100% !important;
+}
+
+.towxml-renderer towxml image.math-formula-block {
+  display: block !important;
+  margin: 16rpx auto !important;
+  max-width: 100% !important;
+}

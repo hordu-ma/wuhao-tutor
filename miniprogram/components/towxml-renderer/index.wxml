@@ -1,0 +1,76 @@
+<!--components/towxml-renderer/index.wxml-->
+<view class="towxml-renderer">
+  <!-- Towxml 渲染模式 -->
+  <block wx:if="{{renderMode === 'towxml' && towxmlData}}">
+    <towxml nodes="{{towxmlData}}" />
+  </block>
+
+  <!-- 降级模式：旧 Markdown 渲染器 -->
+  <block wx:elif="{{renderMode === 'fallback' && richContent}}">
+    <view class="markdown-fallback">
+      <block wx:for="{{richContent}}" wx:for-item="block" wx:key="index">
+        <!-- 段落 -->
+        <view wx:if="{{block.type === 'paragraph'}}" class="md-paragraph">
+          <text wx:for="{{block.content}}" wx:for-item="inline" wx:key="index" class="md-inline">
+            <text wx:if="{{inline.type === 'text'}}">{{inline.value}}</text>
+            <text wx:elif="{{inline.type === 'bold'}}" class="md-bold">{{inline.value}}</text>
+            <text wx:elif="{{inline.type === 'italic'}}" class="md-italic">{{inline.value}}</text>
+            <text wx:elif="{{inline.type === 'code'}}" class="md-code">{{inline.value}}</text>
+            <text wx:elif="{{inline.type === 'link'}}" class="md-link">{{inline.value.text}}</text>
+            <!-- 数学公式图片 -->
+            <image wx:elif="{{inline.type === 'math-formula'}}" 
+                   class="math-formula-{{inline.value.type}}"
+                   src="{{inline.value.src}}" 
+                   alt="{{inline.value.alt}}"
+                   mode="{{inline.value.type === 'block' ? 'widthFix' : 'aspectFit'}}"
+                   bindtap="onFormulaImageTap"
+                   data-alt="{{inline.value.alt}}" />
+          </text>
+        </view>
+        
+        <!-- 标题 -->
+        <view wx:elif="{{block.type === 'heading'}}" class="md-heading md-h{{block.level}}">
+          <text wx:for="{{block.content}}" wx:for-item="inline" wx:key="index" class="md-inline">
+            <text wx:if="{{inline.type === 'text'}}">{{inline.value}}</text>
+            <text wx:elif="{{inline.type === 'bold'}}" class="md-bold">{{inline.value}}</text>
+            <text wx:elif="{{inline.type === 'italic'}}" class="md-italic">{{inline.value}}</text>
+            <text wx:elif="{{inline.type === 'code'}}" class="md-code">{{inline.value}}</text>
+            <image wx:elif="{{inline.type === 'math-formula'}}" 
+                   class="math-formula-{{inline.value.type}}"
+                   src="{{inline.value.src}}" 
+                   alt="{{inline.value.alt}}"
+                   mode="aspectFit" />
+          </text>
+        </view>
+        
+        <!-- 代码块 -->
+        <view wx:elif="{{block.type === 'code'}}" class="md-code-block">
+          <text>{{block.content}}</text>
+        </view>
+        
+        <!-- 列表 -->
+        <view wx:elif="{{block.type === 'list'}}" class="md-list-item" style="padding-left: {{block.indent * 2}}rpx">
+          <text class="md-list-marker">• </text>
+          <view class="md-list-content">
+            <text wx:for="{{block.content}}" wx:for-item="inline" wx:key="index" class="md-inline">
+              <text wx:if="{{inline.type === 'text'}}">{{inline.value}}</text>
+              <text wx:elif="{{inline.type === 'bold'}}" class="md-bold">{{inline.value}}</text>
+              <text wx:elif="{{inline.type === 'italic'}}" class="md-italic">{{inline.value}}</text>
+              <text wx:elif="{{inline.type === 'code'}}" class="md-code">{{inline.value}}</text>
+              <image wx:elif="{{inline.type === 'math-formula'}}" 
+                     class="math-formula-{{inline.value.type}}"
+                     src="{{inline.value.src}}" 
+                     alt="{{inline.value.alt}}"
+                     mode="aspectFit" />
+            </text>
+          </view>
+        </view>
+      </block>
+    </view>
+  </block>
+
+  <!-- 错误状态 -->
+  <view wx:else class="render-error">
+    <text class="error-hint">内容渲染失败</text>
+  </view>
+</view>
