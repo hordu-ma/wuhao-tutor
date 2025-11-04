@@ -31,6 +31,8 @@ class MistakeRepository(BaseRepository[MistakeRecord]):
         user_id: UUID,
         subject: Optional[str] = None,
         mastery_status: Optional[str] = None,
+        category: Optional[str] = None,
+        source: Optional[str] = None,
         page: int = 1,
         page_size: int = 20,
     ) -> Tuple[List[MistakeRecord], int]:
@@ -55,6 +57,21 @@ class MistakeRepository(BaseRepository[MistakeRecord]):
 
         if mastery_status:
             conditions.append(MistakeRecord.mastery_status == mastery_status)
+        
+        # 🎯 Week 2: 支持错题分类筛选
+        if category:
+            # category 映射到 source 字段
+            category_source_mapping = {
+                "empty_question": "learning_empty",
+                "wrong_answer": "learning_wrong",
+                "hard_question": "learning_hard",
+            }
+            mapped_source = category_source_mapping.get(category)
+            if mapped_source:
+                conditions.append(MistakeRecord.source == mapped_source)
+        
+        if source:
+            conditions.append(MistakeRecord.source == source)
 
         # 查询总数
         count_stmt = (

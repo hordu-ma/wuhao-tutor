@@ -200,6 +200,50 @@ async def get_weak_knowledge_chains(
 
 
 @router.post(
+    "/snapshots/generate",
+    response_model=dict,
+    summary="手动生成快照",
+    description="为指定用户和学科手动生成知识图谱快照，用于测试和紧急情况",
+)
+async def manually_generate_snapshot(
+    subject: str = Query(..., description="学科"),
+    user_id: UUID = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """手动生成快照"""
+    try:
+        service = KnowledgeGraphService(db)
+        
+        # 生成快照
+        snapshot = await service.create_knowledge_graph_snapshot(
+            user_id=user_id,
+            subject=subject,
+            period_type="manual"
+        )
+        
+        await db.commit()
+        
+        logger.info(f"✅ 手动快照生成成功: user={user_id}, subject={subject}, snapshot_id={snapshot.id}")
+        
+        return {
+            "success": True,
+            "snapshot_id": str(snapshot.id),
+            "user_id": str(user_id),
+            "subject": subject,
+            "created_at": snapshot.created_at.isoformat() if snapshot.created_at else None,
+            "message": "快照生成成功"
+        }
+        
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"手动生成快照失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"生成快照失败: {str(e)}",
+        )
+
+
+@router.post(
     "/snapshots",
     response_model=KnowledgeGraphSnapshot,
     status_code=status.HTTP_201_CREATED,

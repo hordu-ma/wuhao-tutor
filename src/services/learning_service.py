@@ -1954,9 +1954,21 @@ class LearningService:
                 logger.warning(f"从AI回答提取知识点失败: {kp_err}")
                 ai_feedback_data["knowledge_points"] = []
             
+            # 🎯 根据错题类型确定 source 字段值
+            source_mapping = {
+                "empty_question": "learning_empty",  # 不会做的题
+                "wrong_answer": "learning_wrong",   # 答错的题
+                "hard_question": "learning_hard",   # 有难度的题
+            }
+            source = source_mapping.get(category, "learning")  # 默认 learning
+            
+            logger.info(
+                f"📋 错题分类: category={category}, source={source}"
+            )
+            
             mistake_data = {
                 "user_id": user_id,
-                "source": "learning",
+                "source": source,  # 🎯 动态设置 source
                 "source_question_id": str(extract_orm_uuid_str(question, "id")),
                 # 基本信息
                 "subject": extract_orm_str(question, "subject") or "其他",

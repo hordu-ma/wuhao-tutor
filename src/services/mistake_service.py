@@ -445,6 +445,8 @@ class MistakeService:
         mastery_status = filters.get("mastery_status") if filters else None
         knowledge_point = filters.get("knowledge_point") if filters else None
         knowledge_point_id = filters.get("knowledge_point_id") if filters else None
+        category = filters.get("category") if filters else None
+        source = filters.get("source") if filters else None
 
         # 【新增】如果指定了 knowledge_point（名称），先查询对应的 knowledge_point_id
         if knowledge_point and not knowledge_point_id:
@@ -498,6 +500,8 @@ class MistakeService:
                     user_id=user_id,
                     subject=subject,
                     mastery_status=mastery_status,
+                    category=category,
+                    source=source,
                     page=page,
                     page_size=page_size,
                 )
@@ -507,6 +511,8 @@ class MistakeService:
                 user_id=user_id,
                 subject=subject,
                 mastery_status=mastery_status,
+                category=category,
+                source=source,
                 page=page,
                 page_size=page_size,
             )
