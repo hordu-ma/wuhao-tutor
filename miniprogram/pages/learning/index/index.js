@@ -9,6 +9,7 @@ const api = require('../../../api/index.js');
 const config = require('../../../config/index.js');
 const utils = require('../../../utils/utils.js');
 const { parseMarkdown } = require('../../../utils/markdown-formatter.js');
+const { convertLatexToUnicode, hasLatexFormula } = require('../../../utils/latex-to-unicode.js');
 
 /**
  * 格式化消息时间为友好格式
@@ -1043,6 +1044,36 @@ const pageObject = {
           contentLength: chunk.content ? chunk.content.length : 0,
         });
 
+        // 🔧 [新增] 处理公式增强事件
+        if (chunk.type === 'formula_enhanced') {
+          console.log('📐 收到公式增强内容，长度:', chunk.content?.length || 0);
+
+          // 使用增强后的完整内容替换
+          fullContent = chunk.content || chunk.full_content || fullContent;
+
+          // 立即更新UI，不等待节流
+          const newMessageList = [...this.data.messageList];
+          const aiMsgIndex = newMessageList.findIndex(msg => msg.id === aiMessageId);
+
+          if (aiMsgIndex !== -1) {
+            const enhancedContent = this.enhanceMessageContent(fullContent);
+
+            newMessageList[aiMsgIndex] = {
+              ...newMessageList[aiMsgIndex],
+              content: enhancedContent.content,
+              hasHtmlContent: enhancedContent.hasHtmlContent,
+              richContent: enhancedContent.richContent,
+            };
+
+            this.setData({ messageList: newMessageList });
+
+            console.log('✅ 公式增强内容已应用到UI');
+          }
+
+          // formula_enhanced 事件不需要节流更新
+          return;
+        }
+
         // 累积内容
         if (chunk.content) {
           fullContent += chunk.content;
@@ -1139,6 +1170,12 @@ const pageObject = {
       const hasContent = fullContent && fullContent.length > 0;
 
       if (hasQuestionId || (response && response.type === 'done') || hasContent) {
+        // 🔧 [修复] 如果后端返回了增强后的完整内容，使用它替换累积的内容
+        if (response && response.full_content) {
+          fullContent = response.full_content;
+          console.log('✅ 使用后端增强后的内容，长度:', fullContent.length);
+        }
+
         questionId = response?.question_id || null;
         answerId = response?.answer_id || null;
 
@@ -1169,7 +1206,9 @@ const pageObject = {
             status: 'received',
             confidence: 0, // 流式响应暂无 confidence_score
             sources: [],
+            content: fullContent, // 🔑 使用增强后的内容
           };
+          console.log('✅ 已更新消息列表中的 AI 回答为增强后内容');
         }
 
         this.setData({
@@ -3272,22 +3311,34 @@ const pageObject = {
   enhanceMessageContent(content) {
     if (!content) return { content: '', hasHtmlContent: false, richContent: [] };
 
-    // 检查是否包含HTML标签（特别是数学公式图片）
-    const hasHtml = this.hasHtmlContent(content);
+    // 🎯 第一步：检查并转换LaTeX公式为Unicode
+    let processedContent = content;
+    if (hasLatexFormula(content)) {
+      console.log('[LaTeX转换] 检测到LaTeX公式，开始转换...');
+      processedContent = convertLatexToUnicode(content);
+      console.log('[LaTeX转换] 转换完成', {
+        原始长度: content.length,
+        转换后长度: processedContent.length,
+        包含公式: hasLatexFormula(processedContent),
+      });
+    }
+
+    // 🎯 第二步：检查是否包含HTML标签（特别是数学公式图片）
+    const hasHtml = this.hasHtmlContent(processedContent);
 
     if (hasHtml) {
       // 包含HTML，直接使用rich-text组件显示
       return {
-        content: content,
+        content: processedContent,
         hasHtmlContent: true,
         richContent: [],
       };
     } else {
       // 纯文本，使用Markdown解析
       return {
-        content: content,
+        content: processedContent,
         hasHtmlContent: false,
-        richContent: parseMarkdown(content),
+        richContent: parseMarkdown(processedContent),
       };
     }
   },

@@ -56,7 +56,7 @@ const config = {
   // Markdown 渲染配置
   markdown: {
     // 使用 Towxml 渲染器（AB 测试开关）
-    useTowxml: true, // true: 使用 Towxml, false: 使用旧的 markdown-formatter
+    useTowxml: false, // Towxml 3.x npm 构建问题，暂时禁用使用旧渲染器
     // 降级策略：Towxml 失败时自动降级到旧渲染器
     enableFallback: true,
     // Towxml 主题

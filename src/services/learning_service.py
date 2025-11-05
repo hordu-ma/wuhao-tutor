@@ -318,6 +318,11 @@ class LearningService:
                     logger.warning("收到 None chunk，跳过处理")
                     continue
 
+                # 📝 调试：打印每个 chunk 的信息
+                logger.info(
+                    f"📦 收到 chunk: type={chunk.get('type', 'N/A')}, content_len={len(chunk.get('content', ''))}, finish_reason={chunk.get('finish_reason')}"
+                )
+
                 # 累积完整内容
                 if chunk.get("content"):
                     full_answer_content = chunk.get("full_content", "")
@@ -331,18 +336,35 @@ class LearningService:
                 }
 
                 # 流式完成后保存数据
+                logger.info(
+                    f"🔍 检查 finish_reason: {chunk.get('finish_reason')}, 类型: {type(chunk.get('finish_reason'))}"
+                )
                 if chunk.get("finish_reason") == "stop":
+                    logger.info("✅ 进入公式增强流程")
                     # 🎯 5.5 增强答案内容（处理数学公式）
                     try:
-                        enhanced_content = await self.formula_service.enhance_content(
-                            full_answer_content
+                        enhanced_content = (
+                            await self.formula_service.process_text_with_formulas(
+                                full_answer_content
+                            )
                         )
-                        # 如果公式处理成功，使用增强后的内容
-                        if enhanced_content:
+                        # 如果公式处理成功且内容有变化，使用增强后的内容
+                        if enhanced_content and enhanced_content != full_answer_content:
                             full_answer_content = enhanced_content
                             logger.info(
                                 f"✅ 公式增强成功，内容长度: {len(enhanced_content)}"
                             )
+
+                            # 🔧 关键修复：发送增强后的完整内容给前端
+                            yield {
+                                "type": "formula_enhanced",
+                                "content": enhanced_content,
+                                "full_content": enhanced_content,
+                                "finish_reason": "stop",
+                            }
+                            logger.info("📤 已发送公式增强内容给前端")
+                        else:
+                            logger.info("⚠️ 公式增强未生效或内容未变化")
                     except Exception as formula_err:
                         logger.warning(
                             f"公式增强失败，使用原始内容: {str(formula_err)}"
