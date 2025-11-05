@@ -16,7 +16,7 @@ class SecureLogoutManager {
   constructor() {
     this.logoutHistoryKey = 'logout_history';
     this.tempDataKey = 'temp_logout_data';
-    
+
     // 退出配置
     this.config = {
       enableLogoutConfirmation: true,
@@ -25,7 +25,7 @@ class SecureLogoutManager {
       enableRemoteLogout: true,
       cleanupTimeout: 30000, // 30秒超时
       retryAttempts: 3,
-      logoutMethods: ['normal', 'security', 'forced', 'expired']
+      logoutMethods: ['normal', 'security', 'forced', 'expired'],
     };
   }
 
@@ -43,7 +43,8 @@ class SecureLogoutManager {
         logoutAllDevices = false,
         reason = 'user_initiated',
         skipConfirmation = false,
-        cleanupLevel = 'standard'
+        skipServerLogout = false, // 新增：是否跳过服务器退出
+        cleanupLevel = 'standard',
       } = options;
 
       // 1. 退出确认
@@ -53,7 +54,7 @@ class SecureLogoutManager {
           return {
             success: false,
             reason: 'user_cancelled',
-            message: '用户取消退出'
+            message: '用户取消退出',
           };
         }
       }
@@ -62,20 +63,19 @@ class SecureLogoutManager {
       const logoutSession = await this.startLogoutSession(method, reason, options);
 
       // 3. 执行退出步骤
-      const logoutResult = await this.executeLogoutSteps(logoutSession);
+      const logoutResult = await this.executeLogoutSteps(logoutSession, skipServerLogout);
 
       // 4. 完成退出记录
       await this.completeLogoutSession(logoutSession, logoutResult);
 
       return logoutResult;
-
     } catch (error) {
       console.error('[SecureLogout] 安全退出失败:', error);
       return {
         success: false,
         reason: 'logout_error',
         message: '退出过程发生错误',
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -87,7 +87,7 @@ class SecureLogoutManager {
    * @returns {Promise<boolean>} 是否确认退出
    */
   async showLogoutConfirmation(method, logoutAllDevices) {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       let title = '确认退出';
       let content = '确定要退出登录吗？';
 
@@ -112,12 +112,12 @@ class SecureLogoutManager {
         confirmText: '确定退出',
         cancelText: '取消',
         confirmColor: '#fa5151',
-        success: (res) => {
+        success: res => {
           resolve(res.confirm);
         },
         fail: () => {
           resolve(false);
-        }
+        },
       });
     });
   }
@@ -144,14 +144,13 @@ class SecureLogoutManager {
         options,
         steps: [],
         status: 'in_progress',
-        deviceInfo: await this.getDeviceInfo()
+        deviceInfo: await this.getDeviceInfo(),
       };
 
       // 保存临时退出数据
       await storage.set(this.tempDataKey, logoutSession);
 
       return logoutSession;
-
     } catch (error) {
       console.error('[SecureLogout] 创建退出会话失败:', error);
       throw error;
@@ -161,29 +160,40 @@ class SecureLogoutManager {
   /**
    * 执行退出步骤
    * @param {Object} logoutSession - 退出会话
+   * @param {boolean} skipServerLogout - 是否跳过服务器退出
    * @returns {Promise<Object>} 退出结果
    */
-  async executeLogoutSteps(logoutSession) {
+  async executeLogoutSteps(logoutSession, skipServerLogout = false) {
     const steps = [];
     let overallSuccess = true;
     let lastError = null;
 
     try {
       // 步骤1: 通知服务器退出
-      if (this.config.enableRemoteLogout) {
+      if (this.config.enableRemoteLogout && !skipServerLogout) {
+        console.log('[SecureLogout] 执行服务器退出步骤');
         const serverLogoutResult = await this.performServerLogout(logoutSession);
         steps.push({
           step: 'server_logout',
           success: serverLogoutResult.success,
           timestamp: Date.now(),
           message: serverLogoutResult.message,
-          error: serverLogoutResult.error
+          error: serverLogoutResult.error,
         });
 
         if (!serverLogoutResult.success) {
           overallSuccess = false;
           lastError = serverLogoutResult.error;
         }
+      } else if (skipServerLogout) {
+        console.log('[SecureLogout] 跳过服务器退出步骤（Token可能已失效）');
+        steps.push({
+          step: 'server_logout',
+          success: true,
+          timestamp: Date.now(),
+          message: '已跳过服务器退出（Token已失效或不需要）',
+          skipped: true,
+        });
       }
 
       // 步骤2: 清理本地会话
@@ -193,7 +203,7 @@ class SecureLogoutManager {
         success: sessionCleanupResult.success,
         timestamp: Date.now(),
         message: sessionCleanupResult.message,
-        error: sessionCleanupResult.error
+        error: sessionCleanupResult.error,
       });
 
       if (!sessionCleanupResult.success) {
@@ -209,7 +219,7 @@ class SecureLogoutManager {
           success: dataCleanupResult.success,
           timestamp: Date.now(),
           message: dataCleanupResult.message,
-          error: dataCleanupResult.error
+          error: dataCleanupResult.error,
         });
 
         if (!dataCleanupResult.success) {
@@ -225,7 +235,7 @@ class SecureLogoutManager {
         success: securityCleanupResult.success,
         timestamp: Date.now(),
         message: securityCleanupResult.message,
-        error: securityCleanupResult.error
+        error: securityCleanupResult.error,
       });
 
       // 步骤5: 重置应用状态
@@ -235,7 +245,7 @@ class SecureLogoutManager {
         success: appResetResult.success,
         timestamp: Date.now(),
         message: appResetResult.message,
-        error: appResetResult.error
+        error: appResetResult.error,
       });
 
       return {
@@ -243,17 +253,16 @@ class SecureLogoutManager {
         steps,
         message: overallSuccess ? '安全退出成功' : '退出过程中遇到问题',
         error: lastError,
-        completedAt: Date.now()
+        completedAt: Date.now(),
       };
-
     } catch (error) {
       console.error('[SecureLogout] 执行退出步骤失败:', error);
-      
+
       steps.push({
         step: 'execution_error',
         success: false,
         timestamp: Date.now(),
-        error: error.message
+        error: error.message,
       });
 
       return {
@@ -261,7 +270,7 @@ class SecureLogoutManager {
         steps,
         message: '退出执行失败',
         error: error.message,
-        completedAt: Date.now()
+        completedAt: Date.now(),
       };
     }
   }
@@ -281,7 +290,7 @@ class SecureLogoutManager {
       if (!token) {
         return {
           success: true,
-          message: '没有有效token，跳过服务器退出'
+          message: '没有有效token，跳过服务器退出',
         };
       }
 
@@ -291,37 +300,38 @@ class SecureLogoutManager {
         data: {
           sessionId: logoutSession.sessionId,
           logoutAllDevices: logoutSession.options.logoutAllDevices || false,
-          reason: logoutSession.reason
+          reason: logoutSession.reason,
         },
-        timeout: this.config.cleanupTimeout
+        timeout: this.config.cleanupTimeout,
       });
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return {
           success: true,
           message: '服务器退出成功',
-          data: response.data
+          data: response.data,
         };
       } else {
-        throw new Error(`HTTP ${response.statusCode}: ${response.data?.message || '服务器退出失败'}`);
+        throw new Error(
+          `HTTP ${response.statusCode}: ${response.data?.message || '服务器退出失败'}`,
+        );
       }
-
     } catch (error) {
       console.error('[SecureLogout] 服务器退出失败:', error);
-      
+
       // 网络错误不应阻止本地退出
       if (error.message.includes('网络') || error.message.includes('timeout')) {
         return {
           success: true,
           message: '网络错误，但继续本地退出',
-          warning: error.message
+          warning: error.message,
         };
       }
 
       return {
         success: false,
         message: '服务器退出失败',
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -343,15 +353,14 @@ class SecureLogoutManager {
 
       return {
         success: true,
-        message: '本地会话清理成功'
+        message: '本地会话清理成功',
       };
-
     } catch (error) {
       console.error('[SecureLogout] 本地会话清理失败:', error);
       return {
         success: false,
         message: '本地会话清理失败',
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -373,22 +382,26 @@ class SecureLogoutManager {
         case 'minimal':
           dataKeys.push('userToken', 'userInfo', 'currentRole');
           break;
-        
+
         case 'standard':
           dataKeys.push(
-            'userToken', 'userInfo', 'currentRole',
-            'userPreferences', 'recentSearches', 'cachedData'
+            'userToken',
+            'userInfo',
+            'currentRole',
+            'userPreferences',
+            'recentSearches',
+            'cachedData',
           );
           break;
-        
+
         case 'complete':
           // 清理所有用户相关数据
           const allKeys = await this.getAllStorageKeys();
-          dataKeys.push(...allKeys.filter(key => 
-            key.includes('user') || 
-            key.includes('cache') || 
-            key.includes('temp')
-          ));
+          dataKeys.push(
+            ...allKeys.filter(
+              key => key.includes('user') || key.includes('cache') || key.includes('temp'),
+            ),
+          );
           break;
       }
 
@@ -399,15 +412,14 @@ class SecureLogoutManager {
       return {
         success: true,
         message: `用户数据清理成功 (级别: ${cleanupLevel})`,
-        cleanedKeys: dataKeys.length
+        cleanedKeys: dataKeys.length,
       };
-
     } catch (error) {
       console.error('[SecureLogout] 用户数据清理失败:', error);
       return {
         success: false,
         message: '用户数据清理失败',
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -440,15 +452,14 @@ class SecureLogoutManager {
 
       return {
         success: true,
-        message: '安全数据清理成功'
+        message: '安全数据清理成功',
       };
-
     } catch (error) {
       console.error('[SecureLogout] 安全数据清理失败:', error);
       return {
         success: false,
         message: '安全数据清理失败',
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -478,22 +489,21 @@ class SecureLogoutManager {
         if (page.data && typeof page.setData === 'function') {
           page.setData({
             userInfo: null,
-            isLoggedIn: false
+            isLoggedIn: false,
           });
         }
       });
 
       return {
         success: true,
-        message: '应用状态重置成功'
+        message: '应用状态重置成功',
       };
-
     } catch (error) {
       console.error('[SecureLogout] 应用状态重置失败:', error);
       return {
         success: false,
         message: '应用状态重置失败',
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -523,11 +533,10 @@ class SecureLogoutManager {
       if (logoutResult.success) {
         setTimeout(() => {
           wx.reLaunch({
-            url: '/pages/login/index'
+            url: '/pages/login/index',
           });
         }, 1000);
       }
-
     } catch (error) {
       console.error('[SecureLogout] 完成退出会话失败:', error);
     }
@@ -542,14 +551,14 @@ class SecureLogoutManager {
       wx.showToast({
         title: '退出成功',
         icon: 'success',
-        duration: 2000
+        duration: 2000,
       });
     } else {
       wx.showModal({
         title: '退出异常',
         content: logoutResult.message || '退出过程中遇到问题，但本地登录状态已清除',
         showCancel: false,
-        confirmText: '知道了'
+        confirmText: '知道了',
       });
     }
   }
@@ -560,7 +569,7 @@ class SecureLogoutManager {
    */
   async recordLogoutHistory(logoutSession) {
     try {
-      const history = await storage.get(this.logoutHistoryKey) || [];
+      const history = (await storage.get(this.logoutHistoryKey)) || [];
 
       const record = {
         id: logoutSession.id,
@@ -573,7 +582,7 @@ class SecureLogoutManager {
         success: logoutSession.status === 'completed',
         deviceInfo: logoutSession.deviceInfo,
         stepsCompleted: logoutSession.result.steps.filter(step => step.success).length,
-        totalSteps: logoutSession.result.steps.length
+        totalSteps: logoutSession.result.steps.length,
       };
 
       history.push(record);
@@ -584,7 +593,6 @@ class SecureLogoutManager {
       }
 
       await storage.set(this.logoutHistoryKey, history);
-
     } catch (error) {
       console.error('[SecureLogout] 记录退出历史失败:', error);
     }
@@ -603,7 +611,7 @@ class SecureLogoutManager {
       reason,
       skipConfirmation: true,
       cleanupLevel: 'complete',
-      logoutAllDevices: true
+      logoutAllDevices: true,
     });
   }
 
@@ -613,14 +621,14 @@ class SecureLogoutManager {
    */
   async getAllStorageKeys() {
     try {
-      return new Promise((resolve) => {
+      return new Promise(resolve => {
         wx.getStorageInfo({
-          success: (res) => {
+          success: res => {
             resolve(res.keys || []);
           },
           fail: () => {
             resolve([]);
-          }
+          },
         });
       });
     } catch (error) {
@@ -640,7 +648,7 @@ class SecureLogoutManager {
         brand: systemInfo.brand,
         model: systemInfo.model,
         system: systemInfo.system,
-        platform: systemInfo.platform
+        platform: systemInfo.platform,
       };
     } catch (error) {
       console.error('[SecureLogout] 获取设备信息失败:', error);
@@ -654,7 +662,7 @@ class SecureLogoutManager {
    */
   async getLogoutHistory() {
     try {
-      return await storage.get(this.logoutHistoryKey) || [];
+      return (await storage.get(this.logoutHistoryKey)) || [];
     } catch (error) {
       console.error('[SecureLogout] 获取退出历史失败:', error);
       return [];
@@ -692,15 +700,14 @@ class SecureLogoutManager {
   async recoverInterruptedLogout() {
     try {
       const incompleteSession = await this.getIncompleteLogoutSession();
-      
+
       if (incompleteSession) {
         console.log('[SecureLogout] 发现中断的退出流程，尝试恢复');
-        
+
         // 继续执行退出流程
         const logoutResult = await this.executeLogoutSteps(incompleteSession);
         await this.completeLogoutSession(incompleteSession, logoutResult);
       }
-
     } catch (error) {
       console.error('[SecureLogout] 恢复中断退出失败:', error);
       // 清理临时数据
@@ -714,5 +721,5 @@ const secureLogoutManager = new SecureLogoutManager();
 
 module.exports = {
   secureLogoutManager,
-  SecureLogoutManager
+  SecureLogoutManager,
 };

@@ -154,10 +154,20 @@ Page({
    */
   async clearAuthAndRedirect() {
     try {
-      // 使用 authManager 退出登录
-      await authManager.logout();
+      console.log('[ChangePassword] 开始清理认证信息');
+
+      // 修改密码后 Token 已失效，跳过服务器退出，直接清理本地
+      await authManager.logout({
+        skipConfirmation: true, // 跳过退出确认
+        skipServerLogout: true, // 跳过服务器退出（Token已失效）
+        reason: 'password_changed', // 退出原因
+        cleanupLevel: 'standard', // 标准清理级别
+      });
+
+      console.log('[ChangePassword] 认证信息清理完成');
     } catch (error) {
-      console.error('退出登录失败:', error);
+      console.error('[ChangePassword] 退出登录失败:', error);
+      // 即使退出失败，也继续执行跳转（确保用户体验）
     }
 
     // 跳转到登录页
@@ -170,6 +180,9 @@ Page({
           icon: 'none',
           duration: 2000,
         });
+      },
+      fail: error => {
+        console.error('[ChangePassword] 跳转登录页失败:', error);
       },
     });
   },
