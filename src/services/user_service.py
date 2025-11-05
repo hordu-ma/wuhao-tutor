@@ -6,6 +6,7 @@
 import hashlib
 import logging
 import secrets
+import string
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -608,6 +609,18 @@ class UserService:
             "is_revoked": False,
         }
 
+        # 更新用户登录统计
+        user = await self.user_repo.get_by_id(user_id)
+        if user:
+            current_login_count = user.login_count or 0
+            await self.user_repo.update(
+                user_id,
+                {
+                    "login_count": current_login_count + 1,
+                    "last_login_at": datetime.utcnow(),
+                },
+            )
+
         return await self.session_repo.create(session_data)
 
     async def get_user_session(self, jti: str) -> Optional[UserSession]:
@@ -731,6 +744,164 @@ class UserService:
 
         if expired_sessions:
             logger.info("清理过期会话", extra={"count": len(expired_sessions)})
+
+    # ========== 管理员专用方法 ==========
+
+    async def admin_create_user(
+        self,
+        phone: str,
+        name: str,
+        school: Optional[str] = None,
+        grade_level: Optional[str] = None,
+        class_name: Optional[str] = None,
+    ) -> Tuple[User, str]:
+        """
+        管理员创建用户
+
+        Args:
+            phone: 手机号
+            name: 姓名
+            school: 学校
+            grade_level: 学段
+            class_name: 班级
+
+        Returns:
+            Tuple[User, str]: (用户对象, 明文密码)
+
+        Raises:
+            ConflictError: 手机号已存在
+        """
+        # 检查手机号是否已存在
+        existing_user = await self.user_repo.get_by_field("phone", phone)
+        if existing_user:
+            raise ConflictError(f"手机号 {phone} 已被注册")
+
+        # 生成安全密码
+        password = self._generate_secure_password()
+        password_hash = self._hash_password(password)
+
+        # 创建用户
+        user_data = {
+            "phone": phone,
+            "password_hash": password_hash,
+            "name": name,
+            "nickname": name,
+            "school": school,
+            "grade_level": grade_level,
+            "class_name": class_name,
+            "role": "student",
+            "is_active": True,
+            "is_verified": True,
+            "login_count": 0,
+        }
+
+        user = await self.user_repo.create(user_data)
+
+        logger.info(
+            "管理员创建用户成功",
+            extra={
+                "user_id": extract_orm_uuid_str(user, "id"),
+                "phone": phone,
+                "user_name": name,  # 避免与 LogRecord.name 冲突
+            },
+        )
+
+        return user, password
+
+    async def admin_reset_password(self, user_id: str) -> Tuple[User, str]:
+        """
+        管理员重置用户密码
+
+        Args:
+            user_id: 用户ID
+
+        Returns:
+            Tuple[User, str]: (用户对象, 新密码明文)
+
+        Raises:
+            NotFoundError: 用户不存在
+        """
+        user = await self.user_repo.get_by_id(user_id)
+        if not user:
+            raise NotFoundError("用户不存在")
+
+        # 生成新密码
+        new_password = self._generate_secure_password()
+        new_password_hash = self._hash_password(new_password)
+
+        # 更新密码
+        await self.user_repo.update(user_id, {"password_hash": new_password_hash})
+
+        # 撤销所有会话
+        await self.revoke_all_user_sessions(user_id)
+
+        logger.info("管理员重置密码", extra={"user_id": user_id})
+
+        return user, new_password
+
+    async def admin_list_users(
+        self, page: int = 1, size: int = 20, search: Optional[str] = None
+    ) -> Tuple[List[User], int]:
+        """
+        管理员查询用户列表
+
+        Args:
+            page: 页码
+            size: 每页大小
+            search: 搜索关键词（姓名、手机号、昵称）
+
+        Returns:
+            Tuple[List[User], int]: (用户列表, 总数)
+        """
+        query = select(User)
+
+        # 搜索条件
+        if search:
+            search_pattern = f"%{search}%"
+            query = query.where(
+                or_(
+                    User.name.like(search_pattern),
+                    User.phone.like(search_pattern),
+                    User.nickname.like(search_pattern),
+                )
+            )
+
+        # 总数
+        count_query = select(func.count()).select_from(query.subquery())
+        result = await self.db.execute(count_query)
+        total = result.scalar()
+
+        # 分页
+        query = query.order_by(User.created_at.desc())
+        query = query.offset((page - 1) * size).limit(size)
+
+        result = await self.db.execute(query)
+        users = result.scalars().all()
+
+        return users, total
+
+    def _generate_secure_password(self, length: int = 8) -> str:
+        """
+        生成安全密码
+
+        Args:
+            length: 密码长度
+
+        Returns:
+            str: 安全密码（包含大小写字母和数字）
+        """
+        while True:
+            password = "".join(
+                secrets.choice(string.ascii_letters + string.digits)
+                for _ in range(length)
+            )
+            # 确保包含大小写字母和数字
+            has_upper = any(c.isupper() for c in password)
+            has_lower = any(c.islower() for c in password)
+            has_digit = any(c.isdigit() for c in password)
+
+            if has_upper and has_lower and has_digit:
+                return password
 
 
 # 依赖注入函数

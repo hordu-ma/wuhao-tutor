@@ -6,6 +6,7 @@ API v1 路由集合
 from fastapi import APIRouter
 
 from src.api.v1.endpoints import (
+    admin,
     analytics,
     auth,
     file,
@@ -22,6 +23,8 @@ api_router = APIRouter()
 
 # 注册各模块路由
 api_router.include_router(auth.router, prefix="/auth", tags=["认证"])
+
+api_router.include_router(admin.router, tags=["管理员"])
 
 api_router.include_router(user.router, prefix="/user", tags=["用户管理"])
 
