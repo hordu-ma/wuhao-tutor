@@ -48,44 +48,24 @@ API → Service → Repository → Model
 
 ## 开发规范
 
-### 代码质量 (强制)
+**核心约束**:
+
+- 类型注解 + 具体异常（禁止 `except:` 或 `except Exception:`）
+- 函数 ≤ 60 行，单一职责
+- Google 风格 docstring（复杂逻辑必须）
+- 模型继承 `BaseModel`（UUID 主键 + `created_at` + `updated_at`）
+- Repository 封装数据访问，Service 处理业务逻辑和事务
+- 禁止跨层调用（如 API 直接调用 Repository）
 
 ```python
-# 1. 类型注解 + 具体异常
+# 标准模式（参考 src/services/mistake_service.py）
 async def create_mistake(
     self, db: AsyncSession, user_id: UUID
 ) -> MistakeDetailResponse:
     try:
         # 实现...
-    except SpecificError:  # ✅ 具体异常
-        raise ServiceError("描述")
-    # ❌ 禁止: except: 或 except Exception:
-
-# 2. 函数 ≤ 60 行，单一职责
-# 3. Google 风格 docstring (复杂逻辑必须)
-```
-
-### 数据模型
-
-```python
-# 所有模型继承 BaseModel (src/models/base.py)
-class MyModel(BaseModel):
-    __tablename__ = "my_table"
-    # ✅ UUID 主键 + created_at + updated_at
-    # ✅ 软删除: deleted_at (可选)
-```
-
-### Repository 模式
-
-```python
-class MyRepository(BaseRepository[MyModel]):
-    async def custom_query(self, ...):
-        """复杂查询在 Repository，不在 Service"""
-        pass
-
-# ✅ Repository: 数据访问 + 复杂查询
-# ✅ Service: 业务逻辑 + 多 Repository 组合 + 事务
-# ❌ 禁止: Service 层写 SQL/ORM 查询
+    except SpecificError as e:  # 具体异常
+        raise ServiceError(f"错误: {e}")
 ```
 
 ---
@@ -118,128 +98,62 @@ make type-check         # mypy strict
 
 ## 环境配置
 
-| 环境       | 数据库        | 缓存  | 特性                 |
-| ---------- | ------------- | ----- | -------------------- |
-| Dev        | SQLite        | 可选  | 热重载、详细日志     |
-| Test       | SQLite (内存) | 无    | 快速测试、Mock 依赖  |
-| Production | PostgreSQL    | Redis | 监控、限流、日志脱敏 |
+**环境**: Dev (SQLite) | Test (内存 SQLite) | Prod (PostgreSQL + Redis)
 
-**关键环境变量** (`.env`):
+**关键变量** (`.env`):
 
-```bash
-BAILIAN_API_KEY=sk-xxx            # 生产必须 sk- 开头
-BAILIAN_APPLICATION_ID=xxx
-SQLALCHEMY_DATABASE_URI=xxx       # SQLite/PostgreSQL
-SECRET_KEY=xxx                    # 生产必须更改
-REDIS_HOST=localhost              # 可选
-```
+- `BAILIAN_API_KEY=sk-xxx` (生产必须 sk- 开头)
+- `BAILIAN_APPLICATION_ID=xxx`
+- `SQLALCHEMY_DATABASE_URI=xxx`
+- `SECRET_KEY=xxx` (生产必须更改)
+- `REDIS_HOST=localhost` (可选)
 
 ---
 
 ## 性能与安全
 
-### 限流策略
-
-| 维度    | 限制          | 算法           |
-| ------- | ------------- | -------------- |
-| IP      | 100 请求/分钟 | Token Bucket   |
-| 用户    | 50 请求/分钟  | Token Bucket   |
-| AI 服务 | 20 请求/分钟  | Sliding Window |
-| 登录    | 10 请求/分钟  | Token Bucket   |
-
-### 监控指标
-
-- ✅ 慢查询: >1.0 秒自动记录
-- ✅ N+1 检测: `performance.py` 自动警告
-- ✅ 中间件: 性能监控 → 安全头 → 限流 → CORS → 日志
+**限流**: IP 100/min | 用户 50/min | AI 20/min | 登录 10/min (Token Bucket + Sliding Window)  
+**监控**: 慢查询 >1.0s | N+1 检测 | 中间件链（性能 → 安全头 → 限流 → CORS → 日志）
 
 ---
 
 ## AI 服务集成
 
-### BailianService (src/services/bailian_service.py)
+**BailianService** (`src/services/bailian_service.py`):
 
-```python
-# ✅ 推荐: 使用 Service 层封装
-result = await bailian_service.chat(
-    messages=messages,
-    stream=True,      # 流式响应
-    timeout=120       # 支持图片 OCR
-)
-
-# ❌ 禁止: 直接 HTTP 调用 (跳过重试/监控)
-```
-
-**配置**:
-
-- 超时: 120s (图片 OCR)
-- 重试: 最多 3 次 (指数退避)
-- 流式: SSE (Server-Sent Events)
+- ✅ 使用 Service 层封装（支持重试、监控、流式响应）
+- ❌ 禁止直接 HTTP 调用
+- 配置: 超时 120s | 重试 3 次（指数退避）| SSE 流式
 
 ---
 
 ## 生产部署
 
-**服务器**: 121.199.173.244 (horsduroot.com)  
-**路径**: /opt/wuhao-tutor (后端) + /var/www/html (前端)  
-**服务**: systemd (wuhao-tutor.service)
+**一键部署**: `./scripts/deploy.sh`（前端本地构建 + 后端热部署）  
+**验证**: `curl https://horsduroot.com/health`  
+**日志**: `journalctl -u wuhao-tutor.service -f`
 
-```bash
-# 一键部署
-./scripts/deploy.sh
+**关键陷阱**:
 
-# 验证
-curl https://horsduroot.com/health
+- ❌ 生产用 `start-dev.sh` → 必须 `deploy.sh`
+- ❌ 跳过 Alembic → 数据库变更必须 `make db-migrate`
+- ❌ 硬编码密钥 → 环境变量
+- ❌ 修改 `src/core/` 基础设施（除非完全理解）
 
-# 日志
-ssh root@121.199.173.244 'journalctl -u wuhao-tutor.service -f'
-```
+**最佳实践**:
 
-**注意**:
-
-- 前端本地构建后同步 (避免 npm install 卡住)
-- 小程序本地编译上传 (不在服务器)
-- 数据库迁移需手动执行
-- `.env.production` 在服务器上
+- 数据库变更: 修改模型 → `make db-migrate` → 检查迁移 → `make db-init` → 测试回滚
+- 测试策略: 单元测试 (Services/Repositories) + 集成测试 (API) + 性能测试
+- Mock AI: 开发环境可用 `MockBailianService`
 
 ---
 
-## 常见陷阱
+## 项目结构
 
-### ❌ 避免
-
-1. 生产用 `scripts/start-dev.sh` (必须用 `deploy.sh`)
-2. 修改 `src/core/` 基础设施 (除非完全理解)
-3. 绕过 Alembic 改数据库 (必须 `make db-migrate`)
-4. 硬编码密钥 (必须环境变量)
-
-### ✅ 推荐
-
-1. **数据库变更**: 修改模型 → `make db-migrate` → 检查迁移 → `make db-init` → 测试回滚
-2. **测试策略**: 单元测试 (Services/Repositories) + 集成测试 (API) + 性能测试
-3. **Mock AI**: 开发环境可用 `MockBailianService`
-
----
-
-## 项目结构 (简化)
-
-```
-wuhao-tutor/
-├── src/
-│   ├── api/v1/endpoints/    # API 路由 (50+ 端点)
-│   ├── services/            # 业务逻辑 (BailianService, LearningService 等)
-│   ├── repositories/        # 数据访问 (BaseRepository 泛型)
-│   ├── models/              # ORM 模型 (15+ 表)
-│   ├── schemas/             # Pydantic 模型
-│   ├── core/                # 基础设施 (config, security, monitoring)
-│   └── main.py              # FastAPI 入口
-├── frontend/                # Vue3 + TypeScript + Element Plus
-├── miniprogram/             # 微信小程序 (15+ 页面)
-├── alembic/                 # 数据库迁移
-├── scripts/                 # 开发脚本 (deploy.sh, diagnose.py)
-├── tests/                   # 测试 (单元/集成/性能)
-└── docs/                    # 文档 (api, architecture, guide)
-```
+**后端**: `src/` (api/services/repositories/models/core) | 50+ API | 15+ 表  
+**前端**: `frontend/` (Vue3 + TypeScript + Element Plus)  
+**小程序**: `miniprogram/` (15+ 页面，连接生产环境)  
+**其他**: `alembic/` (迁移) | `scripts/` (部署) | `tests/` (单元/集成/性能)
 
 ---
 
@@ -252,7 +166,3 @@ wuhao-tutor/
 5. **配置外化**: 环境变量，禁止硬编码
 
 ---
-
-**文档版本**: v3.0 (精简版)  
-**最后更新**: 2025-11-05  
-**Token 优化**: 从 ~3000 token 精简至 ~1200 token
