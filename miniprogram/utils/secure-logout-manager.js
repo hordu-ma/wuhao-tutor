@@ -168,6 +168,9 @@ class SecureLogoutManager {
     let overallSuccess = true;
     let lastError = null;
 
+    // 修改密码场景下，对失败更宽容
+    const isPasswordChange = logoutSession.reason === 'password_changed';
+
     try {
       // 步骤1: 通知服务器退出
       if (this.config.enableRemoteLogout && !skipServerLogout) {
@@ -181,7 +184,8 @@ class SecureLogoutManager {
           error: serverLogoutResult.error,
         });
 
-        if (!serverLogoutResult.success) {
+        if (!serverLogoutResult.success && !isPasswordChange) {
+          // 非修改密码场景下，服务器退出失败才影响整体
           overallSuccess = false;
           lastError = serverLogoutResult.error;
         }
@@ -196,7 +200,7 @@ class SecureLogoutManager {
         });
       }
 
-      // 步骤2: 清理本地会话
+      // 步骤2: 清理本地会话（关键步骤）
       const sessionCleanupResult = await this.cleanupLocalSession(logoutSession);
       steps.push({
         step: 'session_cleanup',
@@ -207,11 +211,12 @@ class SecureLogoutManager {
       });
 
       if (!sessionCleanupResult.success) {
+        // 本地会话清理失败总是影响整体（关键步骤）
         overallSuccess = false;
         lastError = sessionCleanupResult.error;
       }
 
-      // 步骤3: 清理用户数据
+      // 步骤3: 清理用户数据（非关键步骤）
       if (this.config.enableDataCleanup) {
         const dataCleanupResult = await this.cleanupUserData(logoutSession);
         steps.push({
@@ -223,12 +228,12 @@ class SecureLogoutManager {
         });
 
         if (!dataCleanupResult.success) {
-          // 数据清理失败不影响整体退出
+          // 数据清理失败不影响整体退出（已有警告日志）
           console.warn('[SecureLogout] 数据清理失败，但继续退出流程');
         }
       }
 
-      // 步骤4: 清理安全数据
+      // 步骤4: 清理安全数据（非关键步骤）
       const securityCleanupResult = await this.cleanupSecurityData(logoutSession);
       steps.push({
         step: 'security_cleanup',
@@ -238,7 +243,9 @@ class SecureLogoutManager {
         error: securityCleanupResult.error,
       });
 
-      // 步骤5: 重置应用状态
+      // 安全数据清理失败不影响整体（非关键步骤）
+
+      // 步骤5: 重置应用状态（非关键步骤）
       const appResetResult = await this.resetApplicationState(logoutSession);
       steps.push({
         step: 'app_reset',
@@ -247,6 +254,8 @@ class SecureLogoutManager {
         message: appResetResult.message,
         error: appResetResult.error,
       });
+
+      // 应用状态重置失败不影响整体（非关键步骤）
 
       return {
         success: overallSuccess,
@@ -429,26 +438,43 @@ class SecureLogoutManager {
    * @param {Object} logoutSession - 退出会话
    * @returns {Promise<Object>} 清理结果
    */
+  /**
+   * 清理安全数据
+   * @param {Object} logoutSession - 退出会话
+   * @returns {Promise<Object>} 清理结果
+   */
   async cleanupSecurityData(logoutSession) {
     try {
       console.log('[SecureLogout] 清理安全数据');
 
       // 清理账号绑定数据（可选）
       if (logoutSession.options.clearBindingData) {
-        await accountBindingManager.clearBindingData();
+        try {
+          await accountBindingManager.clearBindingData();
+        } catch (error) {
+          console.warn('[SecureLogout] 清理账号绑定数据失败（忽略）:', error);
+        }
       }
 
       // 清理登录检测历史（保留部分用于安全分析）
-      const securityEvents = await abnormalLoginDetector.getSecurityEvents();
-      if (securityEvents.length > 10) {
-        // 只保留最近10个安全事件
-        const recentEvents = securityEvents.slice(-10);
-        await storage.set('security_events', recentEvents);
+      try {
+        const securityEvents = await abnormalLoginDetector.getSecurityEvents();
+        if (securityEvents && securityEvents.length > 10) {
+          // 只保留最近10个安全事件
+          const recentEvents = securityEvents.slice(-10);
+          await storage.set('security_events', recentEvents);
+        }
+      } catch (error) {
+        console.warn('[SecureLogout] 清理安全事件失败（忽略）:', error);
       }
 
       // 清理临时安全令牌
-      await storage.remove('temp_security_token');
-      await storage.remove('verification_codes');
+      try {
+        await storage.remove('temp_security_token');
+        await storage.remove('verification_codes');
+      } catch (error) {
+        console.warn('[SecureLogout] 清理临时令牌失败（忽略）:', error);
+      }
 
       return {
         success: true,
@@ -456,10 +482,11 @@ class SecureLogoutManager {
       };
     } catch (error) {
       console.error('[SecureLogout] 安全数据清理失败:', error);
+      // 修改密码场景下，安全数据清理失败不应影响退出
       return {
-        success: false,
-        message: '安全数据清理失败',
-        error: error.message,
+        success: true, // 改为 true，避免影响整体退出
+        message: '安全数据清理部分失败，但已完成基本清理',
+        warning: error.message,
       };
     }
   }

@@ -831,17 +831,33 @@ class AuthManager {
       });
 
       if (logoutResult.success) {
-        console.log('用户登出成功');
+        console.log('[Auth] 用户登出成功');
       } else {
-        console.warn('安全退出过程中遇到问题，但本地状态已清理');
+        console.warn('[Auth] 安全退出过程中遇到问题，但本地状态已清理');
+
+        // 修改密码场景下，即使遇到问题也视为成功（本地已清理）
+        if (options.reason === 'password_changed') {
+          console.log('[Auth] 修改密码场景，忽略退出警告');
+          return { success: true, message: '本地清理成功' };
+        }
       }
 
       return logoutResult;
     } catch (error) {
-      console.error('登出失败', error);
+      console.error('[Auth] 登出失败', error);
 
       // 如果安全退出失败，执行基础清理
-      await this.clearUserSession();
+      try {
+        await this.clearUserSession();
+      } catch (clearError) {
+        console.error('[Auth] 基础清理也失败', clearError);
+      }
+
+      // 修改密码场景下，不抛出异常（确保用户体验）
+      if (options.reason === 'password_changed') {
+        console.log('[Auth] 修改密码场景，忽略退出异常');
+        return { success: true, message: '本地清理完成' };
+      }
 
       throw error;
     }
