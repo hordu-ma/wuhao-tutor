@@ -119,6 +119,9 @@ const pageObject = {
     canView: true,
     canModerate: false,
 
+    // 语音引导
+    showVoiceGuide: false, // 显示语音引导气泡
+
     // 会话管理
     sessionId: '', // 当前会话ID
     isNewSession: false, // 是否为新创建的会话
@@ -394,6 +397,15 @@ const pageObject = {
 
     // 刷新在线状态
     this.updateOnlineStatus();
+
+    // 🎯 [新增] 显示语音引导气泡
+    setTimeout(() => {
+      this.setData({ showVoiceGuide: true });
+      // 3秒后自动隐藏
+      setTimeout(() => {
+        this.setData({ showVoiceGuide: false });
+      }, 3000);
+    }, 1000);
   },
 
   /**

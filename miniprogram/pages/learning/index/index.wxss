@@ -796,6 +796,37 @@
   align-items: center;
   flex-shrink: 0; /* 防止被压缩 */
   width: 80rpx; /* 固定宽度，与右侧保持对称 */
+  position: relative; /* 为气泡提供定位基准 */
+}
+
+/* 🎯 语音引导气泡 */
+.voice-guide-bubble {
+  position: absolute;
+  bottom: 100rpx; /* 语音按钮上方 */
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 16rpx 24rpx;
+  border-radius: 20rpx;
+  font-size: 24rpx;
+  white-space: nowrap;
+  box-shadow: 0 8rpx 24rpx rgba(102, 126, 234, 0.3);
+  animation: gentle-bounce 2s ease-in-out infinite;
+  z-index: 100;
+}
+
+/* 🎯 轻柔弹跳动画 */
+@keyframes gentle-bounce {
+  0%,
+  100% {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+  50% {
+    transform: translateX(-50%) translateY(-10rpx);
+    opacity: 0.9;
+  }
 }
 
 .voice-btn-circle {
