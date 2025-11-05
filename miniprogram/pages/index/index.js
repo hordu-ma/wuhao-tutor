@@ -271,21 +271,69 @@ Page({
    */
   async loadUserStats() {
     try {
-      // TODO: 调用API获取用户统计数据
-      // const response = await api.getUserStats();
+      const { api } = require('../../utils/api.js');
 
-      // 模拟数据
-      const stats = {
-        questionCount: 23,
-        reportCount: 3,
-        todayStudyTime: 0, // 设为0以展示"待开始"占位信息
-      };
+      // 调用后端API获取真实数据
+      const response = await api.analysis.getUserStats();
 
-      console.log('📊 [统计数据] 设置stats:', stats);
-      this.setData({ stats });
-      console.log('📊 [统计数据] 页面data.stats:', this.data.stats);
+      console.log('📊 [统计数据] API响应:', response);
+
+      // 微信小程序API返回格式：{ data: {...}, statusCode: 200, header: {...} }
+      // 后端数据在 response.data 中
+      if (response && response.statusCode === 200 && response.data) {
+        const apiResponse = response.data;
+
+        console.log('📊 [统计数据] 后端响应:', apiResponse);
+
+        // 后端返回格式：{ success: true, data: {...}, message: "..." }
+        if (apiResponse.success && apiResponse.data) {
+          const backendData = apiResponse.data;
+
+          // 映射后端字段到前端展示
+          const stats = {
+            questionCount: backendData.question_count || 0,
+            reportCount: backendData.homework_count || 0,
+            todayStudyTime: backendData.study_hours || 0,
+          };
+
+          console.log('📊 [统计数据] 设置stats:', stats);
+          this.setData({ stats });
+          console.log('📊 [统计数据] 页面data.stats:', this.data.stats);
+        } else {
+          // API返回格式异常，使用默认值
+          console.warn('⚠️ [统计数据] API返回格式异常，使用默认值', apiResponse);
+          this.setData({
+            stats: {
+              questionCount: 0,
+              reportCount: 0,
+              todayStudyTime: 0,
+            },
+          });
+        }
+      } else {
+        console.warn('⚠️ [统计数据] 响应状态异常:', response);
+        this.setData({
+          stats: {
+            questionCount: 0,
+            reportCount: 0,
+            todayStudyTime: 0,
+          },
+        });
+      }
     } catch (error) {
-      console.error('加载用户统计失败:', error);
+      console.error('❌ [统计数据] 加载用户统计失败:', error);
+
+      // 错误降级：显示默认值而不是假数据
+      this.setData({
+        stats: {
+          questionCount: 0,
+          reportCount: 0,
+          todayStudyTime: 0,
+        },
+      });
+
+      // 不显示错误提示，避免打扰用户体验
+      // 仅在控制台记录，方便调试
     }
   },
 

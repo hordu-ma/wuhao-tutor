@@ -134,9 +134,9 @@
 
 .stat-number {
   font-size: 40rpx;
-  line-height: 1;
-  margin-bottom: 12rpx;
-  height: 40rpx;
+  line-height: 1.2;
+  margin-bottom: 16rpx;
+  height: 48rpx;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -144,9 +144,9 @@
 
 .stat-placeholder {
   font-size: 30rpx;
-  line-height: 1;
-  margin-bottom: 12rpx;
-  height: 40rpx;
+  line-height: 1.2;
+  margin-bottom: 16rpx;
+  height: 36rpx;
   display: flex;
   align-items: center;
   justify-content: center;

@@ -1144,6 +1144,16 @@ const api = {
 
   // 学情分析相关
   analysis: {
+    // 获取用户统计数据
+    getUserStats: () =>
+      apiClient.get(
+        '/analytics/user/stats',
+        {},
+        {
+          enableCache: true,
+          cache: { ttl: 5 * 60 * 1000, tags: ['analytics', 'user-stats'] },
+        },
+      ),
     // 获取学习报告
     getReport: params =>
       apiClient.get('/analysis/report', params, {

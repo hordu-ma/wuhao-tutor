@@ -42,15 +42,16 @@
         <view class="stats-grid">
           <view class="stat-item" wx:if="{{role === 'student'}}">
             <text class="stat-number text-white font-bold">{{stats.questionCount}}</text>
-            <text class="stat-label text-white opacity-75">今日问答</text>
+            <text class="stat-label text-white opacity-75">累计问答</text>
           </view>
           <view class="stat-item">
             <text class="stat-number text-white font-bold">{{stats.reportCount}}</text>
-            <text class="stat-label text-white opacity-75">学习报告</text>
+            <text class="stat-label text-white opacity-75">作业批改</text>
           </view>
           <view class="stat-item" wx:if="{{role === 'student'}}">
-            <text class="stat-placeholder text-white font-bold">待开始</text>
-            <text class="stat-label text-white opacity-75">今日学习</text>
+            <text class="stat-number text-white font-bold" wx:if="{{stats.todayStudyTime > 0}}">{{stats.todayStudyTime}}</text>
+            <text class="stat-placeholder text-white font-bold" wx:else>待开始</text>
+            <text class="stat-label text-white opacity-75">学习时长(小时)</text>
           </view>
         </view>
       </view>
