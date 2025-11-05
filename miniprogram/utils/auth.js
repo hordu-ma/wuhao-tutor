@@ -767,7 +767,7 @@ class AuthManager {
   /**
    * 登出
    */
-  async logout() {
+  async logout(options = {}) {
     try {
       // 使用安全退出系统
       const securitySystem = getSecuritySystem();
@@ -775,6 +775,7 @@ class AuthManager {
         method: 'normal',
         reason: 'user_initiated',
         cleanupLevel: 'standard',
+        ...options, // 合并传入的选项（例如 skipConfirmation）
       });
 
       if (logoutResult.success) {

@@ -258,45 +258,49 @@ Page({
   /**
    * 执行退出登录
    */
+  // 执行退出登录
   async performLogout() {
-    wx.showLoading({
-      title: '退出中...',
-    });
-
     try {
-      // ✅ 调用 authManager 的完整退出流程
-      await authManager.logout();
+      // 显示加载提示
+      wx.showLoading({
+        title: '退出中...',
+        mask: true,
+      });
 
+      // 调用退出接口（跳过二次确认，因为用户已在 van-dialog 中确认）
+      await authManager.logout({
+        skipConfirmation: true,
+      });
+
+      // 清理用户信息
+      this.setData({
+        userInfo: null,
+        avatarUrl: '/images/icons/default-avatar.png',
+      });
+
+      // 隐藏加载
       wx.hideLoading();
 
+      // 提示退出成功
       wx.showToast({
         title: '已退出登录',
         icon: 'success',
+        duration: 1500,
       });
 
-      // 跳转到登录页
+      // 延迟跳转到登录页
       setTimeout(() => {
         wx.reLaunch({
-          url: '/pages/login/index',
+          url: '/pages/auth/login/index',
         });
       }, 1500);
     } catch (error) {
       console.error('退出登录失败:', error);
       wx.hideLoading();
-
-      // 即使出错也强制清理并跳转
-      wx.clearStorageSync();
-
       wx.showToast({
-        title: '退出成功',
-        icon: 'success',
+        title: '退出失败',
+        icon: 'error',
       });
-
-      setTimeout(() => {
-        wx.reLaunch({
-          url: '/pages/login/index',
-        });
-      }, 1500);
     }
   },
 });
