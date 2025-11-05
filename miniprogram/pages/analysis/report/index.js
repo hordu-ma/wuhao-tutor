@@ -3,17 +3,6 @@ const { createGuardedPage } = require('../../../utils/enhanced-page-guard.js');
 const api = require('../../../api/index.js');
 const { authManager } = require('../../../utils/auth.js');
 
-// 难度等级映射
-const DIFFICULTY_MAP = {
-  easy: '简单',
-  medium: '中等',
-  hard: '困难',
-  expert: '专家',
-};
-
-// 星期映射
-const WEEKDAY_MAP = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-
 // 学科映射
 const SUBJECT_MAP = {
   math: '数学',
@@ -61,14 +50,6 @@ const pageObject = {
       improvement_suggestions: [],
       knowledge_gaps: [],
       last_analyzed_at: '',
-    },
-
-    // 学习模式格式化数据
-    learningPattern: {
-      most_active_hour: 0,
-      most_active_day_text: '',
-      avg_session_length: 0,
-      preferred_difficulty_text: '',
     },
 
     // 格式化的更新时间
@@ -231,9 +212,6 @@ const pageObject = {
     // 处理知识点数据
     const knowledgePoints = knowledge?.knowledge_points || [];
 
-    // 处理学习模式
-    const learningPattern = this.formatLearningPattern(overview?.learning_pattern);
-
     // 格式化更新时间
     const formattedUpdateTime = this.formatUpdateTime(new Date().toISOString());
 
@@ -255,7 +233,6 @@ const pageObject = {
         last_analyzed_at: new Date().toISOString(),
       },
       knowledgePoints,
-      learningPattern,
       formattedUpdateTime,
       apiStatus: hasData ? 'success' : 'empty',
       hasData,
@@ -266,8 +243,6 @@ const pageObject = {
     console.log('[DEBUG] - loading:', false);
     console.log('[DEBUG] - hasData:', hasData);
     console.log('[DEBUG] - apiStatus:', hasData ? 'success' : 'empty');
-
-    // 图表和诊断组件已移除，仅保留简洁的学习概览和学习模式
   },
 
   /**
@@ -294,27 +269,6 @@ const pageObject = {
     }
 
     return '加载失败，请重试';
-  },
-
-  /**
-   * 格式化学习模式数据
-   */
-  formatLearningPattern(pattern) {
-    if (!pattern) {
-      return {
-        most_active_hour: 0,
-        most_active_day_text: '未知',
-        avg_session_length: 0,
-        preferred_difficulty_text: '未知',
-      };
-    }
-
-    return {
-      most_active_hour: pattern.most_active_hour || 0,
-      most_active_day_text: WEEKDAY_MAP[pattern.most_active_day] || '未知',
-      avg_session_length: pattern.avg_session_length || 0,
-      preferred_difficulty_text: DIFFICULTY_MAP[pattern.preferred_difficulty] || '未知',
-    };
   },
 
   /**

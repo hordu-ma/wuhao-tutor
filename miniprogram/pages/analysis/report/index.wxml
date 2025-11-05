@@ -83,36 +83,6 @@
       </view>
     </view>
 
-    <!-- 学习模式 -->
-    <view class="section pattern-section">
-      <view class="section-header">
-        <text class="section-title">学习模式</text>
-        <text class="section-subtitle">了解您的学习习惯</text>
-      </view>
-
-      <view class="pattern-cards">
-        <view class="pattern-card">
-          <view class="pattern-label">最活跃时段</view>
-          <view class="pattern-value">{{learningPattern.most_active_hour}}:00</view>
-        </view>
-
-        <view class="pattern-card">
-          <view class="pattern-label">最活跃日</view>
-          <view class="pattern-value">{{learningPattern.most_active_day_text}}</view>
-        </view>
-
-        <view class="pattern-card">
-          <view class="pattern-label">平均会话时长</view>
-          <view class="pattern-value">{{learningPattern.avg_session_length}} 分钟</view>
-        </view>
-
-        <view class="pattern-card">
-          <view class="pattern-label">偏好难度</view>
-          <view class="pattern-value">{{learningPattern.preferred_difficulty_text}}</view>
-        </view>
-      </view>
-    </view>
-
     <!-- 最后更新时间 -->
     <view class="report-footer">
       <text class="update-time">更新于 {{formattedUpdateTime}}</text>

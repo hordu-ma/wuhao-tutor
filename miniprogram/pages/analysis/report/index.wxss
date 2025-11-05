@@ -173,34 +173,6 @@
   margin-top: 4rpx;
 }
 
-/* 学习模式卡片 */
-.pattern-cards {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16rpx;
-}
-
-.pattern-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 32rpx;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 16rpx;
-  color: #ffffff;
-}
-
-.pattern-label {
-  font-size: 24rpx;
-  opacity: 0.9;
-  margin-bottom: 12rpx;
-}
-
-.pattern-value {
-  font-size: 36rpx;
-  font-weight: bold;
-}
-
 /* 建议列表 */
 .suggestions-list {
   display: flex;
