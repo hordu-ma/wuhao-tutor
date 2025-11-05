@@ -54,10 +54,10 @@ const pageObject = {
       user_id: '',
       total_questions: 0,
       total_sessions: 0,
+      total_homework: 0,
+      study_hours: '0.0',
       subject_stats: [],
       learning_pattern: {},
-      avg_rating: 0,
-      positive_feedback_rate: 0,
       improvement_suggestions: [],
       knowledge_gaps: [],
       last_analyzed_at: '',
@@ -216,8 +216,8 @@ const pageObject = {
       total_questions: overview?.total_questions || 0,
       total_sessions: overview?.total_sessions || 0,
       total_study_days: overview?.total_study_days || 0,
-      avg_rating: overview?.avg_rating || 0,
-      positive_feedback_rate: overview?.positive_feedback_rate || 0,
+      total_homework: overview?.total_homework || 0,
+      study_hours: overview?.study_hours || '0.0',
     };
 
     // 处理学科统计数据
@@ -253,7 +253,6 @@ const pageObject = {
         improvement_suggestions: overview?.improvement_suggestions || [],
         knowledge_gaps: overview?.knowledge_gaps || [],
         last_analyzed_at: new Date().toISOString(),
-        avg_rating: Number(processedOverview.avg_rating).toFixed(1),
       },
       knowledgePoints,
       learningPattern,

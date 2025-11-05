@@ -62,22 +62,22 @@
         </view>
 
         <view class="stat-card">
-          <view class="stat-icon rating-icon">
-            <van-icon name="star-o" size="24px" />
+          <view class="stat-icon homework-icon">
+            <van-icon name="edit" size="24px" />
           </view>
           <view class="stat-content">
-            <text class="stat-value">{{analytics.avg_rating > 0 ? analytics.avg_rating : '--'}}</text>
-            <text class="stat-label">平均评分</text>
+            <text class="stat-value">{{analytics.total_homework}}</text>
+            <text class="stat-label">作业批改</text>
           </view>
         </view>
 
         <view class="stat-card">
-          <view class="stat-icon feedback-icon">
-            <van-icon name="thumb-circle-o" size="24px" />
+          <view class="stat-icon time-icon">
+            <van-icon name="clock" size="24px" />
           </view>
           <view class="stat-content">
-            <text class="stat-value">{{analytics.positive_feedback_rate > 0 ? analytics.positive_feedback_rate + '%' : '--'}}</text>
-            <text class="stat-label">好评率</text>
+            <text class="stat-value">{{analytics.study_hours}}</text>
+            <text class="stat-label">学习时长</text>
           </view>
         </view>
       </view>

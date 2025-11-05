@@ -55,7 +55,6 @@ class AnalyticsService:
 
             # 新增统计
             total_sessions = await self._count_sessions(user_id, start_date)
-            rating_stats = await self._get_rating_stats(user_id, start_date)
             subject_stats = await self._get_subject_stats(user_id, start_date)
             learning_pattern = await self._analyze_learning_pattern(user_id, start_date)
 
@@ -63,20 +62,26 @@ class AnalyticsService:
             image_questions = await self._count_image_questions(user_id, start_date)
             mistake_count = await self._count_mistakes(user_id, start_date)
 
+            # 计算学习时长(估算:每个问答5分钟,每个作业15分钟)
+            # 注意: 学习时长统计全部时间(与首页保持一致),不受time_range限制
+            total_questions_all = await self._count_questions(user_id, None)
+            total_homework_all = await self._count_homework(user_id, None)
+            estimated_minutes = total_questions_all * 5 + total_homework_all * 15
+            study_hours = round(estimated_minutes / 60, 1)
+
             return {
                 # 新格式（小程序前端需要的字段）
                 "total_questions": total_questions,
                 "total_sessions": total_sessions,
                 "total_study_days": total_study_days,
-                "avg_rating": rating_stats["avg_rating"],
-                "positive_feedback_rate": rating_stats["positive_rate"],
+                "total_homework": total_homework,
+                "study_hours": study_hours,
                 "subject_stats": subject_stats,
                 "learning_pattern": learning_pattern,
                 # "我的"页面专用字段
                 "image_questions": image_questions,  # 图片提问数（作业数）
                 "mistake_count": mistake_count,  # 错题数
                 # 保留原有字段（保持向后兼容）
-                "total_homework": total_homework,
                 "avg_score": avg_score,
                 "knowledge_points": knowledge_points,
                 "study_trend": study_trend,
