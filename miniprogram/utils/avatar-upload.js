@@ -269,17 +269,41 @@ class AvatarUploadManager {
       });
 
       console.log('🔧 [Avatar Upload Debug] 上传响应:', response);
+      console.log('🔧 [Avatar Upload Debug] response.statusCode:', response?.statusCode);
+      console.log('🔧 [Avatar Upload Debug] response.data:', response?.data);
 
       wx.hideLoading();
 
-      // 修复：检查实际的响应结构
-      if (
-        response.statusCode >= 200 &&
-        response.statusCode < 300 &&
-        response.data &&
-        response.data.success
-      ) {
-        const avatarUrl = response.data.data.avatar_url;
+      // 检查响应格式并判断成功
+      let isSuccess = false;
+      let responseData = null;
+
+      // Format 1: {statusCode: 200, data: {...}}
+      if (response && response.statusCode !== undefined) {
+        isSuccess = response.statusCode >= 200 && response.statusCode < 300;
+        responseData = response.data;
+        console.log('🔧 [Avatar Upload Debug] Format 1 (statusCode), isSuccess:', isSuccess);
+      }
+      // Format 2: {success: true, data: {...}}
+      else if (response && response.success !== undefined) {
+        isSuccess = response.success === true;
+        responseData = response;
+        console.log('🔧 [Avatar Upload Debug] Format 2 (success字段), isSuccess:', isSuccess);
+      }
+      // Format 3: 直接数据
+      else if (response) {
+        isSuccess = true;
+        responseData = response;
+        console.log('🔧 [Avatar Upload Debug] Format 3 (直接数据)');
+      }
+
+      if (isSuccess && responseData) {
+        // 提取avatar_url，兼容多层data嵌套
+        const avatarUrl = responseData.data?.avatar_url || responseData.avatar_url;
+
+        if (!avatarUrl) {
+          throw new Error('上传成功但未返回头像URL');
+        }
 
         // 确保头像URL是完整的HTTPS URL
         const fullAvatarUrl = avatarUrl.startsWith('http')
@@ -302,10 +326,12 @@ class AvatarUploadManager {
         return {
           success: true,
           avatarUrl: fullAvatarUrl,
-          data: response.data.data,
+          data: responseData.data || responseData,
         };
       } else {
-        throw new Error(response.data?.message || response.data?.detail || '上传失败');
+        throw new Error(
+          responseData?.message || responseData?.detail || response?.message || '上传失败',
+        );
       }
     } catch (error) {
       console.error('头像上传失败:', error);
@@ -313,7 +339,7 @@ class AvatarUploadManager {
       // 使用专业的错误处理器
       const errorResult = await profileErrorHandler.handleAvatarUploadError(error, {
         retryFunction: async () => {
-          const response = await apiClient.upload('/auth/avatar', filePath, {
+          const retryResponse = await apiClient.upload('/auth/avatar', filePath, {
             name: 'file',
             formData: {
               category: 'avatar',
@@ -321,13 +347,27 @@ class AvatarUploadManager {
             },
           });
 
-          if (
-            response.statusCode >= 200 &&
-            response.statusCode < 300 &&
-            response.data &&
-            response.data.success
-          ) {
-            const avatarUrl = response.data.data.avatar_url;
+          // 检查重试响应格式
+          let retrySuccess = false;
+          let retryData = null;
+
+          if (retryResponse && retryResponse.statusCode !== undefined) {
+            retrySuccess = retryResponse.statusCode >= 200 && retryResponse.statusCode < 300;
+            retryData = retryResponse.data;
+          } else if (retryResponse && retryResponse.success !== undefined) {
+            retrySuccess = retryResponse.success === true;
+            retryData = retryResponse;
+          } else if (retryResponse) {
+            retrySuccess = true;
+            retryData = retryResponse;
+          }
+
+          if (retrySuccess && retryData) {
+            const avatarUrl = retryData.data?.avatar_url || retryData.avatar_url;
+
+            if (!avatarUrl) {
+              throw new Error('重试成功但未返回头像URL');
+            }
 
             // 确保头像URL是完整的HTTPS URL
             const fullAvatarUrl = avatarUrl.startsWith('http')
@@ -338,10 +378,10 @@ class AvatarUploadManager {
             return {
               success: true,
               avatarUrl: fullAvatarUrl,
-              data: response.data.data,
+              data: retryData.data || retryData,
             };
           } else {
-            throw new Error(response.data?.message || response.data?.detail || '上传失败');
+            throw new Error(retryData?.message || retryData?.detail || '重试上传失败');
           }
         },
       });
@@ -380,9 +420,27 @@ class AvatarUploadManager {
       const response = await userAPI.updateProfile(updateData);
 
       console.log('🔧 [Avatar Sync Debug] 后端响应:', response);
+      console.log('🔧 [Avatar Sync Debug] response.statusCode:', response?.statusCode);
+      console.log('🔧 [Avatar Sync Debug] response.success:', response?.success);
 
-      // 判断响应是否成功：检查状态码 200-299
-      const isSuccess = response.statusCode >= 200 && response.statusCode < 300;
+      // 检查响应格式并判断成功（支持三种格式）
+      let isSuccess = false;
+
+      // Format 1: {statusCode: 200, data: {...}}
+      if (response && response.statusCode !== undefined) {
+        isSuccess = response.statusCode >= 200 && response.statusCode < 300;
+        console.log('🔧 [Avatar Sync Debug] Format 1 (statusCode), isSuccess:', isSuccess);
+      }
+      // Format 2: {success: true, data: {...}}
+      else if (response && response.success !== undefined) {
+        isSuccess = response.success === true;
+        console.log('🔧 [Avatar Sync Debug] Format 2 (success字段), isSuccess:', isSuccess);
+      }
+      // Format 3: 直接数据（认为成功）
+      else if (response) {
+        isSuccess = true;
+        console.log('🔧 [Avatar Sync Debug] Format 3 (直接数据)');
+      }
 
       if (isSuccess) {
         console.log('🔧 [Avatar Sync Debug] 头像同步到后端成功');
@@ -523,8 +581,23 @@ class AvatarUploadManager {
       // 调用后端删除头像接口
       const response = await api.delete('/auth/avatar');
 
-      // 判断响应是否成功：检查状态码 200-299
-      const isSuccess = response.statusCode >= 200 && response.statusCode < 300;
+      console.log('🔧 [Avatar Delete Debug] 删除响应:', response);
+
+      // 检查响应格式并判断成功（支持三种格式）
+      let isSuccess = false;
+
+      // Format 1: {statusCode: 200, data: {...}}
+      if (response && response.statusCode !== undefined) {
+        isSuccess = response.statusCode >= 200 && response.statusCode < 300;
+      }
+      // Format 2: {success: true, data: {...}}
+      else if (response && response.success !== undefined) {
+        isSuccess = response.success === true;
+      }
+      // Format 3: 直接数据（认为成功）
+      else if (response) {
+        isSuccess = true;
+      }
 
       if (isSuccess) {
         // 更新本地用户信息

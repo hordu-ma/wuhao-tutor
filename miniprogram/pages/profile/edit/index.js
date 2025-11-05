@@ -434,8 +434,28 @@ Page({
       // 调用后端API更新用户信息
       const response = await userAPI.updateProfile(updateData);
 
-      // 判断响应是否成功：检查状态码 200-299
-      const isSuccess = response.statusCode >= 200 && response.statusCode < 300;
+      console.log('🔍 [Profile Save Debug] 后端响应:', response);
+      console.log('🔍 [Profile Save Debug] response.statusCode:', response?.statusCode);
+      console.log('🔍 [Profile Save Debug] response.success:', response?.success);
+
+      // 检查响应格式并判断成功（支持三种格式）
+      let isSuccess = false;
+
+      // Format 1: {statusCode: 200, data: {...}}
+      if (response && response.statusCode !== undefined) {
+        isSuccess = response.statusCode >= 200 && response.statusCode < 300;
+        console.log('🔍 [Profile Save Debug] Format 1 (statusCode), isSuccess:', isSuccess);
+      }
+      // Format 2: {success: true, data: {...}}
+      else if (response && response.success !== undefined) {
+        isSuccess = response.success === true;
+        console.log('🔍 [Profile Save Debug] Format 2 (success字段), isSuccess:', isSuccess);
+      }
+      // Format 3: 直接数据（认为成功）
+      else if (response) {
+        isSuccess = true;
+        console.log('🔍 [Profile Save Debug] Format 3 (直接数据)');
+      }
 
       if (isSuccess) {
         // 更新本地缓存
@@ -470,7 +490,9 @@ Page({
           wx.navigateBack();
         }, 1500);
       } else {
-        throw new Error(response.message || '保存失败');
+        throw new Error(
+          response.data?.message || response.message || response.detail || '保存失败',
+        );
       }
     } catch (error) {
       console.error('保存用户信息失败:', error);
@@ -513,20 +535,35 @@ Page({
 
           console.log('🔍 [Profile Retry Debug] 重试数据:', retryData);
 
-          const response = await userAPI.updateProfile(retryData);
+          const retryResponse = await userAPI.updateProfile(retryData);
 
-          // 判断响应是否成功：检查状态码 200-299
-          const isSuccess = response.statusCode >= 200 && response.statusCode < 300;
+          console.log('🔍 [Profile Retry Debug] 重试响应:', retryResponse);
 
-          if (isSuccess) {
+          // 检查重试响应格式并判断成功（支持三种格式）
+          let retrySuccess = false;
+
+          if (retryResponse && retryResponse.statusCode !== undefined) {
+            retrySuccess = retryResponse.statusCode >= 200 && retryResponse.statusCode < 300;
+          } else if (retryResponse && retryResponse.success !== undefined) {
+            retrySuccess = retryResponse.success === true;
+          } else if (retryResponse) {
+            retrySuccess = true;
+          }
+
+          if (retrySuccess) {
             const updatedUserInfo = {
               ...this.data.userInfo,
               ...this.data.formData,
             };
             await authManager.updateUserInfo(updatedUserInfo);
-            return response;
+            return retryResponse;
           }
-          throw new Error(response.data?.message || response.message || '保存失败');
+          throw new Error(
+            retryResponse.data?.message ||
+              retryResponse.message ||
+              retryResponse.detail ||
+              '保存失败',
+          );
         },
       });
 
