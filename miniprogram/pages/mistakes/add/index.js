@@ -10,7 +10,7 @@ const pageObject = {
       question_content: '',
       student_answer: '',
       correct_answer: '',
-      explanation: ''
+      explanation: '',
     },
     submitting: false,
     showSubjectPicker: false,
@@ -24,13 +24,13 @@ const pageObject = {
       { name: '生物' },
       { name: '历史' },
       { name: '地理' },
-      { name: '政治' }
+      { name: '政治' },
     ],
     difficultyActions: [
       { name: '简单', value: 1 },
       { name: '中等', value: 2 },
-      { name: '困难', value: 3 }
-    ]
+      { name: '困难', value: 3 },
+    ],
   },
 
   onLoad(options) {
@@ -52,7 +52,7 @@ const pageObject = {
   onSubjectSelected(e) {
     this.setData({
       'formData.subject': e.detail.name,
-      showSubjectPicker: false
+      showSubjectPicker: false,
     });
   },
 
@@ -67,7 +67,7 @@ const pageObject = {
   onDifficultySelected(e) {
     this.setData({
       'formData.difficulty_level': e.detail.value,
-      showDifficultyPicker: false
+      showDifficultyPicker: false,
     });
   },
 
@@ -115,28 +115,31 @@ const pageObject = {
 
       const response = await mistakesApi.createMistake(formData);
 
-      if (response.success) {
+      // 判断响应是否成功：检查状态码 200-299
+      const isSuccess = response.statusCode >= 200 && response.statusCode < 300;
+
+      if (isSuccess) {
         wx.showToast({
           title: '添加成功',
-          icon: 'success'
+          icon: 'success',
         });
 
         setTimeout(() => {
           wx.navigateBack();
         }, 1500);
       } else {
-        throw new Error(response.message || '添加失败');
+        throw new Error(response.data?.message || response.message || '添加失败');
       }
     } catch (error) {
       console.error('添加错题失败', error);
       wx.showToast({
         title: error.message || '添加失败',
-        icon: 'error'
+        icon: 'error',
       });
     } finally {
       this.setData({ submitting: false });
     }
-  }
+  },
 };
 
 Page(createGuardedPage(pageObject, 'pages/mistakes/add/index'));

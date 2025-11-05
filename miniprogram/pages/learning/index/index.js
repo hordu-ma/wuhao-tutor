@@ -603,7 +603,15 @@ const pageObject = {
 
       let sessionId;
       let isNewSession = false;
-      if (sessionResponse.success) {
+
+      // 判断响应是否成功：检查状态码 200-299 且有数据
+      const isSuccess =
+        sessionResponse &&
+        sessionResponse.statusCode >= 200 &&
+        sessionResponse.statusCode < 300 &&
+        sessionResponse.data;
+
+      if (isSuccess) {
         sessionId = sessionResponse.data.id;
         wx.setStorageSync('chat_session_id', sessionId);
         isNewSession = true;
@@ -769,7 +777,11 @@ const pageObject = {
         size: 20,
       });
 
-      if (response.success && response.data) {
+      // 判断响应是否成功：检查状态码 200-299 且有数据
+      const isSuccess =
+        response && response.statusCode >= 200 && response.statusCode < 300 && response.data;
+
+      if (isSuccess) {
         const messages = response.data.map(item => ({
           id: item.question?.id || utils.generateId(),
           content: item.question?.content || '',
@@ -836,7 +848,15 @@ const pageObject = {
         size: 20,
       });
 
-      if (response.success && response.data.length > 0) {
+      // 判断响应是否成功：检查状态码 200-299 且有数据
+      const isSuccess =
+        response &&
+        response.statusCode >= 200 &&
+        response.statusCode < 300 &&
+        response.data &&
+        response.data.length > 0;
+
+      if (isSuccess) {
         const newMessages = response.data.map(msg => ({
           id: msg.id,
           content: msg.content,
@@ -1404,8 +1424,11 @@ const pageObject = {
 
       const response = await api.learning.askQuestion(apiParams);
 
+      // 判断响应是否成功：检查状态码 200-299
+      const isSuccess = response && response.statusCode >= 200 && response.statusCode < 300;
+
       // 记录学习行为
-      if (response.success && this.data.mcpEnabled) {
+      if (isSuccess && this.data.mcpEnabled) {
         setTimeout(() => {
           mcpService.updateLearningBehavior(
             response.data.ai_message_id,
@@ -3197,7 +3220,10 @@ const pageObject = {
     try {
       const response = await api.learning.deleteSession(this.data.sessionId);
 
-      if (response.success) {
+      // 判断响应是否成功：检查状态码 200-299
+      const isSuccess = response && response.statusCode >= 200 && response.statusCode < 300;
+
+      if (isSuccess) {
         this.setData({
           messageList: [],
           conversationContext: [],

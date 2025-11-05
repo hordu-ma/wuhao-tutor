@@ -134,8 +134,10 @@ const pageObject = {
 
       const response = await mistakesApi.deleteMistake(this.data.mistakeId);
 
-      // 🛠️ 删除API返回SuccessResponse: {success: true, message: "..."}
-      if (response && response.success !== false) {
+      // 判断响应是否成功：检查状态码 200-299
+      const isSuccess = response && response.statusCode >= 200 && response.statusCode < 300;
+
+      if (isSuccess) {
         wx.showToast({
           title: '删除成功',
           icon: 'success',

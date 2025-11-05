@@ -125,14 +125,37 @@ const pageObject = {
         api.analysis.getProgress({ days: this.getTimeRangeDays() }),
       ]);
 
-      // 处理结果，兼容多种响应格式
+      // 处理结果，兼容三种响应格式
       const extractData = result => {
         if (result.status !== 'fulfilled') return {};
         const response = result.value;
-        // 处理多种响应格式
-        if (response.data) return response.data; // { success: true, data: {...} }
-        if (response.success !== false) return response; // 直接返回数据
-        return {}; // 其他情况
+
+        console.log('📊 [extractData] response:', response);
+        console.log('📊 [extractData] response.statusCode:', response?.statusCode);
+        console.log('📊 [extractData] response.success:', response?.success);
+        console.log('📊 [extractData] response.data:', response?.data);
+
+        // 判断响应格式
+        // Format 1: {data: {...}, statusCode: 200, header: {...}} - API客户端包装
+        // Format 2: {success: true, message: "...", data: {...}} - 后端业务响应
+        // Format 3: {items: [...], total: N} - 直接数据
+
+        // Format 1: 检查 statusCode
+        if (response && response.statusCode !== undefined) {
+          const isSuccess = response.statusCode >= 200 && response.statusCode < 300;
+          console.log('📊 [extractData] Format 1 (statusCode), isSuccess:', isSuccess);
+          return isSuccess ? response.data || response : {};
+        }
+
+        // Format 2: 检查 success 字段（后端业务响应）
+        if (response && response.success !== undefined) {
+          console.log('📊 [extractData] Format 2 (success字段), success:', response.success);
+          return response.success ? response.data || {} : {};
+        }
+
+        // Format 3: 直接数据（没有包装）
+        console.log('📊 [extractData] Format 3 (直接数据)');
+        return response !== null && response !== undefined ? response : {};
       };
 
       // 处理结果

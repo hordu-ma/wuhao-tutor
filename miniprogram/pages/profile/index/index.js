@@ -185,7 +185,10 @@ const pageObject = {
       console.log('🌐 [服务器获取] response.data存在:', !!response.data);
       console.log('🌐 [服务器获取] response.data内容:', response.data);
 
-      if (response.success && response.data) {
+      // 判断响应是否成功：检查状态码 200-299 且有数据
+      const isSuccess = response.statusCode >= 200 && response.statusCode < 300 && response.data;
+
+      if (isSuccess) {
         console.log('🌐 [服务器获取] 条件判断通过，开始处理数据...');
         const serverUserInfo = response.data;
         console.log('🌐 [服务器获取] 服务器用户信息:', serverUserInfo);

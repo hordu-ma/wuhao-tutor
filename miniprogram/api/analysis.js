@@ -65,8 +65,12 @@ const analysisAPI = {
         },
       )
       .then(response => {
+        // 判断响应是否成功：检查状态码 200-299 且有数据
+        const isSuccess =
+          response && response.statusCode >= 200 && response.statusCode < 300 && response.data;
+
         // 提取活跃度相关数据
-        if (response.success && response.data) {
+        if (isSuccess) {
           return {
             success: true,
             data: {
@@ -159,7 +163,11 @@ const analysisAPI = {
         },
       )
       .then(response => {
-        if (response.success && response.data) {
+        // 判断响应是否成功：检查状态码 200-299 且有数据
+        const isSuccess =
+          response && response.statusCode >= 200 && response.statusCode < 300 && response.data;
+
+        if (isSuccess) {
           return {
             success: true,
             data: {

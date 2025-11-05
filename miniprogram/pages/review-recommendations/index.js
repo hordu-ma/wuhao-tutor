@@ -41,16 +41,25 @@ const pageObject = {
         limit: 10,
       });
 
-      if (response && response.success !== false) {
-        const recommendations = response.data || response || [];
+      // 判断响应是否成功：兼容多种响应格式
+      const isStandardFormat = response && response.statusCode !== undefined;
+      const isSuccess = isStandardFormat
+        ? response.statusCode >= 200 && response.statusCode < 300
+        : response !== null && response !== undefined;
+
+      if (isSuccess) {
+        // 兼容两种响应格式
+        const responseData = isStandardFormat ? response.data || response : response;
+        const recommendations = Array.isArray(responseData)
+          ? responseData
+          : responseData.data || [];
 
         this.setData({
           recommendations,
           loading: false,
         });
-      } else {
-        throw new Error(response?.message || '获取复习推荐失败');
       }
+      // 如果响应异常，保持空列表状态，错误会在 catch 中处理
     } catch (error) {
       console.error('加载复习推荐失败', error);
       const errorMessage = error.message || '加载失败,请稍后重试';

@@ -434,7 +434,10 @@ Page({
       // 调用后端API更新用户信息
       const response = await userAPI.updateProfile(updateData);
 
-      if (response.success) {
+      // 判断响应是否成功：检查状态码 200-299
+      const isSuccess = response.statusCode >= 200 && response.statusCode < 300;
+
+      if (isSuccess) {
         // 更新本地缓存
         const updatedUserInfo = {
           ...this.data.userInfo,
@@ -511,7 +514,11 @@ Page({
           console.log('🔍 [Profile Retry Debug] 重试数据:', retryData);
 
           const response = await userAPI.updateProfile(retryData);
-          if (response.success) {
+
+          // 判断响应是否成功：检查状态码 200-299
+          const isSuccess = response.statusCode >= 200 && response.statusCode < 300;
+
+          if (isSuccess) {
             const updatedUserInfo = {
               ...this.data.userInfo,
               ...this.data.formData,
@@ -519,7 +526,7 @@ Page({
             await authManager.updateUserInfo(updatedUserInfo);
             return response;
           }
-          throw new Error(response.message || '保存失败');
+          throw new Error(response.data?.message || response.message || '保存失败');
         },
       });
 

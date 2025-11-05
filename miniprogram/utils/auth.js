@@ -139,7 +139,11 @@ class AuthManager {
       // 3. 调用后端登录接口
       const response = await this.callLoginAPI(loginData);
 
-      if (response.success) {
+      // 判断响应是否成功：检查状态码 200-299 且有数据
+      const isSuccess =
+        response && response.statusCode >= 200 && response.statusCode < 300 && response.data;
+
+      if (isSuccess) {
         const { access_token, refresh_token, user, session_id } = response.data;
         const userInfo = user;
         const role = user.role || 'student';
@@ -219,7 +223,11 @@ class AuthManager {
       // 4. 调用后端登录接口
       const response = await this.callLoginAPI(loginData);
 
-      if (response.success) {
+      // 判断响应是否成功：检查状态码 200-299 且有数据
+      const isSuccess =
+        response && response.statusCode >= 200 && response.statusCode < 300 && response.data;
+
+      if (isSuccess) {
         const { access_token, refresh_token, user, session_id } = response.data;
         const userInfo = user;
         const role = user.role || 'student';
@@ -728,7 +736,11 @@ class AuthManager {
         timeout: config.api.timeout || 10000,
       });
 
-      if (response.success) {
+      // 判断响应是否成功：检查状态码 200-299 且有数据
+      const isSuccess =
+        response && response.statusCode >= 200 && response.statusCode < 300 && response.data;
+
+      if (isSuccess) {
         const { access_token, refresh_token, user, session_id } = response.data;
 
         // 更新Token和用户信息
@@ -742,7 +754,9 @@ class AuthManager {
           session_id,
         };
       } else {
-        throw new Error(response.error?.message || 'Token刷新失败');
+        throw new Error(
+          response.data?.error?.message || response.error?.message || 'Token刷新失败',
+        );
       }
     } catch (error) {
       console.error('刷新Token失败', error);

@@ -72,7 +72,9 @@ class MCPService {
   async getlearningPreferences(userId) {
     try {
       const response = await api.user.getPreferences();
-      return response.success ? response.data : {};
+      // 判断响应是否成功：检查状态码 200-299 且有数据
+      const isSuccess = response && response.statusCode >= 200 && response.statusCode < 300;
+      return isSuccess ? response.data : {};
     } catch (error) {
       console.warn('获取学习偏好失败:', error);
       return {};
@@ -86,7 +88,15 @@ class MCPService {
     try {
       const response = await api.analysis.getMastery({ subject: 'all' });
 
-      if (response.success && response.data.knowledge_points) {
+      // 判断响应是否成功：检查状态码 200-299 且有数据
+      const isSuccess =
+        response &&
+        response.statusCode >= 200 &&
+        response.statusCode < 300 &&
+        response.data &&
+        response.data.knowledge_points;
+
+      if (isSuccess) {
         // 找出掌握度低于70%的知识点
         const weakPoints = response.data.knowledge_points
           .filter(point => point.mastery < 0.7)
@@ -130,7 +140,9 @@ class MCPService {
   async getLearningProgress(userId) {
     try {
       const response = await api.analysis.getProgress({ days: 30 });
-      return response.success ? response.data : {};
+      // 判断响应是否成功：检查状态码 200-299 且有数据
+      const isSuccess = response && response.statusCode >= 200 && response.statusCode < 300;
+      return isSuccess ? response.data : {};
     } catch (error) {
       console.warn('获取学习进度失败:', error);
       return {};

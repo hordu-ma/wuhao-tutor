@@ -66,16 +66,22 @@ const pageObject = {
         subject: this.data.selectedSubject,
       });
 
-      if (response && response.success !== false) {
-        const snapshot = response.data || response;
+      // 判断响应是否成功：兼容多种响应格式
+      const isStandardFormat = response && response.statusCode !== undefined;
+      const isSuccess = isStandardFormat
+        ? response.statusCode >= 200 && response.statusCode < 300
+        : response !== null && response !== undefined;
+
+      if (isSuccess) {
+        // 兼容两种响应格式
+        const snapshot = isStandardFormat ? response.data || response : response;
 
         this.setData({
           snapshot,
           snapshotLoading: false,
         });
-      } else {
-        throw new Error(response?.message || '获取知识图谱失败');
       }
+      // 如果响应异常，错误会在 catch 中处理
     } catch (error) {
       console.error('加载知识图谱快照失败', error);
       const errorMessage = error.message || '加载失败,请稍后重试';
@@ -109,16 +115,23 @@ const pageObject = {
         limit: 5,
       });
 
-      if (response && response.success !== false) {
-        const weakChains = response.data || response || [];
+      // 判断响应是否成功：兼容多种响应格式
+      const isStandardFormat = response && response.statusCode !== undefined;
+      const isSuccess = isStandardFormat
+        ? response.statusCode >= 200 && response.statusCode < 300
+        : response !== null && response !== undefined;
+
+      if (isSuccess) {
+        // 兼容两种响应格式
+        const responseData = isStandardFormat ? response.data || response : response;
+        const weakChains = Array.isArray(responseData) ? responseData : responseData.data || [];
 
         this.setData({
           weakChains,
           weakChainsLoading: false,
         });
-      } else {
-        throw new Error(response?.message || '获取薄弱知识链失败');
       }
+      // 如果响应异常，错误会在 catch 中处理
     } catch (error) {
       console.error('加载薄弱知识链失败', error);
       this.setData({

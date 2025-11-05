@@ -185,27 +185,22 @@ const pageObject = {
 
       console.log('知识点列表API响应', response);
 
-      if (response && response.success !== false) {
-        // 修复：正确解析API响应
-        // 后端返回格式: { subject, knowledge_points: [...], total_count }
+      // 判断响应是否成功：兼容多种响应格式
+      const isStandardFormat = response && response.statusCode !== undefined;
+      const isSuccess = isStandardFormat
+        ? response.statusCode >= 200 && response.statusCode < 300
+        : response !== null && response !== undefined;
+
+      if (isSuccess) {
+        // 兼容两种响应格式
+        const responseData = isStandardFormat ? response.data || response : response;
+
         let knowledgePoints = [];
 
-        if (response.knowledge_points && Array.isArray(response.knowledge_points)) {
-          // 直接返回的响应对象
-          knowledgePoints = response.knowledge_points;
-        } else if (
-          response.data &&
-          response.data.knowledge_points &&
-          Array.isArray(response.data.knowledge_points)
-        ) {
-          // 嵌套在data中的响应
-          knowledgePoints = response.data.knowledge_points;
-        } else if (Array.isArray(response)) {
-          // 兼容旧格式：直接返回数组
-          knowledgePoints = response;
-        } else if (response.data && Array.isArray(response.data)) {
-          // 兼容旧格式：data是数组
-          knowledgePoints = response.data;
+        if (responseData.knowledge_points && Array.isArray(responseData.knowledge_points)) {
+          knowledgePoints = responseData.knowledge_points;
+        } else if (Array.isArray(responseData)) {
+          knowledgePoints = responseData;
         }
 
         // 添加"全部"选项
@@ -274,30 +269,32 @@ const pageObject = {
       const response = await mistakesApi.getMistakeList(params);
 
       console.log('错题列表API响应', response);
+      console.log('📊 [Debug] response.statusCode:', response?.statusCode);
+      console.log('📊 [Debug] response.data:', response?.data);
 
-      if (response && response.success !== false) {
-        // 处理响应数据，兼容多种格式
-        let items, total, page, page_size;
+      // 判断响应是否成功：兼容多种响应格式
+      // 格式1: { data: {...}, statusCode: 200 } - API 客户端标准格式
+      // 格式2: { items: [...], total: N } - 直接返回的数据
+      const isStandardFormat = response && response.statusCode !== undefined;
+      const isSuccess = isStandardFormat
+        ? response.statusCode >= 200 && response.statusCode < 300
+        : response && response.items !== undefined; // 如果有 items 字段，认为是成功的
 
-        if (response.data) {
-          // 格式 1: { success: true, data: { items, total, page, page_size } }
-          items = response.data.items || [];
-          total = response.data.total || 0;
-          page = response.data.page || this.data.currentPage;
-          page_size = response.data.page_size || this.data.pageSize;
-        } else if (response.items) {
-          // 格式 2: { items, total, page, page_size }
-          items = response.items || [];
-          total = response.total || 0;
-          page = response.page || this.data.currentPage;
-          page_size = response.page_size || this.data.pageSize;
-        } else {
-          // 其他格式，尝试直接使用 response
-          items = Array.isArray(response) ? response : [];
-          total = items.length;
-          page = this.data.currentPage;
-          page_size = this.data.pageSize;
-        }
+      console.log('📊 [Debug] isStandardFormat:', isStandardFormat);
+      console.log('📊 [Debug] isSuccess:', isSuccess);
+
+      if (isSuccess) {
+        // 兼容两种响应格式
+        const responseData = isStandardFormat ? response.data || response : response;
+        console.log('📊 [Debug] responseData:', responseData);
+        console.log('📊 [Debug] responseData.items:', responseData.items);
+
+        const items = responseData.items || [];
+        const total = responseData.total || 0;
+        const page = responseData.page || this.data.currentPage;
+        const page_size = responseData.page_size || this.data.pageSize;
+
+        console.log('📊 [Debug] 提取的数据:', { items: items.length, total, page, page_size });
 
         const hasMore = items.length >= page_size;
 
@@ -315,9 +312,9 @@ const pageObject = {
           total: newMistakesList.length,
           hasMore,
         });
-      } else {
-        throw new Error(response.message || response.error?.message || '加载错题列表失败');
       }
+      // 如果 isSuccess 为 false，说明响应异常，但不抛出错误
+      // 让数据保持为空列表状态
     } catch (error) {
       console.error('加载错题列表失败', error);
 
@@ -488,7 +485,10 @@ const pageObject = {
 
       const response = await mistakesApi.deleteMistake(mistake.id);
 
-      if (response.success) {
+      // 判断响应是否成功：检查状态码 200-299
+      const isSuccess = response.statusCode >= 200 && response.statusCode < 300;
+
+      if (isSuccess) {
         wx.showToast({
           title: '删除成功',
           icon: 'success',
@@ -497,7 +497,7 @@ const pageObject = {
         // 刷新列表
         this.loadMistakesList(true);
       } else {
-        throw new Error(response.message || '删除失败');
+        throw new Error(response.data?.message || response.message || '删除失败');
       }
     } catch (error) {
       console.error('删除错题失败', error);

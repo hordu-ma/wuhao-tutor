@@ -381,7 +381,10 @@ class AvatarUploadManager {
 
       console.log('🔧 [Avatar Sync Debug] 后端响应:', response);
 
-      if (response.success) {
+      // 判断响应是否成功：检查状态码 200-299
+      const isSuccess = response.statusCode >= 200 && response.statusCode < 300;
+
+      if (isSuccess) {
         console.log('🔧 [Avatar Sync Debug] 头像同步到后端成功');
 
         // 强制刷新用户信息以确保数据一致性
@@ -520,7 +523,10 @@ class AvatarUploadManager {
       // 调用后端删除头像接口
       const response = await api.delete('/auth/avatar');
 
-      if (response.success) {
+      // 判断响应是否成功：检查状态码 200-299
+      const isSuccess = response.statusCode >= 200 && response.statusCode < 300;
+
+      if (isSuccess) {
         // 更新本地用户信息
         await this.updateLocalUserAvatar('/assets/images/default-avatar.png');
 
@@ -531,7 +537,7 @@ class AvatarUploadManager {
 
         return true;
       } else {
-        throw new Error(response.message || '删除失败');
+        throw new Error(response.data?.message || response.message || '删除失败');
       }
     } catch (error) {
       console.error('删除头像失败:', error);

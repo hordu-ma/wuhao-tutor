@@ -236,7 +236,11 @@ class SyncManager {
       // 获取服务器用户信息
       const response = await apiClient.get('/auth/me');
 
-      if (!response.success || !response.data) {
+      // 判断响应是否成功：检查状态码 200-299 且有数据
+      const isSuccess =
+        response && response.statusCode >= 200 && response.statusCode < 300 && response.data;
+
+      if (!isSuccess) {
         // 静默失败，使用本地缓存
         console.warn('[Sync] 服务器用户信息获取失败，继续使用本地缓存');
         return;
