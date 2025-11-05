@@ -33,7 +33,7 @@ Component({
     // 旧版 Markdown 解析结果（降级用）
     richContent: null,
     // 是否使用 Towxml 渲染
-    renderMode: 'unknown', // 'towxml' | 'fallback' | 'unknown'
+    renderMode: 'fallback', // 'towxml' | 'fallback' | 'unknown' - 默认使用fallback避免空内容显示错误
   },
 
   lifetimes: {
@@ -58,11 +58,12 @@ Component({
     renderContent() {
       const { content, useTowxml, enableFallback } = this.data;
 
+      // 空内容:保持fallback模式,richContent为空数组
       if (!content) {
         this.setData({
           towxmlData: null,
-          richContent: null,
-          renderMode: 'unknown',
+          richContent: [],
+          renderMode: 'fallback',
         });
         return;
       }
