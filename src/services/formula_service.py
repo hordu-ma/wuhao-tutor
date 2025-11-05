@@ -22,7 +22,7 @@ settings = get_settings()
 
 
 class FormulaService:
-    """数学公式渲染服务"""
+    """数学公式渲染服务 - 多层降级策略版本"""
 
     def __init__(self):
         # 延迟导入避免循环依赖
@@ -38,6 +38,17 @@ class FormulaService:
         self.quicklatex_api = "https://quicklatex.com/latex3.f"
         self.default_formula_size = "\\large"  # 公式大小
         self.cache_prefix = "formula_cache/"  # OSS缓存路径前缀
+        
+        # MathJax Cloud API 配置 (降级方案)
+        self.mathjax_api = "https://api.mathpix.com/v3/text"
+        
+        # 简单公式复杂度阈值
+        self.simple_formula_max_length = 50
+        self.complex_commands = [
+            r'\\frac', r'\\sum', r'\\int', r'\\prod',
+            r'\\matrix', r'\\begin', r'\\sqrt', r'\\lim',
+            r'\\partial', r'\\nabla', r'\\infty'
+        ]
 
     async def process_text_with_formulas(self, text: str) -> str:
         """
@@ -296,7 +307,12 @@ class FormulaService:
         self, content: str, formula_type: str, cache_key: str
     ) -> Optional[str]:
         """
-        渲染单个公式（带降级策略）
+        渲染单个公式（多层降级策略）
+        
+        降级顺序:
+        1. QuickLaTeX API (复杂公式优先)
+        2. 简单公式本地渲染 (Unicode转换)
+        3. 文本降级 (返回原始LaTeX)
 
         Args:
             content: LaTeX公式内容
@@ -310,46 +326,56 @@ class FormulaService:
         try:
             # 记录请求
             self.metrics.record_request(formula_type)
+            
+            # 判断公式复杂度
+            is_simple = self._is_simple_formula(content)
+            complexity = "simple" if is_simple else "complex"
+            logger.debug(f"公式复杂度: {complexity} - {content[:30]}...")
 
-            # 1. 准备LaTeX代码
+            # Level 1: QuickLaTeX API (所有公式都尝试)
             latex_code = self._prepare_latex_code(content, formula_type)
-
-            # 2. 调用QuickLaTeX API（带降级）
             image_content = await self._call_quicklatex_api_with_fallback(
                 latex_code, content, formula_type
             )
 
-            if not image_content:
-                logger.warning(f"公式渲染失败，使用降级方案: {content[:50]}...")
-                self.metrics.record_failure("quicklatex", f"Formula: {content[:50]}")
-                return None
+            if image_content:
+                # QuickLaTeX 成功，上传到OSS
+                image_url = await self._upload_to_oss(
+                    image_content, cache_key, formula_type
+                )
 
-            # 3. 保存到OSS
-            image_url = await self._upload_to_oss(
-                image_content, cache_key, formula_type
-            )
-
-            if not image_url:
-                self.metrics.record_failure("oss_upload", f"Formula: {content[:50]}")
-                return None
-
-            # 4. 保存到数据库缓存
-            await self._save_to_db_cache(
-                latex_hash=cache_key,
-                latex_content=content,
-                image_url=image_url,
-                formula_type=formula_type,
-            )
-
-            # 记录成功
-            response_time = time.time() - start_time
-            self.metrics.record_success(response_time, formula_type)
-
-            logger.info(f"✅ 公式渲染成功: {cache_key[:8]}... -> {image_url[:50]}...")
-            return image_url
+                if image_url:
+                    await self._save_to_db_cache(
+                        latex_hash=cache_key,
+                        latex_content=content,
+                        image_url=image_url,
+                        formula_type=formula_type,
+                    )
+                    response_time = time.time() - start_time
+                    self.metrics.record_success(response_time, formula_type)
+                    logger.info(f"✅ [QuickLaTeX] 公式渲染成功: {cache_key[:8]}...")
+                    return image_url
+            
+            # Level 2: 简单公式本地渲染
+            if is_simple:
+                logger.info(f"🔄 [Fallback] QuickLaTeX失败,尝试简单公式本地渲染: {content[:30]}...")
+                image_url = await self._render_simple_formula_locally(
+                    content, formula_type, cache_key
+                )
+                
+                if image_url:
+                    response_time = time.time() - start_time
+                    self.metrics.record_success(response_time, f"{formula_type}_local")
+                    logger.info(f"✅ [Local] 简单公式本地渲染成功: {cache_key[:8]}...")
+                    return image_url
+            
+            # Level 3: 所有方法失败,记录失败
+            logger.warning(f"❌ 公式渲染完全失败: {content[:50]}...")
+            self.metrics.record_failure("all_methods_failed", f"Formula: {content[:50]}")
+            return None
 
         except Exception as e:
-            logger.error(f"渲染公式失败: {content[:50]}... - {e}")
+            logger.error(f"渲染公式异常: {content[:50]}... - {e}")
             self.metrics.record_failure("unexpected", str(e))
             return None
 
@@ -562,6 +588,54 @@ class FormulaService:
 
         return processed_text
 
+    def _is_simple_formula(self, latex: str) -> bool:
+        """
+        判断是否为简单公式(可本地处理)
+        
+        简单公式特征:
+        - 长度 < 50字符
+        - 不含复杂命令(分数、求和、积分等)
+        - 不含矩阵、多行公式
+        
+        Args:
+            latex: LaTeX公式内容
+            
+        Returns:
+            是否为简单公式
+        """
+        # 检查长度
+        if len(latex) > self.simple_formula_max_length:
+            return False
+        
+        # 检查复杂命令
+        for pattern in self.complex_commands:
+            if re.search(pattern, latex):
+                return False
+        
+        return True
+    
+    async def _render_simple_formula_locally(
+        self, content: str, formula_type: str, cache_key: str
+    ) -> Optional[str]:
+        """
+        本地渲染简单公式(暂时禁用,待PIL环境配置完成)
+        
+        TODO: 实现PIL图片生成
+        - 安装字体文件
+        - 配置PIL环境
+        - 实现LaTeX到Unicode转换
+        
+        Args:
+            content: LaTeX公式内容
+            formula_type: 公式类型
+            cache_key: 缓存键
+            
+        Returns:
+            None (暂未实现)
+        """
+        logger.debug(f"本地渲染暂未启用: {content[:30]}...")
+        return None
+    
     async def cleanup(self):
         """清理资源"""
         await self.client.aclose()

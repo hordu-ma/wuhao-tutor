@@ -371,7 +371,7 @@ async def cleanup_old_metrics() -> None:
 
 
 class FormulaRenderMetrics:
-    """公式渲染监控指标收集器"""
+    """公式渲染监控指标收集器 - 支持多层降级策略"""
 
     def __init__(self):
         self._lock = threading.RLock()
@@ -393,28 +393,36 @@ class FormulaRenderMetrics:
         # 按类型统计
         self.inline_count = 0
         self.block_count = 0
+        
+        # 新增: 降级策略统计
+        self.quicklatex_success = 0  # QuickLaTeX成功
+        self.local_render_success = 0  # 本地渲染成功
+        self.simple_formula_count = 0  # 简单公式数量
+        self.complex_formula_count = 0  # 复杂公式数量
 
         # 最近错误记录
         self.recent_errors: Deque[Dict] = deque(maxlen=100)
 
-    def record_request(self, is_cache_hit: bool, response_time: float) -> None:
+    def record_request(self, formula_type: str = "inline") -> None:
         """记录渲染请求"""
         with self._lock:
             self.total_requests += 1
-            if is_cache_hit:
-                self.cache_hits += 1
-            else:
-                self.cache_misses += 1
-            self.response_times.append(response_time)
-
-    def record_success(self, formula_type: str) -> None:
-        """记录渲染成功"""
-        with self._lock:
-            self.render_success += 1
             if formula_type == "inline":
                 self.inline_count += 1
             elif formula_type == "block":
                 self.block_count += 1
+
+    def record_success(self, response_time: float, formula_type: str) -> None:
+        """记录渲染成功"""
+        with self._lock:
+            self.render_success += 1
+            self.response_times.append(response_time)
+            
+            # 区分渲染方式
+            if "_local" in formula_type:
+                self.local_render_success += 1
+            else:
+                self.quicklatex_success += 1
 
     def record_failure(
         self, error_type: str, error_msg: str, formula_content: str = ""
@@ -485,6 +493,15 @@ class FormulaRenderMetrics:
                 "avg_response_time_ms": self.get_avg_response_time(),
                 "p95_response_time_ms": self.get_p95_response_time(),
                 "by_type": {"inline": self.inline_count, "block": self.block_count},
+                "by_method": {
+                    "quicklatex": self.quicklatex_success,
+                    "local_render": self.local_render_success,
+                    "local_render_rate": f"{round(self.local_render_success / max(1, self.render_success) * 100, 2)}%"
+                },
+                "formula_complexity": {
+                    "simple": self.simple_formula_count,
+                    "complex": self.complex_formula_count,
+                },
                 "errors": {
                     "quicklatex": self.quicklatex_errors,
                     "oss_upload": self.oss_upload_errors,
@@ -508,6 +525,10 @@ class FormulaRenderMetrics:
             self.db_cache_errors = 0
             self.inline_count = 0
             self.block_count = 0
+            self.quicklatex_success = 0
+            self.local_render_success = 0
+            self.simple_formula_count = 0
+            self.complex_formula_count = 0
             self.recent_errors.clear()
 
 
