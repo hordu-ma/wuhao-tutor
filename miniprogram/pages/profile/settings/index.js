@@ -65,6 +65,15 @@ Page({
   },
 
   /**
+   * 修改密码
+   */
+  onChangePassword() {
+    wx.navigateTo({
+      url: '/pages/profile/change-password/index',
+    });
+  },
+
+  /**
    * 用户协议
    */
   onUserAgreement() {

@@ -32,6 +32,15 @@
     <view class="settings-section">
       <view class="section-title">账号管理</view>
       
+      <!-- 修改密码 -->
+      <view class="setting-item" bindtap="onChangePassword">
+        <view class="item-left">
+          <van-icon name="lock" size="20px" color="#667eea" />
+          <text class="item-label">修改密码</text>
+        </view>
+        <van-icon name="arrow" size="16px" color="#cccccc" />
+      </view>
+      
       <view class="setting-item" bindtap="onClearCache">
         <view class="item-left">
           <van-icon name="delete-o" size="20px" color="#667eea" />

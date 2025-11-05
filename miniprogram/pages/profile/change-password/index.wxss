@@ -1,0 +1,38 @@
+/* 修改密码页面样式 */
+
+.change-password-container {
+  min-height: 100vh;
+  background-color: #f5f5f5;
+  padding: 20rpx;
+}
+
+.form-section {
+  background-color: #fff;
+  border-radius: 16rpx;
+  overflow: hidden;
+  margin-bottom: 30rpx;
+}
+
+.tips-section {
+  margin-bottom: 40rpx;
+  padding: 0 20rpx;
+}
+
+.tip-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16rpx;
+  padding: 12rpx 16rpx;
+  background-color: #fff;
+  border-radius: 8rpx;
+}
+
+.tip-text {
+  margin-left: 12rpx;
+  font-size: 28rpx;
+  color: #666;
+}
+
+.submit-section {
+  padding: 0 20rpx;
+}

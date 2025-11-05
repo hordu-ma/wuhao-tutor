@@ -17,6 +17,7 @@
     "pages/profile/index/index",
     "pages/profile/edit/index",
     "pages/profile/settings/index",
+    "pages/profile/change-password/index",
     "pages/profile/help/index"
   ],
   "window": {

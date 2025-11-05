@@ -140,6 +140,24 @@ const userAPI = {
   },
 
   /**
+   * 修改密码
+   * @param {Object} params - 修改参数
+   * @param {string} params.old_password - 旧密码
+   * @param {string} params.new_password - 新密码
+   * @param {string} params.password_confirm - 确认密码
+   * @param {Object} [config] - 请求配置
+   * @returns {Promise<Object>} 修改结果
+   */
+  changePassword(params, config = {}) {
+    return request.post('api/v1/auth/change-password', params, {
+      showLoading: true,
+      loadingText: '修改中...',
+      timeout: 10000,
+      ...config,
+    });
+  },
+
+  /**
    * 获取用户活动记录
    * @param {Object} params - 查询参数
    * @param {number} [params.limit=10] - 返回记录数量

@@ -1,0 +1,67 @@
+<!--修改密码页面-->
+<view class="change-password-container">
+  <!-- 表单区域 -->
+  <view class="form-section">
+    <!-- 旧密码 -->
+    <van-field
+      value="{{ oldPassword }}"
+      type="password"
+      label="旧密码"
+      placeholder="请输入旧密码"
+      border="{{ true }}"
+      bind:change="onOldPasswordChange"
+      required
+    />
+
+    <!-- 新密码 -->
+    <van-field
+      value="{{ newPassword }}"
+      type="password"
+      label="新密码"
+      placeholder="请输入新密码（6-128位）"
+      border="{{ true }}"
+      bind:change="onNewPasswordChange"
+      required
+    />
+
+    <!-- 确认密码 -->
+    <van-field
+      value="{{ confirmPassword }}"
+      type="password"
+      label="确认密码"
+      placeholder="请再次输入新密码"
+      border="{{ true }}"
+      bind:change="onConfirmPasswordChange"
+      required
+    />
+  </view>
+
+  <!-- 安全提示 -->
+  <view class="tips-section">
+    <view class="tip-item">
+      <van-icon name="warning-o" color="#ff9800" size="16px" />
+      <text class="tip-text">修改密码后将自动退出登录</text>
+    </view>
+    <view class="tip-item">
+      <van-icon name="info-o" color="#2196f3" size="16px" />
+      <text class="tip-text">密码长度需在6-128位之间</text>
+    </view>
+  </view>
+
+  <!-- 提交按钮 -->
+  <view class="submit-section">
+    <van-button 
+      type="primary" 
+      block 
+      round
+      loading="{{ isLoading }}"
+      disabled="{{ !canSubmit }}"
+      bindtap="handleSubmit"
+    >
+      确认修改
+    </van-button>
+  </view>
+</view>
+
+<!-- Toast 提示 -->
+<van-toast id="van-toast" />
