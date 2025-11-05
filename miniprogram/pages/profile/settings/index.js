@@ -4,31 +4,11 @@ const { authManager } = require('../../../utils/auth.js');
 
 Page({
   data: {
-    // 设置项
-    settings: {
-      notification: true,
-      homeworkReminder: true,
-      qaNotification: true,
-      recordVisible: true,
-      autoSaveDraft: true,
-      studyReminder: true,
-      defaultDifficulty: '中等',
-    },
-
     // 缓存大小
     cacheSize: '计算中...',
 
     // 应用版本
     appVersion: '1.0.0',
-
-    // 难度选择
-    showDifficultySheet: false,
-    difficultyOptions: [
-      { name: '简单', value: 'easy' },
-      { name: '中等', value: 'medium' },
-      { name: '困难', value: 'hard' },
-      { name: '专家', value: 'expert' },
-    ],
 
     // 对话框
     showDialog: false,
@@ -42,38 +22,7 @@ Page({
    */
   onLoad(options) {
     console.log('设置页面加载');
-    this.loadSettings();
     this.calculateCacheSize();
-  },
-
-  /**
-   * 加载设置
-   */
-  loadSettings() {
-    try {
-      const settings = wx.getStorageSync('user_settings');
-      if (settings) {
-        this.setData({
-          settings: {
-            ...this.data.settings,
-            ...settings,
-          },
-        });
-      }
-    } catch (error) {
-      console.error('加载设置失败:', error);
-    }
-  },
-
-  /**
-   * 保存设置
-   */
-  saveSettings() {
-    try {
-      wx.setStorageSync('user_settings', this.data.settings);
-    } catch (error) {
-      console.error('保存设置失败:', error);
-    }
   },
 
   /**
@@ -103,96 +52,15 @@ Page({
   },
 
   /**
-   * 消息通知开关
-   */
-  onNotificationChange(event) {
-    const checked = event.detail;
-    this.setData({
-      'settings.notification': checked,
-    });
-    this.saveSettings();
-
-    if (checked) {
-      // 请求订阅消息权限
-      this.requestSubscribeMessage();
-    }
-  },
-
-  /**
-   * 作业提醒开关
-   */
-  onHomeworkReminderChange(event) {
-    this.setData({
-      'settings.homeworkReminder': event.detail,
-    });
-    this.saveSettings();
-  },
-
-  /**
-   * 问答通知开关
-   */
-  onQaNotificationChange(event) {
-    this.setData({
-      'settings.qaNotification': event.detail,
-    });
-    this.saveSettings();
-  },
-
-  /**
-   * 学习记录可见开关
-   */
-  onRecordVisibleChange(event) {
-    this.setData({
-      'settings.recordVisible': event.detail,
-    });
-    this.saveSettings();
-  },
-
-  /**
-   * 自动保存草稿开关
-   */
-  onAutoSaveDraftChange(event) {
-    this.setData({
-      'settings.autoSaveDraft': event.detail,
-    });
-    this.saveSettings();
-  },
-
-  /**
-   * 学习提醒开关
-   */
-  onStudyReminderChange(event) {
-    this.setData({
-      'settings.studyReminder': event.detail,
-    });
-    this.saveSettings();
-  },
-
-  /**
-   * 请求订阅消息权限
-   */
-  requestSubscribeMessage() {
-    wx.requestSubscribeMessage({
-      tmplIds: [
-        // TODO: 替换为实际的模板ID
-        'templateId1',
-        'templateId2',
-      ],
-      success: res => {
-        console.log('订阅消息成功:', res);
-      },
-      fail: err => {
-        console.log('订阅消息失败:', err);
-      },
-    });
-  },
-
-  /**
    * 隐私政策
    */
   onPrivacyPolicy() {
-    wx.navigateTo({
-      url: '/pages/webview/index?url=privacy-policy&title=隐私政策',
+    wx.showModal({
+      title: '隐私政策',
+      content:
+        '五好伴学隐私政策要点：\n\n1. 数据加密传输，端到端保护\n2. 不向第三方共享个人信息\n3. 作业照片仅用于批改和学习分析\n4. 学习数据自动云端同步\n5. 支持数据访问和删除请求\n\n详细内容请联系客服获取',
+      confirmText: '我知道了',
+      showCancel: false,
     });
   },
 
@@ -200,8 +68,12 @@ Page({
    * 用户协议
    */
   onUserAgreement() {
-    wx.navigateTo({
-      url: '/pages/webview/index?url=user-agreement&title=用户协议',
+    wx.showModal({
+      title: '用户协议',
+      content:
+        '五好伴学用户协议要点：\n\n1. 本服务面向K12学生和家长\n2. 请合理使用AI辅导功能\n3. 禁止上传违规内容\n4. 保护账号安全\n5. 遵守学习规范\n\n详细内容请联系客服获取',
+      confirmText: '我知道了',
+      showCancel: false,
     });
   },
 
@@ -215,108 +87,6 @@ Page({
       dialogContent: '清除缓存后，下次启动会重新加载数据。确定要清除吗？',
       dialogAction: 'clearCache',
     });
-  },
-
-  /**
-   * 数据管理
-   */
-  onDataManagement() {
-    wx.showModal({
-      title: '数据管理',
-      content: '您可以选择导出学习数据或删除所有本地数据',
-      confirmText: '导出数据',
-      cancelText: '删除数据',
-      success: res => {
-        if (res.confirm) {
-          this.exportData();
-        } else if (res.cancel) {
-          this.confirmDeleteData();
-        }
-      },
-    });
-  },
-
-  /**
-   * 导出数据
-   */
-  exportData() {
-    wx.showToast({
-      title: '数据导出功能开发中',
-      icon: 'none',
-    });
-  },
-
-  /**
-   * 确认删除数据
-   */
-  confirmDeleteData() {
-    wx.showModal({
-      title: '警告',
-      content: '删除数据后无法恢复，确定要删除吗？',
-      confirmText: '确定删除',
-      confirmColor: '#f5222d',
-      success: res => {
-        if (res.confirm) {
-          this.deleteAllData();
-        }
-      },
-    });
-  },
-
-  /**
-   * 删除所有数据
-   */
-  deleteAllData() {
-    try {
-      wx.clearStorageSync();
-      wx.showToast({
-        title: '数据已清除',
-        icon: 'success',
-      });
-
-      // 跳转到登录页
-      setTimeout(() => {
-        wx.reLaunch({
-          url: '/pages/login/index',
-        });
-      }, 1500);
-    } catch (error) {
-      console.error('删除数据失败:', error);
-      wx.showToast({
-        title: '删除失败',
-        icon: 'error',
-      });
-    }
-  },
-
-  /**
-   * 默认难度设置
-   */
-  onDifficultyLevel() {
-    this.setData({
-      showDifficultySheet: true,
-    });
-  },
-
-  /**
-   * 关闭难度选择
-   */
-  onCloseDifficultySheet() {
-    this.setData({
-      showDifficultySheet: false,
-    });
-  },
-
-  /**
-   * 选择难度
-   */
-  onSelectDifficulty(event) {
-    const { name } = event.detail;
-    this.setData({
-      'settings.defaultDifficulty': name,
-      showDifficultySheet: false,
-    });
-    this.saveSettings();
   },
 
   /**
@@ -373,8 +143,19 @@ Page({
    * 意见反馈
    */
   onFeedback() {
-    wx.navigateTo({
-      url: '/pages/profile/feedback/index',
+    wx.showModal({
+      title: '意见反馈',
+      content: '请添加客服微信反馈问题和建议\n客服微信号已复制到剪贴板',
+      confirmText: '好的',
+      showCancel: false,
+      success: () => {
+        wx.setClipboardData({
+          data: 'wuhao_service',
+          success: () => {
+            console.log('客服微信号已复制');
+          },
+        });
+      },
     });
   },
 
@@ -382,8 +163,24 @@ Page({
    * 关于我们
    */
   onAbout() {
-    wx.navigateTo({
-      url: '/pages/profile/about/index',
+    wx.showModal({
+      title: '关于五好伴学',
+      content: `版本：${this.data.appVersion}\n\n五好伴学是专业的K12智能学习辅导平台，提供AI作业批改、学习问答、错题管理和学情分析服务。\n\n客服微信：wuhao_service`,
+      confirmText: '复制客服微信',
+      cancelText: '知道了',
+      success: res => {
+        if (res.confirm) {
+          wx.setClipboardData({
+            data: 'wuhao_service',
+            success: () => {
+              wx.showToast({
+                title: '微信号已复制',
+                icon: 'success',
+              });
+            },
+          });
+        }
+      },
     });
   },
 
@@ -430,16 +227,16 @@ Page({
    */
   performClearCache() {
     try {
-      // 清除除了用户设置和登录信息外的所有缓存
-      const settings = wx.getStorageSync('user_settings');
+      // 清除除了登录信息外的所有缓存
       const token = wx.getStorageSync('token');
+      const refreshToken = wx.getStorageSync('refresh_token');
       const userInfo = wx.getStorageSync('userInfo');
 
       wx.clearStorageSync();
 
-      // 恢复重要数据
-      if (settings) wx.setStorageSync('user_settings', settings);
+      // 恢复登录信息
       if (token) wx.setStorageSync('token', token);
+      if (refreshToken) wx.setStorageSync('refresh_token', refreshToken);
       if (userInfo) wx.setStorageSync('userInfo', userInfo);
 
       wx.showToast({
