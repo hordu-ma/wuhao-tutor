@@ -353,3 +353,147 @@ async def get_subject_stats(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"获取学科统计失败: {str(e)}",
         )
+
+
+@router.get(
+    "/homepage/recommendations",
+    summary="获取首页推荐",
+    description="基于错题本知识点的每日智能推荐，每天自动更新",
+    response_model=DataResponse[list],
+)
+async def get_homepage_recommendations(
+    current_user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    获取首页每日推荐（3条）
+
+    **推荐算法:**
+    - 基于用户错题本中的知识点
+    - 综合考虑掌握度、遗忘曲线、错误率
+    - 每24小时自动更新
+
+    **返回数据:**
+    每条推荐包含:
+    - `id`: 推荐ID
+    - `title`: 推荐标题
+    - `content`: 推荐内容
+    - `icon`: 图标名称
+    - `color`: 颜色值
+    - `knowledge_point_id`: 知识点ID（可选）
+    - `priority`: 优先级分数
+    """
+    try:
+        from datetime import date
+
+        from sqlalchemy import desc, func, select
+
+        from src.models.study import KnowledgeMastery, MistakeRecord
+        from src.services.knowledge_graph_service import KnowledgeGraphService
+
+        # 1. 获取用户主要学科（从错题统计）
+        stmt = (
+            select(MistakeRecord.subject, func.count(MistakeRecord.id).label("count"))
+            .where(MistakeRecord.user_id == current_user_id)
+            .group_by(MistakeRecord.subject)
+            .order_by(desc("count"))
+            .limit(1)
+        )
+        result = await db.execute(stmt)
+        main_subject_row = result.first()
+        main_subject = main_subject_row[0] if main_subject_row else "数学"
+
+        # 2. 调用知识图谱服务的推荐算法
+        kg_service = KnowledgeGraphService(db)
+        raw_recommendations = await kg_service.recommend_review_path(
+            user_id=UUID(current_user_id), subject=main_subject, limit=3
+        )
+
+        # 3. 转换为首页展示格式
+        recommendations = []
+        icon_map = ["star-o", "fire-o", "like-o"]
+        color_map = ["#ff9800", "#f44336", "#2196f3"]
+
+        for idx, item in enumerate(raw_recommendations[:3]):
+            # 获取知识点名称（字段名是 knowledge_point）
+            kp_name = item.get("knowledge_point", "")
+
+            # 如果知识点名称为空，使用默认值
+            if not kp_name or kp_name.strip() == "":
+                kp_name = "重点知识"
+
+            recommendations.append(
+                {
+                    "id": f"rec_{date.today().isoformat()}_{idx}",
+                    "title": f"{kp_name} 复习",
+                    "content": item.get("reason", "建议巩固此知识点，提升掌握度"),
+                    "icon": icon_map[idx] if idx < len(icon_map) else "star-o",
+                    "color": color_map[idx] if idx < len(color_map) else "#666666",
+                    "knowledge_point_id": item.get("knowledge_point_id"),
+                    "priority": item.get("priority", 0.5),
+                }
+            )
+
+        # 4. 如果没有推荐数据，返回默认提示
+        if not recommendations:
+            recommendations = [
+                {
+                    "id": "default_1",
+                    "title": "AI学习建议",
+                    "content": "根据你的学习习惯，建议每天定时复习",
+                    "icon": "star-o",
+                    "color": "#ff9800",
+                },
+                {
+                    "id": "default_2",
+                    "title": "薄弱科目提升",
+                    "content": "物理学科建议加强基础概念的理解",
+                    "icon": "fire-o",
+                    "color": "#f44336",
+                },
+                {
+                    "id": "default_3",
+                    "title": "错题复习计划",
+                    "content": "建议每周复习一次错题本，巩固知识点",
+                    "icon": "like-o",
+                    "color": "#2196f3",
+                },
+            ]
+
+        return DataResponse(
+            success=True, data=recommendations, message="获取首页推荐成功"
+        )
+
+    except Exception as e:
+        import logging
+
+        logging.error(f"获取首页推荐失败: {e}", exc_info=True)
+
+        # 降级：返回默认推荐
+        default_recommendations = [
+            {
+                "id": "fallback_1",
+                "title": "AI学习建议",
+                "content": "根据你的学习习惯，建议每天定时复习",
+                "icon": "star-o",
+                "color": "#ff9800",
+            },
+            {
+                "id": "fallback_2",
+                "title": "薄弱科目提升",
+                "content": "物理学科建议加强基础概念的理解",
+                "icon": "fire-o",
+                "color": "#f44336",
+            },
+            {
+                "id": "fallback_3",
+                "title": "错题复习计划",
+                "content": "建议每周复习一次错题本，巩固知识点",
+                "icon": "like-o",
+                "color": "#2196f3",
+            },
+        ]
+
+        return DataResponse(
+            success=True, data=default_recommendations, message="使用默认推荐"
+        )

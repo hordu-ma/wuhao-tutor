@@ -1154,6 +1154,19 @@ const api = {
           cache: { ttl: 5 * 60 * 1000, tags: ['analytics', 'user-stats'] },
         },
       ),
+    // 获取首页推荐（每日更新）
+    getHomepageRecommendations: () =>
+      apiClient.get(
+        '/analytics/homepage/recommendations',
+        {},
+        {
+          enableCache: true,
+          cache: {
+            ttl: 24 * 60 * 60 * 1000, // 24小时缓存
+            tags: ['homepage', 'recommendations'],
+          },
+        },
+      ),
     // 获取学习报告
     getReport: params =>
       apiClient.get('/analysis/report', params, {

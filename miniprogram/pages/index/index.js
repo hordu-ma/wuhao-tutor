@@ -342,95 +342,39 @@ Page({
    */
   async loadRecommendations() {
     try {
-      const { role, stats } = this.data;
-      let recommendations = [];
+      const { api } = require('../../utils/api.js');
 
-      switch (role) {
-        case 'student':
-          recommendations = [
-            {
-              id: 'study_suggestion',
-              type: 'learning',
-              title: 'AI学习建议',
-              content: '根据您的学习情况，建议重点复习数学函数章节，并完成3道相关练习题。',
-              icon: 'bulb-o',
-              color: '#faad14',
-              action: {
-                type: 'navigate',
-                url: '/pages/study/suggestions/index',
-              },
-              priority: 1,
-            },
-            {
-              id: 'weak_subjects',
-              type: 'improvement',
-              title: '薄弱科目提升',
-              content: '物理力学部分掌握度较低，推荐观看相关教学视频。',
-              icon: 'chart-trending-o',
-              color: '#f5222d',
-              action: {
-                type: 'navigate',
-                url: '/pages/study/weak-subjects/index',
-              },
-              priority: 2,
-            },
-          ];
-          break;
-        case 'parent':
-          recommendations = [
-            {
-              id: 'child_progress',
-              type: 'monitoring',
-              title: '孩子学习进度',
-              content: '孩子本周完成率75%，建议关注数学学科的学习情况。',
-              icon: 'bar-chart-o',
-              color: '#1890ff',
-              action: {
-                type: 'navigate',
-                url: '/pages/analysis/progress/index',
-              },
-              priority: 1,
-            },
-            {
-              id: 'study_time',
-              type: 'reminder',
-              title: '学习时间提醒',
-              content: '建议每日学习时间保持在2小时左右，劳逸结合。',
-              icon: 'clock-o',
-              color: '#52c41a',
-              action: {
-                type: 'navigate',
-                url: '/pages/settings/study-time/index',
-              },
-              priority: 2,
-            },
-          ];
-          break;
-        case 'teacher':
-          recommendations = [
-            {
-              id: 'class_performance',
-              type: 'analysis',
-              title: '班级表现分析',
-              content: '本周班级平均成绩提升3分，有2名学生需要重点关注。',
-              icon: 'friends-o',
-              color: '#1890ff',
-              action: {
-                type: 'navigate',
-                url: '/pages/analysis/class/index',
-              },
-              priority: 1,
-            },
-          ];
-          break;
+      // 调用后端API获取真实推荐
+      const response = await api.analysis.getHomepageRecommendations();
+
+      console.log('📌 [推荐] API响应:', response);
+
+      // 微信小程序API返回格式：{ data: {...}, statusCode: 200, header: {...} }
+      if (response && response.statusCode === 200 && response.data) {
+        const apiResponse = response.data;
+
+        console.log('📌 [推荐] 后端响应:', apiResponse);
+
+        // 后端返回格式：{ success: true, data: [...], message: "..." }
+        if (apiResponse.success && apiResponse.data) {
+          // 限制最多3条
+          const recommendations = apiResponse.data.slice(0, 3);
+
+          console.log('📌 [推荐] 设置推荐:', recommendations);
+          this.setData({ recommendations });
+        } else {
+          console.warn('⚠️ [推荐] API返回格式异常:', apiResponse);
+          this.setData({ recommendations: [] });
+        }
+      } else {
+        console.warn('⚠️ [推荐] 响应状态异常:', response);
+        this.setData({ recommendations: [] });
       }
-
-      // 根据优先级排序
-      recommendations.sort((a, b) => a.priority - b.priority);
-
-      this.setData({ recommendations });
     } catch (error) {
-      console.error('加载推荐内容失败:', error);
+      console.error('❌ [推荐] 加载推荐失败:', error);
+
+      // 错误降级：显示空数组，不影响其他功能
+      this.setData({ recommendations: [] });
     }
   },
 
@@ -439,26 +383,15 @@ Page({
    */
   onRecommendationTap(e) {
     const { recommendation } = e.currentTarget.dataset;
-    if (!recommendation || !recommendation.action) return;
 
-    console.log('点击推荐内容:', recommendation);
+    console.log('📌 点击推荐内容:', recommendation);
 
-    const { action } = recommendation;
-    switch (action.type) {
-      case 'navigate':
-        wx.navigateTo({
-          url: action.url,
-          fail: () => {
-            wx.switchTab({ url: action.url });
-          },
-        });
-        break;
-      case 'action':
-        this[action.method] && this[action.method](action.params);
-        break;
-      default:
-        console.warn('未知的推荐内容操作类型:', action.type);
-    }
+    // 显示提示信息，不跳转
+    wx.showToast({
+      title: '知识点推荐',
+      icon: 'none',
+      duration: 2000,
+    });
   },
 
   /**
