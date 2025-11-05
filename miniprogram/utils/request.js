@@ -66,19 +66,32 @@ class Request {
    */
   setupDefaultInterceptors() {
     // 请求拦截器：添加认证 Token
-    this.addRequestInterceptor(async (config) => {
+    this.addRequestInterceptor(async config => {
       if (!config.skipAuth) {
-        const token = await auth.getToken();
-        if (token) {
-          config.header = config.header || {};
-          config.header.Authorization = `Bearer ${token}`;
+        try {
+          const token = await auth.getToken();
+          console.log('[Request] Token 获取结果:', {
+            hasToken: !!token,
+            tokenLength: token ? token.length : 0,
+            tokenPrefix: token ? token.substring(0, 20) + '...' : 'null',
+            url: config.url,
+          });
+
+          if (token) {
+            config.header = config.header || {};
+            config.header.Authorization = `Bearer ${token}`;
+          } else {
+            console.warn('[Request] ⚠️ Token 为空，请求可能失败:', config.url);
+          }
+        } catch (error) {
+          console.error('[Request] ❌ 获取 Token 失败:', error);
         }
       }
       return config;
     });
 
     // 请求拦截器：添加通用请求头
-    this.addRequestInterceptor(async (config) => {
+    this.addRequestInterceptor(async config => {
       config.header = {
         'Content-Type': 'application/json',
         'X-Client-Type': 'miniprogram',
@@ -90,15 +103,15 @@ class Request {
 
     // 响应拦截器：统一错误处理
     this.addResponseInterceptor(
-      (response) => {
+      response => {
         // 成功响应
         return response;
       },
-      (error) => {
+      error => {
         // 错误响应
         console.error('请求错误:', error);
         return Promise.reject(error);
-      }
+      },
     );
   }
 
@@ -135,10 +148,7 @@ class Request {
     let chain = Promise.resolve(config);
 
     for (const interceptor of this.requestInterceptors) {
-      chain = chain.then(
-        interceptor.onFulfilled,
-        interceptor.onRejected
-      );
+      chain = chain.then(interceptor.onFulfilled, interceptor.onRejected);
     }
 
     return chain;
@@ -153,10 +163,7 @@ class Request {
     let chain = Promise.resolve(response);
 
     for (const interceptor of this.responseInterceptors) {
-      chain = chain.then(
-        interceptor.onFulfilled,
-        interceptor.onRejected
-      );
+      chain = chain.then(interceptor.onFulfilled, interceptor.onRejected);
     }
 
     return chain;
@@ -292,8 +299,7 @@ class Request {
       this.stats.successRequests++;
       const responseTime = Date.now() - startTime;
       this.stats.averageResponseTime =
-        (this.stats.averageResponseTime * (this.stats.successRequests - 1) +
-          responseTime) /
+        (this.stats.averageResponseTime * (this.stats.successRequests - 1) + responseTime) /
         this.stats.successRequests;
 
       return processedResponse;
@@ -345,7 +351,7 @@ class Request {
         data: config.data,
         header: config.header,
         timeout: config.timeout || this.timeout,
-        success: (res) => {
+        success: res => {
           // 检查 HTTP 状态码
           if (res.statusCode >= 200 && res.statusCode < 300) {
             // 检查业务状态码
@@ -376,7 +382,7 @@ class Request {
             });
           }
         },
-        fail: (error) => {
+        fail: error => {
           // 网络错误
           reject({
             code: 'NETWORK_ERROR',
@@ -393,9 +399,9 @@ class Request {
    * @returns {Promise<{isConnected: boolean, networkType: string}>}
    */
   checkNetworkStatus() {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       wx.getNetworkType({
-        success: (res) => {
+        success: res => {
           resolve({
             isConnected: res.networkType !== 'none',
             networkType: res.networkType,
@@ -464,7 +470,7 @@ class Request {
    * @returns {Promise<void>}
    */
   delay(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   /**
@@ -477,8 +483,8 @@ class Request {
   get(url, params = {}, config = {}) {
     // 构建查询字符串
     const queryString = Object.keys(params)
-      .filter((key) => params[key] !== undefined && params[key] !== null)
-      .map((key) => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+      .filter(key => params[key] !== undefined && params[key] !== null)
+      .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
       .join('&');
 
     const fullUrl = queryString ? `${url}?${queryString}` : url;
@@ -531,8 +537,8 @@ class Request {
    */
   delete(url, params = {}, config = {}) {
     const queryString = Object.keys(params)
-      .filter((key) => params[key] !== undefined && params[key] !== null)
-      .map((key) => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+      .filter(key => params[key] !== undefined && params[key] !== null)
+      .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
       .join('&');
 
     const fullUrl = queryString ? `${url}?${queryString}` : url;
@@ -575,7 +581,7 @@ class Request {
           name,
           formData,
           header: processedConfig.header,
-          success: (res) => {
+          success: res => {
             if (config.showLoading) {
               this.hideLoading();
             }
@@ -594,7 +600,7 @@ class Request {
               });
             }
           },
-          fail: (error) => {
+          fail: error => {
             if (config.showLoading) {
               this.hideLoading();
             }

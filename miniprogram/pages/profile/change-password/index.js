@@ -96,12 +96,29 @@ Page({
     try {
       this.setData({ isLoading: true });
 
+      // 在发送请求前，确保Token可用
+      const token = await authManager.getToken();
+      console.log('[ChangePassword] 准备修改密码', {
+        hasToken: !!token,
+        tokenLength: token ? token.length : 0,
+      });
+
+      if (!token) {
+        Toast.fail('登录已过期，请重新登录');
+        setTimeout(() => {
+          this.clearAuthAndRedirect();
+        }, 1500);
+        return;
+      }
+
       // 调用后端 API
-      await request.post('api/v1/auth/change-password', {
+      const response = await request.post('api/v1/auth/change-password', {
         old_password: oldPassword,
         new_password: newPassword,
         password_confirm: confirmPassword,
       });
+
+      console.log('[ChangePassword] 修改密码响应:', response);
 
       // 修改成功
       Toast.success('密码修改成功');
@@ -111,10 +128,21 @@ Page({
         this.clearAuthAndRedirect();
       }, 1500);
     } catch (error) {
-      console.error('修改密码失败:', error);
+      console.error('[ChangePassword] 修改密码失败:', error);
 
       // 显示错误信息
-      const errorMsg = error.message || '密码修改失败，请重试';
+      let errorMsg = '密码修改失败，请重试';
+
+      if (error.code === 'HTTP_401') {
+        errorMsg = '登录已过期，请重新登录';
+        // 401错误时清除认证信息
+        setTimeout(() => {
+          this.clearAuthAndRedirect();
+        }, 1500);
+      } else if (error.message) {
+        errorMsg = error.message;
+      }
+
       Toast.fail(errorMsg);
 
       this.setData({ isLoading: false });

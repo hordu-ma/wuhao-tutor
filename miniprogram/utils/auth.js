@@ -431,18 +431,70 @@ class AuthManager {
    * 获取当前Token
    */
   async getToken() {
+    // 1. 首先检查内存缓存
     if (this.currentToken) {
-      console.log('从内存获取Token');
+      console.log('[Auth] 从内存获取Token成功', {
+        tokenLength: this.currentToken.length,
+        tokenPrefix: this.currentToken.substring(0, 20) + '...',
+      });
       return this.currentToken;
     }
 
     try {
+      // 2. 从存储获取
+      console.log('[Auth] 尝试从存储获取Token...', { key: this.tokenKey });
       const token = await storage.get(this.tokenKey);
-      console.log('从存储获取Token', { hasToken: !!token, key: this.tokenKey });
-      this.currentToken = token;
-      return token;
+
+      if (token) {
+        console.log('[Auth] 从存储获取Token成功', {
+          hasToken: true,
+          tokenLength: token.length,
+          tokenPrefix: token.substring(0, 20) + '...',
+          key: this.tokenKey,
+        });
+        this.currentToken = token;
+        return token;
+      } else {
+        console.warn('[Auth] ⚠️ 存储中未找到Token', { key: this.tokenKey });
+
+        // 3. 尝试直接从微信存储读取（兼容性处理）
+        try {
+          const rawToken = await new Promise(resolve => {
+            wx.getStorage({
+              key: `${this.tokenKey}`,
+              success: res => {
+                console.log('[Auth] 直接读取微信存储成功', {
+                  hasData: !!res.data,
+                  dataType: typeof res.data,
+                });
+                resolve(res.data);
+              },
+              fail: () => {
+                console.warn('[Auth] 直接读取微信存储失败');
+                resolve(null);
+              },
+            });
+          });
+
+          if (rawToken) {
+            // 处理可能的包装数据
+            const extractedToken =
+              typeof rawToken === 'object' && rawToken.value ? rawToken.value : rawToken;
+
+            if (extractedToken && typeof extractedToken === 'string') {
+              console.log('[Auth] ✅ 从微信存储提取Token成功');
+              this.currentToken = extractedToken;
+              return extractedToken;
+            }
+          }
+        } catch (directReadError) {
+          console.error('[Auth] 直接读取微信存储异常', directReadError);
+        }
+
+        return null;
+      }
     } catch (error) {
-      console.error('❌ 获取Token失败', error);
+      console.error('[Auth] ❌ 获取Token失败', error);
       return null;
     }
   }

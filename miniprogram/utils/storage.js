@@ -169,14 +169,35 @@ class StorageManager {
       let cacheData;
       if (sync) {
         // 同步获取
-        cacheData = wx.getStorageSync(finalKey);
+        try {
+          cacheData = wx.getStorageSync(finalKey);
+        } catch (syncError) {
+          console.warn(`[Storage] 同步获取失败，尝试异步获取: ${key}`, syncError);
+          // 小米手机兼容性：同步获取失败时尝试异步
+          cacheData = await new Promise(resolve => {
+            wx.getStorage({
+              key: finalKey,
+              success: res => resolve(res.data),
+              fail: () => resolve(null),
+            });
+          });
+        }
       } else {
         // 异步获取
         cacheData = await new Promise((resolve, reject) => {
           wx.getStorage({
             key: finalKey,
-            success: res => resolve(res.data),
-            fail: () => resolve(null), // 不存在时返回null而不是抛错
+            success: res => {
+              console.log(`[Storage] 异步获取成功: ${key}`, {
+                hasData: !!res.data,
+                dataType: typeof res.data,
+              });
+              resolve(res.data);
+            },
+            fail: err => {
+              console.warn(`[Storage] 异步获取失败: ${key}`, err);
+              resolve(null); // 不存在时返回null而不是抛错
+            },
           });
         });
       }
