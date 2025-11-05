@@ -477,14 +477,33 @@ class AuthManager {
           });
 
           if (rawToken) {
-            // 处理可能的包装数据
-            const extractedToken =
-              typeof rawToken === 'object' && rawToken.value ? rawToken.value : rawToken;
+            // 处理可能的包装数据（多种包装格式）
+            let extractedToken = rawToken;
+
+            // 如果是对象，尝试多种提取策略
+            if (typeof rawToken === 'object') {
+              console.log('[Auth] Token 是对象，尝试提取...', {
+                hasValue: 'value' in rawToken,
+                hasData: 'data' in rawToken,
+                hasToken: 'token' in rawToken,
+                keys: Object.keys(rawToken),
+              });
+
+              extractedToken = rawToken.value || rawToken.data || rawToken.token || rawToken;
+            }
 
             if (extractedToken && typeof extractedToken === 'string') {
-              console.log('[Auth] ✅ 从微信存储提取Token成功');
+              console.log('[Auth] ✅ 从微信存储提取Token成功', {
+                tokenLength: extractedToken.length,
+                tokenPrefix: extractedToken.substring(0, 20) + '...',
+              });
               this.currentToken = extractedToken;
               return extractedToken;
+            } else {
+              console.warn('[Auth] ⚠️ 提取的Token格式不正确', {
+                type: typeof extractedToken,
+                value: extractedToken,
+              });
             }
           }
         } catch (directReadError) {
