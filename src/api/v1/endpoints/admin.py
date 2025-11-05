@@ -30,7 +30,7 @@ async def verify_token(
     authorization: str = Header(..., description="Bearer token"),
     db: AsyncSession = Depends(get_db),
 ):
-    """简化的 Token 验证，避免复杂依赖链"""
+    """Token 验证并检查管理员权限"""
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Invalid authorization header")
 
@@ -44,8 +44,18 @@ async def verify_token(
         user_id = payload.get("sub")
         if not user_id:
             raise HTTPException(status_code=401, detail="Invalid token")
-        # TODO: 添加管理员权限检查
+
+        # 检查管理员权限
+        user = await user_service.user_repo.get_by_id(user_id)
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+
+        if not user.is_admin:
+            raise HTTPException(status_code=403, detail="需要管理员权限才能访问此功能")
+
         return user_id
+    except HTTPException:
+        raise
     except Exception:
         raise HTTPException(status_code=401, detail="Authentication failed")
 
