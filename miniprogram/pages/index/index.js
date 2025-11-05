@@ -9,10 +9,7 @@ Page({
     hasUserInfo: false,
     canIUseGetUserProfile: !!wx.getUserProfile,
     role: null,
-    notifications: [],
-    unreadNotificationCount: 0, // 未读消息数量
     recommendations: [], // 个性化推荐内容
-    todoItems: [], // 待办事项
     stats: {
       questionCount: 0,
       reportCount: 0,
@@ -202,15 +199,6 @@ Page({
       userInfo: null,
       hasUserInfo: false,
       role: null,
-      notifications: [
-        {
-          id: 'welcome',
-          type: 'info',
-          title: '欢迎使用五好伴学',
-          content: '登录后即可体验完整的AI学习功能',
-          time: new Date().toLocaleTimeString(),
-        },
-      ],
       stats: {
         questionCount: 0,
         reportCount: 0,
@@ -230,12 +218,7 @@ Page({
 
       console.log('刷新首页数据');
 
-      await Promise.all([
-        this.loadUserStats(),
-        this.loadNotifications(),
-        this.loadRecommendations(),
-        this.loadTodoItems(),
-      ]);
+      await Promise.all([this.loadUserStats(), this.loadRecommendations()]);
 
       console.log('首页数据刷新完成');
     } catch (error) {
@@ -280,12 +263,7 @@ Page({
    * 加载用户数据
    */
   async loadUserData() {
-    await Promise.all([
-      this.loadUserStats(),
-      this.loadNotifications(),
-      this.loadRecommendations(),
-      this.loadTodoItems(),
-    ]);
+    await Promise.all([this.loadUserStats(), this.loadRecommendations()]);
   },
 
   /**
@@ -308,146 +286,6 @@ Page({
       console.log('📊 [统计数据] 页面data.stats:', this.data.stats);
     } catch (error) {
       console.error('加载用户统计失败:', error);
-    }
-  },
-
-  /**
-   * 加载通知数据
-   */
-  async loadNotifications() {
-    try {
-      const { role, userInfo } = this.data;
-
-      // TODO: 调用API获取通知数据
-      // const response = await api.getNotifications({ limit: 5, role, userId: userInfo?.id });
-
-      // 根据用户角色生成不同的模拟通知数据
-      let notifications = [];
-
-      switch (role) {
-        case 'student':
-          notifications = [
-            {
-              id: '2',
-              title: '学习报告',
-              content: '本周学习报告已生成，快来查看吧！',
-              type: 'grade',
-              priority: 'medium',
-              sender: '系统',
-              recipient: userInfo?.id || '',
-              isRead: false,
-              createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toLocaleString(), // 4小时前
-              actionUrl: '/pages/analysis/report/index',
-            },
-            {
-              id: '3',
-              title: 'AI助手回复',
-              content: '您昨天提问的数学问题已有新的回复',
-              type: 'chat',
-              priority: 'medium',
-              sender: 'AI助手',
-              recipient: userInfo?.id || '',
-              isRead: true,
-              createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toLocaleString(), // 8小时前
-              actionUrl: '/pages/chat/index/index',
-            },
-          ];
-          break;
-        case 'parent':
-          notifications = [
-            {
-              id: '4',
-              title: '学习进度更新',
-              content: '孩子本周完成学习任务，总体表现良好',
-              type: 'progress',
-              priority: 'medium',
-              sender: '系统',
-              recipient: userInfo?.id || '',
-              isRead: false,
-              createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toLocaleString(), // 1小时前
-              actionUrl: '/pages/analysis/progress/index',
-            },
-            {
-              id: '5',
-              title: '成绩分析报告',
-              content: '孩子数学成绩有所提升，建议继续加强练习',
-              type: 'grade',
-              priority: 'high',
-              sender: '数学老师',
-              recipient: userInfo?.id || '',
-              isRead: false,
-              createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toLocaleString(), // 3小时前
-              actionUrl: '/pages/analysis/report/index',
-            },
-            {
-              id: '6',
-              title: '班级通知',
-              content: '下周三将举行期中考试，请做好准备',
-              type: 'announcement',
-              priority: 'high',
-              sender: '班主任',
-              recipient: userInfo?.id || '',
-              isRead: true,
-              createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toLocaleString(), // 1天前
-              actionUrl: '/pages/announcements/detail/index?id=6',
-            },
-          ];
-          break;
-        case 'teacher':
-          notifications = [
-            {
-              id: '8',
-              title: '班级成绩统计',
-              content: '本周班级平均分有所提升，详细分析已生成',
-              type: 'analysis',
-              priority: 'medium',
-              sender: '系统',
-              recipient: userInfo?.id || '',
-              isRead: false,
-              createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toLocaleString(), // 2小时前
-              actionUrl: '/pages/analysis/class/index',
-            },
-            {
-              id: '9',
-              title: '学生提问',
-              content: '张三同学向您提问了关于函数的问题',
-              type: 'chat',
-              priority: 'medium',
-              sender: '张三',
-              recipient: userInfo?.id || '',
-              isRead: true,
-              createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toLocaleString(), // 5小时前
-              actionUrl: '/pages/chat/teacher/index',
-            },
-          ];
-          break;
-        default:
-          notifications = [
-            {
-              id: 'welcome',
-              title: '欢迎使用五好伴学',
-              content: '登录后即可体验完整的AI学习功能',
-              type: 'info',
-              priority: 'low',
-              sender: '系统',
-              recipient: '',
-              isRead: false,
-              createdAt: new Date().toLocaleString(),
-              actionUrl: '/pages/login/index',
-            },
-          ];
-      }
-
-      // 按创建时间排序（最新的在前）
-      notifications.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-      this.setData({ notifications });
-
-      // 更新未读消息数量
-      const unreadCount = notifications.filter(n => !n.isRead).length;
-      this.setData({ unreadNotificationCount: unreadCount });
-    } catch (error) {
-      console.error('加载通知失败:', error);
     }
   },
 
@@ -549,148 +387,6 @@ Page({
   },
 
   /**
-   * 加载待办事项
-   */
-  async loadTodoItems() {
-    try {
-      const { role } = this.data;
-      let todoItems = [];
-
-      switch (role) {
-        case 'student':
-          todoItems = [
-            {
-              id: 'review_physics',
-              title: '复习物理知识点',
-              description: '力学部分重点内容',
-              deadline: '明天',
-              priority: 'medium',
-              completed: false,
-              type: 'study',
-            },
-          ];
-          break;
-        case 'parent':
-          todoItems = [
-            {
-              id: 'check_progress',
-              title: '查看学习进度',
-              description: '查看孩子今日学习完成情况',
-              deadline: '今天',
-              priority: 'medium',
-              completed: false,
-              type: 'monitoring',
-            },
-          ];
-          break;
-        case 'teacher':
-          todoItems = [
-            {
-              id: 'prepare_class',
-              title: '准备明天课程',
-              description: '第四章教学材料',
-              deadline: '明天 08:00',
-              priority: 'medium',
-              completed: false,
-              type: 'preparation',
-            },
-          ];
-          break;
-      }
-
-      this.setData({ todoItems });
-    } catch (error) {
-      console.error('加载待办事项失败:', error);
-    }
-  },
-
-  /**
-   * 点击通知
-   */
-  onNotificationTap(e) {
-    const { notification } = e.currentTarget.dataset;
-    if (!notification) return;
-
-    console.log('点击通知:', notification);
-
-    // 标记为已读
-    this.markNotificationRead(notification.id);
-
-    // 使用通知中的actionUrl或根据类型跳转
-    const url = notification.actionUrl || this.getNotificationUrl(notification);
-
-    if (url) {
-      wx.navigateTo({
-        url,
-        fail: () => {
-          wx.switchTab({ url });
-        },
-      });
-    }
-  },
-
-  /**
-   * 根据通知类型获取跳转URL
-   */
-  getNotificationUrl(notification) {
-    switch (notification.type) {
-      case 'grade':
-        return '/pages/analysis/report/index';
-      case 'progress':
-        return '/pages/analysis/progress/index';
-      case 'chat':
-        return '/pages/chat/index/index';
-      case 'analysis':
-        return '/pages/analysis/class/index';
-      case 'announcement':
-        return `/pages/announcements/detail/index?id=${notification.id}`;
-      case 'info':
-        return '/pages/login/index';
-      default:
-        return '';
-    }
-  },
-
-  /**
-   * 标记通知为已读
-   */
-  async markNotificationRead(notificationId) {
-    try {
-      // TODO: 调用API标记通知为已读
-      // await api.markNotificationRead(notificationId);
-
-      // 更新本地数据
-      const notifications = this.data.notifications.map(item => {
-        if (item.id === notificationId) {
-          return { ...item, isRead: true };
-        }
-        return item;
-      });
-
-      // 重新计算未读数量
-      const unreadCount = notifications.filter(n => !n.isRead).length;
-
-      this.setData({
-        notifications,
-        unreadNotificationCount: unreadCount,
-      });
-
-      console.log(`通知 ${notificationId} 已标记为已读，未读数量: ${unreadCount}`);
-    } catch (error) {
-      console.error('标记通知已读失败:', error);
-    }
-  },
-
-  /**
-   * 查看更多通知
-   */
-  onMoreNotificationsTap() {
-    wx.navigateTo({
-      url: '/pages/notifications/list/index',
-    });
-  },
-
-  /**
    * 点击推荐内容
    */
   onRecommendationTap(e) {
@@ -715,69 +411,6 @@ Page({
       default:
         console.warn('未知的推荐内容操作类型:', action.type);
     }
-  },
-
-  /**
-   * 点击待办事项
-   */
-  onTodoItemTap(e) {
-    const { todo } = e.currentTarget.dataset;
-    if (!todo) return;
-
-    console.log('点击待办事项:', todo);
-
-    // 根据待办事项类型跳转到相应页面
-    let url = '';
-    switch (todo.type) {
-      case 'study':
-        url = '/pages/study/detail/index?id=' + todo.id;
-        break;
-      case 'preparation':
-        url = '/pages/teacher/preparation/index?id=' + todo.id;
-        break;
-      case 'monitoring':
-        url = '/pages/analysis/progress/index';
-        break;
-      default:
-        console.warn('未知的待办事项类型:', todo.type);
-        return;
-    }
-
-    wx.navigateTo({
-      url,
-      fail: () => {
-        wx.switchTab({ url });
-      },
-    });
-  },
-
-  /**
-   * 完成待办事项
-   */
-  onCompleteTodoItem(e) {
-    e.stopPropagation(); // 防止触发父元素的点击事件
-
-    const { todo } = e.currentTarget.dataset;
-    if (!todo) return;
-
-    console.log('完成待办事项:', todo);
-
-    // 更新待办事项状态
-    const todoItems = this.data.todoItems.map(item => {
-      if (item.id === todo.id) {
-        return { ...item, completed: true };
-      }
-      return item;
-    });
-
-    this.setData({ todoItems });
-
-    // TODO: 调用API更新待办事项状态
-    wx.showToast({
-      title: '任务完成',
-      icon: 'success',
-      duration: 1500,
-    });
   },
 
   /**

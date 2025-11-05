@@ -56,53 +56,6 @@
       </view>
     </view>
 
-    <!-- 消息通知区域 -->
-    <view class="notifications-section" wx:if="{{notifications.length > 0}}">
-      <view class="section-header flex-between">
-        <view class="notifications-title-wrapper flex">
-          <text class="section-title font-bold">最新消息</text>
-          <view wx:if="{{unreadNotificationCount > 0}}" class="unread-badge">
-            {{unreadNotificationCount}}
-          </view>
-        </view>
-        <view class="notifications-actions flex">
-          <text class="more-btn text-primary" bind:tap="onMoreNotificationsTap">查看更多</text>
-        </view>
-      </view>
-      <view class="notifications-list">
-        <view
-          class="notification-item card {{!item.isRead ? 'unread' : ''}}"
-          wx:for="{{notifications}}"
-          wx:key="id"
-          data-notification="{{item}}"
-          bind:tap="onNotificationTap"
-        >
-          <view class="notification-header flex-between">
-            <view class="notification-title-wrapper flex">
-              <text class="notification-title font-bold">{{item.title}}</text>
-              <view wx:if="{{item.priority === 'high'}}" class="priority-badge high">
-                紧急
-              </view>
-              <view wx:elif="{{item.priority === 'medium'}}" class="priority-badge medium">
-                重要
-              </view>
-            </view>
-            <view class="notification-meta flex">
-              <view wx:if="{{!item.isRead}}" class="unread-dot bg-error"></view>
-              <text class="notification-time text-secondary text-sm">
-                {{item.createdAt}}
-              </text>
-            </view>
-          </view>
-          <text class="notification-content text-secondary">{{item.content}}</text>
-          <view class="notification-footer flex-between">
-            <text class="notification-sender text-secondary text-sm">来自: {{item.sender}}</text>
-            <van-icon wx:if="{{!item.isRead}}" name="arrow" size="12px" color="#999" />
-          </view>
-        </view>
-      </view>
-    </view>
-
     <!-- 个性化推荐区域 -->
     <view class="recommendations-section" wx:if="{{recommendations.length > 0}}">
       <view class="section-header">
@@ -123,51 +76,6 @@
             <view class="recommendation-content">
               <text class="recommendation-title font-bold">{{item.title}}</text>
               <text class="recommendation-text text-secondary">{{item.content}}</text>
-            </view>
-          </view>
-        </view>
-      </view>
-    </view>
-
-    <!-- 待办事项区域 -->
-    <view class="todo-section" wx:if="{{todoItems.length > 0}}">
-      <view class="section-header">
-        <text class="section-title font-bold">待办事项</text>
-      </view>
-      <view class="todo-list">
-        <view
-          class="todo-item card"
-          wx:for="{{todoItems}}"
-          wx:key="id"
-          data-todo="{{item}}"
-          bind:tap="onTodoItemTap"
-        >
-          <view class="todo-header flex-between">
-            <view class="todo-content">
-              <text class="todo-title font-bold">{{item.title}}</text>
-              <text class="todo-description text-secondary">{{item.description}}</text>
-              <view class="todo-meta flex">
-                <text class="todo-deadline text-sm" 
-                      style="color: {{item.priority === 'high' ? '#f5222d' : item.priority === 'medium' ? '#faad14' : '#52c41a'}}">
-                  {{item.deadline}}
-                </text>
-                <view class="todo-priority {{item.priority}}-priority">
-                  {{item.priority === 'high' ? '紧急' : item.priority === 'medium' ? '一般' : '不急'}}
-                </view>
-              </view>
-            </view>
-            <view class="todo-actions">
-              <van-button
-                wx:if="{{!item.completed}}"
-                type="primary"
-                size="mini"
-                round
-                data-todo="{{item}}"
-                bind:tap="onCompleteTodoItem"
-              >
-                完成
-              </van-button>
-              <van-icon wx:else name="success" size="24px" color="#52c41a" />
             </view>
           </view>
         </view>
