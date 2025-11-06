@@ -2,12 +2,36 @@
 .knowledge-graph-container {
   min-height: 100vh;
   background-color: #f5f5f5;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 顶部操作栏 */
+.top-bar {
+  display: flex;
+  align-items: center;
+  background-color: #ffffff;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
 }
 
 /* 科目选择器 */
 .subject-selector {
-  background-color: #ffffff;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
+  flex: 1;
+}
+
+/* 视图切换按钮 */
+.view-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 0 30rpx;
+  height: 88rpx;
+  border-left: 1rpx solid #f0f0f0;
+}
+
+.toggle-text {
+  font-size: 28rpx;
+  color: #1890ff;
 }
 
 /* 错误提示 */
@@ -25,8 +49,42 @@
   color: #666666;
 }
 
+/* 空状态样式 */
+.empty-wrapper {
+  padding: 60rpx 40rpx;
+}
+
+.empty-tips {
+  margin-top: 40rpx;
+  background-color: #e6f7ff;
+  border-radius: 12rpx;
+  padding: 30rpx;
+  border: 1rpx solid #91d5ff;
+}
+
+.tips-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1890ff;
+  margin-bottom: 20rpx;
+}
+
+.tips-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.tips-item {
+  font-size: 26rpx;
+  color: #595959;
+  line-height: 40rpx;
+}
+
 /* 滚动区域 */
 .kg-scroll {
+  flex: 1;
   padding: 30rpx;
 }
 
@@ -190,4 +248,66 @@
 .bottom-actions {
   margin-top: 40rpx;
   padding-bottom: 20rpx;
+}
+
+/* ========== 图谱视图样式 ========== */
+.graph-view {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+/* 图谱说明 */
+.graph-tips {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 24rpx;
+  background-color: #e6f7ff;
+  border-radius: 12rpx;
+  border-left: 4rpx solid #1890ff;
+}
+
+.tips-text {
+  font-size: 24rpx;
+  color: #666666;
+  line-height: 1.5;
+}
+
+/* 图谱容器 */
+.graph-container {
+  width: 100%;
+  height: 600rpx;
+  background-color: #ffffff;
+  border-radius: 16rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.graph-container ec-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+/* 图谱空状态 */
+.graph-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx 60rpx;
+  background-color: #ffffff;
+  border-radius: 16rpx;
+  gap: 20rpx;
+}
+
+.empty-text {
+  font-size: 28rpx;
+  color: #999999;
+  margin-top: 20rpx;
+}
+
+.empty-hint {
+  font-size: 24rpx;
+  color: #cccccc;
 }

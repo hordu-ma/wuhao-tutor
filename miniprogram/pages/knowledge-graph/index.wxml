@@ -18,14 +18,24 @@
 </wxs>
 
 <view class="knowledge-graph-container">
-  <!-- 科目选择器 -->
-  <view class="subject-selector">
-    <van-dropdown-menu>
-      <van-dropdown-item 
-        value="{{selectedSubject}}" 
-        options="{{subjectOptions}}" 
-        bind:change="onSubjectChange" />
-    </van-dropdown-menu>
+  <!-- 顶部操作栏 -->
+  <view class="top-bar">
+    <!-- 科目选择器 -->
+    <view class="subject-selector">
+      <van-dropdown-menu>
+        <van-dropdown-item 
+          value="{{selectedSubject}}" 
+          options="{{subjectOptions}}" 
+          bind:change="onSubjectChange" />
+      </van-dropdown-menu>
+    </view>
+
+    <!-- 视图切换按钮 -->
+    <view class="view-toggle" bindtap="onViewModeChange">
+      <van-icon name="{{viewMode === 'list' ? 'apps-o' : 'bars'}}"
+                size="20px" color="#1890ff" />
+      <text class="toggle-text">{{viewMode === 'list' ? '图谱' : '列表'}}</text>
+    </view>
   </view>
 
   <!-- 加载状态 -->
@@ -41,7 +51,9 @@
   <!-- 知识图谱内容 -->
   <scroll-view class="kg-scroll" scroll-y="{{true}}" wx:if="{{!snapshotLoading || snapshot}}">
     
-    <!-- 整体统计卡片 -->
+    <!-- ========== 列表视图 ========== -->
+    <view wx:if="{{viewMode === 'list'}}">
+      <!-- 整体统计卡片 -->
     <view class="stats-card" wx:if="{{snapshot}}">
       <view class="card-title">📊 学情概览</view>
       <view class="stats-grid">
@@ -126,17 +138,50 @@
     </view>
 
     <!-- 空状态 -->
-    <empty-state 
-      wx:if="{{!snapshot && !snapshotLoading}}"
-      type="default"
-      text="暂无数据"
-      description="该科目还没有错题记录" />
+    <view class="empty-wrapper" wx:if="{{!snapshot && !snapshotLoading}}">
+      <empty-state 
+        type="default"
+        text="暂无数据"
+        description="该科目还没有错题记录,赶快去学习问答创建一些错题吧~" />
+      
+      <!-- 友好提示 -->
+      <view class="empty-tips">
+        <text class="tips-title">💡 如何构建知识图谱?</text>
+        <view class="tips-list">
+          <text class="tips-item">1. 在学习问答中提问题</text>
+          <text class="tips-item">2. AI会自动识别错题并分析知识点</text>
+          <text class="tips-item">3. 系统会定期生成知识图谱快照</text>
+        </view>
+      </view>
+    </view>
 
-    <!-- 底部操作区 -->
-    <view class="bottom-actions" wx:if="{{snapshot}}">
-      <van-button type="primary" block bindtap="onViewRecommendations">
-        查看智能复习推荐
-      </van-button>
+      <!-- 底部操作区 -->
+      <view class="bottom-actions" wx:if="{{snapshot}}">
+        <van-button type="primary" block bindtap="onViewRecommendations">
+          查看智能复习推荐
+        </van-button>
+      </view>
+    </view>
+
+    <!-- ========== 图谱视图 ========== -->
+    <view wx:if="{{viewMode === 'graph'}}" class="graph-view">
+      <!-- 图谱说明 -->
+      <view class="graph-tips" wx:if="{{snapshot}}">
+        <van-icon name="info-o" size="16px" color="#1890ff" />
+        <text class="tips-text">节点颜色代表掌握度：绿色(已掌握) 黄色(学习中) 红色(待加强)</text>
+      </view>
+
+      <!-- ECharts 图谱 -->
+      <view class="graph-container" wx:if="{{graphOption}}">
+        <ec-canvas id="knowledge-graph" canvas-id="knowledge-graph" ec="{{ec}}"></ec-canvas>
+      </view>
+
+      <!-- 图谱空状态 -->
+      <view class="graph-empty" wx:if="{{!graphOption && snapshot}}">
+        <van-icon name="chart-trending-o" size="48px" color="#ccc" />
+        <text class="empty-text">暂无关联关系数据</text>
+        <text class="empty-hint">继续学习,系统会自动构建知识图谱</text>
+      </view>
     </view>
   </scroll-view>
 </view>

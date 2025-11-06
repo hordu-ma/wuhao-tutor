@@ -706,6 +706,28 @@ const pageObject = {
     // 重新加载数据
     this.loadMistakesList(true);
   },
+
+  /**
+   * 打开知识图谱
+   */
+  onOpenKnowledgeGraph() {
+    console.log('打开知识图谱');
+    const subject =
+      this.data.selectedSubject && this.data.selectedSubject !== '全部'
+        ? this.data.selectedSubject
+        : '数学';
+
+    wx.navigateTo({
+      url: `/pages/knowledge-graph/index?subject=${subject}`,
+      fail: err => {
+        console.error('导航失败:', err);
+        wx.showToast({
+          title: '打开失败',
+          icon: 'none',
+        });
+      },
+    });
+  },
 };
 
 // 应用增强的页面守卫

@@ -83,6 +83,43 @@
       </view>
     </view>
 
+    <!-- 快捷功能区域 (仅学生可见) -->
+    <view class="quick-actions-section" wx:if="{{role === 'student' && isLoggedIn}}">
+      <view class="section-header">
+        <text class="section-title font-bold">快捷功能</text>
+      </view>
+      <view class="quick-actions-grid">
+        <view class="quick-action-item card" bindtap="navigateToKnowledgeGraph">
+          <view class="action-icon-wrapper" style="background-color: #1890ff20">
+            <van-icon name="cluster-o" size="24px" color="#1890ff" />
+          </view>
+          <text class="action-title font-bold">知识图谱</text>
+          <text class="action-desc text-secondary">可视化掌握度</text>
+        </view>
+        <view class="quick-action-item card" bindtap="navigateToMistakes">
+          <view class="action-icon-wrapper" style="background-color: #f5222d20">
+            <van-icon name="warning-o" size="24px" color="#f5222d" />
+          </view>
+          <text class="action-title font-bold">错题本</text>
+          <text class="action-desc text-secondary">智能复习</text>
+        </view>
+        <view class="quick-action-item card" bindtap="navigateToLearning">
+          <view class="action-icon-wrapper" style="background-color: #52c41a20">
+            <van-icon name="chat-o" size="24px" color="#52c41a" />
+          </view>
+          <text class="action-title font-bold">AI问答</text>
+          <text class="action-desc text-secondary">学习助手</text>
+        </view>
+        <view class="quick-action-item card" bindtap="navigateToAnalysis">
+          <view class="action-icon-wrapper" style="background-color: #faad1420">
+            <van-icon name="chart-trending-o" size="24px" color="#faad14" />
+          </view>
+          <text class="action-title font-bold">学习报告</text>
+          <text class="action-desc text-secondary">进度分析</text>
+        </view>
+      </view>
+    </view>
+
     <!-- 学习建议区域 (仅学生可见) - 保留原有功能但简化 -->
     <view class="suggestions-section" wx:if="{{role === 'student' && recommendations.length === 0}}">
       <view class="section-header">

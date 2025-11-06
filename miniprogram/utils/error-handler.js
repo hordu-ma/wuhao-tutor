@@ -53,8 +53,8 @@ class ErrorHandler {
       enabled: true,
       // 是否显示错误详情
       showDetails: true,
-      // 是否自动上报
-      autoReport: true,
+      // 是否自动上报（禁用以避免干扰正常请求）
+      autoReport: false,
       // 错误日志存储键
       errorLogKey: 'error_logs',
       // 最大错误日志数量

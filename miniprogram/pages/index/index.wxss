@@ -598,3 +598,52 @@
   flex-shrink: 0;
   margin-left: 16rpx;
 }
+
+/* 快捷功能区域 */
+.quick-actions-section {
+  margin: 32rpx 32rpx 0;
+}
+
+.quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20rpx;
+  margin-top: 16rpx;
+}
+
+.quick-action-item {
+  padding: 32rpx 24rpx;
+  text-align: center;
+  background-color: #ffffff;
+  border-radius: 16rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.quick-action-item:active {
+  transform: scale(0.95);
+}
+
+.action-icon-wrapper {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16rpx;
+}
+
+.action-title {
+  display: block;
+  font-size: 28rpx;
+  color: #333333;
+  margin-bottom: 8rpx;
+}
+
+.action-desc {
+  display: block;
+  font-size: 22rpx;
+  color: #999999;
+}

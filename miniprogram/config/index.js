@@ -249,8 +249,8 @@ const config = {
   error: {
     // 是否显示错误详情
     showDetails: true,
-    // 错误上报开关
-    report: true,
+    // 错误上报开关（生产环境禁用以避免干扰）
+    report: false,
     // 错误上报地址
     reportUrl: '/api/v1/errors/report',
     // 重试配置

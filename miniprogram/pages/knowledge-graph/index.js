@@ -1,12 +1,21 @@
 // pages/knowledge-graph/index.js - 知识图谱页面
 const { createGuardedPage } = require('../../utils/enhanced-page-guard.js');
 const mistakesApi = require('../../api/mistakes.js');
+// 直接引入完整的ECharts包
+const echarts = require('echarts');
+
+if (!echarts) {
+  console.error('ECharts加载失败');
+}
 
 const pageObject = {
   data: {
     // 当前选择的科目
     selectedSubject: '数学',
     subjectOptions: ['数学', '语文', '英语', '物理', '化学', '生物', '历史', '地理', '政治'],
+
+    // 视图模式: 'list'(列表) | 'graph'(图谱)
+    viewMode: 'list',
 
     // 加载状态
     loading: false,
@@ -18,6 +27,29 @@ const pageObject = {
 
     // 薄弱知识链
     weakChains: [],
+
+    // ECharts配置
+    ec: {
+      onInit: (canvas, width, height, dpr) => {
+        const chart = echarts.init(canvas, null, {
+          width: width,
+          height: height,
+          devicePixelRatio: dpr,
+        });
+        canvas.setChart(chart);
+
+        // 获取页面实例并设置图表配置
+        const pages = getCurrentPages();
+        const currentPage = pages[pages.length - 1];
+        if (currentPage.data.graphOption) {
+          chart.setOption(currentPage.data.graphOption);
+        }
+
+        return chart;
+      },
+    },
+    graphOption: null,
+    chart: null,
 
     // 错误状态
     error: null,
@@ -76,29 +108,81 @@ const pageObject = {
         // 兼容两种响应格式
         const snapshot = isStandardFormat ? response.data || response : response;
 
+        // 转换数据格式
+        const formattedSnapshot = this.formatSnapshotData(snapshot);
+
         this.setData({
-          snapshot,
+          snapshot: formattedSnapshot,
           snapshotLoading: false,
         });
       }
       // 如果响应异常，错误会在 catch 中处理
     } catch (error) {
       console.error('加载知识图谱快照失败', error);
+
+      // 404 表示还没有快照数据
+      if (error.statusCode === 404 || error.status === 404) {
+        this.setData({
+          error: '暂无数据',
+          snapshotLoading: false,
+          snapshot: null,
+        });
+        // 静默处理，不弹toast
+        return;
+      }
+
+      // 其他错误
       const errorMessage = error.message || '加载失败,请稍后重试';
       this.setData({
         error: errorMessage,
         snapshotLoading: false,
         snapshot: null,
       });
-      // 只在非空数据错误时提示用户
-      if (error.status !== 404) {
-        wx.showToast({
-          title: errorMessage,
-          icon: 'none',
-          duration: 2000,
-        });
-      }
+
+      wx.showToast({
+        title: errorMessage,
+        icon: 'none',
+        duration: 2000,
+      });
     }
+  },
+
+  /**
+   * 格式化快照数据
+   */
+  formatSnapshotData(snapshot) {
+    // 如果已经有 knowledge_points 字段，直接返回
+    if (snapshot.knowledge_points) {
+      return snapshot;
+    }
+
+    // 从 graph_data.nodes 转换为 knowledge_points
+    const graphData = snapshot.graph_data || {};
+    const nodes = graphData.nodes || [];
+
+    const knowledge_points = nodes.map(node => ({
+      name: node.name || '',
+      mastery_level: node.mastery_level || node.value || 0,
+      mistake_count: node.mistake_count || 0,
+      last_practiced: node.last_practiced || null,
+    }));
+
+    return {
+      ...snapshot,
+      knowledge_points,
+      total_mistakes: snapshot.total_knowledge_points || 0,
+      average_mastery: this.calculateAverageMastery(knowledge_points),
+    };
+  },
+
+  /**
+   * 计算平均掌握度
+   */
+  calculateAverageMastery(knowledgePoints) {
+    if (!knowledgePoints || knowledgePoints.length === 0) return 0;
+
+    const sum = knowledgePoints.reduce((acc, kp) => acc + (kp.mastery_level || 0), 0);
+    return sum / knowledgePoints.length;
   },
 
   /**
@@ -179,6 +263,174 @@ const pageObject = {
     wx.navigateTo({
       url: `/pages/review-recommendations/index?subject=${this.data.selectedSubject}`,
     });
+  },
+
+  /**
+   * 切换视图模式
+   */
+  onViewModeChange() {
+    const newMode = this.data.viewMode === 'list' ? 'graph' : 'list';
+    this.setData({ viewMode: newMode });
+
+    // 如果切换到图谱视图,初始化ECharts
+    if (newMode === 'graph' && this.data.snapshot) {
+      this.initGraphView();
+    }
+  },
+
+  /**
+   * 初始化图谱视图
+   */
+  initGraphView() {
+    if (!this.data.snapshot || !this.data.snapshot.knowledge_points) {
+      console.warn('没有快照数据,无法初始化图谱');
+      return;
+    }
+
+    const nodes = this.buildGraphNodes(this.data.snapshot.knowledge_points);
+    const links = this.buildGraphLinks(this.data.snapshot.knowledge_points);
+
+    const option = {
+      tooltip: {
+        trigger: 'item',
+        formatter: params => {
+          if (params.dataType === 'node') {
+            const data = params.data;
+            return `${data.name}\n掌握度: ${Math.round(data.mastery * 100)}%\n错题数: ${data.mistakes}`;
+          }
+          return '';
+        },
+      },
+      series: [
+        {
+          type: 'graph',
+          layout: 'force',
+          data: nodes,
+          links: links,
+          roam: true,
+          label: {
+            show: true,
+            position: 'bottom',
+            fontSize: 10,
+            formatter: '{b}',
+          },
+          force: {
+            repulsion: 150,
+            edgeLength: 100,
+            layoutAnimation: true,
+          },
+          emphasis: {
+            focus: 'adjacency',
+            label: {
+              fontSize: 12,
+              fontWeight: 'bold',
+            },
+          },
+        },
+      ],
+    };
+
+    this.setData({ graphOption: option });
+
+    // 延迟初始化图表，确保组件已渲染
+    setTimeout(() => {
+      const component = this.selectComponent('#knowledge-graph');
+
+      if (!component) {
+        console.error('ECharts组件未找到，无法初始化图谱');
+        wx.showToast({
+          title: '图谱组件加载失败',
+          icon: 'none',
+          duration: 2000,
+        });
+        return;
+      }
+
+      try {
+        component.init((canvas, width, height, dpr) => {
+          const chart = echarts.init(canvas, null, {
+            width: width,
+            height: height,
+            devicePixelRatio: dpr,
+          });
+          chart.setOption(option);
+          this.setData({ chart });
+          return chart;
+        });
+      } catch (error) {
+        console.error('ECharts初始化失败', error);
+        wx.showToast({
+          title: '图谱初始化失败',
+          icon: 'none',
+          duration: 2000,
+        });
+      }
+    }, 300); // 增加延迟时间到300ms
+  },
+
+  /**
+   * 构建图谱节点
+   */
+  buildGraphNodes(knowledgePoints) {
+    return knowledgePoints.map(kp => {
+      const mastery = kp.mastery_level || 0;
+      let color = '#f5222d'; // 红色(待加强)
+      let symbolSize = 20;
+
+      if (mastery >= 0.7) {
+        color = '#52c41a'; // 绿色(已掌握)
+        symbolSize = 15;
+      } else if (mastery >= 0.4) {
+        color = '#faad14'; // 黄色(学习中)
+        symbolSize = 18;
+      } else {
+        symbolSize = 25; // 薄弱点更大
+      }
+
+      return {
+        name: kp.name,
+        value: mastery,
+        mastery: mastery,
+        mistakes: kp.mistake_count || 0,
+        symbolSize: symbolSize,
+        itemStyle: {
+          color: color,
+        },
+      };
+    });
+  },
+
+  /**
+   * 构建图谱边
+   * 注意:当前快照数据可能不包含关系,这里用薄弱链作为关联
+   */
+  buildGraphLinks(knowledgePoints) {
+    const links = [];
+
+    // 简化实现:将薄弱知识点与其他相关知识点连接
+    // 实际应用中应从后端获取 knowledge_relations 数据
+    this.data.weakChains.forEach(weakChain => {
+      const sourceNode = weakChain.knowledge_point;
+
+      // 查找相关知识点(这里简化为找掌握度相近的点)
+      knowledgePoints.forEach(kp => {
+        if (
+          kp.name !== sourceNode &&
+          Math.abs(kp.mastery_level - (weakChain.avg_mastery_level || 0)) < 0.2
+        ) {
+          links.push({
+            source: sourceNode,
+            target: kp.name,
+            lineStyle: {
+              color: '#ccc',
+              width: 1,
+            },
+          });
+        }
+      });
+    });
+
+    return links;
   },
 
   /**

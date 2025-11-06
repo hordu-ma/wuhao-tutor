@@ -19,14 +19,19 @@
 .filter-tabs {
   display: flex;
   flex: 1;
-  gap: 30rpx;
+  gap: 20rpx;
+  overflow-x: auto;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
 }
 
 .filter-tab {
-  font-size: 28rpx;
+  font-size: 26rpx;
   color: #666666;
-  padding: 10rpx 20rpx;
+  padding: 10rpx 16rpx;
   transition: all 0.3s;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .filter-tab.active {

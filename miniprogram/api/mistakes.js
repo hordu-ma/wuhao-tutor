@@ -404,7 +404,7 @@ const mistakesAPI = {
     }
 
     return request.get(
-      'knowledge-graph/snapshot',
+      'knowledge-graph/snapshots/latest',
       { subject: params.subject },
       {
         showLoading: false,

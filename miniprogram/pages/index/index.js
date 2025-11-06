@@ -488,4 +488,53 @@ Page({
       },
     });
   },
+
+  // ========== 快捷功能导航 ==========
+
+  /**
+   * 导航到知识图谱
+   */
+  navigateToKnowledgeGraph() {
+    console.log('导航到知识图谱');
+    wx.navigateTo({
+      url: '/pages/knowledge-graph/index?subject=数学',
+      fail: err => {
+        console.error('导航失败:', err);
+        wx.showToast({
+          title: '打开失败',
+          icon: 'none',
+        });
+      },
+    });
+  },
+
+  /**
+   * 导航到错题本
+   */
+  navigateToMistakes() {
+    console.log('导航到错题本');
+    wx.switchTab({
+      url: '/pages/mistakes/list/index',
+    });
+  },
+
+  /**
+   * 导航到AI问答
+   */
+  navigateToLearning() {
+    console.log('导航到AI问答');
+    wx.switchTab({
+      url: '/pages/learning/index/index',
+    });
+  },
+
+  /**
+   * 导航到学习报告
+   */
+  navigateToAnalysis() {
+    console.log('导航到学习报告');
+    wx.switchTab({
+      url: '/pages/analysis/report/index',
+    });
+  },
 });

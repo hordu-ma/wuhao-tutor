@@ -183,7 +183,7 @@ class Request {
     // 移除开头的斜杠
     const path = url.startsWith('/') ? url.slice(1) : url;
 
-    // 对于以 /api 开头的路径，直接拼接
+    // 对于以 api/ 开头的路径，直接拼接
     if (path.startsWith('api/')) {
       return `${this.baseUrl}/${path}`;
     }
