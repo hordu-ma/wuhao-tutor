@@ -1,12 +1,7 @@
 // pages/knowledge-graph/index.js - 知识图谱页面
 const { createGuardedPage } = require('../../utils/enhanced-page-guard.js');
 const mistakesApi = require('../../api/mistakes.js');
-// 直接引入完整的ECharts包
-const echarts = require('echarts');
-
-if (!echarts) {
-  console.error('ECharts加载失败');
-}
+// 注意:官方ec-canvas组件已内置echarts,不需要单独引入
 
 const pageObject = {
   data: {
@@ -30,19 +25,26 @@ const pageObject = {
 
     // ECharts配置
     ec: {
-      onInit: (canvas, width, height, dpr) => {
+      lazyLoad: true, // 启用懒加载,切换到图谱视图时才初始化
+      onInit: function (canvas, width, height, dpr) {
+        // 导入echarts模块(官方组件内置)
+        const echarts = require('../../components/ec-canvas/echarts');
+
+        // 初始化图表
         const chart = echarts.init(canvas, null, {
           width: width,
           height: height,
           devicePixelRatio: dpr,
         });
-        canvas.setChart(chart);
 
         // 获取页面实例并设置图表配置
         const pages = getCurrentPages();
         const currentPage = pages[pages.length - 1];
-        if (currentPage.data.graphOption) {
+        if (currentPage && currentPage.data && currentPage.data.graphOption) {
           chart.setOption(currentPage.data.graphOption);
+          console.log('图表配置已设置');
+        } else {
+          console.warn('图表配置未就绪');
         }
 
         return chart;
@@ -332,40 +334,16 @@ const pageObject = {
 
     this.setData({ graphOption: option });
 
-    // 延迟初始化图表，确保组件已渲染
+    // 延迟初始化,等待组件渲染完成
     setTimeout(() => {
       const component = this.selectComponent('#knowledge-graph');
-
-      if (!component) {
-        console.error('ECharts组件未找到，无法初始化图谱');
-        wx.showToast({
-          title: '图谱组件加载失败',
-          icon: 'none',
-          duration: 2000,
-        });
-        return;
+      if (component && component.init) {
+        console.log('手动触发ECharts组件初始化');
+        component.init();
+      } else {
+        console.warn('ECharts组件未找到');
       }
-
-      try {
-        component.init((canvas, width, height, dpr) => {
-          const chart = echarts.init(canvas, null, {
-            width: width,
-            height: height,
-            devicePixelRatio: dpr,
-          });
-          chart.setOption(option);
-          this.setData({ chart });
-          return chart;
-        });
-      } catch (error) {
-        console.error('ECharts初始化失败', error);
-        wx.showToast({
-          title: '图谱初始化失败',
-          icon: 'none',
-          duration: 2000,
-        });
-      }
-    }, 300); // 增加延迟时间到300ms
+    }, 100);
   },
 
   /**
