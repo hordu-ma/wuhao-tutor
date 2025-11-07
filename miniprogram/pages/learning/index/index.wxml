@@ -207,7 +207,7 @@
         <view class="input-left">
           <!-- 语音引导气泡 -->
           <view class="voice-guide-bubble" wx:if="{{showVoiceGuide}}">
-            <text>👆 长按录音，松开发送</text>
+            <text>长按录音，松开发送</text>
           </view>
           
           <view class="voice-btn-circle"

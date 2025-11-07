@@ -803,7 +803,7 @@
 .voice-guide-bubble {
   position: absolute;
   bottom: 100rpx; /* 语音按钮上方 */
-  left: 100rpx; /* 向右偏移，不再居中 */
+  left: 0; /* 左边缘与语音按钮对齐 */
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   padding: 16rpx 24rpx;
