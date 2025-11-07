@@ -67,9 +67,9 @@ class SpeechRecognitionService:
             SpeechRecognitionError: Token 获取失败
         """
         try:
-            # 🔧 [修复] 检查缓存的 Token 是否有效（提前 2 小时刷新，避免边界情况）
+            # 🔧 [修复] 检查缓存的 Token 是否有效（提前 1 小时刷新，确保不会过期）
             current_time = time.time()
-            if self._access_token and current_time < self._token_expire_time - 7200:
+            if self._access_token and current_time < self._token_expire_time:
                 logger.debug(
                     f"使用缓存的 Token（剩余有效期: {(self._token_expire_time - current_time) / 3600:.1f} 小时）"
                 )
@@ -104,7 +104,7 @@ class SpeechRecognitionService:
             # 构造规范化的请求字符串
             canonicalized_query_string = "&".join(
                 [
-                    f"{urllib.parse.quote(k, safe='')}={urllib.parse.quote(v, safe='')}"
+                    f"{urllib.parse.quote(str(k), safe='')}={urllib.parse.quote(str(v), safe='')}"
                     for k, v in sorted_params
                 ]
             )
@@ -159,12 +159,12 @@ class SpeechRecognitionService:
                 if not token_id or not isinstance(token_id, str):
                     raise SpeechRecognitionError("Token 值无效")
 
-                # Token提前5分钟过期,避免临界点问题
+                # Token提前1小时过期,确保有足够的缓冲时间
                 self._access_token = token_id
                 expire_seconds = result["Token"].get("ExpireTime", 86400)
                 self._token_expire_time = (
-                    current_time + expire_seconds - 300
-                )  # 提前5分钟
+                    current_time + expire_seconds - 3600
+                )  # 提前1小时
 
                 logger.info(
                     f"Token 获取成功，有效期至: "

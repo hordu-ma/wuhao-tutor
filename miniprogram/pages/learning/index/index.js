@@ -1870,18 +1870,54 @@ const pageObject = {
   startVoiceRecord() {
     if (this.data.recordStatus !== 'idle') return;
 
-    this.setData({
-      recordStatus: 'recording',
-      recordDuration: 0,
-    });
+    // 🔧 [修复] 先检查录音权限，再开始录音
+    wx.getSetting({
+      success: res => {
+        if (res.authSetting['scope.record'] === false) {
+          // 用户之前拒绝了录音权限
+          wx.showModal({
+            title: '需要录音权限',
+            content: '请在设置中开启录音权限',
+            confirmText: '去设置',
+            success: modalRes => {
+              if (modalRes.confirm) {
+                wx.openSetting();
+              }
+            },
+          });
+          return;
+        }
 
-    // 🔧 [修复] 直接使用已初始化的 recorderManager，不再重复绑定监听器
-    this.recorderManager.start({
-      duration: 60000, // 最长录音60秒
-      sampleRate: 16000, // 采样率 16kHz（阿里云 ASR 要求）
-      numberOfChannels: 1, // 单声道
-      format: 'wav', // WAV 格式（修复 ASR NO_VALID_AUDIO_ERROR）
-      frameSize: 50, // 帧大小，WAV 格式推荐参数
+        // 有权限或未询问过，开始录音
+        this.setData({
+          recordStatus: 'recording',
+          recordDuration: 0,
+        });
+
+        // 🔧 [修复] 使用 mp3 格式，兼容性更好
+        this.recorderManager.start({
+          duration: 60000, // 最长录音60秒
+          sampleRate: 16000, // 采样率 16kHz（阿里云 ASR 要求）
+          numberOfChannels: 1, // 单声道
+          format: 'mp3', // 🔧 改用 mp3 格式，iPhone 兼容性更好
+          frameSize: 50,
+        });
+      },
+      fail: () => {
+        // 获取设置失败，尝试直接录音（可能会触发权限弹窗）
+        this.setData({
+          recordStatus: 'recording',
+          recordDuration: 0,
+        });
+
+        this.recorderManager.start({
+          duration: 60000,
+          sampleRate: 16000,
+          numberOfChannels: 1,
+          format: 'mp3',
+          frameSize: 50,
+        });
+      },
     });
   },
 
