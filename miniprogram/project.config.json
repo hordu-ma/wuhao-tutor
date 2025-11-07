@@ -142,7 +142,7 @@
     "baseURL": "",
     "serveOnStart": false
   },
-  "packNpmManually": false,
+  "packNpmManually": true,
   "packNpmRelationList": [],
   "cloudfunctionTemplateRoot": "cloudfunctionTemplate/",
   "downloadDomain": [
