@@ -159,10 +159,12 @@ class SpeechRecognitionService:
                 if not token_id or not isinstance(token_id, str):
                     raise SpeechRecognitionError("Token 值无效")
 
+                # Token提前5分钟过期,避免临界点问题
                 self._access_token = token_id
-                self._token_expire_time = current_time + result["Token"].get(
-                    "ExpireTime", 86400
-                )
+                expire_seconds = result["Token"].get("ExpireTime", 86400)
+                self._token_expire_time = (
+                    current_time + expire_seconds - 300
+                )  # 提前5分钟
 
                 logger.info(
                     f"Token 获取成功，有效期至: "
@@ -253,6 +255,12 @@ class SpeechRecognitionService:
             # 获取音频格式
             audio_format = self._get_format_from_filename(filename)
 
+            # 检查AppKey配置
+            if not self.app_key or len(self.app_key) < 10:
+                raise SpeechRecognitionError(
+                    "AppKey配置错误或为空,请检查ASR_APP_KEY环境变量"
+                )
+
             # 构造URL参数（按照阿里云RESTful API规范）
             params = {
                 "appkey": self.app_key,
@@ -295,12 +303,35 @@ class SpeechRecognitionService:
                 )  # 临时改为INFO级别以便调试
 
                 if response.status_code != 200:
+                    error_detail = response.text
                     logger.error(
-                        f"ASR API调用失败: {response.status_code}, {response.text}"
+                        f"ASR API调用失败: {response.status_code}, {error_detail}"
                     )
-                    raise SpeechRecognitionError(
-                        f"语音识别API调用失败: {response.status_code}"
-                    )
+
+                    # 解析具体错误信息
+                    try:
+                        error_data = response.json()
+                        error_msg = error_data.get("message", error_detail)
+                    except:
+                        error_msg = error_detail
+
+                    # 针对不同错误码提供具体提示
+                    if response.status_code == 400:
+                        raise SpeechRecognitionError(
+                            f"语音识别参数错误: {error_msg}。请检查音频格式和采样率配置"
+                        )
+                    elif response.status_code == 401:
+                        raise SpeechRecognitionError(
+                            f"Token认证失败: {error_msg}。Token可能已过期,请重新获取"
+                        )
+                    elif response.status_code == 403:
+                        raise SpeechRecognitionError(
+                            f"无权访问: {error_msg}。请检查AppKey和AccessKey配置"
+                        )
+                    else:
+                        raise SpeechRecognitionError(
+                            f"语音识别API调用失败 ({response.status_code}): {error_msg}"
+                        )
 
                 result = response.json()
 
