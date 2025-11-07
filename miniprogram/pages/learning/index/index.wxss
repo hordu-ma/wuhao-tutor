@@ -803,8 +803,7 @@
 .voice-guide-bubble {
   position: absolute;
   bottom: 100rpx; /* 语音按钮上方 */
-  left: 50%;
-  transform: translateX(-50%);
+  left: 100rpx; /* 向右偏移，不再居中 */
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   padding: 16rpx 24rpx;
@@ -820,11 +819,11 @@
 @keyframes gentle-bounce {
   0%,
   100% {
-    transform: translateX(-50%) translateY(0);
+    transform: translateY(0);
     opacity: 1;
   }
   50% {
-    transform: translateX(-50%) translateY(-10rpx);
+    transform: translateY(-10rpx);
     opacity: 0.9;
   }
 }
