@@ -1,6 +1,6 @@
 // pages/knowledge-graph/index.js - 知识图谱页面
-const { createGuardedPage } = require('../../utils/enhanced-page-guard.js');
-const mistakesApi = require('../../api/mistakes.js');
+const { createGuardedPage } = require('../../../../utils/enhanced-page-guard.js');
+const mistakesApi = require('../../../../api/mistakes.js');
 // 注意:官方ec-canvas组件已内置echarts,不需要单独引入
 
 const pageObject = {

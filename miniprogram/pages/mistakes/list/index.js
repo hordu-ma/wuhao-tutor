@@ -718,7 +718,7 @@ const pageObject = {
         : '数学';
 
     wx.navigateTo({
-      url: `/pages/knowledge-graph/index?subject=${subject}`,
+      url: `/subpackages/charts/pages/knowledge-graph/index?subject=${subject}`,
       fail: err => {
         console.error('导航失败:', err);
         wx.showToast({

@@ -497,7 +497,7 @@ Page({
   navigateToKnowledgeGraph() {
     console.log('导航到知识图谱');
     wx.navigateTo({
-      url: '/pages/knowledge-graph/index?subject=数学',
+      url: '/subpackages/charts/pages/knowledge-graph/index?subject=数学',
       fail: err => {
         console.error('导航失败:', err);
         wx.showToast({

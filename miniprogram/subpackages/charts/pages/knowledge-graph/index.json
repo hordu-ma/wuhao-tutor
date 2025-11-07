@@ -9,6 +9,6 @@
     "van-button": "@vant/weapp/button/index",
     "loading": "/components/loading/index",
     "empty-state": "/components/empty-state/index",
-    "ec-canvas": "/components/ec-canvas/ec-canvas"
+    "ec-canvas": "../../components/ec-canvas/ec-canvas"
   }
 }

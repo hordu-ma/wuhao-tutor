@@ -111,3 +111,6 @@ wuhao_tutor_dev.db
 
 # Production user reports (contains sensitive info)
 production_users_report.md
+
+# 备份目录
+backup/
