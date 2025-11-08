@@ -108,23 +108,34 @@ class KnowledgeGraphService:
 
                 associations.append(assoc_data)
 
+            # 🔧 [修复] 先提交知识点掌握度记录，确保不因后续异常而丢失
+            await self.db.commit()
+            logger.debug(f"已提交 {len(associations)} 个知识点掌握度记录")
+
             # 3. 批量创建关联
             created = await self.mkp_repo.batch_create_associations(associations)
             await self.db.commit()
 
             logger.info(f"为错题 {mistake_id} 创建了 {len(created)} 个知识点关联")
 
-            # 4. 记录学习轨迹
-            for assoc in created:
-                kp_id_str = getattr(assoc, "knowledge_point_id", None)
-                if kp_id_str:
-                    await self._record_learning_track(
-                        user_id=user_id,
-                        knowledge_point_id=UUID(str(kp_id_str)),
-                        mistake_id=mistake_id,
-                        activity_type="mistake_creation",
-                        result="incorrect",
-                    )
+            # 4. 记录学习轨迹（失败不影响主流程）
+            try:
+                for assoc in created:
+                    kp_id_str = getattr(assoc, "knowledge_point_id", None)
+                    if kp_id_str:
+                        await self._record_learning_track(
+                            user_id=user_id,
+                            knowledge_point_id=UUID(str(kp_id_str)),
+                            mistake_id=mistake_id,
+                            activity_type="mistake_creation",
+                            result="incorrect",
+                        )
+                await self.db.commit()
+                logger.debug(f"已记录 {len(created)} 条学习轨迹")
+            except Exception as track_error:
+                # 学习轨迹记录失败不影响主流程
+                logger.warning(f"记录学习轨迹失败（不影响主流程）: {track_error}")
+                await self.db.rollback()  # 回滚学习轨迹，但知识点和关联已提交
 
             return created
 
