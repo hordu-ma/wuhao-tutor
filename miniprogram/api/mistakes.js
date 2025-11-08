@@ -389,11 +389,11 @@ const mistakesAPI = {
   },
 
   /**
-   * 获取知识图谱快照
+   * 获取知识图谱数据（实时）
    * @param {Object} params - 查询参数
    * @param {string} params.subject - 学科
    * @param {Object} [config] - 请求配置
-   * @returns {Promise<Object>} 知识图谱快照数据
+   * @returns {Promise<Object>} 知识点掌握度数据
    */
   getKnowledgeGraphSnapshot(params, config = {}) {
     if (!params || !params.subject) {
@@ -404,7 +404,7 @@ const mistakesAPI = {
     }
 
     return request.get(
-      'knowledge-graph/snapshots/latest',
+      'knowledge-graph/mastery',
       { subject: params.subject },
       {
         showLoading: false,

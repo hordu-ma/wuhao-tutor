@@ -150,15 +150,34 @@ const pageObject = {
   },
 
   /**
-   * 格式化快照数据
+   * 格式化快照数据（适配 /mastery API）
    */
   formatSnapshotData(snapshot) {
-    // 如果已经有 knowledge_points 字段，直接返回
+    // 新版 /mastery API 返回格式: { subject, items, total_count, avg_mastery }
+    if (snapshot.items && Array.isArray(snapshot.items)) {
+      const knowledge_points = snapshot.items.map(item => ({
+        name: item.knowledge_point || '',
+        mastery_level: item.mastery_level || 0,
+        mistake_count: item.mistake_count || 0,
+        correct_count: item.correct_count || 0,
+        total_attempts: item.total_attempts || 0,
+        last_practiced: item.last_practiced_at || null,
+      }));
+
+      return {
+        subject: snapshot.subject,
+        knowledge_points,
+        total_mistakes: snapshot.total_count || 0,
+        average_mastery: snapshot.avg_mastery || 0,
+      };
+    }
+
+    // 兼容旧版 snapshot 格式（向后兼容）
     if (snapshot.knowledge_points) {
       return snapshot;
     }
 
-    // 从 graph_data.nodes 转换为 knowledge_points
+    // 兼容从 graph_data.nodes 转换
     const graphData = snapshot.graph_data || {};
     const nodes = graphData.nodes || [];
 
