@@ -273,7 +273,7 @@ log_success "Python 依赖更新完成"
 
 # 8. 执行数据库迁移
 log_info "执行数据库迁移..."
-if ssh "${SERVER_SSH}" "cd ${BACKEND_REMOTE_DIR} && source venv/bin/activate && alembic upgrade head"; then
+if ssh "${SERVER_SSH}" "cd ${BACKEND_REMOTE_DIR} && source venv/bin/activate && ENVIRONMENT=production alembic upgrade head"; then
     log_success "数据库迁移完成"
 else
     log_warning "数据库迁移可能失败，请手动检查"

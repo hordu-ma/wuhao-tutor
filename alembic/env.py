@@ -2,13 +2,23 @@ import os
 import sys
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from sqlalchemy import engine_from_config, pool
 
 from alembic import context
 
 # 添加项目根目录到 Python 路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
+# 加载环境配置（优先使用 ENVIRONMENT 指定的环境）
+from dotenv import load_dotenv
+
+environment = os.getenv("ENVIRONMENT", "development").lower()
+if environment == "production":
+    load_dotenv(".env.production", override=True)
+elif environment == "testing":
+    load_dotenv(".env.testing", override=True)
+else:
+    load_dotenv(".env", override=False)
 
 # 导入数据库配置和模型
 from src.core.config import get_settings
@@ -52,7 +62,11 @@ def run_migrations_offline() -> None:
     if url is None:
         # 从配置文件获取数据库URL
         settings = get_settings()
-        url = str(settings.SQLALCHEMY_DATABASE_URI).replace("+asyncpg", "").replace("+aiosqlite", "")
+        url = (
+            str(settings.SQLALCHEMY_DATABASE_URI)
+            .replace("+asyncpg", "")
+            .replace("+aiosqlite", "")
+        )
 
     context.configure(
         url=url,
@@ -78,7 +92,11 @@ def run_migrations_online() -> None:
     if "sqlalchemy.url" not in configuration:
         # 从配置文件获取数据库URL
         settings = get_settings()
-        configuration["sqlalchemy.url"] = str(settings.SQLALCHEMY_DATABASE_URI).replace("+asyncpg", "").replace("+aiosqlite", "")
+        configuration["sqlalchemy.url"] = (
+            str(settings.SQLALCHEMY_DATABASE_URI)
+            .replace("+asyncpg", "")
+            .replace("+aiosqlite", "")
+        )
 
     connectable = engine_from_config(
         configuration,

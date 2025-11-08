@@ -255,13 +255,19 @@ def get_settings() -> Settings:
     """
     import os
 
+    from dotenv import load_dotenv
+
     environment = os.getenv("ENVIRONMENT", "development").lower()
 
+    # 根据环境加载对应的 .env 文件
     if environment == "production":
+        load_dotenv(".env.production", override=True)
         return ProductionSettings()
     elif environment == "testing":
+        load_dotenv(".env.testing", override=True)
         return TestingSettings()
     else:
+        load_dotenv(".env", override=False)
         return DevelopmentSettings()
 
 

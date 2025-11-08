@@ -582,14 +582,33 @@ const pageObject = {
 
   /**
    * 添加错题
+   * 🎯 [暂时禁用] 优先使用AI从问答中自动提取错题
+   * TODO: 后续可重新启用手动添加作为补充功能
    */
   onAddMistake() {
-    console.log('添加错题');
+    console.log('[已禁用] 手动添加错题功能');
 
-    // 跳转到添加错题页面
-    wx.navigateTo({
-      url: '/pages/mistakes/add/index',
+    // 🎯 提示用户使用AI问答功能
+    wx.showModal({
+      title: '功能优化中',
+      content: '为保证错题质量，请在"学习问答"中提问，AI会自动帮你整理错题到错题本！',
+      showCancel: true,
+      confirmText: '去提问',
+      cancelText: '知道了',
+      success: res => {
+        if (res.confirm) {
+          // 跳转到学习问答页面
+          wx.navigateTo({
+            url: '/pages/learning/chat/index',
+          });
+        }
+      },
     });
+
+    // 【注释原有跳转代码】
+    // wx.navigateTo({
+    //   url: '/pages/mistakes/add/index',
+    // });
   },
 
   /**

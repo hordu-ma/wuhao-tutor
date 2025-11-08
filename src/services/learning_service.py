@@ -1293,7 +1293,7 @@ class LearningService:
         student_answer: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        将学习问答中的题目加入错题本
+        将学习问答中的题目加入错题本（优化版 - 使用AI结构化提取）
 
         Args:
             user_id: 用户ID
@@ -1318,87 +1318,107 @@ class LearningService:
             if not answer:
                 raise NotFoundError(f"问题 {question_id} 暂无答案")
 
-            # 2. 提取知识点（从Question.topic获取）
-            knowledge_points = []
-            # 使用 getattr 安全访问属性
-            question_topic = getattr(question, "topic", None)
-            if question_topic:
-                knowledge_points.append(question_topic)
+            # 2. 🎯 使用AI结构化提取题目信息
+            question_content = getattr(question, "content", "")
+            answer_content = getattr(answer, "content", "")
+            question_subject = getattr(question, "subject", None)
 
-            # 3. 提取正确答案（从AI回答中解析）
-            correct_answer = None
-            if answer:
-                answer_content = getattr(answer, "content", "")
-                correct_answer = self._extract_correct_answer(answer_content)
-
-            # 4. 解析图片URL
+            # 解析图片URL
             image_urls = []
             question_has_images = getattr(question, "has_images", False)
             question_image_urls = getattr(question, "image_urls", None)
             if question_has_images and question_image_urls:
                 try:
-                    image_urls = json.loads(question_image_urls)
+                    image_urls = (
+                        json.loads(question_image_urls)
+                        if isinstance(question_image_urls, str)
+                        else question_image_urls
+                    )
                 except:
                     image_urls = []
 
-            # 5. 构造错题数据
+            logger.info(
+                f"🔍 开始AI结构化提取: question_id={question_id}, "
+                f"has_images={len(image_urls) > 0}, subject={question_subject}"
+            )
+
+            # 调用AI结构化提取
+            structured_data = await self._extract_structured_question(
+                user_question=question_content,
+                ai_answer=answer_content,
+                image_urls=image_urls,
+                subject=question_subject,
+            )
+
+            logger.info(
+                f"✅ AI提取完成: success={structured_data.get('extraction_success')}, "
+                f"confidence={structured_data.get('confidence')}, "
+                f"knowledge_points={structured_data.get('knowledge_points')}"
+            )
+
+            # 3. 构造错题数据（使用结构化提取的数据）
             from src.models.study import MistakeRecord
             from src.repositories.mistake_repository import MistakeRepository
 
             mistake_repo = MistakeRepository(MistakeRecord, self.db)
 
-            # 安全获取问题属性
-            question_content = getattr(question, "content", "")
-            question_subject = getattr(question, "subject", None)
-            question_difficulty = getattr(question, "difficulty_level", None)
+            # 生成标题（使用提取的纯净题目内容）
+            clean_question = structured_data.get("question_content", question_content)
+            title = self._generate_mistake_title(clean_question)
 
             mistake_data = {
                 "user_id": user_id,
                 "subject": question_subject or "其他",
-                "title": self._generate_mistake_title(question_content),
-                "ocr_text": question_content,  # 题目内容
+                "title": title,
+                "ocr_text": clean_question,  # 🎯 使用纯净的题目内容
                 "image_urls": image_urls,
-                "difficulty_level": question_difficulty or 2,
-                "knowledge_points": knowledge_points,
-                "ai_feedback": (
-                    {
-                        "model": (
-                            getattr(answer, "model_name", "unknown")
-                            if answer
-                            else "unknown"
-                        ),
-                        "answer": getattr(answer, "content", "") if answer else "",
-                        "confidence": (
-                            getattr(answer, "confidence_score", 0.0) if answer else 0.0
-                        ),
-                        "tokens_used": (
-                            getattr(answer, "tokens_used", 0) if answer else 0
-                        ),
-                    }
-                    if answer
-                    else None
-                ),
-                # 【新增】来源信息
+                "difficulty_level": structured_data.get("difficulty_level", 2),
+                "knowledge_points": structured_data.get(
+                    "knowledge_points", []
+                ),  # 🎯 使用AI提取的知识点
+                "ai_feedback": {
+                    "model": (
+                        getattr(answer, "model_name", "unknown")
+                        if answer
+                        else "unknown"
+                    ),
+                    "answer": answer_content,
+                    "confidence": (
+                        getattr(answer, "confidence_score", 0.0) if answer else 0.0
+                    ),
+                    "tokens_used": getattr(answer, "tokens_used", 0) if answer else 0,
+                    # 🎯 新增：结构化提取的数据
+                    "structured_extraction": {
+                        "success": structured_data.get("extraction_success", False),
+                        "confidence": structured_data.get("confidence", 0.0),
+                        "question_type": structured_data.get("question_type", "未知"),
+                        "explanation": structured_data.get("explanation", ""),
+                        "is_fallback": structured_data.get("fallback", False),
+                    },
+                },
+                # 【来源信息】
                 "source": "learning",
                 "source_question_id": question_id,
                 "student_answer": student_answer,
-                "correct_answer": correct_answer,
+                "correct_answer": structured_data.get(
+                    "correct_answer"
+                ),  # 🎯 使用AI提取的答案
                 # 复习相关（使用艾宾浩斯算法）
-                "mastery_status": "not_mastered",  # 🔧 修复：使用正确的枚举值
-                "next_review_at": datetime.now()
-                + timedelta(days=1),  # 第一次复习：1天后
+                "mastery_status": "learning",
+                "next_review_at": datetime.now() + timedelta(days=1),
                 "review_count": 0,
                 "correct_count": 0,
             }
 
-            # 6. 创建错题记录
+            # 4. 创建错题记录
             mistake = await mistake_repo.create(mistake_data)
 
             logger.info(
-                f"从学习问答创建错题: question_id={question_id}, mistake_id={mistake.id}"
+                f"📝 从学习问答创建错题: question_id={question_id}, mistake_id={mistake.id}, "
+                f"使用AI提取={structured_data.get('extraction_success')}"
             )
 
-            # 【新增】自动关联知识点
+            # 5. 【新增】自动关联知识点
             try:
                 from uuid import UUID
 
@@ -1406,28 +1426,47 @@ class LearningService:
 
                 kg_service = KnowledgeGraphService(self.db, self.bailian_service)
 
+                # 准备AI反馈数据（包含结构化提取的知识点）
+                ai_feedback_for_kg = {
+                    "knowledge_points": [
+                        {
+                            "name": kp,
+                            "relevance": 0.9,
+                            "extraction_method": "ai_structured",
+                        }
+                        for kp in structured_data.get("knowledge_points", [])
+                    ],
+                    "question": clean_question,
+                    "explanation": structured_data.get("explanation", answer_content),
+                }
+
                 # 调用知识图谱服务分析并关联知识点
                 await kg_service.analyze_and_associate_knowledge_points(
                     mistake_id=UUID(str(getattr(mistake, "id"))),
                     user_id=UUID(user_id),
                     subject=mistake_data.get("subject", "math"),
-                    ocr_text=question_content,
-                    ai_feedback=mistake_data.get("ai_feedback"),
+                    ocr_text=clean_question,
+                    ai_feedback=ai_feedback_for_kg,
                 )
 
-                logger.info(f"已为错题 {mistake.id} 自动关联知识点")
+                logger.info(f"🔗 已为错题 {mistake.id} 自动关联知识点")
             except Exception as e:
                 # 知识点关联失败不影响错题创建
                 logger.warning(f"知识点自动关联失败: {e}")
 
-            # 7. 转换为响应格式
+            # 6. 转换为响应格式
             return {
                 "id": str(mistake.id),
-                "title": mistake.title,
+                "title": title,
                 "subject": mistake.subject,
                 "source": "learning",
                 "source_question_id": question_id,
-                "knowledge_points": knowledge_points,
+                "knowledge_points": structured_data.get("knowledge_points", []),
+                "question_type": structured_data.get("question_type", "未知"),
+                "difficulty_level": structured_data.get("difficulty_level", 2),
+                "ai_extraction_success": structured_data.get(
+                    "extraction_success", False
+                ),
                 "next_review_date": (
                     next_review_at.isoformat()
                     if (next_review_at := getattr(mistake, "next_review_at", None))
@@ -1470,6 +1509,172 @@ class LearningService:
 
         # 如果没找到，返回AI回答的前100字
         return ai_answer[:100] if len(ai_answer) > 100 else ai_answer
+
+    async def _extract_structured_question(
+        self,
+        user_question: str,
+        ai_answer: str,
+        image_urls: Optional[List[str]] = None,
+        subject: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        🎯 核心方法：使用百炼AI从问答对话中结构化提取题目信息
+
+        目标：
+        - 分离学生提问语句和题目内容
+        - 提取题目主体、答案、解析、知识点
+        - 识别题目类型和难度
+
+        Args:
+            user_question: 用户原始提问（可能包含"老师，我不会..."等语句）
+            ai_answer: AI的完整回答
+            image_urls: 图片URL列表
+            subject: 学科
+
+        Returns:
+            {
+                'question_content': str,  # 纯净的题目内容
+                'correct_answer': str,  # 标准答案
+                'explanation': str,  # 详细解析
+                'knowledge_points': List[str],  # 知识点列表
+                'difficulty_level': int,  # 1-5
+                'question_type': str,  # 选择题/填空题/解答题等
+                'has_image': bool,  # 是否含图片
+                'extraction_success': bool,  # 提取是否成功
+                'confidence': float  # 提取置信度
+            }
+        """
+        try:
+            # 构建提示词
+            prompt = f"""你是一个专业的K12教育题目解析专家。请从以下学生与老师的问答对话中，提取出**结构化的题目信息**。
+
+**学生提问：**
+{user_question}
+
+**老师回答：**
+{ai_answer}
+
+**任务要求：**
+1. 分离学生的提问语句（如"老师我不会"、"帮我看看"）和真正的题目内容
+2. 提取题目主体（如果学生没有明确给出题目，从老师回答中推断）
+3. 提取标准答案
+4. 提取详细解析
+5. 识别涉及的知识点（2-5个）
+6. 判断题目类型和难度
+
+**输出格式（严格JSON）：**
+```json
+{{
+  "question_content": "纯净的题目内容（去除学生的求助语句）",
+  "correct_answer": "标准答案",
+  "explanation": "详细解析过程",
+  "knowledge_points": ["知识点1", "知识点2"],
+  "difficulty_level": 2,
+  "question_type": "选择题/填空题/解答题/判断题/应用题",
+  "extraction_success": true,
+  "confidence": 0.9
+}}
+```
+
+**特殊情况处理：**
+- 如果学生只上传图片没有文字，question_content填写"图片题目（需OCR识别）"
+- 如果无法提取完整题目，设置 extraction_success=false，confidence降低
+- 知识点必须具体明确，不要用"数学知识"这种泛泛的说法
+- 难度等级：1=基础，2=中等，3=困难，4=挑战，5=竞赛"""
+
+            if subject:
+                prompt += f"\n\n**学科：** {subject}"
+
+            if image_urls and len(image_urls) > 0:
+                prompt += f"\n\n**注意：** 学生上传了 {len(image_urls)} 张图片，题目可能在图片中"
+
+            # 调用百炼AI
+            if not self.bailian_service:
+                logger.warning("百炼服务未初始化，使用降级逻辑")
+                return self._fallback_extraction(user_question, ai_answer)
+
+            try:
+                response = await self.bailian_service.chat_completion(
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.3,  # 降低温度保证稳定性
+                )
+
+                # 解析响应
+                response_text = (
+                    response.content if hasattr(response, "content") else str(response)
+                )
+
+                # 提取JSON部分
+                import re
+
+                json_match = re.search(
+                    r"```json\s*(\{.*?\})\s*```", response_text, re.DOTALL
+                )
+                if json_match:
+                    json_str = json_match.group(1)
+                else:
+                    # 尝试直接解析整个响应
+                    json_str = response_text.strip()
+
+                result = json.loads(json_str)
+
+                # 验证必要字段
+                if not result.get("question_content") or not result.get(
+                    "extraction_success"
+                ):
+                    logger.warning("AI提取结果不完整，使用降级逻辑")
+                    return self._fallback_extraction(user_question, ai_answer)
+
+                logger.info(
+                    f"✅ AI结构化提取成功: confidence={result.get('confidence', 0)}, "
+                    f"knowledge_points={len(result.get('knowledge_points', []))}"
+                )
+
+                return result
+
+            except json.JSONDecodeError as e:
+                logger.error(f"AI响应JSON解析失败: {e}, 使用降级逻辑")
+                return self._fallback_extraction(user_question, ai_answer)
+
+        except Exception as e:
+            logger.error(f"AI结构化提取失败: {e}", exc_info=True)
+            return self._fallback_extraction(user_question, ai_answer)
+
+    def _fallback_extraction(
+        self, user_question: str, ai_answer: str
+    ) -> Dict[str, Any]:
+        """
+        降级方案：使用规则提取（当AI提取失败时）
+        """
+        import re
+
+        # 简单规则提取知识点
+        knowledge_points = []
+        kp_patterns = [
+            r"涉及[知识点到了]?[:：]?([^。，\n]+)",
+            r"考查[知识点到了]?[:：]?([^。，\n]+)",
+        ]
+        for pattern in kp_patterns:
+            matches = re.findall(pattern, ai_answer)
+            knowledge_points.extend([m.strip() for m in matches if len(m.strip()) > 2])
+
+        # 去重
+        knowledge_points = list(set(knowledge_points))[:5]
+
+        # 提取答案
+        correct_answer = self._extract_correct_answer(ai_answer)
+
+        return {
+            "question_content": user_question[:200],  # 使用原始提问
+            "correct_answer": correct_answer or "详见解析",
+            "explanation": ai_answer[:500],  # 使用AI回答的前500字
+            "knowledge_points": knowledge_points if knowledge_points else ["未识别"],
+            "difficulty_level": 2,  # 默认中等
+            "question_type": "解答题",
+            "extraction_success": False,  # 标记为降级提取
+            "confidence": 0.5,  # 低置信度
+            "fallback": True,
+        }
 
     # 🎯 错题自动创建逻辑（简化规则版）
     # ========== 智能错题识别辅助方法 ==========
@@ -1959,39 +2164,62 @@ class LearningService:
                     return None
                 # === 降级规则结束 ===
 
+            # 🎯 使用AI结构化提取题目信息（自动创建也应用）
+            logger.info(f"🔍 自动创建错题 - 开始AI结构化提取")
+
+            structured_data = await self._extract_structured_question(
+                user_question=content,
+                ai_answer=answer_content,
+                image_urls=request.image_urls,
+                subject=extract_orm_str(question, "subject"),
+            )
+
+            logger.info(
+                f"✅ 自动创建 - AI提取: success={structured_data.get('extraction_success')}, "
+                f"knowledge_points={len(structured_data.get('knowledge_points', []))}"
+            )
+
             # 创建错题记录
             from src.models.study import MistakeRecord
             from src.repositories.base_repository import BaseRepository
 
             mistake_repo = BaseRepository(MistakeRecord, self.db)
 
-            # 🛠️ 生成错题数据（只使用数据库中存在的字段）
-            # 🎯 从 AI answer 中提取知识点信息
+            # 🛠️ 生成错题数据（使用结构化提取的数据）
+            # 优先使用AI提取的知识点，降级使用规则提取
+            knowledge_points_list = structured_data.get("knowledge_points", [])
+            if not knowledge_points_list:
+                try:
+                    kp_from_rules = self._extract_knowledge_points_from_answer(
+                        answer_content, extract_orm_str(question, "subject") or "其他"
+                    )
+                    knowledge_points_list = [
+                        kp.get("name") for kp in kp_from_rules if kp.get("name")
+                    ]
+                except Exception as kp_err:
+                    logger.warning(f"规则提取知识点失败: {kp_err}")
+                    knowledge_points_list = []
+
             ai_feedback_data = {
                 "category": category,
                 "auto_created": True,
                 "classification": {
                     "category": category,
-                    "confidence": 0.8,  # 简化规则置信度
-                    "reasoning": f"基于规则判断：{'has_images' if has_images else 'keyword_match'}",
+                    "confidence": confidence if "confidence" in locals() else 0.8,
+                    "reasoning": f"基于智能判断",
                 },
                 "auto_created_at": datetime.now().isoformat(),
+                "knowledge_points": knowledge_points_list,
+                "knowledge_points_extracted": len(knowledge_points_list) > 0,
+                # 🎯 结构化提取信息
+                "structured_extraction": {
+                    "success": structured_data.get("extraction_success", False),
+                    "confidence": structured_data.get("confidence", 0.0),
+                    "question_type": structured_data.get("question_type", "未知"),
+                    "explanation": structured_data.get("explanation", ""),
+                    "is_fallback": structured_data.get("fallback", False),
+                },
             }
-
-            # 🎯 尝试从 AI 回答中提取知识点
-            try:
-                knowledge_points_from_ai = self._extract_knowledge_points_from_answer(
-                    answer_content, extract_orm_str(question, "subject") or "其他"
-                )
-                if knowledge_points_from_ai:
-                    ai_feedback_data["knowledge_points"] = knowledge_points_from_ai
-                    ai_feedback_data["knowledge_points_extracted"] = True
-                    logger.info(
-                        f"✅ 从AI回答中提取到 {len(knowledge_points_from_ai)} 个知识点"
-                    )
-            except Exception as kp_err:
-                logger.warning(f"从AI回答提取知识点失败: {kp_err}")
-                ai_feedback_data["knowledge_points"] = []
 
             # 🎯 根据错题类型确定 source 字段值
             source_mapping = {
@@ -2013,28 +2241,37 @@ class LearningService:
                 )
                 question_subject = inferred_subject
 
+            # 使用结构化提取的纯净题目内容
+            clean_question = structured_data.get("question_content", content)
+
             mistake_data = {
                 "user_id": user_id,
                 "source": source,  # 🎯 动态设置 source
                 "source_question_id": str(extract_orm_uuid_str(question, "id")),
                 # 基本信息
                 "subject": question_subject,
-                "title": self._generate_mistake_title(content),
-                "ocr_text": content,
+                "title": self._generate_mistake_title(clean_question),
+                "ocr_text": clean_question,  # 🎯 使用纯净的题目内容
                 "image_urls": (
                     json.dumps(request.image_urls) if request.image_urls else None
                 ),
-                # AI分析信息（包含知识点）
+                # AI分析信息（包含知识点和结构化提取结果）
                 "ai_feedback": json.dumps(ai_feedback_data),
+                "knowledge_points": knowledge_points_list,  # 🎯 使用提取的知识点
                 # 学生答案（可选）
-                "student_answer": None,  # 先为None，后续可增加
-                "correct_answer": self._extract_correct_answer(answer_content),
+                "student_answer": None,
+                "correct_answer": structured_data.get("correct_answer")
+                or self._extract_correct_answer(
+                    answer_content
+                ),  # 🎯 优先使用AI提取的答案
                 # 复习相关
                 "mastery_status": "learning",  # 🛠️ 使用模型中定义的值
                 "next_review_at": datetime.now() + timedelta(days=1),
                 "review_count": 0,
                 "correct_count": 0,
-                "difficulty_level": 2,  # 默认中等难度
+                "difficulty_level": structured_data.get(
+                    "difficulty_level", 2
+                ),  # 🎯 使用AI判断的难度
             }
 
             # 创建错题
@@ -2047,11 +2284,12 @@ class LearningService:
                     if hasattr(mistake, "id")
                     else UUID(extract_orm_uuid_str(mistake, "id"))
                 )
+                # 🎯 使用结构化提取的知识点进行关联
                 await self._trigger_knowledge_association(
                     mistake_id=mistake_id,
                     user_id=UUID(user_id),
                     subject=mistake_data["subject"],
-                    ocr_text=content,
+                    ocr_text=clean_question,  # 🎯 使用纯净的题目内容
                     ai_feedback=ai_feedback_data,
                 )
                 logger.info(f"🔗 知识点关联已触发: mistake_id={mistake_id}")
