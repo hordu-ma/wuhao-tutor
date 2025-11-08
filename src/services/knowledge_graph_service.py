@@ -84,9 +84,17 @@ class KnowledgeGraphService:
 
             # 2. 查询或创建知识点掌握度记录
             associations = []
+            # 占位符黑名单（AI 可能返回的无效知识点名称）
+            INVALID_NAMES = {"知识点名称", "知识点", "placeholder", "example", "示例"}
+
             for idx, kp_data in enumerate(knowledge_points):
                 kp_name = kp_data.get("name") or kp_data.get("knowledge_point")
                 if not kp_name:
+                    continue
+
+                # 🔧 过滤占位符和无效知识点名称
+                if kp_name.strip() in INVALID_NAMES:
+                    logger.warning(f"跳过无效知识点名称: {kp_name}")
                     continue
 
                 # 查询知识点掌握度记录
