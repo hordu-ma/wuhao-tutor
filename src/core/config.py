@@ -227,10 +227,10 @@ class ProductionSettings(Settings):
 
     # 生产环境严格的性能配置
     SLOW_QUERY_THRESHOLD: float = 0.5  # 更严格的慢查询阈值
-    # 🔧 [优化] 放宽限流配置，避免正常使用被误拦截
-    RATE_LIMIT_PER_IP: int = 200  # 60 → 200（每IP每分钟请求限制）
-    RATE_LIMIT_PER_USER: int = 100  # 30 → 100（每用户每分钟请求限制）
-    RATE_LIMIT_AI_SERVICE: int = 30  # 10 → 30（AI服务每分钟请求限制）
+    # 🔧 [优化 v2] 再次放宽限流配置，解决小程序并发请求场景
+    RATE_LIMIT_PER_IP: int = 500  # 200 → 500（每IP每分钟请求限制）
+    RATE_LIMIT_PER_USER: int = 200  # 100 → 200（每用户每分钟请求限制）
+    RATE_LIMIT_AI_SERVICE: int = 30  # 10 → 30（AI服务每分钟请求限制，保持不变）
 
     # 生产环境必需配置验证
     @field_validator("SECRET_KEY", mode="before")
