@@ -126,6 +126,22 @@ class KnowledgeGraphService:
 
             logger.info(f"为错题 {mistake_id} 创建了 {len(created)} 个知识点关联")
 
+            # 🔧 增加知识点的错题计数
+            for assoc in created:
+                kp_id_str = getattr(assoc, "knowledge_point_id", None)
+                if kp_id_str:
+                    km = await self._get_knowledge_mastery_by_id(UUID(str(kp_id_str)))
+                    if km:
+                        mistake_count = getattr(km, "mistake_count", 0)
+                        setattr(km, "mistake_count", int(mistake_count) + 1)
+                        setattr(
+                            km, "total_attempts", getattr(km, "total_attempts", 0) + 1
+                        )
+                        logger.debug(
+                            f"增加知识点 {kp_id_str} 的错题计数: {mistake_count} -> {mistake_count + 1}"
+                        )
+            await self.db.commit()
+
             # 4. 记录学习轨迹（失败不影响主流程）
             try:
                 for assoc in created:
@@ -503,6 +519,57 @@ class KnowledgeGraphService:
         stmt = select(KnowledgeMastery).where(KnowledgeMastery.id == str(km_id))
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
+
+    async def update_knowledge_mastery_after_delete(self, mistake_id: UUID) -> None:
+        """
+        删除错题后更新知识点掌握度统计
+
+        Args:
+            mistake_id: 错题ID
+        """
+        try:
+            # 1. 获取错题关联的知识点
+            associations = await self.mkp_repo.find_by_mistake(mistake_id)
+
+            if not associations:
+                logger.debug(f"错题 {mistake_id} 没有关联知识点，跳过更新")
+                return
+
+            # 2. 减少每个知识点的错题计数
+            for assoc in associations:
+                kp_id_str = getattr(assoc, "knowledge_point_id", None)
+                if not kp_id_str:
+                    continue
+
+                km = await self._get_knowledge_mastery_by_id(UUID(str(kp_id_str)))
+                if not km:
+                    continue
+
+                # 减少错题计数（不能小于0）
+                mistake_count = max(0, getattr(km, "mistake_count", 0) - 1)
+                setattr(km, "mistake_count", mistake_count)
+
+                # 如果错题计数降为0，重置相关统计
+                if mistake_count == 0:
+                    setattr(km, "mastery_level", 0.0)
+                    setattr(km, "confidence_level", 0.5)
+                    setattr(km, "total_attempts", 0)
+                    setattr(km, "correct_count", 0)
+                    logger.info(f"知识点 {kp_id_str} 已无错题，重置掌握度")
+                else:
+                    logger.debug(
+                        f"减少知识点 {kp_id_str} 的错题计数: {mistake_count + 1} -> {mistake_count}"
+                    )
+
+            await self.db.commit()
+            logger.info(
+                f"已更新错题 {mistake_id} 关联的 {len(associations)} 个知识点统计"
+            )
+
+        except Exception as e:
+            await self.db.rollback()
+            logger.error(f"更新知识点统计失败: {e}", exc_info=True)
+            # 不抛出异常，避免影响删除操作
 
     def _calculate_mastery_level(
         self,

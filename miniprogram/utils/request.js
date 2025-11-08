@@ -366,12 +366,12 @@ class Request {
                   details: data.error,
                 });
               } else {
-                // 成功响应
-                resolve(data);
+                // 成功响应 - 包含 statusCode 以便前端判断
+                resolve({ ...data, statusCode: res.statusCode });
               }
             } else {
               // 非标准响应格式，直接返回
-              resolve({ success: true, data: res.data });
+              resolve({ success: true, data: res.data, statusCode: res.statusCode });
             }
           } else {
             // HTTP 错误
