@@ -4,6 +4,7 @@
  */
 @use 'sass:math';
 @use 'sass:color';
+@use 'sass:map';
 
 // ===========================
 // 1. 响应式断点混入
@@ -14,12 +15,12 @@ $breakpoints: (
   'md': 768px,
   'lg': 992px,
   'xl': 1200px,
-  '2xl': 1400px
+  '2xl': 1400px,
 );
 
 @mixin respond-to($breakpoint) {
-  @if map-has-key($breakpoints, $breakpoint) {
-    $value: map-get($breakpoints, $breakpoint);
+  @if map.has-key($breakpoints, $breakpoint) {
+    $value: map.get($breakpoints, $breakpoint);
     @if $value > 0 {
       @media (min-width: $value) {
         @content;
@@ -33,10 +34,11 @@ $breakpoints: (
 }
 
 @mixin respond-below($breakpoint) {
-  @if map-has-key($breakpoints, $breakpoint) {
-    $value: map-get($breakpoints, $breakpoint);
+  @if map.has-key($breakpoints, $breakpoint) {
+    $value: map.get($breakpoints, $breakpoint);
     @if $value > 0 {
-      @media (max-width: $value - 1px) {
+      $max-width: $value - 1px;
+      @media (max-width: #{$max-width}) {
         @content;
       }
     }
@@ -44,10 +46,11 @@ $breakpoints: (
 }
 
 @mixin respond-between($min, $max) {
-  @if map-has-key($breakpoints, $min) and map-has-key($breakpoints, $max) {
-    $min-value: map-get($breakpoints, $min);
-    $max-value: map-get($breakpoints, $max);
-    @media (min-width: $min-value) and (max-width: $max-value - 1px) {
+  @if map.has-key($breakpoints, $min) and map.has-key($breakpoints, $max) {
+    $min-value: map.get($breakpoints, $min);
+    $max-value: map.get($breakpoints, $max);
+    $max-width: $max-value - 1px;
+    @media (min-width: #{$min-value}) and (max-width: #{$max-width}) {
       @content;
     }
   }
@@ -183,7 +186,15 @@ $breakpoints: (
 }
 
 // 动画
-@mixin animation($name, $duration: 1s, $timing: ease, $delay: 0s, $iteration: 1, $direction: normal, $fill: both) {
+@mixin animation(
+  $name,
+  $duration: 1s,
+  $timing: ease,
+  $delay: 0s,
+  $iteration: 1,
+  $direction: normal,
+  $fill: both
+) {
   animation: $name $duration $timing $delay $iteration $direction $fill;
 }
 
@@ -206,7 +217,9 @@ $breakpoints: (
   border: 1px solid $border-color;
   border-radius: 8px;
   font-size: 14px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 
   &:focus {
     outline: none;
@@ -232,7 +245,9 @@ $breakpoints: (
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s ease, transform 0.1s ease;
+  transition:
+    background-color 0.2s ease,
+    transform 0.1s ease;
 
   &:hover {
     background-color: $hover-bg;
@@ -294,7 +309,7 @@ $breakpoints: (
       background: color.scale($thumb-color, $lightness: -10%);
     }
   }
-  
+
   // Firefox
   scrollbar-width: thin;
   scrollbar-color: $thumb-color $track-color;
@@ -335,8 +350,12 @@ $breakpoints: (
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 // 脉冲动画
@@ -380,13 +399,21 @@ $breakpoints: (
 }
 
 @keyframes typewriter {
-  from { width: 0; }
-  to { width: 100%; }
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
 }
 
 @keyframes blinkTextCursor {
-  from { border-right-color: rgba(255, 255, 255, 0.75); }
-  to { border-right-color: transparent; }
+  from {
+    border-right-color: rgba(255, 255, 255, 0.75);
+  }
+  to {
+    border-right-color: transparent;
+  }
 }
 
 // ===========================
