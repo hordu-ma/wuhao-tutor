@@ -21,7 +21,11 @@ from starlette.responses import JSONResponse
 from src.core.config import get_settings
 
 logger = logging.getLogger(__name__)
-settings = get_settings()
+
+
+# 延迟获取 settings，避免在模块导入时固化配置
+def _get_settings():
+    return get_settings()
 
 
 class RateLimitType(Enum):
@@ -114,6 +118,7 @@ class RateLimiter:
 
     def _setup_default_rules(self) -> None:
         """设置默认限流规则"""
+        settings = _get_settings()  # 动态获取配置
         self.rules = [
             # IP限流：从配置读取
             RateLimitRule(
@@ -307,6 +312,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
     def __init__(self, app):
         super().__init__(app)
+        settings = _get_settings()  # 动态获取配置
         self.is_production = not settings.DEBUG
         self.allowed_origins = (
             [str(origin) for origin in settings.BACKEND_CORS_ORIGINS]
