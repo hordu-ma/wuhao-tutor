@@ -651,20 +651,38 @@ class MistakeService:
 
     async def delete_mistake(self, mistake_id: UUID, user_id: UUID) -> None:
         """
-        删除错题
+        删除错题（级联删除关联数据）
 
         Args:
             mistake_id: 错题ID
             user_id: 用户ID
         """
+        from sqlalchemy import delete, text
+
         mistake = await self.mistake_repo.get_by_id(str(mistake_id))
 
         if not mistake or str(mistake.user_id) != str(user_id):
             raise NotFoundError(f"错题 {mistake_id} 不存在")
 
-        await self.mistake_repo.delete(str(mistake_id))
+        # 🔧 级联删除：先删除关联数据，再删除错题
+        mistake_id_str = str(mistake_id)
 
-        logger.info(f"Deleted mistake {mistake_id}")
+        # 1. 删除复习记录 (mistake_review_sessions)
+        await self.db.execute(
+            text("DELETE FROM mistake_review_sessions WHERE mistake_id = :mid"),
+            {"mid": mistake_id_str},
+        )
+
+        # 2. 删除知识点关联 (mistake_knowledge_points)
+        await self.db.execute(
+            text("DELETE FROM mistake_knowledge_points WHERE mistake_id = :mid"),
+            {"mid": mistake_id_str},
+        )
+
+        # 3. 删除错题记录
+        await self.mistake_repo.delete(mistake_id_str)
+
+        logger.info(f"Deleted mistake {mistake_id} with all associations")
 
     async def get_today_review_tasks(self, user_id: UUID) -> TodayReviewResponse:
         """
