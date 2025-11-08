@@ -160,6 +160,94 @@ class BailianService:
 
             raise BailianServiceError(f"聊天补全调用失败: {str(e)}") from e
 
+    async def judge_answer(
+        self,
+        question: str,
+        standard_answer: str,
+        user_answer: str,
+        context: Optional[AIContext] = None,
+    ) -> Dict[str, Any]:
+        """
+        判断用户答案是否正确
+
+        Args:
+            question: 题目内容
+            standard_answer: 标准答案
+            user_answer: 用户答案
+            context: 调用上下文
+
+        Returns:
+            Dict: {
+                "is_correct": bool,  # 是否正确
+                "feedback": str,     # AI反馈
+                "score": float       # 得分 0-100
+            }
+        """
+        prompt = f"""请作为一名严谨的老师，判断学生的答案是否正确。
+
+题目：{question}
+
+标准答案：{standard_answer}
+
+学生答案：{user_answer}
+
+请按照以下JSON格式返回判断结果：
+{{
+  "is_correct": true/false,
+  "feedback": "具体的评价和建议，指出答对或答错的关键点",
+  "score": 0-100的分数
+}}
+
+判断标准：
+1. 如果答案核心意思正确，表述略有差异，判定为正确
+2. 如果答案有明显错误或遗漏关键点，判定为错误
+3. 给出建设性的反馈，帮助学生理解
+4. 分数：90-100优秀，70-89良好，60-69及格，60以下不及格
+"""
+
+        messages = [ChatMessage(role=MessageRole.USER, content=prompt)]
+
+        try:
+            response = await self.chat_completion(messages, context)
+
+            # 解析AI返回的JSON
+            import re
+
+            json_match = re.search(
+                r'\{[^{}]*"is_correct"[^{}]*\}', response.content, re.DOTALL
+            )
+            if json_match:
+                result = json.loads(json_match.group())
+                # 确保包含必需字段
+                return {
+                    "is_correct": result.get("is_correct", False),
+                    "feedback": result.get("feedback", "未能获取反馈"),
+                    "score": result.get("score", 0),
+                }
+            else:
+                # 如果AI没有返回JSON，尝试简单判断
+                content_lower = response.content.lower()
+                is_correct = "正确" in response.content or "correct" in content_lower
+                return {
+                    "is_correct": is_correct,
+                    "feedback": response.content,
+                    "score": 80 if is_correct else 40,
+                }
+
+        except Exception as e:
+            logger.error(f"AI判断答案失败: {e}")
+            # 降级策略：简单文本匹配
+            is_similar = user_answer.strip() == standard_answer.strip()
+            return {
+                "is_correct": is_similar,
+                "feedback": (
+                    "AI判断服务暂时不可用，已使用简单匹配"
+                    if is_similar
+                    else "答案与标准答案不匹配"
+                ),
+                "score": 100 if is_similar else 0,
+            }
+
     async def chat_completion_stream(
         self,
         messages: List[Union[Dict[str, Any], ChatMessage]],

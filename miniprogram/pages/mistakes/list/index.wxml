@@ -67,9 +67,9 @@
         mistake="{{item}}"
         mode="list"
         showActions="{{true}}"
-        bind:tap="onMistakeTap"
         bind:delete="onMistakeDelete"
-        bind:review="onMistakeReview" />
+        bind:review="onMistakeReview"
+        bind:detail="onMistakeDetail" />
     </view>
 
     <!-- 加载更多状态 -->

@@ -15,6 +15,7 @@ from src.api.v1.endpoints import (
     knowledge_graph,
     learning,
     mistakes,
+    reviews,
     user,
 )
 
@@ -34,6 +35,9 @@ api_router.include_router(analytics.router, tags=["学情分析"])
 
 # 错题手册路由
 api_router.include_router(mistakes.router, prefix="/mistakes", tags=["错题手册"])
+
+# 复习会话路由
+api_router.include_router(reviews.router, prefix="/reviews", tags=["复习会话"])
 
 # 知识图谱路由
 api_router.include_router(

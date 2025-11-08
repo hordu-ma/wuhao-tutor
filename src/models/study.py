@@ -3,8 +3,10 @@
 包含错题记录、复习计划、知识点掌握度等
 """
 
+from __future__ import annotations
+
 import enum
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import (
     JSON,
@@ -12,12 +14,21 @@ from sqlalchemy import (
     Column,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
     Text,
 )
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
+
+from .base import BaseModel, is_sqlite
+
+if TYPE_CHECKING:
+    from .user import User
+    from .review import MistakeReviewSession
+
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -153,6 +164,21 @@ class MistakeRecord(BaseModel):
 
     notes = Column(Text, nullable=True, comment="学生备注")
 
+    __allow_unmapped__ = True
+
+    # 关联关系
+    user = relationship("User", back_populates="mistakes")
+    reviews = relationship("MistakeReview", back_populates="mistake")
+    review_sessions: list["MistakeReviewSession"] = relationship(
+        back_populates="mistake"
+    )
+
+    # 索引
+    __table_args__ = (
+        # SQLite不支持的特性
+        {"sqlite_autoincrement": True} if is_sqlite else {},
+    )
+
     def __repr__(self) -> str:
         return f"<MistakeRecord(id='{self.id}', subject='{self.subject}', user_id='{self.user_id}')>"
 
@@ -245,6 +271,9 @@ class MistakeReview(BaseModel):
         nullable=False,
         comment="复习方式: manual | scheduled | random",
     )
+
+    # 关联关系
+    mistake = relationship("MistakeRecord", back_populates="reviews")
 
     def __repr__(self) -> str:
         return f"<MistakeReview(id='{self.id}', mistake_id='{self.mistake_id}', review_result='{self.review_result}')>"

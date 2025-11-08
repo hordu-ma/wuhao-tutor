@@ -130,6 +130,9 @@ class User(BaseModel):
 
     login_count = Column(Integer, default=0, nullable=False, comment="登录次数")
 
+    # 关联关系
+    mistakes = relationship("MistakeRecord", back_populates="user")
+
     # 表约束
     __table_args__ = (
         UniqueConstraint("phone", name="uq_user_phone"),

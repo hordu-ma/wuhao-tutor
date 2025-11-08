@@ -1,0 +1,200 @@
+<!--pages/mistakes/review/index.wxml-->
+<view class="review-container">
+  <!-- 加载状态 -->
+  <view class="loading-wrapper" wx:if="{{loading}}">
+    <van-loading type="spinner" size="48rpx" />
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <!-- 复习内容 -->
+  <view class="review-content" wx:if="{{!loading && !showResult}}">
+    <!-- 进度指示器 -->
+    <view class="progress-section">
+      <view class="stage-steps">
+        <view 
+          wx:for="{{stageSteps}}" 
+          wx:key="index" 
+          class="stage-step {{index < currentStage ? 'completed' : ''}} {{index === currentStage - 1 ? 'active' : ''}}">
+          <view class="step-circle">
+            <text class="step-number" wx:if="{{index >= currentStage}}">{{index + 1}}</text>
+            <van-icon wx:if="{{index < currentStage}}" name="success" color="#52c41a" size="20px" />
+            <view wx:if="{{index === currentStage - 1}}" class="step-dot"></view>
+          </view>
+          <view class="step-content">
+            <text class="step-title">{{item.text}}</text>
+            <text class="step-desc">{{item.desc}}</text>
+          </view>
+        </view>
+      </view>
+      <view class="stage-info">
+        <text class="stage-name">{{stageName}}</text>
+        <text class="stage-desc">第 {{currentStage}} / 3 阶段</text>
+      </view>
+    </view>
+
+    <!-- 题目内容 -->
+    <view class="question-section">
+      <view class="section-title">
+        <van-icon name="question-o" size="20px" color="#1890ff" />
+        <text>题目内容</text>
+      </view>
+      <view class="question-content">
+        {{questionContent}}
+      </view>
+
+      <!-- 知识点标签 -->
+      <view class="knowledge-points" wx:if="{{knowledgePoints.length > 0}}">
+        <van-tag 
+          wx:for="{{knowledgePoints}}" 
+          wx:key="index" 
+          type="primary" 
+          plain 
+          size="medium"
+          custom-class="knowledge-tag">
+          {{item}}
+        </van-tag>
+      </view>
+    </view>
+
+    <!-- 答案输入区 -->
+    <view class="answer-section">
+      <view class="section-title">
+        <van-icon name="edit" size="20px" color="#52c41a" />
+        <text>你的答案</text>
+      </view>
+      <textarea
+        class="answer-textarea"
+        value="{{userAnswer}}"
+        placeholder="请输入你的答案..."
+        placeholder-style="color: #999;"
+        auto-height
+        bindinput="onAnswerInput"
+        maxlength="-1"
+      />
+    </view>
+
+    <!-- 操作按钮 -->
+    <view class="action-section">
+      <view class="action-buttons">
+        <van-button 
+          type="primary" 
+          size="large" 
+          custom-class="submit-btn"
+          loading="{{submitting}}"
+          disabled="{{!userAnswer || !userAnswer.trim()}}"
+          bindtap="onSubmitAnswer">
+          提交答案
+        </van-button>
+        <van-button 
+          type="default" 
+          size="large" 
+          custom-class="skip-btn"
+          disabled="{{submitting}}"
+          bindtap="onSkipQuestion">
+          不会做，查看答案
+        </van-button>
+      </view>
+
+      <view class="tips">
+        <van-icon name="info-o" size="14px" />
+        <text class="tips-text">AI将智能判断你的答案准确性</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 结果弹窗 -->
+  <van-dialog
+    use-slot
+    show="{{ showResultDialog }}"
+    bind:close="onResultDialogConfirm">
+    <view class="result-dialog">
+      <!-- 可滚动内容区 -->
+      <scroll-view class="dialog-scroll-content" scroll-y>
+        <view class="result-icon">
+          <van-icon 
+            name="{{resultData.correct ? 'passed' : 'close'}}" 
+            size="60px" 
+            color="{{resultData.correct ? '#52c41a' : '#ff4d4f'}}" 
+          />
+        </view>
+        <text class="result-title">{{resultData.message}}</text>
+
+        <!-- 答错或跳过时显示详细信息 -->
+        <view wx:if="{{!resultData.correct}}" class="result-detail">
+          <!-- 用户答案（非skip时显示） -->
+          <view wx:if="{{!resultData.skip && resultData.user_answer}}" class="answer-block">
+            <text class="block-title">你的答案：</text>
+            <text class="block-content">{{resultData.user_answer}}</text>
+          </view>
+
+          <!-- 标准答案 -->
+          <view class="answer-block">
+            <text class="block-title">参考答案：</text>
+            <text class="block-content">{{resultData.standard_answer}}</text>
+          </view>
+
+          <!-- AI反馈（非skip时显示） -->
+          <view wx:if="{{!resultData.skip && resultData.ai_feedback}}" class="answer-block">
+            <text class="block-title">AI评价：</text>
+            <text class="block-content feedback">{{resultData.ai_feedback}}</text>
+          </view>
+
+          <!-- 知识点 -->
+          <view wx:if="{{resultData.knowledge_points}}" class="answer-block">
+            <text class="block-title">相关知识点：</text>
+            <text class="block-content">{{resultData.knowledge_points}}</text>
+          </view>
+        </view>
+
+        <!-- 答对时显示反馈 -->
+        <view wx:if="{{resultData.correct && resultData.ai_feedback}}" class="result-detail">
+          <view class="answer-block">
+            <text class="block-title">AI评价：</text>
+            <text class="block-content feedback success">{{resultData.ai_feedback}}</text>
+          </view>
+          <view wx:if="{{resultData.score}}" class="score-badge">
+            <text>得分：{{resultData.score}}</text>
+          </view>
+        </view>
+      </scroll-view>
+
+      <!-- 固定在底部的按钮 -->
+      <view class="dialog-footer">
+        <van-button 
+          type="primary" 
+          size="large" 
+          block
+          bind:click="onResultDialogConfirm">
+          {{resultDialogBtn}}
+        </van-button>
+      </view>
+    </view>
+  </van-dialog>
+
+  <!-- 完成结果 -->
+  <view class="result-wrapper" wx:if="{{showResult}}">
+    <view class="result-content">
+      <van-icon 
+        name="{{resultData.success ? 'passed' : 'close'}}" 
+        size="80px" 
+        color="{{resultData.success ? '#52c41a' : '#ff4d4f'}}" 
+      />
+      <text class="result-title">{{resultData.title}}</text>
+      <text class="result-message">{{resultData.message}}</text>
+
+      <van-button 
+        type="primary" 
+        size="large" 
+        custom-class="result-btn"
+        bindtap="onBackToList">
+        返回列表
+      </van-button>
+    </view>
+  </view>
+</view>
+
+<!-- Toast 提示 -->
+<van-toast id="van-toast" />
+
+<!-- Dialog 对话框 -->
+<van-dialog id="van-dialog" />

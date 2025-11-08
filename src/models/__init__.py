@@ -49,6 +49,9 @@ from .learning import (
     SessionStatus,
 )
 
+# 复习会话模型
+from .review import MistakeReviewSession
+
 # 学习记录模型
 from .study import (
     DifficultyLevel,
@@ -87,6 +90,8 @@ __all__ = [
     "Subject",
     "DifficultyLevel",
     "MasteryStatus",
+    # 复习会话模型
+    "MistakeReviewSession",
     # 知识图谱模型
     "KnowledgeNode",
     "KnowledgeRelation",

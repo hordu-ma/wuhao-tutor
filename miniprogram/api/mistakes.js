@@ -466,6 +466,100 @@ const mistakesAPI = {
       ...config,
     });
   },
+
+  /**
+   * 🎯 开始复习会话（三阶段递进式复习）
+   * @param {string} mistakeId - 错题 ID
+   * @param {Object} [config] - 请求配置
+   * @returns {Promise<Object>} 复习会话信息
+   * @example
+   * const session = await mistakesAPI.startReviewSession(mistakeId);
+   * // 返回: { session_id, stage, stage_name, question_content, correct_answer, knowledge_points }
+   */
+  startReviewSession(mistakeId, config = {}) {
+    if (!mistakeId) {
+      return Promise.reject({
+        code: 'VALIDATION_ERROR',
+        message: '错题 ID 不能为空',
+      });
+    }
+
+    return request.post(
+      'reviews/', // 添加尾斜杠避免 307 重定向丢失 body
+      { mistake_id: mistakeId },
+      {
+        showLoading: true,
+        loadingText: '正在准备复习...',
+        ...config,
+      },
+    );
+  },
+
+  /**
+   * 🎯 获取复习会话状态
+   * @param {string} sessionId - 会话 ID
+   * @param {Object} [config] - 请求配置
+   * @returns {Promise<Object>} 会话状态信息
+   */
+  getReviewSession(sessionId, config = {}) {
+    if (!sessionId) {
+      return Promise.reject({
+        code: 'VALIDATION_ERROR',
+        message: '会话 ID 不能为空',
+      });
+    }
+
+    return request.get(
+      `reviews/${sessionId}`,
+      {},
+      {
+        showLoading: false,
+        ...config,
+      },
+    );
+  },
+
+  /**
+   * 🎯 提交复习答案（AI判断版本）
+   * @param {string} sessionId - 会话 ID
+   * @param {Object} params - 答案数据
+   * @param {string} params.answer - 用户答案
+   * @param {boolean} params.skip - 是否跳过（不会做）
+   * @param {Object} [config] - 请求配置
+   * @returns {Promise<Object>} 提交结果（包含下一阶段信息或反馈）
+   * @example
+   * // 提交答案AI判断
+   * const result = await mistakesAPI.submitReviewAnswer(sessionId, {
+   *   answer: '用户的答案',
+   *   skip: false
+   * });
+   * // 跳过（不会做）
+   * const result = await mistakesAPI.submitReviewAnswer(sessionId, {
+   *   answer: '',
+   *   skip: true
+   * });
+   */
+  submitReviewAnswer(sessionId, params, config = {}) {
+    if (!sessionId) {
+      return Promise.reject({
+        code: 'VALIDATION_ERROR',
+        message: '会话 ID 不能为空',
+      });
+    }
+
+    if (!params || typeof params.skip !== 'boolean') {
+      return Promise.reject({
+        code: 'VALIDATION_ERROR',
+        message: '答案数据不完整',
+      });
+    }
+
+    return request.post(`reviews/${sessionId}/submit`, params, {
+      showLoading: true,
+      loadingText: params.skip ? '加载答案中...' : 'AI判题中...',
+      ...config,
+    });
+  },
 };
 
 module.exports = mistakesAPI;

@@ -26,6 +26,18 @@ logger = get_logger(__name__)
 class MistakeRepository(BaseRepository[MistakeRecord]):
     """错题记录仓储"""
 
+    async def find_by_id(self, mistake_id: UUID) -> Optional[MistakeRecord]:
+        """
+        根据ID查找错题记录
+
+        Args:
+            mistake_id: 错题ID
+
+        Returns:
+            错题记录对象，不存在返回None
+        """
+        return await self.get_by_id(str(mistake_id))
+
     async def find_by_user(
         self,
         user_id: UUID,

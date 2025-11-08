@@ -419,19 +419,19 @@ const pageObject = {
   },
 
   /**
-   * 错题卡片点击
+   * 查看错题详情（来自"查看详情"按钮）
    */
-  onMistakeTap(e) {
+  onMistakeDetail(e) {
     // ✅ 防御性编程：检查事件数据
     if (!e || !e.detail) {
-      console.error('点击错题事件无效', e);
+      console.error('[列表页] 查看详情事件无效', e);
       return;
     }
 
     const { mistake } = e.detail;
 
     if (!mistake || !mistake.id) {
-      console.error('错题数据无效', {
+      console.error('[列表页] 错题数据无效', {
         event: e,
         detail: e.detail,
         mistake: mistake,
@@ -443,7 +443,7 @@ const pageObject = {
       return;
     }
 
-    console.log('点击错题', mistake);
+    console.log('[列表页] 查看错题详情', mistake);
 
     // 跳转到错题详情页面
     wx.navigateTo({
@@ -512,23 +512,72 @@ const pageObject = {
   },
 
   /**
-   * 开始复习错题
+   * 开始复习错题（三阶段递进式复习）
    */
-  onMistakeReview(e) {
+  async onMistakeReview(e) {
     // ✅ 防御性编程
     if (!e || !e.detail || !e.detail.mistake || !e.detail.mistake.id) {
-      console.error('复习错题事件无效', e);
+      console.error('[列表页] 复习错题事件无效', e);
       return;
     }
 
     const { mistake } = e.detail;
+    console.log('[列表页] 开始三阶段复习，错题:', mistake);
 
-    console.log('复习错题', mistake);
+    try {
+      wx.showLoading({
+        title: '准备复习中...',
+        mask: true,
+      });
 
-    // 跳转到错题详情页面（复习模式）
-    wx.navigateTo({
-      url: `/pages/mistakes/detail/index?id=${mistake.id}&mode=review`,
-    });
+      // 调用后端 API 启动复习会话
+      const sessionData = await mistakesApi.startReviewSession(mistake.id);
+
+      console.log('[列表页] 复习会话创建成功:', sessionData);
+
+      // ✅ 验证返回数据
+      if (!sessionData || !sessionData.session_id) {
+        throw new Error('会话创建失败：未返回有效的会话ID');
+      }
+
+      wx.hideLoading();
+
+      // 跳转到复习页面，传递会话 ID 和错题 ID
+      wx.navigateTo({
+        url: `/pages/mistakes/review/index?session_id=${sessionData.session_id}&mistake_id=${mistake.id}`,
+        success: () => {
+          console.log('[列表页] 成功跳转到复习页面');
+        },
+        fail: err => {
+          console.error('[列表页] 跳转复习页面失败:', err);
+          wx.showToast({
+            title: '跳转失败',
+            icon: 'none',
+          });
+        },
+      });
+    } catch (error) {
+      console.error('[列表页] 启动复习会话失败:', error);
+      wx.hideLoading();
+
+      // ✅ 详细的错误提示
+      let errorMessage = '启动复习失败';
+
+      if (error.message) {
+        errorMessage = error.message;
+      }
+
+      // 特殊处理限流错误
+      if (error.statusCode === 429 || error.message?.includes('Too Many Requests')) {
+        errorMessage = '请求过于频繁，请稍后再试';
+      }
+
+      wx.showToast({
+        title: errorMessage,
+        icon: 'none',
+        duration: 2500,
+      });
+    }
   },
 
   /**

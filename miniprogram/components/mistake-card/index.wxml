@@ -2,9 +2,7 @@
 <!-- ✅ 引入 WXS 模块 -->
 <wxs src="./utils.wxs" module="utils" />
 
-<view class="mistake-card {{mode}}"
-      catchtap="onCardTap"
-      data-mistake="{{mistake}}">
+<view class="mistake-card {{mode}}">
 
   <!-- 卡片头部 -->
   <view class="card-header">
@@ -139,7 +137,7 @@
     <!-- 查看详情 -->
     <van-button size="small"
                 plain
-                bindtap="onViewDetail"
+                catchtap="onViewDetail"
                 data-mistake="{{mistake}}">
       查看详情
     </van-button>
@@ -148,7 +146,7 @@
     <van-button size="small"
                 type="primary"
                 wx:if="{{mistake.mastery_status !== 'mastered'}}"
-                bindtap="onStartReview"
+                catchtap="onStartReview"
                 data-mistake="{{mistake}}">
       开始复习
     </van-button>
@@ -156,7 +154,7 @@
     <!-- 编辑 -->
     <van-button size="small"
                 plain
-                bindtap="onEdit"
+                catchtap="onEdit"
                 data-mistake="{{mistake}}">
       编辑
     </van-button>
@@ -165,7 +163,7 @@
     <van-button size="small"
                 plain
                 type="danger"
-                bindtap="onDelete"
+                catchtap="onDelete"
                 data-mistake="{{mistake}}">
       删除
     </van-button>
