@@ -43,10 +43,11 @@
           value="{{ phone }}"
           type="number"
           label="手机号"
-          placeholder="请输入手机号"
+          placeholder="{{ agreedToTerms ? '请输入手机号' : '请先同意协议' }}"
           maxlength="11"
           border="{{ true }}"
           bind:change="onPhoneChange"
+          disabled="{{ !agreedToTerms }}"
           clearable
         >
           <van-icon slot="left-icon" name="phone-o" />
@@ -57,9 +58,10 @@
           value="{{ password }}"
           type="{{ showPassword ? 'text' : 'password' }}"
           label="密码"
-          placeholder="请输入密码"
+          placeholder="{{ agreedToTerms ? '请输入密码' : '请先同意协议' }}"
           border="{{ true }}"
           bind:change="onPasswordChange"
+          disabled="{{ !agreedToTerms }}"
           clearable
         >
           <van-icon slot="left-icon" name="lock" />
@@ -71,6 +73,23 @@
         </van-field>
       </view>
 
+      <!-- 用户协议（移到登录按钮前面） -->
+      <view class="agreement">
+        <label class="agreement-label">
+          <checkbox 
+            class="agreement-checkbox" 
+            checked="{{ agreedToTerms }}" 
+            bindtap="onAgreementChange"
+          />
+          <view class="agreement-content">
+            <text class="agreement-text">我已阅读并同意</text>
+            <text class="agreement-link" catchtap="showUserAgreement">《用户服务协议》</text>
+            <text class="agreement-text">及</text>
+            <text class="agreement-link" catchtap="showPrivacyPolicy">《隐私政策》</text>
+          </view>
+        </label>
+      </view>
+
       <!-- 登录按钮 -->
       <van-button
         class="login-btn"
@@ -78,22 +97,12 @@
         size="large"
         round
         loading="{{loading}}"
-        disabled="{{loading || networkStatus !== 'connected'}}"
+        disabled="{{loading || networkStatus !== 'connected' || !agreedToTerms}}"
         bind:click="onLogin"
         loading-text="登录中..."
       >
         登录
       </van-button>
-
-      <!-- 用户协议 -->
-      <view class="agreement">
-        <text class="agreement-text">
-          登录即表示同意
-          <text class="agreement-link">《用户协议》</text>
-          和
-          <text class="agreement-link">《隐私政策》</text>
-        </text>
-      </view>
     </view>
 
     <!-- 底部装饰 -->
