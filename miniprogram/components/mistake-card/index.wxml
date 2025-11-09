@@ -10,10 +10,11 @@
       <view class="subject-tag" data-subject="{{mistake.subject}}">
         {{mistake.subject}}
       </view>
-      <view class="difficulty-tag difficulty-{{mistake.difficulty_level}}">
+      <!-- 难度标签已隐藏 -->
+      <!-- <view class="difficulty-tag difficulty-{{mistake.difficulty_level}}">
         <van-icon name="{{utils.getDifficultyIcon(mistake.difficulty_level)}}" size="12" />
         <text>{{utils.getDifficultyText(mistake.difficulty_level)}}</text>
-      </view>
+      </view> -->
       <!-- 🎯 错题类型标签 -->
       <view class="category-tag category-{{mistake.category}}" wx:if="{{mistake.category}}">
         <text>{{utils.getCategoryText(mistake.category)}}</text>

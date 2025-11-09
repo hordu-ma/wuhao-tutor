@@ -80,6 +80,7 @@ function getDifficultyText(level) {
  * 获取掌握状态文本
  */
 function getMasteryStatusText(status) {
+  if (status == 'learning') return '学习中';
   if (status == 'not_mastered') return '未掌握';
   if (status == 'reviewing') return '复习中';
   if (status == 'mastered') return '已掌握';
