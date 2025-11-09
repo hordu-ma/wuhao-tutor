@@ -519,11 +519,11 @@ Page({
   },
 
   /**
-   * 导航到AI问答
+   * 导航到作业问答
    */
   navigateToLearning() {
-    console.log('导航到AI问答');
-    wx.switchTab({
+    console.log('导航到作业问答');
+    wx.navigateTo({
       url: '/pages/learning/index/index',
     });
   },

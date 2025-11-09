@@ -107,8 +107,8 @@
           <view class="action-icon-wrapper" style="background-color: #52c41a20">
             <van-icon name="chat-o" size="24px" color="#52c41a" />
           </view>
-          <text class="action-title font-bold">AI问答</text>
-          <text class="action-desc text-secondary">学习助手</text>
+          <text class="action-title font-bold">作业问答</text>
+          <text class="action-desc text-secondary">AI智能助手</text>
         </view>
         <view class="quick-action-item card" bindtap="navigateToAnalysis">
           <view class="action-icon-wrapper" style="background-color: #faad1420">

@@ -52,12 +52,6 @@
         "selectedIconPath": "assets/icons/homework-active.png"
       },
       {
-        "pagePath": "pages/learning/index/index",
-        "text": "作业问答",
-        "iconPath": "assets/icons/chat.png",
-        "selectedIconPath": "assets/icons/chat-active.png"
-      },
-      {
         "pagePath": "pages/analysis/report/index",
         "text": "学习报告",
         "iconPath": "assets/icons/report.png",
