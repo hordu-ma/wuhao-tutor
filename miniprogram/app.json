@@ -72,6 +72,11 @@
     "connectSocket": 10000
   },
   "requiredBackgroundModes": ["audio", "backgroundFetch"],
+  "permission": {
+    "scope.record": {
+      "desc": "用于语音提问和AI语音识别功能"
+    }
+  },
   "preloadRule": {
     "pages/learning/index/index": {
       "network": "all",
