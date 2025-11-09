@@ -4,10 +4,11 @@
 """
 
 import logging
-from typing import Optional
+from typing import Any, Dict, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.v1.endpoints.auth import get_current_user_id
@@ -27,7 +28,6 @@ from src.services.knowledge_graph_service import KnowledgeGraphService
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-
 # ========== 知识点关联 ==========
 
 
@@ -43,26 +43,34 @@ async def get_knowledge_points_for_filter(
     user_id: UUID = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ) -> KnowledgePointListResponse:
-    """获取知识点列表（用于筛选）"""
+    """获取知识点列表（用于筛选）- 实时统计版本"""
     try:
-        from sqlalchemy import and_, func, select
+        from sqlalchemy import and_, distinct, func, select
 
+        from src.models.knowledge_graph import MistakeKnowledgePoint
         from src.models.study import KnowledgeMastery
 
-        # 查询用户在该学科的所有知识点及错题数量
+        # 🔧 实时统计：从关联表统计实际错题数量
         stmt = (
             select(
                 KnowledgeMastery.knowledge_point,
-                KnowledgeMastery.mistake_count,
+                func.count(distinct(MistakeKnowledgePoint.mistake_id)).label(
+                    "actual_mistake_count"
+                ),
+            )
+            .outerjoin(
+                MistakeKnowledgePoint,
+                MistakeKnowledgePoint.knowledge_point_id == KnowledgeMastery.id,
             )
             .where(
                 and_(
                     KnowledgeMastery.user_id == str(user_id),
                     KnowledgeMastery.subject == subject,
-                    KnowledgeMastery.mistake_count >= min_count,
                 )
             )
-            .order_by(KnowledgeMastery.mistake_count.desc())
+            .group_by(KnowledgeMastery.id, KnowledgeMastery.knowledge_point)
+            .having(func.count(distinct(MistakeKnowledgePoint.mistake_id)) >= min_count)
+            .order_by(func.count(distinct(MistakeKnowledgePoint.mistake_id)).desc())
         )
 
         result = await db.execute(stmt)
@@ -74,10 +82,14 @@ async def get_knowledge_points_for_filter(
         knowledge_points = [
             KnowledgePointItem(
                 name=str(row[0]),
-                mistake_count=int(row[1]),
+                mistake_count=int(row[1]) if row[1] else 0,
             )
             for row in rows
         ]
+
+        logger.info(
+            f"实时统计知识点: 学科={subject}, 用户={user_id}, 结果数={len(knowledge_points)}"
+        )
 
         return KnowledgePointListResponse(
             subject=subject,
@@ -213,27 +225,29 @@ async def manually_generate_snapshot(
     """手动生成快照"""
     try:
         service = KnowledgeGraphService(db)
-        
+
         # 生成快照
         snapshot = await service.create_knowledge_graph_snapshot(
-            user_id=user_id,
-            subject=subject,
-            period_type="manual"
+            user_id=user_id, subject=subject, period_type="manual"
         )
-        
+
         await db.commit()
-        
-        logger.info(f"✅ 手动快照生成成功: user={user_id}, subject={subject}, snapshot_id={snapshot.id}")
-        
+
+        logger.info(
+            f"✅ 手动快照生成成功: user={user_id}, subject={subject}, snapshot_id={snapshot.id}"
+        )
+
         return {
             "success": True,
             "snapshot_id": str(snapshot.id),
             "user_id": str(user_id),
             "subject": subject,
-            "created_at": snapshot.created_at.isoformat() if snapshot.created_at else None,
-            "message": "快照生成成功"
+            "created_at": (
+                snapshot.created_at.isoformat() if snapshot.created_at else None
+            ),
+            "message": "快照生成成功",
         }
-        
+
     except Exception as e:
         await db.rollback()
         logger.error(f"手动生成快照失败: {e}", exc_info=True)
@@ -535,4 +549,107 @@ async def get_user_knowledge_mastery(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"获取掌握度失败: {str(e)}",
+        )
+
+
+# ========== 数据一致性 ==========
+
+
+@router.get(
+    "/consistency-check",
+    summary="知识点数据一致性检查",
+    description="检查 mistake_count 字段与实际关联表的一致性（管理员功能）",
+)
+async def check_knowledge_point_consistency(
+    subject: Optional[str] = Query(None, description="学科筛选"),
+    user_id: UUID = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> Dict[str, Any]:
+    """检查知识点数据一致性"""
+    try:
+        from sqlalchemy import case, distinct, func, select
+
+        from src.models.knowledge_graph import MistakeKnowledgePoint
+        from src.models.study import KnowledgeMastery
+
+        # 构建查询条件
+        conditions = [KnowledgeMastery.user_id == str(user_id)]
+        if subject:
+            conditions.append(KnowledgeMastery.subject == subject)
+
+        # 查询存储值与实际值
+        stmt = (
+            select(
+                KnowledgeMastery.id,
+                KnowledgeMastery.subject,
+                KnowledgeMastery.knowledge_point,
+                KnowledgeMastery.mistake_count.label("stored_count"),
+                func.count(distinct(MistakeKnowledgePoint.mistake_id)).label(
+                    "actual_count"
+                ),
+            )
+            .outerjoin(
+                MistakeKnowledgePoint,
+                MistakeKnowledgePoint.knowledge_point_id == KnowledgeMastery.id,
+            )
+            .where(and_(*conditions))
+            .group_by(
+                KnowledgeMastery.id,
+                KnowledgeMastery.subject,
+                KnowledgeMastery.knowledge_point,
+                KnowledgeMastery.mistake_count,
+            )
+        )
+
+        result = await db.execute(stmt)
+        rows = result.all()
+
+        # 统计结果
+        total = len(rows)
+        inconsistent_items = []
+
+        for row in rows:
+            kp_id, subj, kp_name, stored, actual = row
+            if stored != actual:
+                inconsistent_items.append(
+                    {
+                        "id": str(kp_id),
+                        "subject": subj,
+                        "knowledge_point": kp_name,
+                        "stored_count": stored,
+                        "actual_count": actual,
+                        "diff": actual - stored,
+                    }
+                )
+
+        inconsistent_count = len(inconsistent_items)
+        consistent_count = total - inconsistent_count
+
+        logger.info(
+            f"一致性检查完成: 总数={total}, 一致={consistent_count}, 不一致={inconsistent_count}"
+        )
+
+        return {
+            "status": "ok" if inconsistent_count == 0 else "inconsistent",
+            "total_checked": total,
+            "consistent_count": consistent_count,
+            "inconsistent_count": inconsistent_count,
+            "inconsistent_items": inconsistent_items[:20],  # 最多返回 20 条
+            "message": (
+                "所有数据一致"
+                if inconsistent_count == 0
+                else f"发现 {inconsistent_count} 条不一致记录，请运行修复脚本"
+            ),
+            "fix_command": (
+                "python scripts/fix_knowledge_point_counts.py"
+                if inconsistent_count > 0
+                else None
+            ),
+        }
+
+    except Exception as e:
+        logger.error(f"一致性检查失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"一致性检查失败: {str(e)}",
         )

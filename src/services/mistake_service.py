@@ -667,14 +667,8 @@ class MistakeService:
         # 🔧 级联删除：先删除关联数据，再删除错题
         mistake_id_str = str(mistake_id)
 
-        # 🔧 更新知识点掌握度统计（在删除关联前）
-        try:
-            from src.services.knowledge_graph_service import KnowledgeGraphService
-
-            kg_service = KnowledgeGraphService(self.db, self.bailian_service)
-            await kg_service.update_knowledge_mastery_after_delete(mistake_id)
-        except Exception as e:
-            logger.warning(f"更新知识点统计失败（不影响删除）: {e}")
+        # ✅ 方案A：使用实时计算，无需维护 mistake_count 字段
+        # 删除关联记录即可，前端查询时会实时统计
 
         # 1. 删除复习记录 (mistake_review_sessions)
         await self.db.execute(

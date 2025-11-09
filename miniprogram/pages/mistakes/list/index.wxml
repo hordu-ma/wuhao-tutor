@@ -7,14 +7,6 @@
             bindtap="onTabChange" data-tab="all">
         全部
       </view>
-      <view class="filter-tab {{activeTab === 'not_mastered' ? 'active' : ''}}"
-            bindtap="onTabChange" data-tab="not_mastered">
-        未掌握
-      </view>
-      <view class="filter-tab {{activeTab === 'reviewing' ? 'active' : ''}}"
-            bindtap="onTabChange" data-tab="reviewing">
-        复习中
-      </view>
       <view class="filter-tab {{activeTab === 'mastered' ? 'active' : ''}}"
             bindtap="onTabChange" data-tab="mastered">
         已掌握

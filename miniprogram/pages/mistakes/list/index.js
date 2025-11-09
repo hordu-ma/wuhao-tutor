@@ -348,8 +348,6 @@ const pageObject = {
   getStatusFromTab(tab) {
     const statusMap = {
       all: undefined,
-      not_mastered: 'not_mastered',
-      reviewing: 'reviewing',
       mastered: 'mastered',
     };
     return statusMap[tab];
@@ -361,8 +359,6 @@ const pageObject = {
   getEmptyDescription(tab) {
     const descriptions = {
       all: '还没有错题，继续加油哦',
-      not_mastered: '太棒了！没有未掌握的错题',
-      reviewing: '暂无正在复习的错题',
       mastered: '还没有完全掌握的错题，继续努力',
     };
     return descriptions[tab] || '暂无数据';

@@ -30,7 +30,8 @@
       <view class="ai-badge" wx:if="{{mistake.ai_analysis}}">
         <van-icon name="bulb-o" size="10" />
       </view>
-      <view class="status-tag {{mistake.mastery_status}}">
+      <!-- 只显示"已掌握"状态，其他状态不显示标签 -->
+      <view class="status-tag {{mistake.mastery_status}}" wx:if="{{mistake.mastery_status === 'mastered'}}">
         {{utils.getMasteryStatusText(mistake.mastery_status)}}
       </view>
     </view>
@@ -89,11 +90,11 @@
       </view>
     </view>
 
-    <!-- 下次复习时间 -->
+    <!-- 下次复习时间 - 极简显示：只显示图标和日期，不显示文字描述 -->
     <view class="next-review" wx:if="{{mistake.next_review_date && mode !== 'review'}}">
       <van-icon name="clock-o" size="12" />
       <text class="{{utils.getNextReviewClass(mistake.next_review_date)}}">
-        {{utils.getNextReviewText(mistake.next_review_date)}}
+        {{utils.formatReviewDate(mistake.next_review_date)}}
       </text>
     </view>
     
