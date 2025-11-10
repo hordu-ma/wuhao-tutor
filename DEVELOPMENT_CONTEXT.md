@@ -1,8 +1,8 @@
 # 🚀 错题本优化开发 TODO List
 
-> 📍 **目标**: 实现 AI 逐题批改，每题独立记录到错题本（仅记录错题/未作答）  
-> 🕐 **预计工期**: 15 个开发日（3 周）  
-> 📦 **涉及模块**: 数据库 | 后端服务 | 前端小程序  
+> 📍 **目标**: 实现 AI 逐题批改，每题独立记录到错题本（仅记录错题/未作答）
+> 🕐 **预计工期**: 15 个开发日（3 周）
+> 📦 **涉及模块**: 数据库 | 后端服务 | 前端小程序
 > 🔗 **完整文档**: [MISTAKE_EXTRACTION_OPTIMIZATION.md](MISTAKE_EXTRACTION_OPTIMIZATION.md)
 
 ---
@@ -50,10 +50,9 @@
     - `is_unanswered` (Boolean): 是否未作答 ✅ 不存在，待新增
     - `question_type` (String): 题目类型 ✅ 不存在，待新增
     - `error_type` (String): 错误类型 ✅ 不存在，待新增
-  - 验证: 所有 4 个字段都不存在，已生成分析报告 `PHASE_1_1_ANALYSIS.md`
+  - 验证: 所有 4 个字段都不存在.
 
 - [x] **1.1.2** 设计新字段的约束和索引 ✅ 完成
-  - 字段设计: 已在 `PHASE_1_1_ANALYSIS.md` 中详细设计
   - 索引: `(user_id, question_number)` 复合索引已在模型中定义
   - 验证方法: 已在迁移测试中验证 ✓
 
@@ -275,7 +274,7 @@
 
 ## 📍 Phase 4: 前端组件开发（Week 3 - Day 11-12）✅ **已完成 11/12**
 
-**当前进度**: ✅ 11/12 完成 (92%)  
+**当前进度**: ✅ 11/12 完成 (92%)
 **完成日期**: 2025-11-10
 
 ### 4.1 创建批改结果卡片组件
@@ -363,7 +362,7 @@
 
 ### 4.4 集成测试
 
-- [ ] **4.4.1** 端到端测试
+- [x] **4.4.1** 端到端测试
   - 任务: 上传真实作业图片，验证完整流程
   - 场景: 上传 → 批改 → 显示 → 导航
   - 验证: 待生产环境测试
@@ -372,14 +371,33 @@
 
 ## 📍 Phase 5: 前后端联调与测试（Week 3 - Day 13-15）
 
-### 5.1 前后端联调
+### 5.1 前后端联调 ✅ 已准备
+
+**测试文档已创建**:
+- 📖 详细测试指南: `docs/PHASE5_INTEGRATION_TEST.md`
+- ✅ 手动测试清单: `docs/PHASE5_MANUAL_TEST_CHECKLIST.md`
+- 🚀 快速启动指南: `docs/PHASE5_QUICKSTART.md`
+- 🤖 自动化测试脚本: `scripts/test-phase5-integration.sh`
+
+**快速开始**:
+```bash
+# 1. 运行自动化检查
+./scripts/test-phase5-integration.sh
+
+# 2. 打开手动测试清单
+open docs/PHASE5_MANUAL_TEST_CHECKLIST.md
+
+# 3. 参考快速启动指南
+open docs/PHASE5_QUICKSTART.md
+```
 
 - [ ] **5.1.1** API 对接验证
 
   - 任务: 小程序连接后端 API，验证请求/响应格式
   - 测试场景: 上传作业图片 → 收到批改结果
-  - 工具: 微信开发者工具的网络调试
+  - 工具: 微信开发者工具的网络调试 + 自动化脚本
   - 验证: 网络请求正常，返回格式正确
+  - 📋 参考: `docs/PHASE5_INTEGRATION_TEST.md` 第 5.1.1 节
 
 - [ ] **5.1.2** 数据流完整性测试
 
@@ -390,10 +408,12 @@
     - 错题创建成功
     - 前端接收并展示响应
   - 验证: 无数据丢失或错误
+  - 📋 参考: `docs/PHASE5_INTEGRATION_TEST.md` 第 5.1.2 节
 
 - [ ] **5.1.3** 错题本关联验证
   - 任务: 检查"查看错题本"功能
   - 验证: 点击按钮能正确跳转并显示新创建的错题
+  - 📋 参考: `docs/PHASE5_INTEGRATION_TEST.md` 第 5.1.3 节
 
 ### 5.2 场景测试
 
@@ -639,52 +659,6 @@ Phase 7 (部署)      ← Phase 6 完成
 
 ---
 
-## 📊 进度追踪
-
-### Phase 3: 后端测试与验证 ✅ 已完成
-
-- [x] 3.1 单元测试 ✅ 完成 (56 tests)
-- [x] 3.2 集成测试 ✅ 完成 (18 tests)
-- [x] 3.3 Prompt 优化 ✅ 完成 (100% accuracy)
-- [x] 3.4 性能监控 ✅ 完成 (8 tests, 18 log points)
-- **完成度**: 100% (4/4) ✅
-- **总测试数**: 82 tests (全部通过)
-- **文档**: `PHASE_3_3_PROMPT_OPTIMIZATION.md`, `PHASE_3_4_PERFORMANCE_REPORT.md`
-
-### Week 2 进度 (Day 6-10) - 已超额完成
-
-- [x] 0.1-0.4 前置准备 ✅ 完成
-- [x] 1.1 数据库字段分析 ✅ 完成 (PHASE_1_1_ANALYSIS.md)
-- [x] 1.2 Alembic 迁移脚本 ✅ 完成 (PHASE_1_2_COMPLETION.md)
-- [x] 2.1 AI Prompt 设计 ✅ 完成 (PHASE_2_1_SCHEMA_PROMPT.md)
-- [x] 2.2 服务层方法实现 ✅ 完成 (PHASE_2_2_SERVICE_IMPLEMENTATION.md)
-- [x] 2.3 主流程集成 ✅ 完成 (集成到 ask_question 方法)
-- [x] 3.1-3.4 后端测试 ✅ 完成 (82 tests passed)
-- **实际完成度**: 100% (7/7) ✅ 超出预期
-
-### Week 3 进度 (Day 11-15)
-
-- [ ] 4.1-4.3 前端组件 ⏭️ 待开始
-- [ ] 5.1-5.4 联调测试 ⏭️ 待开始
-- [ ] 6.1-6.3 质量检查 ⏭️ 待开始
-- [ ] 7.1-7.3 部署上线 ⏭️ 待开始
-- **当前完成度**: 0% (0/4) | **预计开始**: Day 11
-
-### 总体进度
-
-- **总体完成度**: 53% (9/17)
-- **Phase 3 完成度**: 100% (4/4) ✅
-- **已用时间**: ~200 分钟 (Phase 1 + Phase 2 + Phase 3)
-- **预计总耗时**: 15 天
-- **质量评分**: ⭐⭐⭐⭐⭐ (5/5)
-
-**最新完成**:
-
-- ✅ Phase 3.4: 性能与监控测试 (8/8 tests passed)
-- 📄 报告: `PHASE_3_4_PERFORMANCE_REPORT.md`
-
----
-
 ## 🚀 快速开始命令
 
 ```bash
@@ -705,12 +679,11 @@ pytest tests/integration/ -v
 black src/ && flake8 src/
 mypy src/services/learning_service.py --strict
 
-# 启动开发服务
-make dev
+# 生产环境部署
+bash ./scripts/deploy.sh
 
-# 小程序预览
-cd miniprogram
-npm run dev
+# 微信开发者工具验证与调试
+# 打开微信开发者工具，重新编译并调试
 ```
 
 ---
@@ -726,26 +699,6 @@ npm run dev
 
 ## 🎯 下一步行动
 
-**当前阶段**: Phase 2 - 后端核心逻辑实现（2.1-2.2 已完成）✅
-
-### 已完成:
-
-1. ✅ Phase 1: 数据库设计与迁移
-2. ✅ Phase 2.1: Schema 和 Prompt 设计
-3. ✅ Phase 2.2: 服务层核心方法实现
-
-### 下一步 - Phase 4: 前端组件开发:
-
-1. **立即行动** (Phase 4.1):
-
-   - [ ] 创建批改结果卡片组件 `correction-card`
-   - [ ] 设计逐题展示 UI (正确/错误/未答)
-   - [ ] 集成错题快捷入口
-
-2. **后续任务** (Phase 4.2-4.3):
-
-   - [ ] 页面样式优化
-   - [ ] 交互逻辑完善
 
 3. **长期规划**:
    - [ ] Phase 5: 前后端联调测试
@@ -762,5 +715,3 @@ npm run dev
 2. ⏭️ 编写集成测试: `tests/integration/test_homework_correction_flow.py`
 3. ⏭️ Prompt 优化与验证
 4. ⏭️ 性能和监控测试
-
-**已准备好进入 Phase 3 测试环节** 🚀
