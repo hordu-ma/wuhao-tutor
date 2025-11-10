@@ -1,0 +1,54 @@
+{
+  "description": "场景5: 混合题型 - 选择+填空+解答",
+  "scenario": "mixed_question_types",
+  "image_urls": ["mock://homework_mixed_types.jpg"],
+  "subject": "数学",
+  "user_hint": "",
+  "mock_homework_content": "1. 选择题：下列哪个是质数？A.4  B.6  C.7  D.8   学生答案：C\n2. 填空题：一个三角形的内角和是 __ 度   学生答案：180\n3. 解答题：计算 (3+5)×2 的值，并写出计算步骤\n   学生答案：3+5=8, 8×2=16",
+  "expected_result": {
+    "total_questions": 3,
+    "unanswered_count": 0,
+    "error_count": 0,
+    "corrections": [
+      {
+        "question_number": 1,
+        "question_type": "选择题",
+        "is_unanswered": false,
+        "student_answer": "C",
+        "correct_answer": "C",
+        "error_type": null,
+        "explanation": "答案正确，7是质数",
+        "knowledge_points": ["质数", "数的性质"],
+        "score": 100
+      },
+      {
+        "question_number": 2,
+        "question_type": "填空题",
+        "is_unanswered": false,
+        "student_answer": "180",
+        "correct_answer": "180",
+        "error_type": null,
+        "explanation": "答案正确",
+        "knowledge_points": ["三角形内角和定理"],
+        "score": 100
+      },
+      {
+        "question_number": 3,
+        "question_type": "解答题",
+        "is_unanswered": false,
+        "student_answer": "3+5=8, 8×2=16",
+        "correct_answer": "16",
+        "error_type": null,
+        "explanation": "计算步骤正确，答案正确",
+        "knowledge_points": ["混合运算", "运算顺序"],
+        "score": 100
+      }
+    ]
+  },
+  "validation_rules": {
+    "must_have_3_questions": true,
+    "must_have_different_question_types": true,
+    "question_types_must_include": ["选择题", "填空题", "解答题"],
+    "all_questions_must_be_correct": true
+  }
+}

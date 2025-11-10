@@ -1,0 +1,55 @@
+{
+  "description": "场景3: 全对作业 - 3题全部正确",
+  "scenario": "all_correct",
+  "image_urls": ["mock://homework_all_correct.jpg"],
+  "subject": "数学",
+  "user_hint": "",
+  "mock_homework_content": "1. 选择题：3 + 5 = ?  A.7  B.8  C.9   学生答案：B\n2. 填空题：5 × 6 = __   学生答案：30\n3. 解答题：小明有8个苹果，吃了3个，还剩几个？ 学生答案：8-3=5个",
+  "expected_result": {
+    "total_questions": 3,
+    "unanswered_count": 0,
+    "error_count": 0,
+    "corrections": [
+      {
+        "question_number": 1,
+        "question_type": "选择题",
+        "is_unanswered": false,
+        "student_answer": "B",
+        "correct_answer": "B",
+        "error_type": null,
+        "explanation": "答案正确",
+        "knowledge_points": ["一位数加法"],
+        "score": 100
+      },
+      {
+        "question_number": 2,
+        "question_type": "填空题",
+        "is_unanswered": false,
+        "student_answer": "30",
+        "correct_answer": "30",
+        "error_type": null,
+        "explanation": "答案正确",
+        "knowledge_points": ["乘法口诀"],
+        "score": 100
+      },
+      {
+        "question_number": 3,
+        "question_type": "解答题",
+        "is_unanswered": false,
+        "student_answer": "8-3=5个",
+        "correct_answer": "5个",
+        "error_type": null,
+        "explanation": "列式和答案都正确",
+        "knowledge_points": ["减法应用题"],
+        "score": 100
+      }
+    ]
+  },
+  "validation_rules": {
+    "must_have_3_questions": true,
+    "all_questions_must_be_correct": true,
+    "all_error_types_must_be_null": true,
+    "error_count_must_be_0": true,
+    "all_scores_must_be_100": true
+  }
+}

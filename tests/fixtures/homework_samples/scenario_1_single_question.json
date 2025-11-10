@@ -1,0 +1,32 @@
+{
+  "description": "场景1: 单题作业 - 数学计算题",
+  "scenario": "single_question",
+  "image_urls": ["mock://homework_single_math.jpg"],
+  "subject": "数学",
+  "user_hint": "",
+  "mock_homework_content": "1. 计算：125 + 376 = 501",
+  "expected_result": {
+    "total_questions": 1,
+    "unanswered_count": 0,
+    "error_count": 0,
+    "corrections": [
+      {
+        "question_number": 1,
+        "question_type": "计算题",
+        "is_unanswered": false,
+        "student_answer": "501",
+        "correct_answer": "501",
+        "error_type": null,
+        "explanation": "答案正确",
+        "knowledge_points": ["三位数加法", "进位加法"],
+        "score": 100
+      }
+    ]
+  },
+  "validation_rules": {
+    "must_have_1_question": true,
+    "question_1_must_be_correct": true,
+    "error_type_must_be_null": true,
+    "score_must_be_100": true
+  }
+}

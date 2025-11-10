@@ -28,9 +28,10 @@ from src.models.study import MistakeRecord
 from src.models.user import User
 from src.schemas.learning import (
     AskQuestionRequest,
+    DifficultyLevel,
     HomeworkCorrectionResult,
     QuestionCorrectionItem,
-    QuestionType,
+    SubjectType,
 )
 from src.services.bailian_service import ChatCompletionResponse
 
@@ -499,10 +500,10 @@ def test_ask_question_request() -> AskQuestionRequest:
     """
     return AskQuestionRequest(
         content="如何求解二次方程？",
-        question_type="problem_solving",
-        subject="math",
+        question_type=QuestionType.PROBLEM_SOLVING,
+        subject=SubjectType.MATH,
         topic="二次方程",
-        difficulty_level=3,
+        difficulty_level=DifficultyLevel.MEDIUM,
         use_context=True,
         include_history=True,
         max_history=5,
@@ -519,10 +520,10 @@ def test_ask_question_with_images_request() -> AskQuestionRequest:
     """
     return AskQuestionRequest(
         content="请批改这份作业",
-        question_type="homework_help",
-        subject="math",
+        question_type=QuestionType.HOMEWORK_HELP,
+        subject=SubjectType.MATH,
         topic="作业批改",
-        difficulty_level=2,
+        difficulty_level=DifficultyLevel.EASY,
         image_urls=[
             "https://example.com/homework1.jpg",
             "https://example.com/homework2.jpg",

@@ -1,0 +1,77 @@
+{
+  "description": "场景4: 部分未作答 - 5题中2题未答",
+  "scenario": "partial_unanswered",
+  "image_urls": ["mock://homework_partial_unanswered.jpg"],
+  "subject": "数学",
+  "user_hint": "",
+  "mock_homework_content": "1. 10 + 15 = 25 ✓\n2. 20 - 8 = (空白)\n3. 6 × 7 = 42 ✓\n4. 36 ÷ 4 = (空白)\n5. 50 + 50 = 99 ✗",
+  "expected_result": {
+    "total_questions": 5,
+    "unanswered_count": 2,
+    "error_count": 1,
+    "corrections": [
+      {
+        "question_number": 1,
+        "question_type": "计算题",
+        "is_unanswered": false,
+        "student_answer": "25",
+        "correct_answer": "25",
+        "error_type": null,
+        "explanation": "答案正确",
+        "knowledge_points": ["两位数加法"],
+        "score": 100
+      },
+      {
+        "question_number": 2,
+        "question_type": "计算题",
+        "is_unanswered": true,
+        "student_answer": null,
+        "correct_answer": "12",
+        "error_type": null,
+        "explanation": "未作答",
+        "knowledge_points": ["两位数减法"],
+        "score": 0
+      },
+      {
+        "question_number": 3,
+        "question_type": "计算题",
+        "is_unanswered": false,
+        "student_answer": "42",
+        "correct_answer": "42",
+        "error_type": null,
+        "explanation": "答案正确",
+        "knowledge_points": ["乘法口诀"],
+        "score": 100
+      },
+      {
+        "question_number": 4,
+        "question_type": "计算题",
+        "is_unanswered": true,
+        "student_answer": null,
+        "correct_answer": "9",
+        "error_type": null,
+        "explanation": "未作答",
+        "knowledge_points": ["除法运算"],
+        "score": 0
+      },
+      {
+        "question_number": 5,
+        "question_type": "计算题",
+        "is_unanswered": false,
+        "student_answer": "99",
+        "correct_answer": "100",
+        "error_type": "计算错误",
+        "explanation": "50 + 50 = 100，不是99",
+        "knowledge_points": ["两位数加法"],
+        "score": 0
+      }
+    ]
+  },
+  "validation_rules": {
+    "must_have_5_questions": true,
+    "must_have_2_unanswered": true,
+    "unanswered_questions_student_answer_must_be_null": true,
+    "unanswered_questions_is_unanswered_must_be_true": true,
+    "error_count_must_be_1": true
+  }
+}

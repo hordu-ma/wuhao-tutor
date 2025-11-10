@@ -151,11 +151,11 @@ class LearningService:
         try:
             # 1. 获取或创建会话
             session = await self._get_or_create_session(user_id, request)
+            session_id_str = extract_orm_uuid_str(session, "id")  # 🔧 立即提取ID
 
             # 2. 保存问题
-            question = await self._save_question(
-                user_id, extract_orm_uuid_str(session, "id"), request
-            )
+            question = await self._save_question(user_id, session_id_str, request)
+            question_id_str = extract_orm_uuid_str(question, "id")  # 🔧 立即提取ID
 
             # 3. 构建AI上下文
             ai_context = await self._build_ai_context(
@@ -164,7 +164,7 @@ class LearningService:
 
             # 4. 构建对话消息
             messages = await self._build_conversation_messages(
-                extract_orm_uuid_str(session, "id"),
+                session_id_str,
                 request,
                 ai_context,
                 request.include_history,
@@ -222,14 +222,11 @@ class LearningService:
                 raise BailianServiceError(f"AI调用失败: {ai_response.error_message}")
 
             # 6. 保存答案
-            answer = await self._save_answer(
-                extract_orm_uuid_str(question, "id"), ai_response
-            )
+            answer = await self._save_answer(question_id_str, ai_response)
+            answer_id_str = extract_orm_uuid_str(answer, "id")  # 🔧 立即提取ID
 
             # 7. 更新会话统计
-            await self._update_session_stats(
-                extract_orm_uuid_str(session, "id"), ai_response.tokens_used
-            )
+            await self._update_session_stats(session_id_str, ai_response.tokens_used)
 
             # 8. 更新用户学习分析
             await self._update_learning_analytics(user_id, question, answer)
@@ -295,10 +292,19 @@ class LearningService:
             # 11. 构建响应
             processing_time = int((time.time() - start_time) * 1000)
 
-            # 🔧 刷新ORM对象，确保所有属性已加载（避免 MissingGreenlet 错误）
-            await self.db.refresh(question)
-            await self.db.refresh(answer)
-            await self.db.refresh(session)
+            # 🔧 重新查询对象以确保所有属性已加载（避免 MissingGreenlet 错误）
+            # 使用之前提取的ID来避免触发懒加载
+            question_stmt = select(Question).where(Question.id == question_id_str)
+            question_result = await self.db.execute(question_stmt)
+            question = question_result.scalar_one()
+
+            answer_stmt = select(Answer).where(Answer.id == answer_id_str)
+            answer_result = await self.db.execute(answer_stmt)
+            answer = answer_result.scalar_one()
+
+            session_stmt = select(ChatSession).where(ChatSession.id == session_id_str)
+            session_result = await self.db.execute(session_stmt)
+            session = session_result.scalar_one()
 
             return AskQuestionResponse(
                 question=QuestionResponse.model_validate(question),
@@ -2366,14 +2372,11 @@ class LearningService:
 
             # 创建错题
             mistake = await mistake_repo.create(mistake_data)
+            mistake_id_str = extract_orm_uuid_str(mistake, "id")  # 🔧 立即提取ID
 
             # 🎯 创建错题后立即关联知识点
             try:
-                mistake_id = (
-                    mistake.id
-                    if hasattr(mistake, "id")
-                    else UUID(extract_orm_uuid_str(mistake, "id"))
-                )
+                mistake_id = UUID(mistake_id_str)
                 # 🎯 使用结构化提取的知识点进行关联
                 await self._trigger_knowledge_association(
                     mistake_id=mistake_id,
@@ -2388,7 +2391,7 @@ class LearningService:
 
             # 返回错题信息
             return {
-                "id": str(mistake.id),
+                "id": mistake_id_str,
                 "category": category,
                 "next_review_date": (datetime.now() + timedelta(days=1)).isoformat(),
                 "subject": mistake_data["subject"],
@@ -2844,6 +2847,7 @@ class LearningService:
             prompt = HOMEWORK_CORRECTION_PROMPT.format(subject=subject)
             if user_hint:
                 prompt += f"\n\n学生提示：{user_hint}"
+                logger.debug(f"📌 添加用户提示: {user_hint[:50]}...")
 
             # 构建消息
             messages = [
@@ -2855,10 +2859,16 @@ class LearningService:
             ]
 
             logger.info(
-                f"📝 开始作业批改: subject={subject}, " f"image_count={len(image_urls)}"
+                f"📝 [作业批改] 开始: subject={subject}, "
+                f"image_count={len(image_urls)}, "
+                f"prompt_length={len(prompt)}"
             )
+            logger.debug(f"📄 Prompt内容: {prompt[:200]}...")
 
             # 调用 AI
+            start_time = time.time()
+            logger.info(f"🚀 [AI调用] 调用百炼AI批改服务...")
+
             ai_response = await self.bailian_service.chat_completion(
                 messages=messages,
                 max_tokens=2000,  # 批改可能需要更多 tokens
@@ -2866,30 +2876,55 @@ class LearningService:
                 top_p=0.8,
             )
 
+            elapsed_time = time.time() - start_time
+            logger.info(
+                f"⏱️ [AI响应] 耗时: {elapsed_time:.2f}s, "
+                f"tokens_used={ai_response.tokens_used if hasattr(ai_response, 'tokens_used') else 'N/A'}"
+            )
+
             if not ai_response.success:
-                logger.error(f"AI 批改失败: {ai_response.error_message}")
+                logger.error(
+                    f"❌ [AI失败] 批改失败: {ai_response.error_message}, "
+                    f"耗时: {elapsed_time:.2f}s"
+                )
                 return None
 
             # 解析 AI 响应
             response_content = ai_response.content or ""
-            logger.debug(f"AI 批改响应: {response_content[:200]}...")
+            logger.info(
+                f"📥 [AI响应] 接收内容: length={len(response_content)}, "
+                f"preview={response_content[:100]}..."
+            )
+            logger.debug(f"📄 完整响应: {response_content}")
 
             # 尝试提取 JSON
             try:
+                logger.info(f"🔍 [JSON解析] 开始提取JSON数据...")
+
                 # 查找 JSON 块
                 json_start = response_content.find("{")
                 json_end = response_content.rfind("}") + 1
 
                 if json_start == -1 or json_end <= json_start:
-                    logger.error("AI 响应中未找到 JSON 格式")
+                    logger.error(
+                        f"❌ [JSON解析] AI响应中未找到JSON格式, "
+                        f"response_length={len(response_content)}"
+                    )
                     return None
 
                 json_str = response_content[json_start:json_end]
+                logger.debug(f"📋 提取的JSON: {json_str[:200]}...")
+
                 result_dict = json.loads(json_str)
+                logger.info(
+                    f"✅ [JSON解析] 成功, "
+                    f"corrections_count={len(result_dict.get('corrections', []))}"
+                )
 
                 # 构建批改结果
+                logger.info(f"🔨 [数据构建] 构建批改结果对象...")
                 corrections = []
-                for item in result_dict.get("corrections", []):
+                for idx, item in enumerate(result_dict.get("corrections", []), 1):
                     correction = QuestionCorrectionItem(
                         question_number=item.get("question_number", 0),
                         question_type=item.get("question_type", ""),
@@ -2902,6 +2937,11 @@ class LearningService:
                         score=item.get("score"),
                     )
                     corrections.append(correction)
+                    logger.debug(
+                        f"  题目{idx}: Q{correction.question_number}, "
+                        f"type={correction.question_type}, "
+                        f"error={correction.error_type or 'None'}"
+                    )
 
                 correction_result = HomeworkCorrectionResult(
                     corrections=corrections,
@@ -2915,20 +2955,32 @@ class LearningService:
                 )
 
                 logger.info(
-                    f"✅ 作业批改完成: total_questions={len(corrections)}, "
+                    f"✅ [批改完成] 作业批改成功: "
+                    f"total_questions={len(corrections)}, "
                     f"unanswered={correction_result.unanswered_count}, "
                     f"errors={correction_result.error_count}, "
-                    f"overall_score={correction_result.overall_score}"
+                    f"overall_score={correction_result.overall_score}, "
+                    f"total_time={elapsed_time:.2f}s"
                 )
 
                 return correction_result
 
             except json.JSONDecodeError as e:
-                logger.error(f"解析 AI 响应 JSON 失败: {str(e)}")
+                logger.error(
+                    f"❌ [JSON解析] 解析失败: {str(e)}, "
+                    f"json_preview={json_str[:200] if 'json_str' in locals() else 'N/A'}",
+                    exc_info=True,
+                )
                 return None
 
+        except BailianServiceError as e:
+            logger.error(f"❌ [AI服务] 百炼服务异常: {str(e)}", exc_info=True)
+            return None
         except Exception as e:
-            logger.error(f"作业批改异常: {str(e)}", exc_info=True)
+            logger.error(
+                f"❌ [异常] 作业批改未知异常: {type(e).__name__}: {str(e)}",
+                exc_info=True,
+            )
             return None
 
     async def _create_mistakes_from_correction(
@@ -2956,18 +3008,29 @@ class LearningService:
         mistake_repo = MistakeRepository(MistakeRecord, self.db)
         created_mistakes = []
 
+        logger.info(
+            f"📝 [错题创建] 开始处理批改结果: "
+            f"total_corrections={len(correction_result.corrections)}, "
+            f"error_count={correction_result.error_count}, "
+            f"unanswered_count={correction_result.unanswered_count}"
+        )
+
         try:
-            for item in correction_result.corrections:
+            for idx, item in enumerate(correction_result.corrections, 1):
                 # 只为错误或未作答的题目创建错题
                 if not item.is_unanswered and not item.error_type:
                     logger.debug(
-                        f"跳过正确题目: question_number={item.question_number}"
+                        f"  [{idx}/{len(correction_result.corrections)}] "
+                        f"跳过正确题目: Q{item.question_number}"
                     )
                     continue
 
                 logger.info(
-                    f"创建错题: question_number={item.question_number}, "
-                    f"is_unanswered={item.is_unanswered}, error_type={item.error_type}"
+                    f"  [{idx}/{len(correction_result.corrections)}] "
+                    f"🔴 处理错题: Q{item.question_number}, "
+                    f"type={item.question_type}, "
+                    f"is_unanswered={item.is_unanswered}, "
+                    f"error_type={item.error_type or 'N/A'}"
                 )
 
                 # 生成标题
@@ -3002,25 +3065,33 @@ class LearningService:
 
                 # 创建错题记录
                 mistake = await mistake_repo.create(mistake_data)
+                mistake_id = str(mistake.id)
                 logger.info(
-                    f"✅ 错题创建成功: mistake_id={mistake.id}, "
-                    f"question_number={item.question_number}"
+                    f"    ✅ 错题记录已创建: mistake_id={mistake_id}, "
+                    f"knowledge_points={len(item.knowledge_points or [])}"
                 )
 
                 created_mistakes.append(
                     {
-                        "id": str(mistake.id),
+                        "id": mistake_id,
                         "question_number": item.question_number,
                         "error_type": item.error_type,
                         "title": title,
                     }
                 )
 
-            logger.info(f"🎯 从批改结果创建了 {len(created_mistakes)} 个错题")
+            logger.info(
+                f"🎯 [错题创建] 完成: "
+                f"created={len(created_mistakes)}, "
+                f"total={len(correction_result.corrections)}, "
+                f"success_rate={len(created_mistakes)/len(correction_result.corrections)*100:.1f}%"
+            )
             return len(created_mistakes), created_mistakes
 
         except Exception as e:
-            logger.error(f"创建错题失败: {str(e)}", exc_info=True)
+            logger.error(
+                f"❌ [错题创建] 失败: {type(e).__name__}: {str(e)}", exc_info=True
+            )
             return 0, []
 
 
