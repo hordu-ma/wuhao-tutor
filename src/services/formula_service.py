@@ -24,7 +24,7 @@ settings = get_settings()
 class FormulaService:
     """数学公式渲染服务 - 多层降级策略版本"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         # 延迟导入避免循环依赖
         from src.services.ai_image_service import AIImageAccessService
 
@@ -38,16 +38,24 @@ class FormulaService:
         self.quicklatex_api = "https://quicklatex.com/latex3.f"
         self.default_formula_size = "\\large"  # 公式大小
         self.cache_prefix = "formula_cache/"  # OSS缓存路径前缀
-        
+
         # MathJax Cloud API 配置 (降级方案)
         self.mathjax_api = "https://api.mathpix.com/v3/text"
-        
+
         # 简单公式复杂度阈值
         self.simple_formula_max_length = 50
         self.complex_commands = [
-            r'\\frac', r'\\sum', r'\\int', r'\\prod',
-            r'\\matrix', r'\\begin', r'\\sqrt', r'\\lim',
-            r'\\partial', r'\\nabla', r'\\infty'
+            r"\\frac",
+            r"\\sum",
+            r"\\int",
+            r"\\prod",
+            r"\\matrix",
+            r"\\begin",
+            r"\\sqrt",
+            r"\\lim",
+            r"\\partial",
+            r"\\nabla",
+            r"\\infty",
         ]
 
     async def process_text_with_formulas(self, text: str) -> str:
@@ -120,7 +128,7 @@ class FormulaService:
         for match in re.finditer(inline_pattern, text):
             # 检查是否在块级公式内
             is_inside_block = any(
-                block["start"] <= match.start() < block["end"]
+                int(block["start"]) <= match.start() < int(block["end"])
                 for block in formulas
                 if block["type"] == "block"
             )
@@ -204,7 +212,9 @@ class FormulaService:
             from src.core.database import get_db
             from src.repositories.formula_cache_repository import FormulaCacheRepository
 
-            async with get_db() as db:
+            db_gen = get_db()
+            db = await db_gen.__anext__()
+            try:
                 cache_repo = FormulaCacheRepository(db)
                 cached = await cache_repo.get_by_hash(cache_key)
 
@@ -212,45 +222,55 @@ class FormulaService:
                     logger.debug(f"✅ 数据库缓存命中: {cache_key[:8]}...")
 
                     # 验证 URL 是否仍然有效（可选，增加一次网络请求）
-                    if await self._verify_url(cached.image_url):
+                    if await self._verify_url(str(cached.image_url)):
                         # 数据库缓存有效，更新命中计数（异步，不等待）
                         try:
                             await cache_repo.increment_hit_count(cache_key)
                         except Exception as e:
                             logger.debug(f"更新命中计数失败（不影响主流程）: {e}")
-                        return cached.image_url
+                        return str(cached.image_url) if cached.image_url else None
                     else:
                         logger.warning(
                             f"缓存 URL 已失效，将重新渲染: {cache_key[:8]}..."
                         )
                         return None
 
-            # 2. 数据库中没有，尝试检查 OSS（备用方案）
-            logger.debug(f"数据库缓存未命中: {cache_key[:8]}...")
+                # 2. 数据库中没有，尝试检查 OSS（备用方案）
+                logger.debug(f"数据库缓存未命中: {cache_key[:8]}...")
 
-            # OSS 文件存在检查（如果 OSS 有 head_object 方法）
-            # 由于 file_exists 可能未实现，这里使用 try-except 包裹
-            try:
-                png_path = f"{self.cache_prefix}{cache_key}.png"
-                svg_path = f"{self.cache_prefix}{cache_key}.svg"
+                # OSS 文件存在检查（如果 OSS 有 head_object 方法）
+                # 由于 file_exists 可能未实现，这里使用 try-except 包裹
+                try:
+                    png_path = f"{self.cache_prefix}{cache_key}.png"
+                    svg_path = f"{self.cache_prefix}{cache_key}.svg"
 
-                # 检查 PNG 文件
-                if hasattr(self.ai_image_service, "file_exists"):
-                    if await self.ai_image_service.file_exists(png_path):
-                        url = await self.ai_image_service.get_url(png_path)
-                        logger.info(f"OSS 缓存命中（PNG）: {cache_key[:8]}...")
-                        # 回写到数据库缓存
-                        await self._save_to_db_cache(cache_key, "", url, "inline")
-                        return url
+                    # 检查 PNG 文件
+                    if hasattr(self.ai_image_service, "file_exists") and hasattr(
+                        self.ai_image_service, "get_file_url"
+                    ):
+                        if await self.ai_image_service.file_exists(png_path):
+                            url = await self.ai_image_service.get_file_url(png_path)
+                            if url:
+                                logger.info(f"OSS 缓存命中（PNG）: {cache_key[:8]}...")
+                                # 回写到数据库缓存
+                                await self._save_to_db_cache(
+                                    cache_key, "", str(url), "inline"
+                                )
+                                return str(url)
 
-                    # 检查 SVG 文件
-                    if await self.ai_image_service.file_exists(svg_path):
-                        url = await self.ai_image_service.get_url(svg_path)
-                        logger.info(f"OSS 缓存命中（SVG）: {cache_key[:8]}...")
-                        await self._save_to_db_cache(cache_key, "", url, "inline")
-                        return url
-            except Exception as oss_err:
-                logger.debug(f"OSS 检查失败（可能不支持）: {oss_err}")
+                        # 检查 SVG 文件
+                        if await self.ai_image_service.file_exists(svg_path):
+                            url = await self.ai_image_service.get_file_url(svg_path)
+                            if url:
+                                logger.info(f"OSS 缓存命中（SVG）: {cache_key[:8]}...")
+                                await self._save_to_db_cache(
+                                    cache_key, "", str(url), "inline"
+                                )
+                                return str(url)
+                except Exception as oss_err:
+                    logger.debug(f"OSS 检查失败（可能不支持）: {oss_err}")
+            finally:
+                await db_gen.aclose()
 
             return None
 
@@ -291,7 +311,9 @@ class FormulaService:
             from src.core.database import get_db
             from src.repositories.formula_cache_repository import FormulaCacheRepository
 
-            async with get_db() as db:
+            db_gen = get_db()
+            db = await db_gen.__anext__()
+            try:
                 cache_repo = FormulaCacheRepository(db)
                 await cache_repo.create_cache(
                     latex_hash=latex_hash,
@@ -299,16 +321,18 @@ class FormulaService:
                     image_url=image_url,
                     formula_type=formula_type,
                 )
-                logger.debug(f"已保存到数据库缓存: {latex_hash[:8]}...")
+                logger.debug(f"✅ 已回写到数据库缓存: {latex_hash[:8]}...")
+            finally:
+                await db_gen.aclose()
         except Exception as e:
-            logger.warning(f"保存数据库缓存失败（不影响主流程）: {e}")
+            logger.warning(f"回写数据库缓存失败: {e}")
 
     async def _render_single_formula(
         self, content: str, formula_type: str, cache_key: str
     ) -> Optional[str]:
         """
         渲染单个公式（多层降级策略）
-        
+
         降级顺序:
         1. QuickLaTeX API (复杂公式优先)
         2. 简单公式本地渲染 (Unicode转换)
@@ -326,7 +350,7 @@ class FormulaService:
         try:
             # 记录请求
             self.metrics.record_request(formula_type)
-            
+
             # 判断公式复杂度
             is_simple = self._is_simple_formula(content)
             complexity = "simple" if is_simple else "complex"
@@ -355,23 +379,27 @@ class FormulaService:
                     self.metrics.record_success(response_time, formula_type)
                     logger.info(f"✅ [QuickLaTeX] 公式渲染成功: {cache_key[:8]}...")
                     return image_url
-            
+
             # Level 2: 简单公式本地渲染
             if is_simple:
-                logger.info(f"🔄 [Fallback] QuickLaTeX失败,尝试简单公式本地渲染: {content[:30]}...")
+                logger.info(
+                    f"🔄 [Fallback] QuickLaTeX失败,尝试简单公式本地渲染: {content[:30]}..."
+                )
                 image_url = await self._render_simple_formula_locally(
                     content, formula_type, cache_key
                 )
-                
+
                 if image_url:
                     response_time = time.time() - start_time
                     self.metrics.record_success(response_time, f"{formula_type}_local")
                     logger.info(f"✅ [Local] 简单公式本地渲染成功: {cache_key[:8]}...")
                     return image_url
-            
+
             # Level 3: 所有方法失败,记录失败
             logger.warning(f"❌ 公式渲染完全失败: {content[:50]}...")
-            self.metrics.record_failure("all_methods_failed", f"Formula: {content[:50]}")
+            self.metrics.record_failure(
+                "all_methods_failed", f"Formula: {content[:50]}"
+            )
             return None
 
         except Exception as e:
@@ -452,25 +480,33 @@ class FormulaService:
 
                 cache_path = f"{self.cache_prefix}{cache_key}.png"
 
-                image_url = await self.ai_image_service.upload_file(
-                    file_data=image_bytes,
-                    object_name=cache_path,
-                    content_type="image/png",
-                )
-                logger.debug(f"PNG 已上传到 OSS: {cache_path}")
-                return image_url
+                if hasattr(self.ai_image_service, "upload_file"):
+                    url_result = await self.ai_image_service.upload_file(
+                        file_data=image_bytes,
+                        object_name=cache_path,
+                        content_type="image/png",
+                    )
+                    logger.debug(f"PNG 已上传到 OSS: {cache_path}")
+                    return str(url_result) if url_result else None
+                else:
+                    logger.warning("AIImageAccessService 不支持 upload_file 方法")
+                    return None
 
             else:
                 # SVG格式
                 cache_path = f"{self.cache_prefix}{cache_key}.svg"
 
-                image_url = await self.ai_image_service.upload_file(
-                    file_data=image_content.encode("utf-8"),
-                    object_name=cache_path,
-                    content_type="image/svg+xml",
-                )
-                logger.debug(f"SVG 已上传到 OSS: {cache_path}")
-                return image_url
+                if hasattr(self.ai_image_service, "upload_file"):
+                    url_result = await self.ai_image_service.upload_file(
+                        file_data=image_content.encode("utf-8"),
+                        object_name=cache_path,
+                        content_type="image/svg+xml",
+                    )
+                    logger.debug(f"SVG 已上传到 OSS: {cache_path}")
+                    return str(url_result) if url_result else None
+                else:
+                    logger.warning("AIImageAccessService 不支持 upload_file 方法")
+                    return None
 
         except Exception as e:
             logger.error(f"上传到 OSS 失败: {e}")
@@ -591,52 +627,52 @@ class FormulaService:
     def _is_simple_formula(self, latex: str) -> bool:
         """
         判断是否为简单公式(可本地处理)
-        
+
         简单公式特征:
         - 长度 < 50字符
         - 不含复杂命令(分数、求和、积分等)
         - 不含矩阵、多行公式
-        
+
         Args:
             latex: LaTeX公式内容
-            
+
         Returns:
             是否为简单公式
         """
         # 检查长度
         if len(latex) > self.simple_formula_max_length:
             return False
-        
+
         # 检查复杂命令
         for pattern in self.complex_commands:
             if re.search(pattern, latex):
                 return False
-        
+
         return True
-    
+
     async def _render_simple_formula_locally(
         self, content: str, formula_type: str, cache_key: str
     ) -> Optional[str]:
         """
         本地渲染简单公式(暂时禁用,待PIL环境配置完成)
-        
+
         TODO: 实现PIL图片生成
         - 安装字体文件
         - 配置PIL环境
         - 实现LaTeX到Unicode转换
-        
+
         Args:
             content: LaTeX公式内容
             formula_type: 公式类型
             cache_key: 缓存键
-            
+
         Returns:
             None (暂未实现)
         """
         logger.debug(f"本地渲染暂未启用: {content[:30]}...")
         return None
-    
-    async def cleanup(self):
+
+    async def cleanup(self) -> None:
         """清理资源"""
         await self.client.aclose()
 

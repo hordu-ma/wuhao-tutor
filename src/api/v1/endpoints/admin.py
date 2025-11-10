@@ -4,6 +4,7 @@
 """
 
 import hashlib
+from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
@@ -42,7 +43,7 @@ async def _verify_token_with_cache(token: str, db: AsyncSession) -> str:
     # 尝试从缓存读取
     cached_user_id = await cache_manager.get(cache_key, namespace="security")
     if cached_user_id:
-        return cached_user_id
+        return str(cached_user_id)
 
     # 缓存未命中，执行完整验证
     user_service = get_user_service(db)
@@ -52,6 +53,8 @@ async def _verify_token_with_cache(token: str, db: AsyncSession) -> str:
 
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid token")
+
+    user_id = str(user_id)
 
     # 检查管理员权限
     user = await user_service.user_repo.get_by_id(user_id)
@@ -70,7 +73,7 @@ async def _verify_token_with_cache(token: str, db: AsyncSession) -> str:
 async def verify_token(
     authorization: str = Header(..., description="Bearer token"),
     db: AsyncSession = Depends(get_db),
-):
+) -> str:
     """Token 验证并检查管理员权限（使用 Redis 缓存优化）"""
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Invalid authorization header")
@@ -93,7 +96,7 @@ async def create_user(
     request: AdminCreateUserRequest,
     db: AsyncSession = Depends(get_db),
     user_id: str = Depends(verify_token),
-):
+) -> AdminCreateUserResponse:
     """
     管理员创建用户
 
@@ -139,7 +142,7 @@ async def list_users(
     search: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
     user_id: str = Depends(verify_token),
-):
+) -> AdminUserListResponse:
     """
     管理员查询用户列表
 
@@ -153,23 +156,23 @@ async def list_users(
             page=page, size=size, search=search
         )
 
-        items = [
-            AdminUserListItem(
-                id=str(user.id),
-                phone=user.phone,
-                name=user.name,
-                nickname=user.nickname,
-                school=user.school,
-                grade_level=user.grade_level,
-                class_name=user.class_name,
-                is_active=user.is_active,
-                is_verified=user.is_verified,
-                login_count=user.login_count,
-                last_login_at=user.last_login_at,
-                created_at=user.created_at,
-            )
-            for user in users
-        ]
+        items = []
+        for user in users:
+            user_dict = {
+                "id": str(user.id),
+                "phone": str(user.phone),
+                "name": str(user.name),
+                "nickname": str(user.nickname) if user.nickname else None,
+                "school": str(user.school) if user.school else None,
+                "grade_level": str(user.grade_level) if user.grade_level else None,
+                "class_name": str(user.class_name) if user.class_name else None,
+                "is_active": bool(user.is_active),
+                "is_verified": bool(user.is_verified),
+                "login_count": int(user.login_count),
+                "last_login_at": user.last_login_at,
+                "created_at": user.created_at,
+            }
+            items.append(AdminUserListItem.model_validate(user_dict))
 
         return AdminUserListResponse(total=total, page=page, size=size, items=items)
 
@@ -189,7 +192,7 @@ async def reset_user_password(
     user_id: str,
     db: AsyncSession = Depends(get_db),
     admin_id: str = Depends(verify_token),
-):
+) -> AdminResetPasswordResponse:
     """
     管理员重置用户密码
 
@@ -204,8 +207,8 @@ async def reset_user_password(
 
         return AdminResetPasswordResponse(
             user_id=str(user.id),
-            phone=user.phone,
-            name=user.name,
+            phone=str(user.phone),
+            name=str(user.name),
             password=new_password,
         )
 
@@ -228,7 +231,7 @@ async def update_user_status(
     request: AdminUpdateUserStatusRequest,
     db: AsyncSession = Depends(get_db),
     admin_id: str = Depends(verify_token),
-):
+) -> SuccessResponse:
     """
     管理员启用/禁用用户
 
@@ -267,7 +270,7 @@ async def delete_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
     admin_id: str = Depends(verify_token),
-):
+) -> SuccessResponse:
     """
     管理员删除用户
 
