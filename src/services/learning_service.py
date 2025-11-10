@@ -85,9 +85,9 @@ HOMEWORK_CORRECTION_PROMPT = """
 
 请返回严格的 JSON 格式的结果，格式如下（必须是有效的 JSON）：
 
-{
+{{
   "corrections": [
-    {
+    {{
       "question_number": <题号>,
       "question_type": "<题目类型，如选择题、填空题、解答题等>",
       "is_unanswered": <是否未作答，true/false>,
@@ -97,14 +97,14 @@ HOMEWORK_CORRECTION_PROMPT = """
       "explanation": "<批改说明和解析过程>",
       "knowledge_points": ["<知识点1>", "<知识点2>"],
       "score": <该题得分百分比，0-100>
-    }
+    }}
   ],
   "summary": "<作业总体评语，包括学生的优点和需要改进的地方>",
   "overall_score": <整份作业得分百分比，0-100>,
   "total_questions": <题目总数>,
   "unanswered_count": <未作答题数>,
   "error_count": <出错题数>
-}
+}}
 
 注意：
 - 必须返回有效的 JSON 格式
