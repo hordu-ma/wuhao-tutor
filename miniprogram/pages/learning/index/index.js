@@ -1040,10 +1040,13 @@ const pageObject = {
 
         // 🎯 [新增] 批改场景加载提示（有图片时可能是作业批改）
         if (imageUrls.length >= 1 && inputText.includes('批改')) {
+          console.log('🔄 显示批改加载提示');
           wx.showLoading({
             title: 'AI批改中...',
             mask: true,
           });
+          // 标记显示了批改加载提示
+          this.setData({ _showingCorrectionLoading: true });
         }
       }
 
@@ -1167,7 +1170,13 @@ const pageObject = {
 
       console.log('[Stream Complete]', response);
 
-      // 🔧 [新增] 清理流式更新定时器，确保最后一次更新执行
+      // � [调试] 打印完整响应结构
+      console.log('📋 [调试] 完整响应:', JSON.stringify(response, null, 2));
+      console.log('📋 [调试] correction_result 存在?', !!response?.correction_result);
+      console.log('📋 [调试] mistakes_created 值:', response?.mistakes_created);
+      console.log('📋 [调试] mistake_created 值:', response?.mistake_created);
+
+      // �🔧 [新增] 清理流式更新定时器，确保最后一次更新执行
       if (streamUpdateTimer) {
         clearTimeout(streamUpdateTimer);
         streamUpdateTimer = null;
@@ -1253,10 +1262,17 @@ const pageObject = {
 
         // 🎯 处理批改结果（作业批改场景） - 在 setData 之前处理
         if (response.correction_result && Array.isArray(response.correction_result)) {
+          console.log('📋 检测到批改结果:', response.correction_result);
+          console.log('📋 批改统计:', {
+            totalQuestions: response.correction_result.length,
+            mistakesCreated: response.mistakes_created || 0,
+          });
+
           // 🎯 [新增] 数据验证
           if (response.correction_result.length === 0) {
             console.warn('⚠️ 批改结果为空数组');
             wx.hideLoading();
+            this.setData({ _showingCorrectionLoading: false });
             wx.showToast({
               title: '未识别到题目，请重新上传',
               icon: 'none',
@@ -1265,13 +1281,10 @@ const pageObject = {
             return;
           }
 
-          console.log('✅ 收到批改结果:', {
-            totalQuestions: response.correction_result.length,
-            mistakesCreated: response.mistakes_created || 0,
-          });
-
           // 🎯 [新增] 关闭批改加载提示
+          console.log('🔄 关闭批改加载提示（检测到批改结果）');
           wx.hideLoading();
+          this.setData({ _showingCorrectionLoading: false });
 
           // 创建批改结果卡片消息
           const correctionCardMessage = {
@@ -1311,6 +1324,13 @@ const pageObject = {
           messageList: newMessageList,
           isAITyping: false,
         });
+
+        // 🎯 [修复] 确保关闭批改加载提示（无论是否有 correction_result）
+        if (this.data._showingCorrectionLoading) {
+          console.log('🔄 关闭批改加载提示（流式完成）');
+          wx.hideLoading();
+          this.setData({ _showingCorrectionLoading: false });
+        }
 
         // 🎯 静默处理错题自动创建（无UI提示）
         if (response.mistake_created) {
@@ -1359,6 +1379,13 @@ const pageObject = {
           messageList: newMessageList,
           isAITyping: false,
         });
+
+        // 🎯 [修复] 确保关闭批改加载提示（异常分支也要关闭）
+        if (this.data._showingCorrectionLoading) {
+          console.log('🔄 关闭批改加载提示（异常分支）');
+          wx.hideLoading();
+          this.setData({ _showingCorrectionLoading: false });
+        }
       }
     } catch (error) {
       console.error('发送消息失败:', {
@@ -1367,8 +1394,15 @@ const pageObject = {
         message: error.message,
       });
 
-      // 🎯 [新增] 确保关闭加载提示
-      wx.hideLoading();
+      // 🎯 [修复] 确保关闭批改加载提示
+      if (this.data._showingCorrectionLoading) {
+        console.log('🔄 关闭批改加载提示（错误处理）');
+        wx.hideLoading();
+        this.setData({ _showingCorrectionLoading: false });
+      } else {
+        // 如果不是批改加载提示，也要关闭（避免其他加载提示残留）
+        wx.hideLoading();
+      }
 
       // 更新用户消息状态为失败
       const newMessageList = [...this.data.messageList];

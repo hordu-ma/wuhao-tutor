@@ -236,11 +236,22 @@ class LearningService:
             mistakes_created_count = 0
             try:
                 # 9.1 检测是否为作业批改场景
-                if self._is_homework_correction_scenario(
+                is_correction_scenario = self._is_homework_correction_scenario(
                     request.question_type,
                     extract_orm_str(question, "content") or "",
                     request.image_urls,
-                ):
+                )
+
+                # 🔍 [调试] 详细日志
+                logger.info(
+                    f"🔍 批改场景检测: is_correction={is_correction_scenario}, "
+                    f"question_type={request.question_type}, "
+                    f"content='{extract_orm_str(question, 'content') or ''}', "
+                    f"has_images={bool(request.image_urls)}, "
+                    f"image_count={len(request.image_urls or [])}"
+                )
+
+                if is_correction_scenario:
                     logger.info(f"📝 检测到作业批改场景，启动专用逻辑")
 
                     # 9.2 调用AI进行批改
@@ -494,38 +505,112 @@ class LearningService:
                     except Exception as e:
                         logger.warning(f"更新学习分析失败: {e}")
 
-                    # 🎯 9.5 智能错题自动创建（不阻塞流式响应）
-                    mistake_created = False
-                    mistake_info = None
+                    # 🎯 9.3 作业批改专用逻辑（流式版本）
+                    correction_result = None
+                    mistakes_created_count = 0
                     try:
-                        mistake_result = await self._auto_create_mistake_if_needed(
-                            user_id, question, answer, request
-                        )
-                        if mistake_result:
-                            mistake_created = True
-                            mistake_info = mistake_result
-                            logger.info(
-                                f"✅ [流式] 错题自动创建成功: user_id={user_id}, "
-                                f"mistake_id={mistake_info.get('id')}, "
-                                f"category={mistake_info.get('category')}, "
-                                f"confidence={mistake_info.get('confidence')}"
-                            )
-                    except Exception as mistake_err:
-                        logger.warning(
-                            f"[流式] 错题创建失败，但不影响问答: {str(mistake_err)}"
+                        # 检测是否为作业批改场景
+                        is_correction_scenario = self._is_homework_correction_scenario(
+                            request.question_type,
+                            extract_orm_str(question, "content") or "",
+                            request.image_urls,
                         )
 
+                        logger.info(
+                            f"🔍 [流式] 批改场景检测: is_correction={is_correction_scenario}, "
+                            f"question_type={request.question_type}, "
+                            f"has_images={bool(request.image_urls)}"
+                        )
+
+                        if is_correction_scenario:
+                            logger.info(f"📝 [流式] 检测到作业批改场景，启动专用逻辑")
+
+                            # 调用AI进行批改
+                            subject = extract_orm_str(request, "subject") or "math"
+                            user_hint = extract_orm_str(question, "content")
+
+                            correction_result = (
+                                await self._call_ai_for_homework_correction(
+                                    image_urls=request.image_urls or [],
+                                    subject=subject,
+                                    user_hint=user_hint,
+                                )
+                            )
+
+                            # 如果批改成功，逐题创建错题
+                            if correction_result:
+                                mistakes_created_count, mistake_list = (
+                                    await self._create_mistakes_from_correction(
+                                        user_id=user_id,
+                                        correction_result=correction_result,
+                                        subject=subject,
+                                        image_urls=request.image_urls or [],
+                                    )
+                                )
+                                logger.info(
+                                    f"✅ [流式] 作业批改完成: 创建 {mistakes_created_count} 个错题"
+                                )
+                    except Exception as correction_err:
+                        logger.warning(
+                            f"[流式] 作业批改失败，但不影响问答: {str(correction_err)}"
+                        )
+
+                    # 🎯 9.5 智能错题自动创建（简化规则，只在非批改场景执行）
+                    mistake_created = False
+                    mistake_info = None
+                    if not correction_result:  # 只在非批改场景执行
+                        try:
+                            mistake_result = await self._auto_create_mistake_if_needed(
+                                user_id, question, answer, request
+                            )
+                            if mistake_result:
+                                mistake_created = True
+                                mistake_info = mistake_result
+                                logger.info(
+                                    f"✅ [流式] 错题自动创建成功: user_id={user_id}, "
+                                    f"mistake_id={mistake_info.get('id')}, "
+                                    f"category={mistake_info.get('category')}, "
+                                    f"confidence={mistake_info.get('confidence')}"
+                                )
+                        except Exception as mistake_err:
+                            logger.warning(
+                                f"[流式] 错题创建失败，但不影响问答: {str(mistake_err)}"
+                            )
+
                     # 10. 发送完成事件
-                    yield {
+                    done_event = {
                         "type": "done",
                         "question_id": question_id,
                         "answer_id": answer_id,
                         "session_id": session_id,
                         "usage": chunk.get("usage", {}),
                         "full_content": full_answer_content,
-                        "mistake_created": mistake_created,  # 🎯 新增
-                        "mistake_info": mistake_info,  # 🎯 新增
+                        "mistake_created": mistake_created,  # 🎯 简化规则创建
+                        "mistake_info": mistake_info,  # 🎯 简化规则信息
                     }
+
+                    # 🎯 添加批改结果（如果存在）
+                    if correction_result:
+                        # 转换为字典格式
+                        done_event["correction_result"] = [
+                            {
+                                "question_number": item.question_number,
+                                "error_type": item.error_type,
+                                "is_unanswered": item.is_unanswered,
+                                "student_answer": item.student_answer,
+                                "correct_answer": item.correct_answer,
+                                "explanation": item.explanation,
+                                "knowledge_points": item.knowledge_points,
+                            }
+                            for item in correction_result.corrections
+                        ]
+                        done_event["mistakes_created"] = mistakes_created_count
+                        logger.info(
+                            f"📤 [流式] 发送批改结果: {len(correction_result.corrections)} 题, "
+                            f"{mistakes_created_count} 个错题"
+                        )
+
+                    yield done_event
 
         except BailianServiceError as e:
             logger.error(f"AI服务调用失败: {e}")
@@ -2793,6 +2878,7 @@ class LearningService:
         """
         # 检查问题类型
         if question_type == QuestionType.HOMEWORK_HELP:
+            logger.info("🔍 批改场景检测: question_type=HOMEWORK_HELP → True")
             return True
 
         # 检查内容中的关键词
@@ -2812,13 +2898,27 @@ class LearningService:
         ]
 
         content_lower = content.lower()
-        has_correction_keyword = any(kw in content_lower for kw in correction_keywords)
+        matched_keywords = [kw for kw in correction_keywords if kw in content_lower]
+        has_correction_keyword = len(matched_keywords) > 0
 
         # 有图片 + 包含批改关键词 = 批改场景
         has_images = bool(image_urls and len(image_urls) > 0)
+
+        # 🔍 [调试] 详细判断日志
+        logger.info(
+            f"🔍 批改场景检测详情: "
+            f"has_images={has_images}, "
+            f"image_count={len(image_urls or [])}, "
+            f"has_keyword={has_correction_keyword}, "
+            f"matched_keywords={matched_keywords}, "
+            f"content='{content[:50]}...'"
+        )
+
         if has_images and has_correction_keyword:
+            logger.info("🔍 批改场景检测: has_images AND has_keyword → True")
             return True
 
+        logger.info("🔍 批改场景检测: 条件不满足 → False")
         return False
 
     async def _call_ai_for_homework_correction(
