@@ -3,6 +3,7 @@
 提供用户管理功能
 """
 
+import hashlib
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
@@ -22,38 +23,61 @@ from src.schemas.common import SuccessResponse
 from src.schemas.user import UserResponse
 from src.services.auth_service import AuthService
 from src.services.user_service import get_user_service
+from src.utils.cache import cache_manager
 
 router = APIRouter(prefix="/admin", tags=["管理员"])
+
+
+# Token 验证缓存：键为 hash(token)，值为 user_id，TTL=1小时
+async def _verify_token_with_cache(token: str, db: AsyncSession) -> str:
+    """
+    带缓存的 Token 验证
+    - 首次验证：查询数据库，缓存结果（1小时）
+    - 后续请求：直接从缓存读取，减少 JWT 解析 + 数据库查询
+    """
+    # 生成缓存键
+    token_hash = hashlib.sha256(token.encode()).hexdigest()[:16]
+    cache_key = f"admin_token:{token_hash}"
+
+    # 尝试从缓存读取
+    cached_user_id = await cache_manager.get(cache_key, namespace="security")
+    if cached_user_id:
+        return cached_user_id
+
+    # 缓存未命中，执行完整验证
+    user_service = get_user_service(db)
+    auth_service = AuthService(user_service)
+    payload = auth_service.verify_token(token)
+    user_id = payload.get("sub")
+
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    # 检查管理员权限
+    user = await user_service.user_repo.get_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+
+    if not user.is_admin:
+        raise HTTPException(status_code=403, detail="需要管理员权限才能访问此功能")
+
+    # 缓存验证结果（TTL=1小时）
+    await cache_manager.set(cache_key, user_id, ttl=3600, namespace="security")
+
+    return user_id
 
 
 async def verify_token(
     authorization: str = Header(..., description="Bearer token"),
     db: AsyncSession = Depends(get_db),
 ):
-    """Token 验证并检查管理员权限"""
+    """Token 验证并检查管理员权限（使用 Redis 缓存优化）"""
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Invalid authorization header")
 
     token = authorization.replace("Bearer ", "")
     try:
-        from src.services.user_service import get_user_service
-
-        user_service = get_user_service(db)
-        auth_service = AuthService(user_service)
-        payload = auth_service.verify_token(token)
-        user_id = payload.get("sub")
-        if not user_id:
-            raise HTTPException(status_code=401, detail="Invalid token")
-
-        # 检查管理员权限
-        user = await user_service.user_repo.get_by_id(user_id)
-        if not user:
-            raise HTTPException(status_code=401, detail="User not found")
-
-        if not user.is_admin:
-            raise HTTPException(status_code=403, detail="需要管理员权限才能访问此功能")
-
-        return user_id
+        return await _verify_token_with_cache(token, db)
     except HTTPException:
         raise
     except Exception:
