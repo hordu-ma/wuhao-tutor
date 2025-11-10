@@ -23,8 +23,11 @@ if str(project_root) not in sys.path:
 
 from src.core.config import get_settings
 from src.models.base import Base
+from src.models.learning import Answer, ChatSession, Question, QuestionType
 from src.models.study import MistakeRecord
+from src.models.user import User
 from src.schemas.learning import (
+    AskQuestionRequest,
     HomeworkCorrectionResult,
     QuestionCorrectionItem,
     QuestionType,
@@ -425,3 +428,187 @@ def pytest_collection_modifyitems(items):
     for item in items:
         if "async" in item.keywords:
             item.add_marker(pytest.mark.asyncio)
+
+
+# ========== 集成测试 Fixture ==========
+
+
+@pytest.fixture
+async def test_user(db_session: AsyncSession) -> User:
+    """
+    创建测试用户
+
+    Args:
+        db_session: 数据库会话
+
+    Returns:
+        User: 测试用户对象
+    """
+    user_id = str(uuid4())
+    phone = f"1{str(uuid4())[:10]}"  # 生成模拟手机号
+    user = User(
+        id=user_id,
+        phone=phone,
+        password_hash="hashed_password",
+        name=f"测试用户_{user_id[:8]}",
+        is_active=True,
+    )
+
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+    return user
+
+
+@pytest.fixture
+async def test_session(db_session: AsyncSession, test_user: User) -> ChatSession:
+    """
+    创建测试会话
+
+    Args:
+        db_session: 数据库会话
+        test_user: 测试用户
+
+    Returns:
+        ChatSession: 测试会话对象
+    """
+    session = ChatSession(
+        user_id=test_user.id,
+        title="测试会话",
+        subject="math",
+        grade_level="高一",
+        status="active",
+        question_count=0,
+        total_tokens=0,
+        context_enabled=True,
+    )
+
+    db_session.add(session)
+    await db_session.commit()
+    await db_session.refresh(session)
+    return session
+
+
+@pytest.fixture
+def test_ask_question_request() -> AskQuestionRequest:
+    """
+    创建测试的 AskQuestionRequest
+
+    Returns:
+        AskQuestionRequest: 提问请求对象
+    """
+    return AskQuestionRequest(
+        content="如何求解二次方程？",
+        question_type="problem_solving",
+        subject="math",
+        topic="二次方程",
+        difficulty_level=3,
+        use_context=True,
+        include_history=True,
+        max_history=5,
+    )
+
+
+@pytest.fixture
+def test_ask_question_with_images_request() -> AskQuestionRequest:
+    """
+    创建包含图片的 AskQuestionRequest
+
+    Returns:
+        AskQuestionRequest: 包含图片的提问请求
+    """
+    return AskQuestionRequest(
+        content="请批改这份作业",
+        question_type="homework_help",
+        subject="math",
+        topic="作业批改",
+        difficulty_level=2,
+        image_urls=[
+            "https://example.com/homework1.jpg",
+            "https://example.com/homework2.jpg",
+        ],
+        use_context=False,
+        include_history=False,
+    )
+
+
+@pytest.fixture
+def test_simple_ai_response() -> str:
+    """
+    创建简单的 AI 响应
+
+    Returns:
+        str: JSON 格式的 AI 响应
+    """
+    return json.dumps(
+        {
+            "answer": "二次方程可以通过以下方法求解...",
+            "key_points": ["判别式", "求根公式"],
+            "difficulty": "middle",
+            "timestamp": "2025-11-05T10:00:00Z",
+        }
+    )
+
+
+@pytest.fixture
+def test_homework_correction_ai_response() -> str:
+    """
+    创建作业批改的 AI 响应
+
+    Returns:
+        str: 作业批改的 JSON 响应
+    """
+    return json.dumps(
+        {
+            "corrections": [
+                {
+                    "question_number": 1,
+                    "question_type": "选择题",
+                    "is_unanswered": False,
+                    "student_answer": "B",
+                    "correct_answer": "A",
+                    "error_type": "理解错误",
+                    "explanation": "学生错误地理解了题意",
+                    "knowledge_points": ["集合论", "逻辑"],
+                    "score": 0,
+                },
+                {
+                    "question_number": 2,
+                    "question_type": "解答题",
+                    "is_unanswered": False,
+                    "student_answer": "正确过程",
+                    "correct_answer": "正确过程",
+                    "error_type": None,
+                    "explanation": "过程和答案都正确",
+                    "knowledge_points": ["函数"],
+                    "score": 100,
+                },
+            ],
+            "summary": "整体表现不错，需要加强概念理解",
+            "overall_score": 75,
+            "total_questions": 2,
+            "unanswered_count": 0,
+            "error_count": 1,
+        }
+    )
+
+
+@pytest.fixture
+def mock_bailian_service_for_integration():
+    """
+    提供用于集成测试的 Mock BailianService
+
+    Returns:
+        MockBailianService: 配置好的 Mock 服务
+    """
+    service = MockBailianService()
+    # 设置为返回简单的 AI 响应
+    service.set_response(
+        json.dumps(
+            {
+                "answer": "这是 AI 的回答",
+                "key_points": ["知识点1"],
+            }
+        )
+    )
+    return service
