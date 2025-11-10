@@ -26,8 +26,8 @@ from sqlalchemy.orm import relationship
 from .base import BaseModel, is_sqlite
 
 if TYPE_CHECKING:
-    from .user import User
     from .review import MistakeReviewSession
+    from .user import User
 
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -160,6 +160,28 @@ class MistakeRecord(BaseModel):
     # 【新增】正确答案（可选）
     correct_answer = Column(Text, nullable=True, comment="正确答案")
 
+    # 【作业批改字段】题号（从1开始）
+    question_number = Column(
+        Integer, nullable=True, comment="题号(从1开始，用于区分同一作业中的不同题目)"
+    )
+
+    # 【作业批改字段】是否未作答
+    is_unanswered = Column(Boolean, default=False, nullable=False, comment="是否未作答")
+
+    # 【作业批改字段】题目类型
+    question_type = Column(
+        String(50),
+        nullable=True,
+        comment="题目类型: 选择题/填空题/解答题/判断题/多选题/短答题等",
+    )
+
+    # 【作业批改字段】错误类型
+    error_type = Column(
+        String(100),
+        nullable=True,
+        comment="错误类型: 未作答/计算错误/概念错误/理解错误/单位错误/逻辑错误等",
+    )
+
     tags = Column(JSON, nullable=True, comment="标签列表")
 
     notes = Column(Text, nullable=True, comment="学生备注")
@@ -175,6 +197,7 @@ class MistakeRecord(BaseModel):
 
     # 索引
     __table_args__ = (
+        Index("ix_mistake_records_user_question", "user_id", "question_number"),
         # SQLite不支持的特性
         {"sqlite_autoincrement": True} if is_sqlite else {},
     )
