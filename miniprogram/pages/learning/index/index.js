@@ -1037,6 +1037,14 @@ const pageObject = {
       // 只有在有图片时才添加 image_urls 参数
       if (imageUrls.length > 0) {
         requestParams.image_urls = imageUrls;
+
+        // 🎯 [新增] 批改场景加载提示（有图片时可能是作业批改）
+        if (imageUrls.length >= 1 && inputText.includes('批改')) {
+          wx.showLoading({
+            title: 'AI批改中...',
+            mask: true,
+          });
+        }
       }
 
       console.log('发送流式请求参数:', requestParams);
@@ -1243,6 +1251,62 @@ const pageObject = {
           console.log('✅ 已更新消息列表中的 AI 回答为增强后内容');
         }
 
+        // 🎯 处理批改结果（作业批改场景） - 在 setData 之前处理
+        if (response.correction_result && Array.isArray(response.correction_result)) {
+          // 🎯 [新增] 数据验证
+          if (response.correction_result.length === 0) {
+            console.warn('⚠️ 批改结果为空数组');
+            wx.hideLoading();
+            wx.showToast({
+              title: '未识别到题目，请重新上传',
+              icon: 'none',
+              duration: 2000,
+            });
+            return;
+          }
+
+          console.log('✅ 收到批改结果:', {
+            totalQuestions: response.correction_result.length,
+            mistakesCreated: response.mistakes_created || 0,
+          });
+
+          // 🎯 [新增] 关闭批改加载提示
+          wx.hideLoading();
+
+          // 创建批改结果卡片消息
+          const correctionCardMessage = {
+            id: `correction_${Date.now()}`,
+            type: 'correction_card',
+            sender: 'ai',
+            timestamp: new Date().toISOString(),
+            formattedTime: formatMessageTime(new Date()),
+            status: 'received',
+            correctionData: {
+              corrections: response.correction_result,
+              total_questions: response.correction_result.length,
+              mistakes_created: response.mistakes_created || 0,
+            },
+          };
+
+          // 添加批改卡片到消息列表
+          newMessageList.push(correctionCardMessage);
+
+          // 显示成功提示
+          if (response.mistakes_created > 0) {
+            wx.showToast({
+              title: `批改完成！${response.mistakes_created}题加入错题本`,
+              icon: 'success',
+              duration: 2000,
+            });
+          } else {
+            wx.showToast({
+              title: '批改完成！全部正确 👍',
+              icon: 'success',
+              duration: 2000,
+            });
+          }
+        }
+
         this.setData({
           messageList: newMessageList,
           isAITyping: false,
@@ -1302,6 +1366,9 @@ const pageObject = {
         code: error.code,
         message: error.message,
       });
+
+      // 🎯 [新增] 确保关闭加载提示
+      wx.hideLoading();
 
       // 更新用户消息状态为失败
       const newMessageList = [...this.data.messageList];

@@ -5,6 +5,7 @@
   "usingComponents": {
     "loading": "/components/loading/index",
     "empty-state": "/components/empty-state/index",
-    "towxml-renderer": "/components/towxml-renderer/index"
+    "towxml-renderer": "/components/towxml-renderer/index",
+    "correction-card": "/components/correction-card/index"
   }
 }

@@ -117,6 +117,11 @@
                    bindtap="previewImage"
                    data-url="{{item.content}}" />
 
+            <!-- 批改结果卡片 -->
+            <view wx:elif="{{item.type === 'correction_card'}}" class="correction-card-wrapper">
+              <correction-card data="{{item.correctionData}}" />
+            </view>
+
             <!-- AI消息附加信息 -->
             <view wx:if="{{item.sender === 'ai' && (item.confidence || item.sources)}}" class="ai-meta">
               <view wx:if="{{item.confidence}}" class="confidence">

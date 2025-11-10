@@ -1,0 +1,267 @@
+/* components/correction-card/index.wxss */
+
+/* 主容器 */
+.correction-card {
+  background-color: #ffffff;
+  border-radius: 16rpx;
+  overflow: hidden;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.08);
+  margin: 20rpx 0;
+}
+
+/* 批改摘要卡片 */
+.summary-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 30rpx;
+  color: #ffffff;
+}
+
+.summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.summary-title {
+  font-size: 32rpx;
+  font-weight: bold;
+}
+
+.summary-score {
+  font-size: 28rpx;
+  font-weight: 600;
+  background-color: rgba(255, 255, 255, 0.2);
+  padding: 8rpx 20rpx;
+  border-radius: 20rpx;
+}
+
+/* 统计数据 */
+.summary-stats {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 20rpx;
+  padding: 20rpx 0;
+  background-color: rgba(255, 255, 255, 0.15);
+  border-radius: 12rpx;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.stat-number {
+  font-size: 40rpx;
+  font-weight: bold;
+}
+
+.stat-label {
+  font-size: 24rpx;
+  opacity: 0.9;
+}
+
+.stat-correct .stat-number {
+  color: #52c41a;
+}
+
+.stat-error .stat-number {
+  color: #ff4d4f;
+}
+
+.stat-unanswered .stat-number {
+  color: #faad14;
+}
+
+.summary-text {
+  margin-top: 20rpx;
+  padding: 20rpx;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  line-height: 1.6;
+}
+
+/* 错题列表区域 */
+.mistakes-section {
+  padding: 30rpx;
+}
+
+.section-header {
+  margin-bottom: 20rpx;
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #333333;
+}
+
+.mistake-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+/* 错题卡片 */
+.mistake-item {
+  background-color: #f7f8fa;
+  border-radius: 12rpx;
+  padding: 24rpx;
+  border-left: 4rpx solid #ff4d4f;
+}
+
+.mistake-header {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 16rpx;
+  flex-wrap: wrap;
+}
+
+.question-number {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333333;
+}
+
+.question-type {
+  padding: 4rpx 12rpx;
+  background-color: #e6f7ff;
+  color: #1890ff;
+  font-size: 22rpx;
+  border-radius: 8rpx;
+}
+
+.error-badge {
+  padding: 4rpx 12rpx;
+  background-color: #fff1f0;
+  color: #ff4d4f;
+  font-size: 22rpx;
+  border-radius: 8rpx;
+}
+
+.unanswered-badge {
+  padding: 4rpx 12rpx;
+  background-color: #fffbe6;
+  color: #faad14;
+  font-size: 22rpx;
+  border-radius: 8rpx;
+}
+
+/* 答案区块 */
+.answer-block {
+  margin: 12rpx 0;
+  padding: 16rpx;
+  background-color: #ffffff;
+  border-radius: 8rpx;
+}
+
+.answer-label {
+  font-size: 24rpx;
+  color: #666666;
+  display: block;
+  margin-bottom: 8rpx;
+}
+
+.answer-content {
+  font-size: 26rpx;
+  line-height: 1.6;
+  display: block;
+}
+
+.student-answer {
+  color: #ff4d4f;
+}
+
+.correct-answer {
+  color: #52c41a;
+  font-weight: 500;
+}
+
+/* 批改说明 */
+.explanation-block {
+  margin: 12rpx 0;
+  padding: 16rpx;
+  background-color: #fafafa;
+  border-radius: 8rpx;
+  border-left: 3rpx solid #1890ff;
+}
+
+.explanation-label {
+  font-size: 24rpx;
+  color: #666666;
+  display: block;
+  margin-bottom: 8rpx;
+}
+
+.explanation-content {
+  font-size: 26rpx;
+  line-height: 1.8;
+  color: #333333;
+  display: block;
+}
+
+/* 知识点 */
+.knowledge-points {
+  margin-top: 12rpx;
+}
+
+.knowledge-label {
+  font-size: 24rpx;
+  color: #666666;
+  display: block;
+  margin-bottom: 8rpx;
+}
+
+.knowledge-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.knowledge-tag {
+  padding: 6rpx 16rpx;
+  background-color: #e6fffb;
+  color: #13c2c2;
+  font-size: 22rpx;
+  border-radius: 16rpx;
+}
+
+/* 操作按钮区域 */
+.action-buttons {
+  display: flex;
+  gap: 20rpx;
+  padding: 0 30rpx 30rpx;
+}
+
+.action-btn {
+  flex: 1;
+  padding: 24rpx 32rpx; /* 增加内边距以确保触摸目标 >= 44px */
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  font-weight: 500;
+  text-align: center;
+  border: none;
+  min-height: 88rpx; /* 44px = 88rpx, 确保触摸目标足够大 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 响应式设计 */
+@media (max-width: 375px) {
+  .summary-title {
+    font-size: 28rpx;
+  }
+
+  .stat-number {
+    font-size: 36rpx;
+  }
+
+  .mistake-item {
+    padding: 20rpx;
+  }
+}
