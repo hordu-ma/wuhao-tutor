@@ -318,6 +318,86 @@ class SessionResponse(SessionBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+# ========== 作业批改Schema模型 ==========
+
+
+class QuestionCorrectionItem(BaseModel):
+    """单个题目的批改结果"""
+
+    question_number: int = Field(..., ge=1, description="题号(从1开始)")
+    question_type: str = Field(
+        ..., description="题目类型: 选择题/填空题/解答题/判断题/多选题/短答题等"
+    )
+    is_unanswered: bool = Field(default=False, description="是否未作答")
+    student_answer: Optional[str] = Field(None, description="学生答案")
+    correct_answer: Optional[str] = Field(None, description="正确答案")
+    error_type: Optional[str] = Field(
+        None,
+        description="错误类型: 未作答/计算错误/概念错误/理解错误/单位错误/逻辑错误等",
+    )
+    explanation: Optional[str] = Field(None, description="批改说明和解析")
+    knowledge_points: List[str] = Field(
+        default_factory=list, description="涉及的知识点"
+    )
+    score: Optional[int] = Field(None, ge=0, le=100, description="该题得分(百分比)")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "question_number": 1,
+                "question_type": "选择题",
+                "is_unanswered": False,
+                "student_answer": "A",
+                "correct_answer": "B",
+                "error_type": "概念错误",
+                "explanation": "二次函数的顶点式应该是...",
+                "knowledge_points": ["二次函数", "顶点式"],
+                "score": 0,
+            }
+        }
+    )
+
+
+class HomeworkCorrectionResult(BaseModel):
+    """作业批改结果汇总"""
+
+    corrections: List[QuestionCorrectionItem] = Field(
+        ..., description="所有题目的批改结果"
+    )
+    summary: Optional[str] = Field(None, description="作业总体评语")
+    overall_score: Optional[int] = Field(
+        None, ge=0, le=100, description="整份作业得分(百分比)"
+    )
+    total_questions: int = Field(..., ge=1, description="题目总数")
+    unanswered_count: int = Field(default=0, ge=0, description="未作答题数")
+    error_count: int = Field(default=0, ge=0, description="出错题数")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "corrections": [
+                    {
+                        "question_number": 1,
+                        "question_type": "选择题",
+                        "is_unanswered": False,
+                        "student_answer": "A",
+                        "correct_answer": "B",
+                        "error_type": "概念错误",
+                        "explanation": "...",
+                        "knowledge_points": ["..."],
+                        "score": 0,
+                    }
+                ],
+                "summary": "本次作业主要出现的问题是对二次函数顶点式的理解不透彻...",
+                "overall_score": 75,
+                "total_questions": 10,
+                "unanswered_count": 1,
+                "error_count": 3,
+            }
+        }
+    )
+
+
 class QuestionAnswerPair(BaseModel):
     """问答对"""
 
@@ -337,6 +417,12 @@ class AskQuestionResponse(BaseModel):
     # 🎯 错题自动创建相关字段
     mistake_created: bool = Field(default=False, description="是否自动创建了错题")
     mistake_info: Optional[Dict[str, Any]] = Field(default=None, description="错题信息")
+
+    # 📝 作业批改相关字段
+    correction_result: Optional[HomeworkCorrectionResult] = Field(
+        default=None, description="作业批改结果（如果是批改场景）"
+    )
+    mistakes_created: int = Field(default=0, description="本次自动创建的错题数量")
 
     model_config = ConfigDict(
         json_schema_extra={

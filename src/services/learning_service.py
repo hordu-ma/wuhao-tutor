@@ -40,8 +40,10 @@ from src.schemas.learning import (
     AskQuestionResponse,
     CreateSessionRequest,
     FeedbackRequest,
+    HomeworkCorrectionResult,
     LearningAnalyticsResponse,
     PaginatedResponse,
+    QuestionCorrectionItem,
     QuestionHistoryQuery,
     QuestionResponse,
     SessionListQuery,
@@ -67,6 +69,52 @@ from src.utils.type_converters import (
 
 logger = logging.getLogger("learning_service")
 settings = get_settings()
+
+# ========== 作业批改 Prompt 常量 ==========
+
+HOMEWORK_CORRECTION_PROMPT = """
+你是一个资深的教育工作者和学科专家，擅长批改学生作业。
+
+现在请批改学生提交的作业。请按照以下要求进行批改：
+
+1. **逐题分析**：对每一道题目进行仔细分析
+2. **准确判断**：判断学生答案是否正确、是否遗漏
+3. **错误分类**：对错误答案进行分类（如计算错误、概念错误、理解错误、单位错误等）
+4. **知识点提取**：提取每题涉及的核心知识点
+5. **详细解析**：给出清晰的解题思路和正确答案
+
+请返回严格的 JSON 格式的结果，格式如下（必须是有效的 JSON）：
+
+{
+  "corrections": [
+    {
+      "question_number": <题号>,
+      "question_type": "<题目类型，如选择题、填空题、解答题等>",
+      "is_unanswered": <是否未作答，true/false>,
+      "student_answer": "<学生答案，如果未作答则为null>",
+      "correct_answer": "<正确答案>",
+      "error_type": "<错误类型，如计算错误、概念错误等，如果正确则为null>",
+      "explanation": "<批改说明和解析过程>",
+      "knowledge_points": ["<知识点1>", "<知识点2>"],
+      "score": <该题得分百分比，0-100>
+    }
+  ],
+  "summary": "<作业总体评语，包括学生的优点和需要改进的地方>",
+  "overall_score": <整份作业得分百分比，0-100>,
+  "total_questions": <题目总数>,
+  "unanswered_count": <未作答题数>,
+  "error_count": <出错题数>
+}
+
+注意：
+- 必须返回有效的 JSON 格式
+- 题号应从 1 开始
+- 对于正确答案，error_type 应为 null
+- 对于未作答的题目，is_unanswered 应为 true，student_answer 为 null
+- score 应该反映该题的正确程度（0 表示完全错误或未作答，100 表示完全正确）
+- 知识点应该具体明确，最多 3 个
+- 学科：{subject}
+"""
 
 
 class LearningService:
@@ -186,25 +234,65 @@ class LearningService:
             # 8. 更新用户学习分析
             await self._update_learning_analytics(user_id, question, answer)
 
-            # 🎯 9. 智能错题自动创建（简化规则版）
+            # 🎯 9. 作业批改专用逻辑（新增）
+            correction_result = None
+            mistakes_created_count = 0
+            try:
+                # 9.1 检测是否为作业批改场景
+                if self._is_homework_correction_scenario(
+                    request.question_type,
+                    extract_orm_str(question, "content") or "",
+                    request.image_urls,
+                ):
+                    logger.info(f"📝 检测到作业批改场景，启动专用逻辑")
+
+                    # 9.2 调用AI进行批改
+                    subject = extract_orm_str(request, "subject") or "math"
+                    user_hint = extract_orm_str(question, "content")
+
+                    correction_result = await self._call_ai_for_homework_correction(
+                        image_urls=request.image_urls or [],
+                        subject=subject,
+                        user_hint=user_hint,
+                    )
+
+                    # 9.3 如果批改成功，逐题创建错题
+                    if correction_result:
+                        mistakes_created_count, mistake_list = (
+                            await self._create_mistakes_from_correction(
+                                user_id=user_id,
+                                correction_result=correction_result,
+                                subject=subject,
+                                image_urls=request.image_urls or [],
+                            )
+                        )
+                        logger.info(
+                            f"✅ 作业批改完成: 创建 {mistakes_created_count} 个错题"
+                        )
+            except Exception as correction_err:
+                logger.warning(f"作业批改失败，但不影响问答: {str(correction_err)}")
+
+            # 🎯 10. 智能错题自动创建（简化规则版）
+            # 如果不是批改场景，使用原有逻辑
             mistake_created = False
             mistake_info = None
-            try:
-                mistake_result = await self._auto_create_mistake_if_needed(
-                    user_id, question, answer, request
-                )
-                if mistake_result:
-                    mistake_created = True
-                    mistake_info = mistake_result
-                    logger.info(
-                        f"✅ 错题自动创建成功: user_id={user_id}, "
-                        f"mistake_id={mistake_info.get('id')}, "
-                        f"category={mistake_info.get('category')}"
+            if not correction_result:  # 只在非批改场景执行
+                try:
+                    mistake_result = await self._auto_create_mistake_if_needed(
+                        user_id, question, answer, request
                     )
-            except Exception as mistake_err:
-                logger.warning(f"错题创建失败，但不影响问答: {str(mistake_err)}")
+                    if mistake_result:
+                        mistake_created = True
+                        mistake_info = mistake_result
+                        logger.info(
+                            f"✅ 错题自动创建成功: user_id={user_id}, "
+                            f"mistake_id={mistake_info.get('id')}, "
+                            f"category={mistake_info.get('category')}"
+                        )
+                except Exception as mistake_err:
+                    logger.warning(f"错题创建失败，但不影响问答: {str(mistake_err)}")
 
-            # 10. 构建响应
+            # 11. 构建响应
             processing_time = int((time.time() - start_time) * 1000)
 
             # 🔧 刷新ORM对象，确保所有属性已加载（避免 MissingGreenlet 错误）
@@ -218,8 +306,10 @@ class LearningService:
                 session=SessionResponse.model_validate(session),
                 processing_time=processing_time,
                 tokens_used=ai_response.tokens_used,
-                mistake_created=mistake_created,  # 🎯 新增
-                mistake_info=mistake_info,  # 🎯 新增
+                mistake_created=mistake_created,  # 🎯 简化规则创建
+                mistake_info=mistake_info,  # 🎯 简化规则信息
+                correction_result=correction_result,  # 🎯 批改结果
+                mistakes_created=mistakes_created_count,  # 🎯 批改创建的错题数
             )
 
         except Exception as e:
@@ -2678,6 +2768,260 @@ class LearningService:
 
         logger.debug("科目推断: 无明显关键词，默认数学")
         return "数学"
+
+    # ========== 作业批改核心方法 ==========
+
+    def _is_homework_correction_scenario(
+        self,
+        question_type: Optional[QuestionType],
+        content: str,
+        image_urls: Optional[List[str]],
+    ) -> bool:
+        """
+        判断是否为作业批改场景
+
+        Args:
+            question_type: 问题类型
+            content: 问题内容
+            image_urls: 图片列表
+
+        Returns:
+            bool: 是否为批改场景
+        """
+        # 检查问题类型
+        if question_type == QuestionType.HOMEWORK_HELP:
+            return True
+
+        # 检查内容中的关键词
+        correction_keywords = [
+            "批改",
+            "改错",
+            "作业",
+            "题目",
+            "答案",
+            "对不对",
+            "这道题",
+            "帮我检查",
+            "看看对不对",
+            "这份作业",
+            "逐题",
+            "逐个",
+        ]
+
+        content_lower = content.lower()
+        has_correction_keyword = any(kw in content_lower for kw in correction_keywords)
+
+        # 有图片 + 包含批改关键词 = 批改场景
+        has_images = bool(image_urls and len(image_urls) > 0)
+        if has_images and has_correction_keyword:
+            return True
+
+        return False
+
+    async def _call_ai_for_homework_correction(
+        self,
+        image_urls: List[str],
+        subject: str,
+        user_hint: Optional[str] = None,
+    ) -> Optional[HomeworkCorrectionResult]:
+        """
+        调用 AI 进行作业批改
+
+        Args:
+            image_urls: 作业图片 URLs
+            subject: 学科
+            user_hint: 用户提示信息
+
+        Returns:
+            HomeworkCorrectionResult: 批改结果，失败时返回 None
+        """
+        if not image_urls:
+            logger.warning("批改失败：没有提供图片")
+            return None
+
+        try:
+            # 构建 Prompt
+            prompt = HOMEWORK_CORRECTION_PROMPT.format(subject=subject)
+            if user_hint:
+                prompt += f"\n\n学生提示：{user_hint}"
+
+            # 构建消息
+            messages = [
+                {
+                    "role": "user",
+                    "content": prompt,
+                    "image_urls": image_urls,
+                }
+            ]
+
+            logger.info(
+                f"📝 开始作业批改: subject={subject}, " f"image_count={len(image_urls)}"
+            )
+
+            # 调用 AI
+            ai_response = await self.bailian_service.chat_completion(
+                messages=messages,
+                max_tokens=2000,  # 批改可能需要更多 tokens
+                temperature=0.3,  # 降低温度以获得更准确的结果
+                top_p=0.8,
+            )
+
+            if not ai_response.success:
+                logger.error(f"AI 批改失败: {ai_response.error_message}")
+                return None
+
+            # 解析 AI 响应
+            response_content = ai_response.content or ""
+            logger.debug(f"AI 批改响应: {response_content[:200]}...")
+
+            # 尝试提取 JSON
+            try:
+                # 查找 JSON 块
+                json_start = response_content.find("{")
+                json_end = response_content.rfind("}") + 1
+
+                if json_start == -1 or json_end <= json_start:
+                    logger.error("AI 响应中未找到 JSON 格式")
+                    return None
+
+                json_str = response_content[json_start:json_end]
+                result_dict = json.loads(json_str)
+
+                # 构建批改结果
+                corrections = []
+                for item in result_dict.get("corrections", []):
+                    correction = QuestionCorrectionItem(
+                        question_number=item.get("question_number", 0),
+                        question_type=item.get("question_type", ""),
+                        is_unanswered=item.get("is_unanswered", False),
+                        student_answer=item.get("student_answer"),
+                        correct_answer=item.get("correct_answer"),
+                        error_type=item.get("error_type"),
+                        explanation=item.get("explanation"),
+                        knowledge_points=item.get("knowledge_points", []),
+                        score=item.get("score"),
+                    )
+                    corrections.append(correction)
+
+                correction_result = HomeworkCorrectionResult(
+                    corrections=corrections,
+                    summary=result_dict.get("summary"),
+                    overall_score=result_dict.get("overall_score"),
+                    total_questions=result_dict.get(
+                        "total_questions", len(corrections)
+                    ),
+                    unanswered_count=result_dict.get("unanswered_count", 0),
+                    error_count=result_dict.get("error_count", 0),
+                )
+
+                logger.info(
+                    f"✅ 作业批改完成: total_questions={len(corrections)}, "
+                    f"unanswered={correction_result.unanswered_count}, "
+                    f"errors={correction_result.error_count}, "
+                    f"overall_score={correction_result.overall_score}"
+                )
+
+                return correction_result
+
+            except json.JSONDecodeError as e:
+                logger.error(f"解析 AI 响应 JSON 失败: {str(e)}")
+                return None
+
+        except Exception as e:
+            logger.error(f"作业批改异常: {str(e)}", exc_info=True)
+            return None
+
+    async def _create_mistakes_from_correction(
+        self,
+        user_id: str,
+        correction_result: HomeworkCorrectionResult,
+        subject: str,
+        image_urls: List[str],
+    ) -> Tuple[int, List[Dict[str, Any]]]:
+        """
+        从批改结果创建错题记录
+
+        Args:
+            user_id: 用户 ID
+            correction_result: 批改结果
+            subject: 学科
+            image_urls: 作业图片 URLs
+
+        Returns:
+            Tuple[创建的错题数量, 错题信息列表]
+        """
+        from src.models.study import MistakeRecord
+        from src.repositories.mistake_repository import MistakeRepository
+
+        mistake_repo = MistakeRepository(MistakeRecord, self.db)
+        created_mistakes = []
+
+        try:
+            for item in correction_result.corrections:
+                # 只为错误或未作答的题目创建错题
+                if not item.is_unanswered and not item.error_type:
+                    logger.debug(
+                        f"跳过正确题目: question_number={item.question_number}"
+                    )
+                    continue
+
+                logger.info(
+                    f"创建错题: question_number={item.question_number}, "
+                    f"is_unanswered={item.is_unanswered}, error_type={item.error_type}"
+                )
+
+                # 生成标题
+                title = f"第{item.question_number}题"
+                if item.error_type:
+                    title += f" - {item.error_type}"
+                if len(title) > 200:
+                    title = title[:200]
+
+                # 构建错题数据
+                mistake_data = {
+                    "user_id": user_id,
+                    "subject": subject,
+                    "title": title,
+                    "question_number": item.question_number,  # 新增字段
+                    "is_unanswered": item.is_unanswered,  # 新增字段
+                    "question_type": item.question_type,  # 新增字段
+                    "error_type": item.error_type,  # 新增字段
+                    "student_answer": item.student_answer,
+                    "correct_answer": item.correct_answer,
+                    "image_urls": image_urls,
+                    "ai_feedback": {
+                        "explanation": item.explanation,
+                        "score": item.score,
+                    },
+                    "knowledge_points": item.knowledge_points or [],
+                    "difficulty_level": 2,  # 默认中等难度
+                    "mastery_status": "learning",
+                    "source": "homework_correction",
+                    "notes": f"自动批改：{item.explanation}",
+                }
+
+                # 创建错题记录
+                mistake = await mistake_repo.create(mistake_data)
+                logger.info(
+                    f"✅ 错题创建成功: mistake_id={mistake.id}, "
+                    f"question_number={item.question_number}"
+                )
+
+                created_mistakes.append(
+                    {
+                        "id": str(mistake.id),
+                        "question_number": item.question_number,
+                        "error_type": item.error_type,
+                        "title": title,
+                    }
+                )
+
+            logger.info(f"🎯 从批改结果创建了 {len(created_mistakes)} 个错题")
+            return len(created_mistakes), created_mistakes
+
+        except Exception as e:
+            logger.error(f"创建错题失败: {str(e)}", exc_info=True)
+            return 0, []
 
 
 # 依赖注入函数
