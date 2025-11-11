@@ -24,23 +24,30 @@ def configure_logging() -> None:
         # 添加时间戳
         structlog.processors.TimeStamper(fmt="iso"),
         # 添加调用信息（仅在调试模式下）
-        structlog.processors.CallsiteParameterAdder(
-            parameters=[structlog.processors.CallsiteParameter.FILENAME,
-                       structlog.processors.CallsiteParameter.LINENO]
-        ) if settings.DEBUG else structlog.processors.CallsiteParameterAdder(),
+        (
+            structlog.processors.CallsiteParameterAdder(
+                parameters=[
+                    structlog.processors.CallsiteParameter.FILENAME,
+                    structlog.processors.CallsiteParameter.LINENO,
+                ]
+            )
+            if settings.DEBUG
+            else structlog.processors.CallsiteParameterAdder()
+        ),
     ]
 
     # 根据配置选择输出格式
     if settings.LOG_FORMAT == "json":
-        processors.extend([
-            structlog.processors.dict_tracebacks,
-            structlog.processors.JSONRenderer()
-        ])
+        processors.extend(
+            [structlog.processors.dict_tracebacks, structlog.processors.JSONRenderer()]
+        )
     else:
-        processors.extend([
-            structlog.processors.add_log_level,
-            structlog.dev.ConsoleRenderer(colors=True)
-        ])
+        processors.extend(
+            [
+                structlog.processors.add_log_level,
+                structlog.dev.ConsoleRenderer(colors=True),
+            ]
+        )
 
     # 配置 structlog
     structlog.configure(

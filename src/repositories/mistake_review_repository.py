@@ -47,15 +47,11 @@ class MistakeReviewRepository(BaseRepository[MistakeReview]):
         result = await self.db.execute(stmt)
         items = result.scalars().all()
 
-        logger.debug(
-            f"Found {len(items)} review records for mistake {mistake_id}"
-        )
+        logger.debug(f"Found {len(items)} review records for mistake {mistake_id}")
 
         return list(items)
 
-    async def get_latest_review(
-        self, mistake_id: UUID
-    ) -> Optional[MistakeReview]:
+    async def get_latest_review(self, mistake_id: UUID) -> Optional[MistakeReview]:
         """
         获取最近一次复习记录
 
@@ -81,9 +77,7 @@ class MistakeReviewRepository(BaseRepository[MistakeReview]):
 
         return review
 
-    async def calculate_average_mastery(
-        self, mistake_id: UUID
-    ) -> float:
+    async def calculate_average_mastery(self, mistake_id: UUID) -> float:
         """
         计算平均掌握度
 
@@ -93,9 +87,8 @@ class MistakeReviewRepository(BaseRepository[MistakeReview]):
         Returns:
             平均掌握度（0.0-1.0）
         """
-        stmt = (
-            select(func.avg(MistakeReview.mastery_level))
-            .where(MistakeReview.mistake_id == str(mistake_id))
+        stmt = select(func.avg(MistakeReview.mastery_level)).where(
+            MistakeReview.mistake_id == str(mistake_id)
         )
 
         result = await self.db.execute(stmt)
@@ -107,9 +100,7 @@ class MistakeReviewRepository(BaseRepository[MistakeReview]):
 
         return round(float(avg_mastery), 2)
 
-    async def get_review_streak(
-        self, user_id: UUID
-    ) -> int:
+    async def get_review_streak(self, user_id: UUID) -> int:
         """
         获取连续复习天数
 
@@ -158,15 +149,11 @@ class MistakeReviewRepository(BaseRepository[MistakeReview]):
             else:
                 break
 
-        logger.debug(
-            f"Calculated review streak for user {user_id}: {streak} days"
-        )
+        logger.debug(f"Calculated review streak for user {user_id}: {streak} days")
 
         return streak
 
-    async def find_by_user(
-        self, user_id: UUID, limit: int = 50
-    ) -> List[MistakeReview]:
+    async def find_by_user(self, user_id: UUID, limit: int = 50) -> List[MistakeReview]:
         """
         查询用户的所有复习记录
 
@@ -187,9 +174,7 @@ class MistakeReviewRepository(BaseRepository[MistakeReview]):
         result = await self.db.execute(stmt)
         items = result.scalars().all()
 
-        logger.debug(
-            f"Found {len(items)} review records for user {user_id}"
-        )
+        logger.debug(f"Found {len(items)} review records for user {user_id}")
 
         return list(items)
 
@@ -228,9 +213,7 @@ class MistakeReviewRepository(BaseRepository[MistakeReview]):
 
         return count
 
-    async def get_review_accuracy(
-        self, user_id: UUID
-    ) -> float:
+    async def get_review_accuracy(self, user_id: UUID) -> float:
         """
         获取复习正确率
 

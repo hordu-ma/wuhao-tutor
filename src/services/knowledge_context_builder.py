@@ -115,12 +115,12 @@ class KnowledgeContextBuilder:
             )
             summary = await self._generate_context_summary(session, user_id, subject)
             recent_errors = await self._get_recent_errors(session, user_id, subject)
-            
+
             # 🎯 NEW: 优先从知识图谱快照获取掌握度
             mastery = await self._get_mastery_from_snapshot(
                 session, user_id, subject
             ) or await self._calculate_knowledge_mastery(session, user_id, subject)
-            
+
             patterns = await self._analyze_study_patterns(session, user_id, subject)
 
             return LearningContext(
@@ -597,14 +597,14 @@ class KnowledgeContextBuilder:
     ) -> Optional[Dict[str, float]]:
         """
         从知识图谱快照获取掌握度
-        
+
         Returns:
             Dict[str, float]: 知识点名称 -> 掌握度 (0-1)
         """
         try:
             from src.models.knowledge_graph import UserKnowledgeGraphSnapshot
             from uuid import UUID
-            
+
             # 查询最新快照
             stmt = (
                 select(UserKnowledgeGraphSnapshot)
@@ -612,22 +612,22 @@ class KnowledgeContextBuilder:
                 .order_by(UserKnowledgeGraphSnapshot.snapshot_date.desc())
                 .limit(1)
             )
-            
+
             if subject:
                 stmt = stmt.where(UserKnowledgeGraphSnapshot.subject == subject)
-            
+
             result = await session.execute(stmt)
             snapshot = result.scalar_one_or_none()
-            
+
             if not snapshot:
                 logger.info(f"未找到用户 {user_id} 的知识图谱快照")
                 return None
-            
+
             # 从快照中提取掌握度
             knowledge_points = snapshot.knowledge_points
             if isinstance(knowledge_points, str):
                 knowledge_points = json.loads(knowledge_points)
-            
+
             mastery_dict = {}
             for kp in knowledge_points:
                 if isinstance(kp, dict):
@@ -635,13 +635,13 @@ class KnowledgeContextBuilder:
                     mastery = kp.get("mastery", 0.0)
                     if name:
                         mastery_dict[name] = mastery
-            
+
             logger.info(
                 f"✅ 从快照获取掌握度: user={user_id}, "
                 f"knowledge_points={len(mastery_dict)}"
             )
             return mastery_dict
-            
+
         except Exception as e:
             logger.error(f"从快照获取掌握度失败: {e}")
             return None

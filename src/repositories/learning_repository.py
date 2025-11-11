@@ -13,8 +13,12 @@ from sqlalchemy.orm import selectinload, joinedload
 
 from src.core.logging import get_logger
 from src.models.learning import (
-    ChatSession, Question, Answer, LearningAnalytics,
-    QuestionType, SessionStatus
+    ChatSession,
+    Question,
+    Answer,
+    LearningAnalytics,
+    QuestionType,
+    SessionStatus,
 )
 from src.models.user import User
 from src.repositories.base_repository import BaseRepository
@@ -38,9 +42,7 @@ class LearningRepository:
     # ========== 会话相关查询 ==========
 
     async def get_user_active_session(
-        self,
-        user_id: str,
-        subject: Optional[str] = None
+        self, user_id: str, subject: Optional[str] = None
     ) -> Optional[ChatSession]:
         """
         获取用户的活跃会话
@@ -56,7 +58,7 @@ class LearningRepository:
             stmt = select(ChatSession).where(
                 and_(
                     ChatSession.user_id == user_id,
-                    ChatSession.status == SessionStatus.ACTIVE.value
+                    ChatSession.status == SessionStatus.ACTIVE.value,
                 )
             )
 
@@ -85,7 +87,7 @@ class LearningRepository:
         limit: Optional[int] = None,
         offset: Optional[int] = None,
         status: Optional[str] = None,
-        subject: Optional[str] = None
+        subject: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
         获取用户的会话列表及统计信息
@@ -102,14 +104,18 @@ class LearningRepository:
         """
         try:
             # 构建基础查询
-            stmt = select(
-                ChatSession,
-                func.count(Question.id).label('question_count'),
-                func.avg(Answer.user_rating).label('avg_rating'),
-                func.max(Question.created_at).label('last_question_time')
-            ).outerjoin(Question).outerjoin(Answer).where(
-                ChatSession.user_id == user_id
-            ).group_by(ChatSession.id)
+            stmt = (
+                select(
+                    ChatSession,
+                    func.count(Question.id).label("question_count"),
+                    func.avg(Answer.user_rating).label("avg_rating"),
+                    func.max(Question.created_at).label("last_question_time"),
+                )
+                .outerjoin(Question)
+                .outerjoin(Answer)
+                .where(ChatSession.user_id == user_id)
+                .group_by(ChatSession.id)
+            )
 
             # 应用过滤条件
             if status:
@@ -130,10 +136,10 @@ class LearningRepository:
             sessions = []
             for session, q_count, avg_rating, last_q_time in rows:
                 session_data = {
-                    'session': session,
-                    'question_count': q_count or 0,
-                    'avg_rating': round(avg_rating, 2) if avg_rating else None,
-                    'last_question_time': last_q_time
+                    "session": session,
+                    "question_count": q_count or 0,
+                    "avg_rating": round(avg_rating, 2) if avg_rating else None,
+                    "last_question_time": last_q_time,
                 }
                 sessions.append(session_data)
 
@@ -145,10 +151,7 @@ class LearningRepository:
             raise
 
     async def get_session_with_qa_history(
-        self,
-        session_id: str,
-        user_id: str,
-        limit: Optional[int] = None
+        self, session_id: str, user_id: str, limit: Optional[int] = None
     ) -> Optional[Dict[str, Any]]:
         """
         获取会话及其问答历史
@@ -163,16 +166,17 @@ class LearningRepository:
         """
         try:
             # 获取会话信息
-            session = await self.session_repo.get_by_field('id', session_id)
-            if not session or str(getattr(session, 'user_id', '')) != str(user_id):
+            session = await self.session_repo.get_by_field("id", session_id)
+            if not session or str(getattr(session, "user_id", "")) != str(user_id):
                 return None
 
             # 获取问答历史
-            stmt = select(Question).options(
-                selectinload(Question.answer)
-            ).where(
-                Question.session_id == session_id
-            ).order_by(asc(Question.created_at))
+            stmt = (
+                select(Question)
+                .options(selectinload(Question.answer))
+                .where(Question.session_id == session_id)
+                .order_by(asc(Question.created_at))
+            )
 
             if limit:
                 stmt = stmt.limit(limit)
@@ -180,10 +184,7 @@ class LearningRepository:
             result = await self.db.execute(stmt)
             questions = result.scalars().all()
 
-            return {
-                'session': session,
-                'qa_history': list(questions)
-            }
+            return {"session": session, "qa_history": list(questions)}
 
         except Exception as e:
             logger.error(f"Error getting session with QA history {session_id}: {e}")
@@ -192,11 +193,7 @@ class LearningRepository:
     # ========== 问答相关查询 ==========
 
     async def get_recent_questions_by_topic(
-        self,
-        user_id: str,
-        topic: str,
-        days: int = 7,
-        limit: int = 5
+        self, user_id: str, topic: str, days: int = 7, limit: int = 5
     ) -> List[Question]:
         """
         获取用户最近关于某话题的问题
@@ -213,18 +210,25 @@ class LearningRepository:
         try:
             cutoff_date = datetime.now() - timedelta(days=days)
 
-            stmt = select(Question).where(
-                and_(
-                    Question.user_id == user_id,
-                    Question.topic.ilike(f"%{topic}%"),
-                    Question.created_at >= cutoff_date.isoformat()
+            stmt = (
+                select(Question)
+                .where(
+                    and_(
+                        Question.user_id == user_id,
+                        Question.topic.ilike(f"%{topic}%"),
+                        Question.created_at >= cutoff_date.isoformat(),
+                    )
                 )
-            ).order_by(desc(Question.created_at)).limit(limit)
+                .order_by(desc(Question.created_at))
+                .limit(limit)
+            )
 
             result = await self.db.execute(stmt)
             questions = result.scalars().all()
 
-            logger.debug(f"Found {len(questions)} recent questions on topic '{topic}' for user {user_id}")
+            logger.debug(
+                f"Found {len(questions)} recent questions on topic '{topic}' for user {user_id}"
+            )
             return list(questions)
 
         except Exception as e:
@@ -232,10 +236,7 @@ class LearningRepository:
             raise
 
     async def get_questions_with_low_ratings(
-        self,
-        user_id: str,
-        max_rating: int = 2,
-        limit: int = 10
+        self, user_id: str, max_rating: int = 2, limit: int = 10
     ) -> List[Dict[str, Any]]:
         """
         获取用户评分较低的问答
@@ -249,23 +250,26 @@ class LearningRepository:
             包含问题和答案的列表
         """
         try:
-            stmt = select(Question, Answer).join(Answer).where(
-                and_(
-                    Question.user_id == user_id,
-                    Answer.user_rating <= max_rating,
-                    Answer.user_rating.is_not(None)
+            stmt = (
+                select(Question, Answer)
+                .join(Answer)
+                .where(
+                    and_(
+                        Question.user_id == user_id,
+                        Answer.user_rating <= max_rating,
+                        Answer.user_rating.is_not(None),
+                    )
                 )
-            ).order_by(desc(Question.created_at)).limit(limit)
+                .order_by(desc(Question.created_at))
+                .limit(limit)
+            )
 
             result = await self.db.execute(stmt)
             rows = result.all()
 
             qa_pairs = []
             for question, answer in rows:
-                qa_pairs.append({
-                    'question': question,
-                    'answer': answer
-                })
+                qa_pairs.append({"question": question, "answer": answer})
 
             logger.debug(f"Found {len(qa_pairs)} low-rated QA pairs for user {user_id}")
             return qa_pairs
@@ -279,7 +283,7 @@ class LearningRepository:
         user_id: str,
         search_term: str,
         subject: Optional[str] = None,
-        limit: int = 20
+        limit: int = 20,
     ) -> List[Question]:
         """
         根据内容搜索问题
@@ -299,8 +303,8 @@ class LearningRepository:
                     Question.user_id == user_id,
                     or_(
                         Question.content.ilike(f"%{search_term}%"),
-                        Question.topic.ilike(f"%{search_term}%")
-                    )
+                        Question.topic.ilike(f"%{search_term}%"),
+                    ),
                 )
             )
 
@@ -312,7 +316,9 @@ class LearningRepository:
             result = await self.db.execute(stmt)
             questions = result.scalars().all()
 
-            logger.debug(f"Found {len(questions)} questions matching '{search_term}' for user {user_id}")
+            logger.debug(
+                f"Found {len(questions)} questions matching '{search_term}' for user {user_id}"
+            )
             return list(questions)
 
         except Exception as e:
@@ -322,9 +328,7 @@ class LearningRepository:
     # ========== 学习分析相关查询 ==========
 
     async def get_user_learning_stats(
-        self,
-        user_id: str,
-        days: int = 30
+        self, user_id: str, days: int = 30
     ) -> Dict[str, Any]:
         """
         获取用户学习统计数据
@@ -340,22 +344,26 @@ class LearningRepository:
             cutoff_date = datetime.now() - timedelta(days=days)
 
             # 基础统计查询
-            stats_query = select(
-                func.count(Question.id).label('total_questions'),
-                func.count(func.distinct(ChatSession.id)).label('total_sessions'),
-                func.count(func.distinct(Question.subject)).label('active_subjects'),
-                func.avg(Answer.user_rating).label('avg_rating'),
-                func.count(
-                    func.case((Answer.is_helpful == True, 1))
-                ).label('helpful_answers')
-            ).select_from(Question).outerjoin(
-                ChatSession, Question.session_id == ChatSession.id
-            ).outerjoin(
-                Answer, Question.id == Answer.question_id
-            ).where(
-                and_(
-                    Question.user_id == user_id,
-                    Question.created_at >= cutoff_date.isoformat()
+            stats_query = (
+                select(
+                    func.count(Question.id).label("total_questions"),
+                    func.count(func.distinct(ChatSession.id)).label("total_sessions"),
+                    func.count(func.distinct(Question.subject)).label(
+                        "active_subjects"
+                    ),
+                    func.avg(Answer.user_rating).label("avg_rating"),
+                    func.count(func.case((Answer.is_helpful == True, 1))).label(
+                        "helpful_answers"
+                    ),
+                )
+                .select_from(Question)
+                .outerjoin(ChatSession, Question.session_id == ChatSession.id)
+                .outerjoin(Answer, Question.id == Answer.question_id)
+                .where(
+                    and_(
+                        Question.user_id == user_id,
+                        Question.created_at >= cutoff_date.isoformat(),
+                    )
                 )
             )
 
@@ -363,32 +371,36 @@ class LearningRepository:
             stats_row = result.first()
 
             # 学科分布查询
-            subject_query = select(
-                Question.subject,
-                func.count(Question.id).label('count')
-            ).where(
-                and_(
-                    Question.user_id == user_id,
-                    Question.created_at >= cutoff_date.isoformat(),
-                    Question.subject.is_not(None)
+            subject_query = (
+                select(Question.subject, func.count(Question.id).label("count"))
+                .where(
+                    and_(
+                        Question.user_id == user_id,
+                        Question.created_at >= cutoff_date.isoformat(),
+                        Question.subject.is_not(None),
+                    )
                 )
-            ).group_by(Question.subject).order_by(desc('count'))
+                .group_by(Question.subject)
+                .order_by(desc("count"))
+            )
 
             subject_result = await self.db.execute(subject_query)
             subject_rows = subject_result.all()
             subject_stats = {row[0]: row[1] for row in subject_rows}
 
             # 问题类型分布查询
-            type_query = select(
-                Question.question_type,
-                func.count(Question.id).label('count')
-            ).where(
-                and_(
-                    Question.user_id == user_id,
-                    Question.created_at >= cutoff_date.isoformat(),
-                    Question.question_type.is_not(None)
+            type_query = (
+                select(Question.question_type, func.count(Question.id).label("count"))
+                .where(
+                    and_(
+                        Question.user_id == user_id,
+                        Question.created_at >= cutoff_date.isoformat(),
+                        Question.question_type.is_not(None),
+                    )
                 )
-            ).group_by(Question.question_type).order_by(desc('count'))
+                .group_by(Question.question_type)
+                .order_by(desc("count"))
+            )
 
             type_result = await self.db.execute(type_query)
             type_rows = type_result.all()
@@ -397,28 +409,34 @@ class LearningRepository:
             # 组合统计结果
             if stats_row:
                 learning_stats = {
-                    'total_questions': getattr(stats_row, 'total_questions', 0) or 0,
-                    'total_sessions': getattr(stats_row, 'total_sessions', 0) or 0,
-                    'active_subjects': getattr(stats_row, 'active_subjects', 0) or 0,
-                    'avg_rating': round(getattr(stats_row, 'avg_rating', 0), 2) if getattr(stats_row, 'avg_rating', None) else None,
-                    'helpful_answers': getattr(stats_row, 'helpful_answers', 0) or 0,
-                    'subject_distribution': subject_stats,
-                    'question_type_distribution': type_stats,
-                    'period_days': days
+                    "total_questions": getattr(stats_row, "total_questions", 0) or 0,
+                    "total_sessions": getattr(stats_row, "total_sessions", 0) or 0,
+                    "active_subjects": getattr(stats_row, "active_subjects", 0) or 0,
+                    "avg_rating": (
+                        round(getattr(stats_row, "avg_rating", 0), 2)
+                        if getattr(stats_row, "avg_rating", None)
+                        else None
+                    ),
+                    "helpful_answers": getattr(stats_row, "helpful_answers", 0) or 0,
+                    "subject_distribution": subject_stats,
+                    "question_type_distribution": type_stats,
+                    "period_days": days,
                 }
             else:
                 learning_stats = {
-                    'total_questions': 0,
-                    'total_sessions': 0,
-                    'active_subjects': 0,
-                    'avg_rating': None,
-                    'helpful_answers': 0,
-                    'subject_distribution': subject_stats,
-                    'question_type_distribution': type_stats,
-                    'period_days': days
+                    "total_questions": 0,
+                    "total_sessions": 0,
+                    "active_subjects": 0,
+                    "avg_rating": None,
+                    "helpful_answers": 0,
+                    "subject_distribution": subject_stats,
+                    "question_type_distribution": type_stats,
+                    "period_days": days,
                 }
 
-            logger.debug(f"Generated learning stats for user {user_id}: {learning_stats}")
+            logger.debug(
+                f"Generated learning stats for user {user_id}: {learning_stats}"
+            )
             return learning_stats
 
         except Exception as e:
@@ -426,9 +444,7 @@ class LearningRepository:
             raise
 
     async def get_daily_activity_pattern(
-        self,
-        user_id: str,
-        days: int = 30
+        self, user_id: str, days: int = 30
     ) -> Dict[str, int]:
         """
         获取用户每日活动模式
@@ -444,18 +460,19 @@ class LearningRepository:
             cutoff_date = datetime.now() - timedelta(days=days)
 
             # 使用原生SQL进行日期分组（适应不同数据库）
-            stmt = text("""
+            stmt = text(
+                """
                 SELECT DATE(created_at) as question_date, COUNT(*) as count
                 FROM questions
                 WHERE user_id = :user_id
                   AND created_at >= :cutoff_date
                 GROUP BY DATE(created_at)
                 ORDER BY question_date
-            """)
+            """
+            )
 
             result = await self.db.execute(
-                stmt,
-                {'user_id': user_id, 'cutoff_date': cutoff_date.isoformat()}
+                stmt, {"user_id": user_id, "cutoff_date": cutoff_date.isoformat()}
             )
 
             daily_pattern = {}
@@ -470,9 +487,7 @@ class LearningRepository:
             raise
 
     async def get_knowledge_mastery_analysis(
-        self,
-        user_id: str,
-        subject: Optional[str] = None
+        self, user_id: str, subject: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         分析用户知识掌握情况
@@ -485,62 +500,77 @@ class LearningRepository:
             知识掌握分析结果
         """
         try:
-            base_query = select(
-                Question.topic,
-                func.count(Question.id).label('question_count'),
-                func.avg(Answer.user_rating).label('avg_rating'),
-                func.avg(Answer.confidence_score).label('avg_confidence'),
-                func.count(
-                    func.case((Answer.is_helpful == True, 1))
-                ).label('helpful_count')
-            ).select_from(Question).join(
-                Answer, Question.id == Answer.question_id
-            ).where(
-                and_(
-                    Question.user_id == user_id,
-                    Question.topic.is_not(None),
-                    Answer.user_rating.is_not(None)
+            base_query = (
+                select(
+                    Question.topic,
+                    func.count(Question.id).label("question_count"),
+                    func.avg(Answer.user_rating).label("avg_rating"),
+                    func.avg(Answer.confidence_score).label("avg_confidence"),
+                    func.count(func.case((Answer.is_helpful == True, 1))).label(
+                        "helpful_count"
+                    ),
+                )
+                .select_from(Question)
+                .join(Answer, Question.id == Answer.question_id)
+                .where(
+                    and_(
+                        Question.user_id == user_id,
+                        Question.topic.is_not(None),
+                        Answer.user_rating.is_not(None),
+                    )
                 )
             )
 
             if subject:
                 base_query = base_query.where(Question.subject == subject)
 
-            base_query = base_query.group_by(Question.topic).having(
-                func.count(Question.id) >= 2  # 至少2个问题才能分析
-            ).order_by(desc('avg_rating'))
+            base_query = (
+                base_query.group_by(Question.topic)
+                .having(func.count(Question.id) >= 2)  # 至少2个问题才能分析
+                .order_by(desc("avg_rating"))
+            )
 
             result = await self.db.execute(base_query)
             topic_analysis = []
 
             for row in result:
-                mastery_level = 'high' if row.avg_rating >= 4 else 'medium' if row.avg_rating >= 3 else 'low'
-                topic_analysis.append({
-                    'topic': row.topic,
-                    'question_count': row.question_count,
-                    'avg_rating': round(row.avg_rating, 2),
-                    'avg_confidence': round(row.avg_confidence, 2) if row.avg_confidence else None,
-                    'helpful_rate': round(row.helpful_count / row.question_count * 100, 2),
-                    'mastery_level': mastery_level
-                })
+                mastery_level = (
+                    "high"
+                    if row.avg_rating >= 4
+                    else "medium" if row.avg_rating >= 3 else "low"
+                )
+                topic_analysis.append(
+                    {
+                        "topic": row.topic,
+                        "question_count": row.question_count,
+                        "avg_rating": round(row.avg_rating, 2),
+                        "avg_confidence": (
+                            round(row.avg_confidence, 2) if row.avg_confidence else None
+                        ),
+                        "helpful_rate": round(
+                            row.helpful_count / row.question_count * 100, 2
+                        ),
+                        "mastery_level": mastery_level,
+                    }
+                )
 
             # 按掌握程度分组
             mastery_summary = {
-                'high': [t for t in topic_analysis if t['mastery_level'] == 'high'],
-                'medium': [t for t in topic_analysis if t['mastery_level'] == 'medium'],
-                'low': [t for t in topic_analysis if t['mastery_level'] == 'low']
+                "high": [t for t in topic_analysis if t["mastery_level"] == "high"],
+                "medium": [t for t in topic_analysis if t["mastery_level"] == "medium"],
+                "low": [t for t in topic_analysis if t["mastery_level"] == "low"],
             }
 
             analysis_result = {
-                'topics_analyzed': len(topic_analysis),
-                'mastery_distribution': {
-                    'high': len(mastery_summary['high']),
-                    'medium': len(mastery_summary['medium']),
-                    'low': len(mastery_summary['low'])
+                "topics_analyzed": len(topic_analysis),
+                "mastery_distribution": {
+                    "high": len(mastery_summary["high"]),
+                    "medium": len(mastery_summary["medium"]),
+                    "low": len(mastery_summary["low"]),
                 },
-                'topic_details': topic_analysis,
-                'improvement_areas': mastery_summary['low'][:5],  # 前5个需要改进的话题
-                'strong_areas': mastery_summary['high'][:5]       # 前5个强势话题
+                "topic_details": topic_analysis,
+                "improvement_areas": mastery_summary["low"][:5],  # 前5个需要改进的话题
+                "strong_areas": mastery_summary["high"][:5],  # 前5个强势话题
             }
 
             logger.debug(f"Generated knowledge mastery analysis for user {user_id}")
@@ -583,22 +613,28 @@ class LearningRepository:
 
             for session_id in session_ids:
                 # 计算会话的问题数量和token消耗
-                stats_query = select(
-                    func.count(Question.id).label('question_count'),
-                    func.sum(Answer.tokens_used).label('total_tokens')
-                ).select_from(Question).outerjoin(
-                    Answer, Question.id == Answer.question_id
-                ).where(Question.session_id == session_id)
+                stats_query = (
+                    select(
+                        func.count(Question.id).label("question_count"),
+                        func.sum(Answer.tokens_used).label("total_tokens"),
+                    )
+                    .select_from(Question)
+                    .outerjoin(Answer, Question.id == Answer.question_id)
+                    .where(Question.session_id == session_id)
+                )
 
                 result = await self.db.execute(stats_query)
                 stats = result.first()
 
                 # 更新会话统计
                 if stats:
-                    await self.session_repo.update(session_id, {
-                        'question_count': stats.question_count or 0,
-                        'total_tokens': stats.total_tokens or 0
-                    })
+                    await self.session_repo.update(
+                        session_id,
+                        {
+                            "question_count": stats.question_count or 0,
+                            "total_tokens": stats.total_tokens or 0,
+                        },
+                    )
                     updated_count += 1
 
             logger.debug(f"Bulk updated stats for {updated_count} sessions")

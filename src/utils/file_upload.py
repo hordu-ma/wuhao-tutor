@@ -25,6 +25,7 @@ logger = get_logger(__name__)
 
 class FileType:
     """文件类型常量"""
+
     IMAGE = "image"
     DOCUMENT = "document"
     VIDEO = "video"
@@ -37,33 +38,33 @@ class UploadConfig:
 
     # 允许的文件扩展名
     ALLOWED_EXTENSIONS = {
-        FileType.IMAGE: {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff'},
-        FileType.DOCUMENT: {'.pdf', '.doc', '.docx', '.txt', '.rtf'},
-        FileType.VIDEO: {'.mp4', '.avi', '.mov', '.wmv', '.flv'},
-        FileType.AUDIO: {'.mp3', '.wav', '.ogg', '.m4a'},
+        FileType.IMAGE: {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tiff"},
+        FileType.DOCUMENT: {".pdf", ".doc", ".docx", ".txt", ".rtf"},
+        FileType.VIDEO: {".mp4", ".avi", ".mov", ".wmv", ".flv"},
+        FileType.AUDIO: {".mp3", ".wav", ".ogg", ".m4a"},
     }
 
     # 文件大小限制 (bytes)
     MAX_FILE_SIZES = {
-        FileType.IMAGE: 10 * 1024 * 1024,      # 10MB
-        FileType.DOCUMENT: 50 * 1024 * 1024,   # 50MB
-        FileType.VIDEO: 100 * 1024 * 1024,     # 100MB
-        FileType.AUDIO: 20 * 1024 * 1024,      # 20MB
-        FileType.OTHER: 10 * 1024 * 1024,      # 10MB
+        FileType.IMAGE: 10 * 1024 * 1024,  # 10MB
+        FileType.DOCUMENT: 50 * 1024 * 1024,  # 50MB
+        FileType.VIDEO: 100 * 1024 * 1024,  # 100MB
+        FileType.AUDIO: 20 * 1024 * 1024,  # 20MB
+        FileType.OTHER: 10 * 1024 * 1024,  # 10MB
     }
 
     # MIME类型映射
     MIME_TYPES = {
-        '.jpg': 'image/jpeg',
-        '.jpeg': 'image/jpeg',
-        '.png': 'image/png',
-        '.gif': 'image/gif',
-        '.bmp': 'image/bmp',
-        '.webp': 'image/webp',
-        '.pdf': 'application/pdf',
-        '.doc': 'application/msword',
-        '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        '.txt': 'text/plain',
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".png": "image/png",
+        ".gif": "image/gif",
+        ".bmp": "image/bmp",
+        ".webp": "image/webp",
+        ".pdf": "application/pdf",
+        ".doc": "application/msword",
+        ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ".txt": "text/plain",
     }
 
 
@@ -81,7 +82,7 @@ class FileInfo:
         storage_type: str = "local",
         width: Optional[int] = None,
         height: Optional[int] = None,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
     ):
         self.filename = filename
         self.file_path = file_path
@@ -108,7 +109,7 @@ class FileInfo:
             "width": self.width,
             "height": self.height,
             "metadata": self.metadata,
-            "upload_time": self.upload_time.isoformat()
+            "upload_time": self.upload_time.isoformat(),
         }
 
 
@@ -120,7 +121,7 @@ class AliCloudOSSStorage:
         access_key_id: Optional[str] = None,
         access_key_secret: Optional[str] = None,
         bucket_name: Optional[str] = None,
-        endpoint: Optional[str] = None
+        endpoint: Optional[str] = None,
     ):
         """
         初始化OSS存储服务
@@ -164,10 +165,7 @@ class AliCloudOSSStorage:
         return self.bucket is not None
 
     async def upload_file(
-        self,
-        file_data: bytes,
-        object_name: str,
-        content_type: Optional[str] = None
+        self, file_data: bytes, object_name: str, content_type: Optional[str] = None
     ) -> str:
         """
         上传文件到OSS
@@ -187,15 +185,11 @@ class AliCloudOSSStorage:
             # 设置元数据
             headers = {}
             if content_type:
-                headers['Content-Type'] = content_type
+                headers["Content-Type"] = content_type
 
             # 上传文件
             if self.bucket is not None:
-                result = self.bucket.put_object(
-                    object_name,
-                    file_data,
-                    headers=headers
-                )
+                result = self.bucket.put_object(object_name, file_data, headers=headers)
             else:
                 raise AIServiceError("OSS客户端未初始化")
 
@@ -240,11 +234,7 @@ class AliCloudOSSStorage:
 class FileUploadService:
     """文件上传服务"""
 
-    def __init__(
-        self,
-        base_upload_dir: str = "uploads",
-        use_oss: bool = True
-    ):
+    def __init__(self, base_upload_dir: str = "uploads", use_oss: bool = True):
         """
         初始化文件上传服务
 
@@ -306,7 +296,9 @@ class FileUploadService:
                 return False, f"不支持的文件类型: {ext}"
 
         # 检查文件大小
-        max_size = UploadConfig.MAX_FILE_SIZES.get(file_type, UploadConfig.MAX_FILE_SIZES[FileType.OTHER])
+        max_size = UploadConfig.MAX_FILE_SIZES.get(
+            file_type, UploadConfig.MAX_FILE_SIZES[FileType.OTHER]
+        )
         if file_size > max_size:
             max_size_mb = max_size / 1024 / 1024
             return False, f"文件大小超出限制: {max_size_mb}MB"
@@ -337,6 +329,7 @@ class FileUploadService:
         """
         try:
             from io import BytesIO
+
             image = Image.open(BytesIO(file_data))
             return image.size
         except Exception as e:
@@ -374,9 +367,7 @@ class FileUploadService:
         return f"{file_type}/{today}/{filename}"
 
     async def save_upload_file(
-        self,
-        upload_file: UploadFile,
-        subfolder: str = "general"
+        self, upload_file: UploadFile, subfolder: str = "general"
     ) -> FileInfo:
         """
         保存上传文件
@@ -397,7 +388,9 @@ class FileUploadService:
                 raise AIServiceError("文件名不能为空")
 
             # 验证文件
-            is_valid, error_msg = self._validate_file(upload_file.filename, len(file_data))
+            is_valid, error_msg = self._validate_file(
+                upload_file.filename, len(file_data)
+            )
             if not is_valid:
                 raise AIServiceError(error_msg)
 
@@ -406,16 +399,21 @@ class FileUploadService:
             file_type = self._get_file_type(upload_file.filename)
 
             # 生成存储路径
-            storage_path = f"{subfolder}/{self._get_storage_path(unique_filename, file_type)}"
+            storage_path = (
+                f"{subfolder}/{self._get_storage_path(unique_filename, file_type)}"
+            )
 
             # 计算文件哈希
             file_hash = self._calculate_file_hash(file_data)
 
             # 获取MIME类型
-            file_suffix = Path(upload_file.filename).suffix.lower() if upload_file.filename else ""
+            file_suffix = (
+                Path(upload_file.filename).suffix.lower()
+                if upload_file.filename
+                else ""
+            )
             mime_type = upload_file.content_type or UploadConfig.MIME_TYPES.get(
-                file_suffix,
-                'application/octet-stream'
+                file_suffix, "application/octet-stream"
             )
 
             # 获取图片尺寸（如果是图片）
@@ -427,9 +425,7 @@ class FileUploadService:
             if self.use_oss and self.oss_storage and self.oss_storage.is_available():
                 # 上传到OSS
                 file_url = await self.oss_storage.upload_file(
-                    file_data,
-                    storage_path,
-                    mime_type
+                    file_data, storage_path, mime_type
                 )
 
                 file_info = FileInfo(
@@ -445,8 +441,8 @@ class FileUploadService:
                     metadata={
                         "original_filename": upload_file.filename,
                         "unique_filename": unique_filename,
-                        "file_type": file_type
-                    }
+                        "file_type": file_type,
+                    },
                 )
 
             else:
@@ -454,7 +450,7 @@ class FileUploadService:
                 local_file_path = self.base_upload_dir / storage_path
                 local_file_path.parent.mkdir(parents=True, exist_ok=True)
 
-                async with aiofiles.open(local_file_path, 'wb') as f:
+                async with aiofiles.open(local_file_path, "wb") as f:
                     await f.write(file_data)
 
                 file_info = FileInfo(
@@ -470,8 +466,8 @@ class FileUploadService:
                     metadata={
                         "original_filename": upload_file.filename,
                         "unique_filename": unique_filename,
-                        "file_type": file_type
-                    }
+                        "file_type": file_type,
+                    },
                 )
 
             logger.info(f"文件上传成功: {upload_file.filename} -> {storage_path}")
@@ -485,9 +481,7 @@ class FileUploadService:
             await upload_file.seek(0)
 
     async def save_multiple_files(
-        self,
-        upload_files: List[UploadFile],
-        subfolder: str = "general"
+        self, upload_files: List[UploadFile], subfolder: str = "general"
     ) -> List[FileInfo]:
         """
         批量保存上传文件

@@ -20,13 +20,13 @@ from src.core.monitoring import (
     get_metrics_collector,
     get_system_collector,
     PerformanceMonitoringMiddleware,
-    cleanup_old_metrics
+    cleanup_old_metrics,
 )
 from src.core.security import (
     get_rate_limiter,
     RateLimitMiddleware,
     SecurityHeadersMiddleware,
-    cleanup_rate_limiters
+    cleanup_rate_limiters,
 )
 
 
@@ -95,7 +95,11 @@ def create_app() -> FastAPI:
     # 注册路由
     setup_routes(app)
 
-    logger.info("✅ FastAPI 应用创建完成", project=settings.PROJECT_NAME, version=settings.VERSION)
+    logger.info(
+        "✅ FastAPI 应用创建完成",
+        project=settings.PROJECT_NAME,
+        version=settings.VERSION,
+    )
     return app
 
 
@@ -126,10 +130,15 @@ def setup_middleware(app: FastAPI) -> None:
 
     # 安全中间件
     import os
+
     if os.getenv("TESTING") != "1":  # 测试时跳过主机验证
         app.add_middleware(
             TrustedHostMiddleware,
-            allowed_hosts=["localhost", "127.0.0.1", "testserver", settings.HOST] if settings.DEBUG else ["*"]
+            allowed_hosts=(
+                ["localhost", "127.0.0.1", "testserver", settings.HOST]
+                if settings.DEBUG
+                else ["*"]
+            ),
         )
 
     # 日志中间件（最内层，最后执行）
@@ -140,12 +149,12 @@ def setup_exception_handlers(app: FastAPI) -> None:
     """配置异常处理器"""
 
     @app.exception_handler(RequestValidationError)
-    async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    async def validation_exception_handler(
+        request: Request, exc: RequestValidationError
+    ):
         """请求验证异常处理"""
         logger = get_logger("app.exception")
-        logger.warning("请求验证失败",
-                      path=request.url.path,
-                      errors=exc.errors())
+        logger.warning("请求验证失败", path=request.url.path, errors=exc.errors())
 
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -160,10 +169,9 @@ def setup_exception_handlers(app: FastAPI) -> None:
     async def internal_server_error_handler(request: Request, exc: Exception):
         """内部服务器错误处理"""
         logger = get_logger("app.exception")
-        logger.error("内部服务器错误",
-                    path=request.url.path,
-                    error=str(exc),
-                    exc_info=True)
+        logger.error(
+            "内部服务器错误", path=request.url.path, error=str(exc), exc_info=True
+        )
 
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -184,7 +192,7 @@ def setup_routes(app: FastAPI) -> None:
             "project": settings.PROJECT_NAME,
             "version": settings.VERSION,
             "status": "running",
-            "message": "欢迎使用五好伴学！"
+            "message": "欢迎使用五好伴学！",
         }
 
     @app.get("/health")
@@ -199,6 +207,7 @@ def setup_routes(app: FastAPI) -> None:
 
     # 注册 API 路由
     from src.api.v1.api import api_router
+
     app.include_router(api_router, prefix=settings.API_V1_STR)
 
 

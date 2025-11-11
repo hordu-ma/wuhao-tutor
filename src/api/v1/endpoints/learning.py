@@ -1273,7 +1273,7 @@ async def websocket_ask_question(
             await websocket.send_json(
                 {"type": "error", "message": f"AI 服务错误: {str(e)}"}
             )
-        except:
+        except (RuntimeError, ConnectionError):
             pass
     except Exception as e:
         logger.error(f"WebSocket 错误: {e}", exc_info=True)
@@ -1281,11 +1281,11 @@ async def websocket_ask_question(
             await websocket.send_json(
                 {"type": "error", "message": f"服务器错误: {str(e)}"}
             )
-        except:
+        except (RuntimeError, ConnectionError):
             pass
     finally:
         try:
             await websocket.close()
             logger.info("WebSocket 连接已关闭")
-        except:
+        except (RuntimeError, ConnectionError):
             pass

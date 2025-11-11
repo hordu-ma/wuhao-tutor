@@ -28,10 +28,11 @@ logger = get_logger(__name__)
 
 class OCRType:
     """OCR识别类型常量"""
-    GENERAL = "general"           # 通用文字识别
+
+    GENERAL = "general"  # 通用文字识别
     HANDWRITTEN = "handwritten"  # 手写文字识别
-    TABLE = "table"              # 表格识别
-    FORMULA = "formula"          # 公式识别
+    TABLE = "table"  # 表格识别
+    FORMULA = "formula"  # 公式识别
 
 
 class OCRResult:
@@ -43,7 +44,7 @@ class OCRResult:
         confidence: float,
         word_info: List[Dict[str, Any]],
         raw_response: Dict[str, Any],
-        processing_time: float
+        processing_time: float,
     ):
         self.text = text
         self.confidence = confidence
@@ -61,7 +62,7 @@ class OCRResult:
             "word_info": self.word_info,
             "processing_time": self.processing_time,
             "timestamp": self.timestamp.isoformat(),
-            "raw_response": self.raw_response
+            "raw_response": self.raw_response,
         }
 
 
@@ -75,7 +76,7 @@ class AliCloudOCRService:
         self,
         access_key_id: Optional[str] = None,
         access_key_secret: Optional[str] = None,
-        region: str = "cn-hangzhou"
+        region: str = "cn-hangzhou",
     ):
         """
         初始化阿里云OCR服务
@@ -86,7 +87,9 @@ class AliCloudOCRService:
             region: 地域
         """
         self.access_key_id = access_key_id or settings.ALICLOUD_ACCESS_KEY_ID
-        self.access_key_secret = access_key_secret or settings.ALICLOUD_ACCESS_KEY_SECRET
+        self.access_key_secret = (
+            access_key_secret or settings.ALICLOUD_ACCESS_KEY_SECRET
+        )
         self.region = region
         self.endpoint = f"https://ocr.{region}.aliyuncs.com"
 
@@ -108,7 +111,9 @@ class AliCloudOCRService:
         sorted_params = sorted(params.items())
 
         # 构造签名字符串
-        query_string = "&".join([f"{k}={urllib.parse.quote_plus(str(v))}" for k, v in sorted_params])
+        query_string = "&".join(
+            [f"{k}={urllib.parse.quote_plus(str(v))}" for k, v in sorted_params]
+        )
         string_to_sign = f"{method}&%2F&{urllib.parse.quote_plus(query_string)}"
 
         # 计算签名
@@ -117,18 +122,16 @@ class AliCloudOCRService:
 
         signature = base64.b64encode(
             hmac.new(
-                (self.access_key_secret + "&").encode('utf-8'),
-                string_to_sign.encode('utf-8'),
-                hashlib.sha1
+                (self.access_key_secret + "&").encode("utf-8"),
+                string_to_sign.encode("utf-8"),
+                hashlib.sha1,
             ).digest()
-        ).decode('utf-8')
+        ).decode("utf-8")
 
         return signature
 
     def _preprocess_image(
-        self,
-        image_path: str,
-        enhance: bool = True
+        self, image_path: str, enhance: bool = True
     ) -> Tuple[str, Dict[str, Any]]:
         """
         图像预处理
@@ -166,9 +169,7 @@ class AliCloudOCRService:
                 gray = clahe.apply(gray)
 
                 # 锐化
-                kernel = np.array([[-1, -1, -1],
-                                 [-1, 9, -1],
-                                 [-1, -1, -1]])
+                kernel = np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]])
                 gray = cv2.filter2D(gray, -1, kernel)
 
                 # 转回BGR格式
@@ -180,12 +181,18 @@ class AliCloudOCRService:
                 scale = max_size / max(width, height)
                 new_width = int(width * scale)
                 new_height = int(height * scale)
-                image = cv2.resize(image, (new_width, new_height), interpolation=cv2.INTER_AREA)
-                logger.debug(f"图片已压缩: {width}x{height} -> {new_width}x{new_height}")
+                image = cv2.resize(
+                    image, (new_width, new_height), interpolation=cv2.INTER_AREA
+                )
+                logger.debug(
+                    f"图片已压缩: {width}x{height} -> {new_width}x{new_height}"
+                )
 
             # 转换为base64
-            _, encoded_image = cv2.imencode('.jpg', image, [cv2.IMWRITE_JPEG_QUALITY, 85])
-            base64_image = base64.b64encode(encoded_image).decode('utf-8')
+            _, encoded_image = cv2.imencode(
+                ".jpg", image, [cv2.IMWRITE_JPEG_QUALITY, 85]
+            )
+            base64_image = base64.b64encode(encoded_image).decode("utf-8")
 
             # 图片信息
             image_info = {
@@ -195,7 +202,7 @@ class AliCloudOCRService:
                 "processed_height": image.shape[0],
                 "original_size": original_size,
                 "processed_size": len(base64_image),
-                "enhanced": enhance
+                "enhanced": enhance,
             }
 
             logger.debug(f"图片预处理完成: {image_info}")
@@ -209,7 +216,7 @@ class AliCloudOCRService:
         self,
         action: str,
         image_data: str,
-        additional_params: Optional[Dict[str, Any]] = None
+        additional_params: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         调用OCR API
@@ -224,19 +231,19 @@ class AliCloudOCRService:
         """
         try:
             # 构造请求参数
-            timestamp = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+            timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
             nonce = str(int(time.time() * 1000))
 
             params = {
-                'Action': action,
-                'Version': '2019-12-30',
-                'AccessKeyId': self.access_key_id,
-                'SignatureMethod': 'HMAC-SHA1',
-                'SignatureVersion': '1.0',
-                'SignatureNonce': nonce,
-                'Timestamp': timestamp,
-                'Format': 'JSON',
-                'RegionId': self.region,
+                "Action": action,
+                "Version": "2019-12-30",
+                "AccessKeyId": self.access_key_id,
+                "SignatureMethod": "HMAC-SHA1",
+                "SignatureVersion": "1.0",
+                "SignatureNonce": nonce,
+                "Timestamp": timestamp,
+                "Format": "JSON",
+                "RegionId": self.region,
             }
 
             # 添加额外参数
@@ -245,13 +252,10 @@ class AliCloudOCRService:
 
             # 生成签名
             signature = self._generate_signature(params)
-            params['Signature'] = signature
+            params["Signature"] = signature
 
             # 准备请求体
-            request_body = {
-                'ImageType': 1,  # base64格式
-                'ImageData': image_data
-            }
+            request_body = {"ImageType": 1, "ImageData": image_data}  # base64格式
 
             # 发送请求
             async with httpx.AsyncClient(timeout=30.0) as client:
@@ -260,16 +264,16 @@ class AliCloudOCRService:
                     params=params,
                     json=request_body,
                     headers={
-                        'Content-Type': 'application/json; charset=utf-8',
-                        'User-Agent': f'wuhao-tutor/{settings.VERSION}'
-                    }
+                        "Content-Type": "application/json; charset=utf-8",
+                        "User-Agent": f"wuhao-tutor/{settings.VERSION}",
+                    },
                 )
 
                 response.raise_for_status()
                 result = response.json()
 
-                if 'Code' in result and result['Code'] != 'Success':
-                    error_msg = result.get('Message', '未知错误')
+                if "Code" in result and result["Code"] != "Success":
+                    error_msg = result.get("Message", "未知错误")
                     raise AIServiceError(f"OCR API调用失败: {error_msg}")
 
                 return result
@@ -282,9 +286,7 @@ class AliCloudOCRService:
             raise AIServiceError(f"OCR服务调用失败: {e}")
 
     async def recognize_general_text(
-        self,
-        image_path: str,
-        enhance: bool = True
+        self, image_path: str, enhance: bool = True
     ) -> OCRResult:
         """
         通用文字识别
@@ -307,8 +309,7 @@ class AliCloudOCRService:
 
             # 调用OCR API
             response = await self._call_ocr_api(
-                action="RecognizeGeneral",
-                image_data=base64_image
+                action="RecognizeGeneral", image_data=base64_image
             )
 
             # 处理响应
@@ -318,41 +319,49 @@ class AliCloudOCRService:
             word_count = 0
 
             # 解析识别结果
-            if 'Data' in response and 'Content' in response['Data']:
-                for item in response['Data']['Content']:
-                    text = item.get('Text', '')
-                    confidence = float(item.get('Confidence', 0)) / 100.0  # 转换为0-1范围
+            if "Data" in response and "Content" in response["Data"]:
+                for item in response["Data"]["Content"]:
+                    text = item.get("Text", "")
+                    confidence = (
+                        float(item.get("Confidence", 0)) / 100.0
+                    )  # 转换为0-1范围
 
                     if text.strip():
                         text_lines.append(text)
-                        word_info.append({
-                            "text": text,
-                            "confidence": confidence,
-                            "positions": {
-                                "left": item.get('Left', 0),
-                                "top": item.get('Top', 0),
-                                "width": item.get('Width', 0),
-                                "height": item.get('Height', 0)
+                        word_info.append(
+                            {
+                                "text": text,
+                                "confidence": confidence,
+                                "positions": {
+                                    "left": item.get("Left", 0),
+                                    "top": item.get("Top", 0),
+                                    "width": item.get("Width", 0),
+                                    "height": item.get("Height", 0),
+                                },
                             }
-                        })
+                        )
 
                         total_confidence += confidence
                         word_count += 1
 
             # 合并文本
             full_text = "\n".join(text_lines)
-            average_confidence = total_confidence / word_count if word_count > 0 else 0.0
+            average_confidence = (
+                total_confidence / word_count if word_count > 0 else 0.0
+            )
 
             processing_time = asyncio.get_event_loop().time() - start_time
 
-            logger.info(f"通用OCR识别完成: {word_count}个文本块, 平均置信度: {average_confidence:.2f}")
+            logger.info(
+                f"通用OCR识别完成: {word_count}个文本块, 平均置信度: {average_confidence:.2f}"
+            )
 
             return OCRResult(
                 text=full_text,
                 confidence=average_confidence,
                 word_info=word_info,
                 raw_response=response,
-                processing_time=processing_time
+                processing_time=processing_time,
             )
 
         except Exception as e:
@@ -361,9 +370,7 @@ class AliCloudOCRService:
             raise
 
     async def recognize_handwritten_text(
-        self,
-        image_path: str,
-        enhance: bool = True
+        self, image_path: str, enhance: bool = True
     ) -> OCRResult:
         """
         手写文字识别
@@ -386,8 +393,7 @@ class AliCloudOCRService:
 
             # 调用OCR API
             response = await self._call_ocr_api(
-                action="RecognizeHandwriting",
-                image_data=base64_image
+                action="RecognizeHandwriting", image_data=base64_image
             )
 
             # 处理响应（与通用识别类似）
@@ -396,40 +402,46 @@ class AliCloudOCRService:
             total_confidence = 0.0
             word_count = 0
 
-            if 'Data' in response and 'Content' in response['Data']:
-                for item in response['Data']['Content']:
-                    text = item.get('Text', '')
-                    confidence = float(item.get('Confidence', 0)) / 100.0
+            if "Data" in response and "Content" in response["Data"]:
+                for item in response["Data"]["Content"]:
+                    text = item.get("Text", "")
+                    confidence = float(item.get("Confidence", 0)) / 100.0
 
                     if text.strip():
                         text_lines.append(text)
-                        word_info.append({
-                            "text": text,
-                            "confidence": confidence,
-                            "positions": {
-                                "left": item.get('Left', 0),
-                                "top": item.get('Top', 0),
-                                "width": item.get('Width', 0),
-                                "height": item.get('Height', 0)
+                        word_info.append(
+                            {
+                                "text": text,
+                                "confidence": confidence,
+                                "positions": {
+                                    "left": item.get("Left", 0),
+                                    "top": item.get("Top", 0),
+                                    "width": item.get("Width", 0),
+                                    "height": item.get("Height", 0),
+                                },
                             }
-                        })
+                        )
 
                         total_confidence += confidence
                         word_count += 1
 
             full_text = "\n".join(text_lines)
-            average_confidence = total_confidence / word_count if word_count > 0 else 0.0
+            average_confidence = (
+                total_confidence / word_count if word_count > 0 else 0.0
+            )
 
             processing_time = asyncio.get_event_loop().time() - start_time
 
-            logger.info(f"手写OCR识别完成: {word_count}个文本块, 平均置信度: {average_confidence:.2f}")
+            logger.info(
+                f"手写OCR识别完成: {word_count}个文本块, 平均置信度: {average_confidence:.2f}"
+            )
 
             return OCRResult(
                 text=full_text,
                 confidence=average_confidence,
                 word_info=word_info,
                 raw_response=response,
-                processing_time=processing_time
+                processing_time=processing_time,
             )
 
         except Exception as e:
@@ -438,10 +450,7 @@ class AliCloudOCRService:
             raise
 
     async def auto_recognize(
-        self,
-        image_path: str,
-        ocr_type: str = OCRType.GENERAL,
-        enhance: bool = True
+        self, image_path: str, ocr_type: str = OCRType.GENERAL, enhance: bool = True
     ) -> OCRResult:
         """
         自动识别（根据类型选择合适的OCR方法）

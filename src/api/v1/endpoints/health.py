@@ -27,6 +27,9 @@ settings = get_settings()
 
 router = APIRouter(prefix="/health", tags=["健康检查"])
 
+# 全局变量存储应用启动时间
+_app_start_time = time.time()
+
 
 @router.get("/", summary="系统健康检查", description="检查系统各组件的健康状态")
 async def health_check(db: AsyncSession = Depends(get_db)) -> JSONResponse:
@@ -197,6 +200,8 @@ async def readiness_check(db: AsyncSession = Depends(get_db)) -> JSONResponse:
 @router.get("/liveness", summary="活性检查", description="检查应用程序是否正在运行")
 async def liveness_check() -> JSONResponse:
     """活性检查 - 最简单的存活检查"""
+    # 使用全局变量存储启动时间
+    uptime = time.time() - _app_start_time
     return JSONResponse(
         status_code=status.HTTP_200_OK,
         content={
@@ -274,7 +279,7 @@ async def get_metrics(db: AsyncSession = Depends(get_db)) -> JSONResponse:
                     "connection_status": "connected",
                     "engine": "sqlite",
                 }
-            except:
+            except (Exception, OSError, RuntimeError):
                 metrics["database"] = {"connection_status": "error", "error": str(e)}
 
         # 应用指标
@@ -397,8 +402,8 @@ async def get_rate_limit_status() -> JSONResponse:
         )
 
 
-# 初始化启动时间
-liveness_check._start_time = time.time()
+# 不再需要这一行，因为我们使用了全局变量
+# liveness_check._start_time = time.time()
 
 
 @router.get(

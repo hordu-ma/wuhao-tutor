@@ -257,7 +257,7 @@ class UserService:
                 import json
 
                 study_subjects = json.loads(study_subjects_str)
-            except:
+            except (ValueError, TypeError, AttributeError):
                 pass
 
         study_goals_str = extract_orm_str(user, "study_goals")
@@ -266,7 +266,7 @@ class UserService:
                 import json
 
                 study_goals = json.loads(study_goals_str)
-            except:
+            except (ValueError, TypeError, AttributeError):
                 pass
 
         # 构建详细响应
@@ -345,7 +345,7 @@ class UserService:
         if study_goals_str:
             try:
                 existing_goals = json.loads(study_goals_str)
-            except:
+            except (ValueError, TypeError, AttributeError):
                 existing_goals = []
 
         # 添加新目标
@@ -876,9 +876,9 @@ class UserService:
         query = query.offset((page - 1) * size).limit(size)
 
         result = await self.db.execute(query)
-        users = result.scalars().all()
+        users = list(result.scalars().all())
 
-        return users, total
+        return users, total or 0
 
     def _generate_secure_password(self, length: int = 8) -> str:
         """

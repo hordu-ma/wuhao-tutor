@@ -128,7 +128,7 @@ async def get_optional_current_user(
 
         user = await user_service.user_repo.get_by_id(user_id)
         return user
-    except:
+    except Exception:
         return None
 
 

@@ -18,7 +18,7 @@ logger = get_logger(__name__)
 class SpacedRepetitionAlgorithm:
     """
     间隔重复算法
-    
+
     基于艾宾浩斯遗忘曲线，结合用户掌握度动态调整复习间隔
     """
 
@@ -150,9 +150,7 @@ class SpacedRepetitionAlgorithm:
 
         mastery = round(score, 2)
 
-        logger.info(
-            f"Calculated mastery level from {len(recent)} reviews: {mastery}"
-        )
+        logger.info(f"Calculated mastery level from {len(recent)} reviews: {mastery}")
 
         return mastery
 

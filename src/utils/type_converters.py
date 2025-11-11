@@ -49,7 +49,7 @@ def safe_bool(value: Any) -> bool:
     if isinstance(value, bool):
         return value
     if isinstance(value, str):
-        return value.lower() in ('true', '1', 'yes', 'on')
+        return value.lower() in ("true", "1", "yes", "on")
     try:
         return bool(value)
     except (ValueError, TypeError):
@@ -138,13 +138,17 @@ def extract_orm_str(orm_obj: Any, attr_name: str, default: str = "") -> str:
     return safe_str(value)
 
 
-def extract_orm_int(orm_obj: Any, attr_name: str, default: Optional[int] = None) -> Optional[int]:
+def extract_orm_int(
+    orm_obj: Any, attr_name: str, default: Optional[int] = None
+) -> Optional[int]:
     """从ORM对象提取整数属性"""
     value = extract_orm_value(orm_obj, attr_name, default)
     return safe_int(value)
 
 
-def extract_orm_float(orm_obj: Any, attr_name: str, default: Optional[float] = None) -> Optional[float]:
+def extract_orm_float(
+    orm_obj: Any, attr_name: str, default: Optional[float] = None
+) -> Optional[float]:
     """从ORM对象提取浮点数属性"""
     value = extract_orm_value(orm_obj, attr_name, default)
     return safe_float(value)
@@ -162,7 +166,9 @@ def extract_orm_uuid_str(orm_obj: Any, attr_name: str, default: str = "") -> str
     return safe_uuid_str(value)
 
 
-def extract_orm_datetime_str(orm_obj: Any, attr_name: str, default: Optional[str] = None) -> Optional[str]:
+def extract_orm_datetime_str(
+    orm_obj: Any, attr_name: str, default: Optional[str] = None
+) -> Optional[str]:
     """从ORM对象提取日期时间并转为字符串"""
     value = extract_orm_value(orm_obj, attr_name, default)
     return safe_datetime_str(value)
@@ -212,7 +218,9 @@ class TypeSafeORM:
         """获取整数属性"""
         return extract_orm_int(self._orm_obj, attr_name, default)
 
-    def get_float(self, attr_name: str, default: Optional[float] = None) -> Optional[float]:
+    def get_float(
+        self, attr_name: str, default: Optional[float] = None
+    ) -> Optional[float]:
         """获取浮点数属性"""
         return extract_orm_float(self._orm_obj, attr_name, default)
 
@@ -224,11 +232,15 @@ class TypeSafeORM:
         """获取UUID字符串属性"""
         return extract_orm_uuid_str(self._orm_obj, attr_name, default)
 
-    def get_datetime_str(self, attr_name: str, default: Optional[str] = None) -> Optional[str]:
+    def get_datetime_str(
+        self, attr_name: str, default: Optional[str] = None
+    ) -> Optional[str]:
         """获取日期时间字符串属性"""
         return extract_orm_datetime_str(self._orm_obj, attr_name, default)
 
-    def get_json(self, attr_name: str, default: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
+    def get_json(
+        self, attr_name: str, default: Optional[Dict[str, Any]] = None
+    ) -> Optional[Dict[str, Any]]:
         """获取JSON属性"""
         value = extract_orm_value(self._orm_obj, attr_name, None)
         result = safe_json_loads(value)
@@ -241,6 +253,7 @@ def wrap_orm(orm_obj: Any) -> TypeSafeORM:
 
 
 # 常用的响应构造辅助函数
+
 
 def build_user_response_data(user_obj: Any) -> Dict[str, Any]:
     """构建用户响应数据"""
@@ -259,7 +272,7 @@ def build_user_response_data(user_obj: Any) -> Dict[str, Any]:
         "is_verified": safe_user.get_bool("is_verified"),
         "avatar_url": safe_user.get_str("avatar_url"),
         "created_at": safe_user.get_datetime_str("created_at"),
-        "updated_at": safe_user.get_datetime_str("updated_at")
+        "updated_at": safe_user.get_datetime_str("updated_at"),
     }
 
 
@@ -279,7 +292,7 @@ def build_session_response_data(session_obj: Any) -> Dict[str, Any]:
         "is_revoked": safe_session.get_bool("is_revoked"),
         "ip_address": safe_session.get_str("ip_address"),
         "user_agent": safe_session.get_str("user_agent"),
-        "created_at": safe_session.get_datetime_str("created_at")
+        "created_at": safe_session.get_datetime_str("created_at"),
     }
 
 
@@ -303,5 +316,5 @@ def build_homework_response_data(homework_obj: Any) -> Dict[str, Any]:
         "max_score": safe_homework.get_float("max_score"),
         "time_limit": safe_homework.get_int("time_limit"),
         "created_at": safe_homework.get_datetime_str("created_at"),
-        "updated_at": safe_homework.get_datetime_str("updated_at")
+        "updated_at": safe_homework.get_datetime_str("updated_at"),
     }

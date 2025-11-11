@@ -51,15 +51,17 @@ class BaseRepository(Generic[ModelType]):
         """
         try:
             # 如果没有ID，生成UUID
-            if hasattr(self.model, 'id') and 'id' not in data:
-                data['id'] = str(uuid4())
+            if hasattr(self.model, "id") and "id" not in data:
+                data["id"] = str(uuid4())
 
             instance = self.model(**data)
             self.db.add(instance)
             await self.db.commit()
             await self.db.refresh(instance)
 
-            logger.debug(f"Created {self.model.__name__} with id: {getattr(instance, 'id', 'N/A')}")
+            logger.debug(
+                f"Created {self.model.__name__} with id: {getattr(instance, 'id', 'N/A')}"
+            )
             return instance
 
         except IntegrityError as e:
@@ -82,7 +84,7 @@ class BaseRepository(Generic[ModelType]):
             模型实例或None
         """
         try:
-            stmt = select(self.model).where(getattr(self.model, 'id') == record_id)
+            stmt = select(self.model).where(getattr(self.model, "id") == record_id)
             result = await self.db.execute(stmt)
             instance = result.scalar_one_or_none()
 
@@ -130,7 +132,7 @@ class BaseRepository(Generic[ModelType]):
         limit: Optional[int] = None,
         offset: Optional[int] = None,
         order_by: Optional[str] = None,
-        filters: Optional[Dict[str, Any]] = None
+        filters: Optional[Dict[str, Any]] = None,
     ) -> List[ModelType]:
         """
         获取所有记录
@@ -161,7 +163,7 @@ class BaseRepository(Generic[ModelType]):
 
             # 应用排序
             if order_by:
-                if order_by.startswith('-'):
+                if order_by.startswith("-"):
                     # 降序
                     order_field = order_by[1:]
                     field_attr = getattr(self.model, order_field)
@@ -199,9 +201,12 @@ class BaseRepository(Generic[ModelType]):
             更新后的模型实例或None
         """
         try:
-            stmt = update(self.model).where(
-                getattr(self.model, 'id') == record_id
-            ).values(**data).returning(self.model)
+            stmt = (
+                update(self.model)
+                .where(getattr(self.model, "id") == record_id)
+                .values(**data)
+                .returning(self.model)
+            )
 
             result = await self.db.execute(stmt)
             await self.db.commit()
@@ -211,7 +216,9 @@ class BaseRepository(Generic[ModelType]):
                 await self.db.refresh(instance)
                 logger.debug(f"Updated {self.model.__name__} with id: {record_id}")
             else:
-                logger.debug(f"No {self.model.__name__} found to update with id: {record_id}")
+                logger.debug(
+                    f"No {self.model.__name__} found to update with id: {record_id}"
+                )
 
             return instance
 
@@ -221,7 +228,9 @@ class BaseRepository(Generic[ModelType]):
             raise
         except Exception as e:
             await self.db.rollback()
-            logger.error(f"Error updating {self.model.__name__} with id {record_id}: {e}")
+            logger.error(
+                f"Error updating {self.model.__name__} with id {record_id}: {e}"
+            )
             raise
 
     async def delete(self, record_id: str) -> bool:
@@ -235,7 +244,7 @@ class BaseRepository(Generic[ModelType]):
             是否删除成功
         """
         try:
-            stmt = delete(self.model).where(getattr(self.model, 'id') == record_id)
+            stmt = delete(self.model).where(getattr(self.model, "id") == record_id)
             result = await self.db.execute(stmt)
             await self.db.commit()
 
@@ -243,13 +252,17 @@ class BaseRepository(Generic[ModelType]):
             if deleted:
                 logger.debug(f"Deleted {self.model.__name__} with id: {record_id}")
             else:
-                logger.debug(f"No {self.model.__name__} found to delete with id: {record_id}")
+                logger.debug(
+                    f"No {self.model.__name__} found to delete with id: {record_id}"
+                )
 
             return deleted
 
         except Exception as e:
             await self.db.rollback()
-            logger.error(f"Error deleting {self.model.__name__} with id {record_id}: {e}")
+            logger.error(
+                f"Error deleting {self.model.__name__} with id {record_id}: {e}"
+            )
             raise
 
     async def count(self, filters: Optional[Dict[str, Any]] = None) -> int:
@@ -263,7 +276,7 @@ class BaseRepository(Generic[ModelType]):
             记录数量
         """
         try:
-            stmt = select(func.count(getattr(self.model, 'id')))
+            stmt = select(func.count(getattr(self.model, "id")))
 
             # 应用过滤条件
             if filters:
@@ -298,7 +311,9 @@ class BaseRepository(Generic[ModelType]):
             是否存在
         """
         try:
-            stmt = select(func.count(getattr(self.model, 'id'))).where(getattr(self.model, 'id') == record_id)
+            stmt = select(func.count(getattr(self.model, "id"))).where(
+                getattr(self.model, "id") == record_id
+            )
             result = await self.db.execute(stmt)
             count = result.scalar()
 
@@ -308,7 +323,9 @@ class BaseRepository(Generic[ModelType]):
             return exists
 
         except Exception as e:
-            logger.error(f"Error checking if {self.model.__name__} exists with id {record_id}: {e}")
+            logger.error(
+                f"Error checking if {self.model.__name__} exists with id {record_id}: {e}"
+            )
             raise
 
     async def bulk_create(self, data_list: List[Dict[str, Any]]) -> List[ModelType]:
@@ -325,8 +342,8 @@ class BaseRepository(Generic[ModelType]):
             instances = []
             for data in data_list:
                 # 如果没有ID，生成UUID
-                if hasattr(self.model, 'id') and 'id' not in data:
-                    data['id'] = str(uuid4())
+                if hasattr(self.model, "id") and "id" not in data:
+                    data["id"] = str(uuid4())
                 instances.append(self.model(**data))
 
             self.db.add_all(instances)
@@ -361,10 +378,12 @@ class BaseRepository(Generic[ModelType]):
         try:
             updated_count = 0
             for update_data in updates:
-                record_id = update_data.pop('id')
-                stmt = update(self.model).where(
-                    getattr(self.model, 'id') == record_id
-                ).values(**update_data)
+                record_id = update_data.pop("id")
+                stmt = (
+                    update(self.model)
+                    .where(getattr(self.model, "id") == record_id)
+                    .values(**update_data)
+                )
 
                 result = await self.db.execute(stmt)
                 updated_count += result.rowcount
@@ -389,7 +408,7 @@ class BaseRepository(Generic[ModelType]):
             删除的记录数量
         """
         try:
-            stmt = delete(self.model).where(getattr(self.model, 'id').in_(record_ids))
+            stmt = delete(self.model).where(getattr(self.model, "id").in_(record_ids))
             result = await self.db.execute(stmt)
             await self.db.commit()
 
@@ -407,7 +426,7 @@ class BaseRepository(Generic[ModelType]):
         search_term: str,
         search_fields: List[str],
         limit: Optional[int] = None,
-        offset: Optional[int] = None
+        offset: Optional[int] = None,
     ) -> List[ModelType]:
         """
         搜索记录

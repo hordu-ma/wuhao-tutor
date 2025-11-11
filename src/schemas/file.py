@@ -12,6 +12,7 @@ from pydantic.types import UUID4
 
 class FileMetadata(BaseModel):
     """文件元数据"""
+
     original_filename: str = Field(..., description="原始文件名")
     content_type: str = Field(..., description="文件MIME类型")
     size: int = Field(..., ge=0, description="文件大小（字节）")
@@ -22,6 +23,7 @@ class FileMetadata(BaseModel):
 
 class FileUploadResponse(BaseModel):
     """文件上传响应"""
+
     id: UUID4 = Field(..., description="文件ID")
     original_filename: str = Field(..., description="原始文件名")
     stored_filename: str = Field(..., description="存储文件名")
@@ -37,6 +39,7 @@ class FileUploadResponse(BaseModel):
 
 class FileInfoResponse(BaseModel):
     """文件信息响应"""
+
     id: UUID4 = Field(..., description="文件ID")
     original_filename: str = Field(..., description="原始文件名")
     stored_filename: str = Field(..., description="存储文件名")
@@ -53,6 +56,7 @@ class FileInfoResponse(BaseModel):
 
 class FileListQuery(BaseModel):
     """文件列表查询参数"""
+
     page: int = Field(1, ge=1, description="页码")
     size: int = Field(20, ge=1, le=100, description="每页数量")
     category: Optional[str] = Field(None, description="分类筛选")
@@ -60,15 +64,16 @@ class FileListQuery(BaseModel):
     search: Optional[str] = Field(None, description="搜索关键词")
     user_id: str = Field(..., description="用户ID")
 
-    @validator('file_type')
+    @validator("file_type")
     def validate_file_type(cls, v):
-        if v and v not in ['image', 'document']:
+        if v and v not in ["image", "document"]:
             raise ValueError('file_type must be "image" or "document"')
         return v
 
 
 class FileListResponse(BaseModel):
     """文件列表响应"""
+
     success: bool = Field(True, description="是否成功")
     data: List[FileInfoResponse] = Field(..., description="文件列表")
     message: str = Field(..., description="响应消息")
@@ -79,6 +84,7 @@ class FileListResponse(BaseModel):
 
 class FileStatsResponse(BaseModel):
     """文件统计响应"""
+
     total_files: int = Field(..., ge=0, description="总文件数")
     total_size: int = Field(..., ge=0, description="总大小（字节）")
     image_count: int = Field(..., ge=0, description="图片数量")

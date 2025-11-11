@@ -62,7 +62,7 @@ async def get_mistake_list(
 === 错题列表筛选参数 ===
 user_id: {user_id}
 subject: {subject}
-mastery_status: {mastery_status}  
+mastery_status: {mastery_status}
 knowledge_point: {knowledge_point}
 category: {category}
 source: {source}

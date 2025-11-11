@@ -83,7 +83,7 @@ class RedisCache:
             序列化后的bytes
         """
         if isinstance(value, (str, int, float, bool)):
-            return json.dumps(value).encode('utf-8')
+            return json.dumps(value).encode("utf-8")
         else:
             return pickle.dumps(value)
 
@@ -99,7 +99,7 @@ class RedisCache:
         """
         try:
             # 先尝试JSON反序列化
-            return json.loads(data.decode('utf-8'))
+            return json.loads(data.decode("utf-8"))
         except (json.JSONDecodeError, UnicodeDecodeError):
             # 如果JSON失败，使用pickle
             return pickle.loads(data)
@@ -134,11 +134,7 @@ class RedisCache:
             return None
 
     async def set(
-        self,
-        key: str,
-        value: Any,
-        ttl: Optional[int] = None,
-        namespace: str = ""
+        self, key: str, value: Any, ttl: Optional[int] = None, namespace: str = ""
     ) -> bool:
         """
         设置缓存值
@@ -311,10 +307,11 @@ def cache_key_generator(*args, **kwargs) -> str:
             serializable_kwargs[key] = str(value)
 
     # 生成唯一的缓存键
-    key_data = json.dumps({
-        "args": serializable_args,
-        "kwargs": serializable_kwargs
-    }, sort_keys=True, default=str)
+    key_data = json.dumps(
+        {"args": serializable_args, "kwargs": serializable_kwargs},
+        sort_keys=True,
+        default=str,
+    )
 
     return hashlib.md5(key_data.encode()).hexdigest()
 
@@ -323,7 +320,7 @@ def cache(
     ttl: int = 3600,
     namespace: str = "default",
     key_generator: Optional[Callable] = None,
-    cache_manager: Optional[RedisCache] = None
+    cache_manager: Optional[RedisCache] = None,
 ):
     """
     缓存装饰器
@@ -337,6 +334,7 @@ def cache(
     Returns:
         装饰器函数
     """
+
     def decorator(func: Callable) -> Callable:
         _cache_manager = cache_manager or _get_default_cache_manager()
         _key_generator = key_generator or cache_key_generator
@@ -383,10 +381,7 @@ def cache(
     return decorator
 
 
-def cache_clear(
-    namespace: str = "default",
-    cache_manager: Optional[RedisCache] = None
-):
+def cache_clear(namespace: str = "default", cache_manager: Optional[RedisCache] = None):
     """
     清空缓存装饰器
 
@@ -394,6 +389,7 @@ def cache_clear(
         namespace: 要清空的命名空间
         cache_manager: 缓存管理器实例
     """
+
     def decorator(func: Callable) -> Callable:
         _cache_manager = cache_manager or _get_default_cache_manager()
 
@@ -451,6 +447,7 @@ cache_manager = get_cache_manager()
 # ============================================================================
 # 兼容性函数别名
 # ============================================================================
+
 
 def cache_result(ttl: int = 3600, namespace: str = "default"):
     """

@@ -16,7 +16,11 @@ settings = get_settings()
 
 # 支持的图片格式
 SUPPORTED_IMAGE_FORMATS = {
-    'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/gif",
+    "image/webp",
 }
 
 # 最大文件大小 (10MB)
@@ -38,7 +42,7 @@ def validate_image_file(file: UploadFile) -> bool:
 
     # 检查文件扩展名
     file_ext = os.path.splitext(file.filename)[1].lower()
-    if file_ext not in ['.jpg', '.jpeg', '.png', '.gif', '.webp']:
+    if file_ext not in [".jpg", ".jpeg", ".png", ".gif", ".webp"]:
         return False
 
     # 检查MIME类型
@@ -49,10 +53,7 @@ def validate_image_file(file: UploadFile) -> bool:
 
 
 async def save_uploaded_file(
-    file: UploadFile,
-    category: str,
-    filename: str,
-    user_id: str
+    file: UploadFile, category: str, filename: str, user_id: str
 ) -> str:
     """
     保存上传的文件
@@ -101,7 +102,7 @@ async def get_file_info(file_path: str) -> Dict[str, Any]:
         "size": 0,
         "mime_type": None,
         "width": None,
-        "height": None
+        "height": None,
     }
 
     if not os.path.exists(file_path):
@@ -112,7 +113,7 @@ async def get_file_info(file_path: str) -> Dict[str, Any]:
     info["mime_type"] = mimetypes.guess_type(file_path)[0]
 
     # 如果是图片，获取尺寸信息
-    if info["mime_type"] and info["mime_type"].startswith('image/'):
+    if info["mime_type"] and info["mime_type"].startswith("image/"):
         try:
             with Image.open(file_path) as img:
                 info["width"] = img.width
@@ -152,7 +153,7 @@ def generate_file_url(relative_path: str) -> str:
     Returns:
         文件访问URL
     """
-    base_url = getattr(settings, 'FILE_BASE_URL', '/api/v1/files/preview')
+    base_url = getattr(settings, "FILE_BASE_URL", "/api/v1/files/preview")
     return f"{base_url}/{relative_path}"
 
 
@@ -168,12 +169,12 @@ def get_file_category(filename: str) -> str:
     """
     file_ext = os.path.splitext(filename)[1].lower()
 
-    if file_ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp']:
-        return 'images'
-    elif file_ext in ['.pdf', '.doc', '.docx']:
-        return 'documents'
+    if file_ext in [".jpg", ".jpeg", ".png", ".gif", ".webp"]:
+        return "images"
+    elif file_ext in [".pdf", ".doc", ".docx"]:
+        return "documents"
     else:
-        return 'general'
+        return "general"
 
 
 def ensure_upload_directory() -> None:
@@ -184,7 +185,7 @@ def ensure_upload_directory() -> None:
     upload_dir.mkdir(parents=True, exist_ok=True)
 
     # 创建基本的分类目录
-    categories = ['images', 'documents', 'homework', 'general']
+    categories = ["images", "documents", "homework", "general"]
     for category in categories:
         (upload_dir / category).mkdir(exist_ok=True)
 

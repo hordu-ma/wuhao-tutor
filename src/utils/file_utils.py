@@ -14,6 +14,7 @@ from PIL import Image
 # Optional magic library for MIME type detection
 try:
     import magic  # type: ignore
+
     HAS_MAGIC = True
 except ImportError:
     magic = None  # type: ignore
@@ -22,12 +23,18 @@ except ImportError:
 
 # 支持的文件类型
 ALLOWED_IMAGE_TYPES = {
-    'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/webp",
+    "image/gif",
 }
 
 ALLOWED_DOCUMENT_TYPES = {
-    'application/pdf', 'text/plain', 'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    "application/pdf",
+    "text/plain",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 }
 
 ALLOWED_TYPES = ALLOWED_IMAGE_TYPES | ALLOWED_DOCUMENT_TYPES
@@ -55,8 +62,8 @@ def validate_file_type(content_type: str, filename: Optional[str] = None) -> boo
     content_type = content_type.lower().strip()
 
     # 特殊处理一些常见的变体
-    if content_type == 'image/jpg':
-        content_type = 'image/jpeg'
+    if content_type == "image/jpg":
+        content_type = "image/jpeg"
 
     return content_type in ALLOWED_TYPES
 
@@ -72,7 +79,7 @@ def get_file_extension(filename: Optional[str] = None) -> str:
         str: 文件扩展名（包含点号）
     """
     if not filename:
-        return ''
+        return ""
 
     return Path(filename).suffix.lower()
 
@@ -95,12 +102,12 @@ def generate_safe_filename(original_filename: str, file_id: str) -> str:
     ext = get_file_extension(original_filename)
 
     # 清理文件ID，只保留字母数字和连字符
-    safe_id = re.sub(r'[^a-zA-Z0-9\-]', '', file_id)
+    safe_id = re.sub(r"[^a-zA-Z0-9\-]", "", file_id)
 
     return f"{safe_id}{ext}"
 
 
-def calculate_file_hash(file_content: bytes, algorithm: str = 'sha256') -> str:
+def calculate_file_hash(file_content: bytes, algorithm: str = "sha256") -> str:
     """
     计算文件哈希值
 
@@ -111,9 +118,9 @@ def calculate_file_hash(file_content: bytes, algorithm: str = 'sha256') -> str:
     Returns:
         str: 十六进制哈希值
     """
-    if algorithm == 'md5':
+    if algorithm == "md5":
         hasher = hashlib.md5()
-    elif algorithm == 'sha1':
+    elif algorithm == "sha1":
         hasher = hashlib.sha1()
     else:
         hasher = hashlib.sha256()
@@ -175,21 +182,23 @@ def get_mime_type(filename: str, file_content: Optional[bytes] = None) -> Option
     # 根据扩展名手动映射
     ext = get_file_extension(filename).lower()
     ext_mapping = {
-        '.jpg': 'image/jpeg',
-        '.jpeg': 'image/jpeg',
-        '.png': 'image/png',
-        '.gif': 'image/gif',
-        '.webp': 'image/webp',
-        '.pdf': 'application/pdf',
-        '.txt': 'text/plain',
-        '.doc': 'application/msword',
-        '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".png": "image/png",
+        ".gif": "image/gif",
+        ".webp": "image/webp",
+        ".pdf": "application/pdf",
+        ".txt": "text/plain",
+        ".doc": "application/msword",
+        ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     }
 
-    return ext_mapping.get(ext, 'application/octet-stream')
+    return ext_mapping.get(ext, "application/octet-stream")
 
 
-def validate_image_file(file_content: bytes) -> Tuple[bool, Optional[str], Optional[Tuple[int, int]]]:
+def validate_image_file(
+    file_content: bytes,
+) -> Tuple[bool, Optional[str], Optional[Tuple[int, int]]]:
     """
     验证图片文件
 
@@ -206,12 +215,20 @@ def validate_image_file(file_content: bytes) -> Tuple[bool, Optional[str], Optio
 
             # 检查图片尺寸
             if width > MAX_IMAGE_DIMENSION or height > MAX_IMAGE_DIMENSION:
-                return False, f"图片尺寸过大，最大支持 {MAX_IMAGE_DIMENSION}x{MAX_IMAGE_DIMENSION}", (width, height)
+                return (
+                    False,
+                    f"图片尺寸过大，最大支持 {MAX_IMAGE_DIMENSION}x{MAX_IMAGE_DIMENSION}",
+                    (width, height),
+                )
 
             # 检查图片格式
-            format_str = img.format.lower() if img.format else ''
-            if format_str not in ['jpeg', 'png', 'gif', 'webp']:
-                return False, f"不支持的图片格式: {img.format or 'unknown'}", (width, height)
+            format_str = img.format.lower() if img.format else ""
+            if format_str not in ["jpeg", "png", "gif", "webp"]:
+                return (
+                    False,
+                    f"不支持的图片格式: {img.format or 'unknown'}",
+                    (width, height),
+                )
 
             return True, None, (width, height)
 
@@ -234,10 +251,10 @@ def sanitize_filename(filename: str) -> str:
 
     # 移除路径分隔符和危险字符
     dangerous_chars = r'[<>:"/\\|?*\x00-\x1f]'
-    cleaned = re.sub(dangerous_chars, '_', filename)
+    cleaned = re.sub(dangerous_chars, "_", filename)
 
     # 移除开头和结尾的点和空格
-    cleaned = cleaned.strip('. ')
+    cleaned = cleaned.strip(". ")
 
     # 确保文件名不为空且不超过255个字符
     if not cleaned:
@@ -290,14 +307,16 @@ def get_file_category(content_type: str) -> str:
     content_type = content_type.lower()
 
     if content_type in ALLOWED_IMAGE_TYPES:
-        return 'image'
+        return "image"
     elif content_type in ALLOWED_DOCUMENT_TYPES:
-        return 'document'
+        return "document"
     else:
-        return 'other'
+        return "other"
 
 
-def create_thumbnail(image_content: bytes, max_size: Tuple[int, int] = (200, 200)) -> Optional[bytes]:
+def create_thumbnail(
+    image_content: bytes, max_size: Tuple[int, int] = (200, 200)
+) -> Optional[bytes]:
     """
     创建图片缩略图
 
@@ -314,28 +333,32 @@ def create_thumbnail(image_content: bytes, max_size: Tuple[int, int] = (200, 200
 
         with Image.open(io.BytesIO(image_content)) as img:
             # 转换为RGB模式（处理RGBA等格式）
-            if img.mode in ('RGBA', 'LA', 'P'):
-                background = Image.new('RGB', img.size, (255, 255, 255))
-                if img.mode == 'P':
-                    img = img.convert('RGBA')
-                background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+            if img.mode in ("RGBA", "LA", "P"):
+                background = Image.new("RGB", img.size, (255, 255, 255))
+                if img.mode == "P":
+                    img = img.convert("RGBA")
+                background.paste(
+                    img, mask=img.split()[-1] if img.mode == "RGBA" else None
+                )
                 img = background
-            elif img.mode != 'RGB':
-                img = img.convert('RGB')
+            elif img.mode != "RGB":
+                img = img.convert("RGB")
 
             # 创建缩略图
             img.thumbnail(max_size, Image.Resampling.LANCZOS)
 
             # 保存为JPEG格式
             output = io.BytesIO()
-            img.save(output, format='JPEG', quality=85, optimize=True)
+            img.save(output, format="JPEG", quality=85, optimize=True)
             return output.getvalue()
 
     except Exception:
         return None
 
 
-def validate_file_content(content: bytes, content_type: str, filename: str) -> Tuple[bool, Optional[str]]:
+def validate_file_content(
+    content: bytes, content_type: str, filename: str
+) -> Tuple[bool, Optional[str]]:
     """
     全面验证文件内容
 

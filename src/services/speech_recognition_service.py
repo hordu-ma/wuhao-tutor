@@ -312,7 +312,7 @@ class SpeechRecognitionService:
                     try:
                         error_data = response.json()
                         error_msg = error_data.get("message", error_detail)
-                    except:
+                    except (ValueError, KeyError, AttributeError):
                         error_msg = error_detail
 
                     # 针对不同错误码提供具体提示

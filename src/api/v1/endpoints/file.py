@@ -89,7 +89,7 @@ async def file_health():
                 space_usage_percent = (
                     (used_space / total_space) * 100 if total_space > 0 else 0
                 )
-            except:
+            except (OSError, AttributeError):
                 free_space = total_space = used_space = space_usage_percent = 0
         else:
             free_space = total_space = used_space = space_usage_percent = 0

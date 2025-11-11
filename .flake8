@@ -1,0 +1,35 @@
+[flake8]
+# 与 Black 兼容的配置
+max-line-length = 88
+# E501: 行过长
+# E203: 冒号前的空白
+# W503: 二元运算符前的换行
+# F401: 未使用的导入
+# F841: 未使用的局部变量
+# E722: 裸except（保留在允许列表中）
+# E712: 布尔比较（保留在允许列表中）
+# E402: 模块级导入位置（保留在允许列表中）
+# F811: 重复导入（保留在允许列表中）
+# F541: f-string缺少占位符（非关键）
+extend-ignore = E203, W503, E501, F401, F841, E722, E712, E402, F811, F541
+
+# 排除目录
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    .eggs,
+    *.egg,
+    build,
+    dist,
+    .tox,
+    alembic/versions,
+    node_modules
+
+# 每个文件最大复杂度（核心业务逻辑允许更高）
+max-complexity = 40
+
+# 导入顺序检查
+application-import-names = src
+import-order-style = google

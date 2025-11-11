@@ -6,14 +6,14 @@
 import asyncio
 import hashlib
 import json
+import logging
 import time
 from collections import defaultdict, deque
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Callable, Union
 from dataclasses import dataclass, field
-from functools import wraps
-import logging
+from datetime import datetime, timedelta
 from enum import Enum
+from functools import wraps
+from typing import Any, Callable, Dict, List, Optional, Union
 
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
@@ -29,6 +29,7 @@ settings = get_settings()
 
 class QueryType(Enum):
     """查询类型枚举"""
+
     SELECT = "SELECT"
     INSERT = "INSERT"
     UPDATE = "UPDATE"
@@ -39,6 +40,7 @@ class QueryType(Enum):
 @dataclass
 class QueryMetrics:
     """查询指标"""
+
     query_hash: str
     query_type: QueryType
     execution_time: float
@@ -51,6 +53,7 @@ class QueryMetrics:
 @dataclass
 class SlowQuery:
     """慢查询记录"""
+
     query: str
     query_hash: str
     execution_time: float
@@ -68,14 +71,18 @@ class QueryCache:
         self.miss_count = 0
         self.cache_keys: deque = deque(maxlen=max_cache_size)
 
-    def _generate_cache_key(self, query: str, params: Optional[Dict[str, Any]] = None) -> str:
+    def _generate_cache_key(
+        self, query: str, params: Optional[Dict[str, Any]] = None
+    ) -> str:
         """生成缓存键"""
         content = query
         if params:
             content += json.dumps(params, sort_keys=True, default=str)
         return f"query:{hashlib.md5(content.encode()).hexdigest()}"
 
-    async def get(self, query: str, params: Optional[Dict[str, Any]] = None) -> Optional[Any]:
+    async def get(
+        self, query: str, params: Optional[Dict[str, Any]] = None
+    ) -> Optional[Any]:
         """获取缓存结果"""
         cache_key = self._generate_cache_key(query, params)
         result = await cache_manager.get(cache_key)
@@ -88,7 +95,13 @@ class QueryCache:
         self.miss_count += 1
         return None
 
-    async def set(self, query: str, result: Any, params: Optional[Dict[str, Any]] = None, ttl: Optional[int] = None) -> None:
+    async def set(
+        self,
+        query: str,
+        result: Any,
+        params: Optional[Dict[str, Any]] = None,
+        ttl: Optional[int] = None,
+    ) -> None:
         """设置缓存结果"""
         cache_key = self._generate_cache_key(query, params)
         ttl = ttl or self.default_ttl
@@ -145,7 +158,7 @@ class QueryCache:
             "miss_count": self.miss_count,
             "hit_rate": round(hit_rate, 2),
             "cached_entries": len(self.cache_keys),
-            "max_cache_size": self.max_cache_size
+            "max_cache_size": self.max_cache_size,
         }
 
 
@@ -157,16 +170,23 @@ class QueryMonitor:
         self.max_slow_queries = max_slow_queries
         self.query_metrics: deque = deque(maxlen=10000)
         self.slow_queries: Dict[str, SlowQuery] = {}
-        self.query_stats: Dict[str, Dict] = defaultdict(lambda: {
-            'count': 0,
-            'total_time': 0.0,
-            'avg_time': 0.0,
-            'max_time': 0.0,
-            'min_time': float('inf')
-        })
+        self.query_stats: Dict[str, Dict] = defaultdict(
+            lambda: {
+                "count": 0,
+                "total_time": 0.0,
+                "avg_time": 0.0,
+                "max_time": 0.0,
+                "min_time": float("inf"),
+            }
+        )
 
-    def record_query(self, query: str, execution_time: float,
-                    affected_rows: int = 0, cache_hit: bool = False) -> None:
+    def record_query(
+        self,
+        query: str,
+        execution_time: float,
+        affected_rows: int = 0,
+        cache_hit: bool = False,
+    ) -> None:
         """记录查询指标"""
         query_hash = hashlib.md5(query.encode()).hexdigest()
         query_type = self._detect_query_type(query)
@@ -180,18 +200,18 @@ class QueryMonitor:
             timestamp=datetime.utcnow(),
             table_name=table_name,
             affected_rows=affected_rows,
-            cache_hit=cache_hit
+            cache_hit=cache_hit,
         )
 
         self.query_metrics.append(metrics)
 
         # 更新统计
         stats = self.query_stats[query_hash]
-        stats['count'] += 1
-        stats['total_time'] += execution_time
-        stats['avg_time'] = stats['total_time'] / stats['count']
-        stats['max_time'] = max(stats['max_time'], execution_time)
-        stats['min_time'] = min(stats['min_time'], execution_time)
+        stats["count"] += 1
+        stats["total_time"] += execution_time
+        stats["avg_time"] = stats["total_time"] / stats["count"]
+        stats["max_time"] = max(stats["max_time"], execution_time)
+        stats["min_time"] = min(stats["min_time"], execution_time)
 
         # 检查慢查询
         if execution_time > self.slow_query_threshold:
@@ -200,13 +220,13 @@ class QueryMonitor:
     def _detect_query_type(self, query: str) -> QueryType:
         """检测查询类型"""
         query_upper = query.strip().upper()
-        if query_upper.startswith('SELECT'):
+        if query_upper.startswith("SELECT"):
             return QueryType.SELECT
-        elif query_upper.startswith('INSERT'):
+        elif query_upper.startswith("INSERT"):
             return QueryType.INSERT
-        elif query_upper.startswith('UPDATE'):
+        elif query_upper.startswith("UPDATE"):
             return QueryType.UPDATE
-        elif query_upper.startswith('DELETE'):
+        elif query_upper.startswith("DELETE"):
             return QueryType.DELETE
         return QueryType.UNKNOWN
 
@@ -214,19 +234,21 @@ class QueryMonitor:
         """提取表名（简单实现）"""
         try:
             query_upper = query.strip().upper()
-            if 'FROM' in query_upper:
-                parts = query_upper.split('FROM')[1].split()
+            if "FROM" in query_upper:
+                parts = query_upper.split("FROM")[1].split()
                 if parts:
                     table_name = parts[0].strip()
                     # 移除可能的schema前缀
-                    if '.' in table_name:
-                        table_name = table_name.split('.')[-1]
+                    if "." in table_name:
+                        table_name = table_name.split(".")[-1]
                     return table_name.strip('`"[]')
-        except:
+        except (IndexError, AttributeError, ValueError):
             pass
         return None
 
-    def _record_slow_query(self, query: str, query_hash: str, execution_time: float) -> None:
+    def _record_slow_query(
+        self, query: str, query_hash: str, execution_time: float
+    ) -> None:
         """记录慢查询"""
         if query_hash in self.slow_queries:
             slow_query = self.slow_queries[query_hash]
@@ -236,15 +258,17 @@ class QueryMonitor:
         else:
             if len(self.slow_queries) >= self.max_slow_queries:
                 # 移除最旧的记录
-                oldest_hash = min(self.slow_queries.keys(),
-                                key=lambda k: self.slow_queries[k].timestamp)
+                oldest_hash = min(
+                    self.slow_queries.keys(),
+                    key=lambda k: self.slow_queries[k].timestamp,
+                )
                 del self.slow_queries[oldest_hash]
 
             self.slow_queries[query_hash] = SlowQuery(
                 query=query,
                 query_hash=query_hash,
                 execution_time=execution_time,
-                timestamp=datetime.utcnow()
+                timestamp=datetime.utcnow(),
             )
 
         logger.warning(f"Slow query detected: {execution_time:.3f}s - {query[:100]}...")
@@ -256,11 +280,11 @@ class QueryMonitor:
 
         if not recent_metrics:
             return {
-                'total_queries': 0,
-                'avg_execution_time': 0.0,
-                'cache_hit_rate': 0.0,
-                'query_types': {},
-                'table_activity': {}
+                "total_queries": 0,
+                "avg_execution_time": 0.0,
+                "cache_hit_rate": 0.0,
+                "query_types": {},
+                "table_activity": {},
             }
 
         # 统计查询类型
@@ -278,28 +302,27 @@ class QueryMonitor:
                 cache_hits += 1
 
         return {
-            'total_queries': len(recent_metrics),
-            'avg_execution_time': round(total_time / len(recent_metrics), 3),
-            'cache_hit_rate': round((cache_hits / len(recent_metrics)) * 100, 2),
-            'query_types': dict(query_types),
-            'table_activity': dict(sorted(table_activity.items(),
-                                        key=lambda x: x[1], reverse=True)[:10])
+            "total_queries": len(recent_metrics),
+            "avg_execution_time": round(total_time / len(recent_metrics), 3),
+            "cache_hit_rate": round((cache_hits / len(recent_metrics)) * 100, 2),
+            "query_types": dict(query_types),
+            "table_activity": dict(
+                sorted(table_activity.items(), key=lambda x: x[1], reverse=True)[:10]
+            ),
         }
 
     def get_slow_queries(self, limit: int = 10) -> List[Dict[str, Any]]:
         """获取慢查询列表"""
         sorted_queries = sorted(
-            self.slow_queries.values(),
-            key=lambda x: x.execution_time,
-            reverse=True
+            self.slow_queries.values(), key=lambda x: x.execution_time, reverse=True
         )[:limit]
 
         return [
             {
-                'query': sq.query[:200] + '...' if len(sq.query) > 200 else sq.query,
-                'execution_time': sq.execution_time,
-                'count': sq.count,
-                'last_seen': sq.timestamp.isoformat()
+                "query": sq.query[:200] + "..." if len(sq.query) > 200 else sq.query,
+                "execution_time": sq.execution_time,
+                "count": sq.count,
+                "last_seen": sq.timestamp.isoformat(),
             }
             for sq in sorted_queries
         ]
@@ -314,8 +337,12 @@ class QueryMonitor:
 class CachedQuery:
     """查询缓存装饰器"""
 
-    def __init__(self, ttl: int = 300, cache_key: Optional[str] = None,
-                 invalidate_on: Optional[List[str]] = None):
+    def __init__(
+        self,
+        ttl: int = 300,
+        cache_key: Optional[str] = None,
+        invalidate_on: Optional[List[str]] = None,
+    ):
         self.ttl = ttl
         self.cache_key = cache_key
         self.invalidate_on = invalidate_on or []
@@ -336,7 +363,7 @@ class CachedQuery:
                 query_monitor.record_query(
                     query=f"CACHED:{func.__name__}",
                     execution_time=0.001,
-                    cache_hit=True
+                    cache_hit=True,
                 )
                 return cached_result
 
@@ -352,7 +379,7 @@ class CachedQuery:
             query_monitor.record_query(
                 query=f"FUNC:{func.__name__}",
                 execution_time=execution_time,
-                cache_hit=False
+                cache_hit=False,
             )
 
             return result
@@ -370,12 +397,12 @@ class DatabaseOptimizer:
     async def analyze_performance(self, db: AsyncSession) -> Dict[str, Any]:
         """分析数据库性能"""
         analysis = {
-            'timestamp': datetime.utcnow().isoformat(),
-            'query_performance': query_monitor.get_query_stats(),
-            'slow_queries': query_monitor.get_slow_queries(),
-            'cache_performance': query_cache.get_stats(),
-            'connection_info': await self._get_connection_info(db),
-            'optimization_suggestions': self._get_optimization_suggestions()
+            "timestamp": datetime.utcnow().isoformat(),
+            "query_performance": query_monitor.get_query_stats(),
+            "slow_queries": query_monitor.get_slow_queries(),
+            "cache_performance": query_cache.get_stats(),
+            "connection_info": await self._get_connection_info(db),
+            "optimization_suggestions": self._get_optimization_suggestions(),
         }
 
         return analysis
@@ -387,25 +414,31 @@ class DatabaseOptimizer:
             result = await db.execute(text("SELECT count(*) FROM pg_stat_activity"))
             active_connections = result.scalar() or 0
 
-            result = await db.execute(text("SELECT setting FROM pg_settings WHERE name = 'max_connections'"))
+            result = await db.execute(
+                text("SELECT setting FROM pg_settings WHERE name = 'max_connections'")
+            )
             max_connections = result.scalar() or 1
 
             max_conn_int = int(max_connections) if max_connections else 1
             active_conn_int = int(active_connections) if active_connections else 0
 
             return {
-                'active_connections': active_conn_int,
-                'max_connections': max_conn_int,
-                'connection_usage': round((active_conn_int / max_conn_int) * 100, 2) if max_conn_int > 0 else 0.0,
-                'database_type': 'postgresql'
+                "active_connections": active_conn_int,
+                "max_connections": max_conn_int,
+                "connection_usage": (
+                    round((active_conn_int / max_conn_int) * 100, 2)
+                    if max_conn_int > 0
+                    else 0.0
+                ),
+                "database_type": "postgresql",
             }
-        except:
+        except Exception:
             # SQLite或其他数据库
             return {
-                'active_connections': 1,
-                'max_connections': 1,
-                'connection_usage': 100.0,
-                'database_type': 'sqlite'
+                "active_connections": 1,
+                "max_connections": 1,
+                "connection_usage": 100.0,
+                "database_type": "sqlite",
             }
 
     def _get_optimization_suggestions(self) -> List[Dict[str, Any]]:
@@ -414,34 +447,40 @@ class DatabaseOptimizer:
 
         # 检查缓存命中率
         cache_stats = query_cache.get_stats()
-        if cache_stats['hit_rate'] < 50:
-            suggestions.append({
-                'type': 'cache',
-                'priority': 'medium',
-                'message': f"查询缓存命中率较低 ({cache_stats['hit_rate']}%)，考虑增加缓存TTL或优化查询",
-                'action': 'increase_cache_ttl'
-            })
+        if cache_stats["hit_rate"] < 50:
+            suggestions.append(
+                {
+                    "type": "cache",
+                    "priority": "medium",
+                    "message": f"查询缓存命中率较低 ({cache_stats['hit_rate']}%)，考虑增加缓存TTL或优化查询",
+                    "action": "increase_cache_ttl",
+                }
+            )
 
         # 检查慢查询
         slow_queries = query_monitor.get_slow_queries(limit=5)
         if slow_queries:
-            suggestions.append({
-                'type': 'performance',
-                'priority': 'high',
-                'message': f"发现 {len(slow_queries)} 个慢查询，建议优化索引或查询逻辑",
-                'action': 'optimize_slow_queries',
-                'details': [sq['query'][:100] for sq in slow_queries[:3]]
-            })
+            suggestions.append(
+                {
+                    "type": "performance",
+                    "priority": "high",
+                    "message": f"发现 {len(slow_queries)} 个慢查询，建议优化索引或查询逻辑",
+                    "action": "optimize_slow_queries",
+                    "details": [sq["query"][:100] for sq in slow_queries[:3]],
+                }
+            )
 
         # 检查查询频率
         query_stats = query_monitor.get_query_stats()
-        if query_stats['total_queries'] > 1000:  # 每小时超过1000次查询
-            suggestions.append({
-                'type': 'performance',
-                'priority': 'medium',
-                'message': f"查询频率较高 ({query_stats['total_queries']}/小时)，建议增加缓存使用",
-                'action': 'increase_caching'
-            })
+        if query_stats["total_queries"] > 1000:  # 每小时超过1000次查询
+            suggestions.append(
+                {
+                    "type": "performance",
+                    "priority": "medium",
+                    "message": f"查询频率较高 ({query_stats['total_queries']}/小时)，建议增加缓存使用",
+                    "action": "increase_caching",
+                }
+            )
 
         return suggestions
 
@@ -454,9 +493,9 @@ class DatabaseOptimizer:
         query_monitor.query_metrics.clear()
 
         return {
-            'action': 'cache_optimization',
-            'timestamp': datetime.utcnow().isoformat(),
-            'message': '查询缓存已优化'
+            "action": "cache_optimization",
+            "timestamp": datetime.utcnow().isoformat(),
+            "message": "查询缓存已优化",
         }
 
 
@@ -468,23 +507,25 @@ db_optimizer = DatabaseOptimizer()
 
 # SQLAlchemy 事件监听器
 @event.listens_for(Engine, "before_cursor_execute")
-def receive_before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+def receive_before_cursor_execute(
+    conn, cursor, statement, parameters, context, executemany
+):
     """查询执行前的事件"""
     context._query_start_time = time.time()
 
 
 @event.listens_for(Engine, "after_cursor_execute")
-def receive_after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+def receive_after_cursor_execute(
+    conn, cursor, statement, parameters, context, executemany
+):
     """查询执行后的事件"""
-    if hasattr(context, '_query_start_time'):
+    if hasattr(context, "_query_start_time"):
         execution_time = time.time() - context._query_start_time
-        affected_rows = cursor.rowcount if hasattr(cursor, 'rowcount') else 0
+        affected_rows = cursor.rowcount if hasattr(cursor, "rowcount") else 0
 
         # 记录查询指标
         query_monitor.record_query(
-            query=statement,
-            execution_time=execution_time,
-            affected_rows=affected_rows
+            query=statement, execution_time=execution_time, affected_rows=affected_rows
         )
 
 
@@ -504,8 +545,12 @@ def get_database_optimizer() -> DatabaseOptimizer:
 
 
 # 辅助函数
-async def cached_db_query(db: AsyncSession, query: str, params: Optional[Dict[str, Any]] = None,
-                         ttl: int = 300) -> Any:
+async def cached_db_query(
+    db: AsyncSession,
+    query: str,
+    params: Optional[Dict[str, Any]] = None,
+    ttl: int = 300,
+) -> Any:
     """执行带缓存的数据库查询"""
     # 检查缓存
     cached_result = await query_cache.get(query, params)
@@ -531,12 +576,12 @@ async def cached_db_query(db: AsyncSession, query: str, params: Optional[Dict[st
             serializable_data = [dict(row._mapping) for row in data]
         else:
             # 如果没有行数据，可能是DML操作
-            affected_rows = getattr(result, 'rowcount', 0) or 0
+            affected_rows = getattr(result, "rowcount", 0) or 0
             serializable_data = {"affected_rows": affected_rows}
     except Exception:
         # 如果fetchall失败，尝试获取affected rows
         try:
-            affected_rows = getattr(result, 'rowcount', 0) or 0
+            affected_rows = getattr(result, "rowcount", 0) or 0
             serializable_data = {"affected_rows": affected_rows}
         except Exception:
             # 最终回退
@@ -546,7 +591,7 @@ async def cached_db_query(db: AsyncSession, query: str, params: Optional[Dict[st
     await query_cache.set(query, serializable_data, params, ttl)
 
     # 记录指标
-    affected_rows = getattr(result, 'rowcount', 0) or 0
+    affected_rows = getattr(result, "rowcount", 0) or 0
     query_monitor.record_query(query, execution_time, affected_rows=affected_rows)
 
     return serializable_data

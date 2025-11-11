@@ -393,7 +393,7 @@ class FormulaRenderMetrics:
         # 按类型统计
         self.inline_count = 0
         self.block_count = 0
-        
+
         # 新增: 降级策略统计
         self.quicklatex_success = 0  # QuickLaTeX成功
         self.local_render_success = 0  # 本地渲染成功
@@ -417,7 +417,7 @@ class FormulaRenderMetrics:
         with self._lock:
             self.render_success += 1
             self.response_times.append(response_time)
-            
+
             # 区分渲染方式
             if "_local" in formula_type:
                 self.local_render_success += 1
@@ -496,7 +496,7 @@ class FormulaRenderMetrics:
                 "by_method": {
                     "quicklatex": self.quicklatex_success,
                     "local_render": self.local_render_success,
-                    "local_render_rate": f"{round(self.local_render_success / max(1, self.render_success) * 100, 2)}%"
+                    "local_render_rate": f"{round(self.local_render_success / max(1, self.render_success) * 100, 2)}%",
                 },
                 "formula_complexity": {
                     "simple": self.simple_formula_count,
