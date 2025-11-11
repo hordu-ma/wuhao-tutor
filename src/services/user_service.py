@@ -10,6 +10,7 @@ import string
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
+from passlib.context import CryptContext
 from sqlalchemy import and_, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -55,6 +56,9 @@ from src.utils.type_converters import (
 
 logger = logging.getLogger("user_service")
 settings = get_settings()
+
+# 密码加密上下文（用于 bcrypt 验证）
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 class UserService:
@@ -718,14 +722,26 @@ class UserService:
         return f"{salt}:{password_hash.hex()}"
 
     def _verify_password(self, password: str, password_hash: str) -> bool:
-        """验证密码"""
+        """验证密码 - 兼容 bcrypt 和 PBKDF2 两种算法"""
+        # 检查密码哈希格式
+        if not password_hash:
+            return False
+
+        # 1. 尝试 bcrypt 验证（旧格式）
+        if password_hash.startswith("$2b$") or password_hash.startswith("$2a$"):
+            try:
+                return pwd_context.verify(password, password_hash)
+            except Exception:
+                return False
+
+        # 2. 尝试 PBKDF2 验证（新格式，salt:hash）
         try:
             salt, stored_hash = password_hash.split(":")
             calculated_hash = hashlib.pbkdf2_hmac(
                 "sha256", password.encode("utf-8"), salt.encode("utf-8"), 100000
             )
             return calculated_hash.hex() == stored_hash
-        except ValueError:
+        except (ValueError, AttributeError):
             return False
 
     async def _cleanup_expired_sessions(self):

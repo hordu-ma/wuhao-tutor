@@ -9,6 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import BaseModel
 
 if TYPE_CHECKING:
+    from .study import MistakeRecord
     from .user import User
 
 
@@ -29,3 +30,4 @@ class MistakeReviewSession(BaseModel):
 
     # 关联关系
     user: Mapped["User"] = relationship()
+    mistake: Mapped["MistakeRecord"] = relationship(back_populates="review_sessions")

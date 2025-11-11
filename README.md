@@ -1,36 +1,352 @@
 # 五好伴学 (Wuhao Tutor)
 
-> 基于阿里云百炼智能体的 K12 智能学习支持平台  
-> AI 驱动的作业问答 + 智能错题手册 + 学情分析 + 知识图谱
+> 基于阿里云百炼 AI 的 K12 智能学习平台
 
-一个现代化的教育科技平台，专为 K12 学生（小学到高中）打造，利用阿里云百炼 AI 技术提供智能学习问答、错题管理、知识图谱构建和全面的学情分析服务。
+一个现代化教育科技平台，为 K12 学生打造，提供 AI 智能问答、错题管理、知识图谱和学情分析服务。
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Python](https://img.shields.io/badge/python-3.11+-blue.svg)
+![Python](https://img.shields.io/badge/python-3.12+-blue.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)
 ![Vue](https://img.shields.io/badge/Vue-3.4+-4FC08D.svg)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.6+-blue.svg)
 ![Status](https://img.shields.io/badge/status-Production-green.svg)
 
 ---
 
 ## 📊 项目现状
 
-**生产环境**: https://www.horsduroot.com (已部署至阿里云 ECS)  
+**生产环境**: https://www.horsduroot.com  
 **服务器**: 121.199.173.244 (Nginx + systemd + HTTPS)  
-**最后更新**: 2025-11-05  
-**技术架构**: FastAPI + Vue3 + 微信小程序 + PostgreSQL + Redis + 阿里云百炼 AI  
+**技术架构**: FastAPI + Vue3 + 微信小程序 + PostgreSQL + Redis + 阿里云百炼  
 **当前版本**: v0.1.0
 
-### 核心功能模块
+### 核心功能
 
-| 模块             | 状态        | 端口支持     | 说明                                                      |
-| ---------------- | ----------- | ------------ | --------------------------------------------------------- |
-| **作业问答**     | ✅ 生产可用 | Web + 小程序 | AI 驱动的学习助手，支持对话式问答、数学公式渲染、流式响应 |
-| **错题手册**     | ✅ 生产可用 | Web + 小程序 | 错题记录、智能复习提醒、知识点关联、艾宾浩斯遗忘曲线算法  |
-| **知识图谱**     | ✅ 生产可用 | Web + 小程序 | 知识点关联分析、薄弱点识别、学习路径推荐                  |
-| **学习分析**     | ✅ 生产可用 | Web + 小程序 | 学习时长统计、知识点掌握度、学科分布、趋势分析            |
-| **个人中心**     | ✅ 生产可用 | Web + 小程序 | 用户信息管理、头像上传、学习统计展示                      |
+| 模块           | 状态        | 说明                                     |
+| -------------- | ----------- | ---------------------------------------- |
+| **作业问答**   | ✅ 生产可用 | AI 对话式问答、数学公式渲染、流式响应    |
+| **错题手册**   | ✅ 生产可用 | 错题记录、智能复习提醒、艾宾浩斯算法     |
+| **知识图谱**   | ✅ 生产可用 | 知识点关联分析、薄弱点识别、学习路径推荐 |
+| **学习分析**   | ✅ 生产可用 | 学习时长统计、知识点掌握度、趋势分析     |
+| **微信小程序** | ✅ 已上线   | 完整功能覆盖，连接生产环境               |
+
+### 📚 关键文档
+
+- **[DEVELOPMENT_CONTEXT.md](DEVELOPMENT_CONTEXT.md)** - 项目开发上下文（Phase 1-7 已完成）
+- **[MISTAKE_EXTRACTION_OPTIMIZATION.md](docs/MISTAKE_EXTRACTION_OPTIMIZATION.md)** - 错题本逼题提取方案
+- **[部署文档](docs/deployment/)** - 生产部署指南
+
+---
+
+## ✨ 核心特性
+
+### 💬 AI 智能问答
+
+- **多模态输入**: 文字、图片 OCR、语音识别
+- **流式响应**: Server-Sent Events (SSE) 实时输出
+- **公式渲染**: KaTeX 支持数学公式显示
+- **上下文感知**: 结合学情提供个性化答案
+
+**API 端点**: 25+ 个
+
+### 📚 智能错题管理
+
+- **复习算法**: 艾宾浩斯遗忘曲线算法
+- **知识关联**: 自动提取知识点标签
+- **掌握度跟踪**: 0-100 分段评分
+- **今日复习**: 每日自动生成待复习清单
+
+**API 端点**: 10+ 个
+
+### 🕸️ 知识图谱
+
+- **知识点提取**: AI 自动识别知识点
+- **关系建模**: 前置关系、并列关系、应用关系
+- **薄弱点分析**: 基于掌握度和错误率
+- **可视化展示**: ECharts 图谱交互
+
+**API 端点**: 3+ 个
+
+### 📊 学习分析
+
+- **多维度统计**: 学习时长、提问次数、活跃天数
+- **知识掌握**: 基于答题记录的掌握度分析
+- **学科分布**: 各学科学习占比和趋势
+
+**API 端点**: 8+ 个
+
+### 🔒 安全特性
+
+**限流保护** (三层):
+
+```
+IP 级别:     100 请求/分钟 (Token Bucket)
+用户级别:   50 请求/分钟 (Token Bucket)
+AI 服务:    20 请求/分钟 (Sliding Window)
+登录端点:   10 请求/分钟 (Token Bucket)
+```
+
+**认证机制**: JWT 双 Token (Access 8 天 + Refresh 30 天)
+
+**性能监控**: 慢查询监听 (>1.0s)、N+1 检测、系统资源追踪
+
+---
+
+## 🏭 技术架构
+
+### 多端架构
+
+```
+┌─────────────────────────────────┐
+│     客户端层 (Client Tier)      │
+├─────────────────────────────────┤
+│  Web 前端  │  微信小程序          │
+│  Vue3 + TS  │  原生 JS + TS       │
+└─────────────────────────────────┘
+            ↓  HTTPS / API
+┌─────────────────────────────────┐
+│    API 网关层 (Nginx)         │
+│  SSL/TLS + 静态托管 + 路由   │
+└─────────────────────────────────┘
+            ↓
+┌─────────────────────────────────┐
+│   FastAPI 后端 (Uvicorn)     │
+│  四层架构 + 异步 + 中间件   │
+└─────────────────────────────────┘
+     ↓           ↓          ↓
+┌───────────┐ ┌─────────┐ ┌─────────┐
+│PostgreSQL│ │ Redis  │ │阿里云AI│
+│  数据库  │ │  缓存  │ │百炼+OSS│
+└───────────┘ └─────────┘ └─────────┘
+```
+
+### 技术栈
+
+**后端**:
+
+- Python 3.12+ | FastAPI 0.104+ | SQLAlchemy 2.x (Async)
+- Alembic 迁移 | Pydantic v2 | JWT 认证
+
+**数据库**:
+
+- 生产: PostgreSQL 14+ | 开发: SQLite
+- 缓存: Redis 6+ (限流 + Token 存储)
+
+**AI 服务**:
+
+- 阿里云百炼 (通义千问) | 语音识别 ASR | OSS 存储
+
+**前端**:
+
+- Vue 3.4+ (Composition API) | TypeScript 5.6+
+- Element Plus 2.5+ | Vite 5+ | Pinia + Vue Router
+- KaTeX (公式) | ECharts (图表)
+
+**小程序**:
+
+- 微信原生 API | TypeScript 声明
+- 自定义网络封装 | 本地缓存管理
+
+**部署**:
+
+- 阿里云 ECS | Nginx | systemd | Let's Encrypt
+
+### 四层架构
+
+```
+API Layer      →  HTTP 请求处理、参数验证
+Service Layer  →  业务逻辑、事务管理
+Repository     →  数据访问、复杂查询
+Model Layer    →  ORM 映射、数据模型
+```
+
+**架构原则**:
+
+- ✅ 严格分层：API → Service → Repository → Model
+- ✅ 全异步：所有 I/O 操作 `async/await`
+- ✅ 类型安全：mypy strict 模式
+- ❗ 禁止跨层：禁止 API 直接调用 Repository
+
+---
+
+## 🚀 快速开始
+
+### 环境要求
+
+```bash
+Python 3.12+    # 后端运行环境
+Node.js 18+     # 前端构建环境
+uv              # Python 包管理器
+```
+
+### 安装步骤
+
+#### 1. 克隆项目
+
+```bash
+git clone https://github.com/hordu-ma/wuhao-tutor.git
+cd wuhao-tutor
+```
+
+#### 2. 后端配置
+
+```bash
+# 安装 uv
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# 同步依赖
+uv sync
+
+# 复制配置模板
+cp config/templates/.env.development .env
+
+# 编辑 .env 配置：
+# - BAILIAN_API_KEY=sk-xxx  # 阿里云百炼 API Key
+# - SECRET_KEY=xxx          # JWT 密钥
+```
+
+#### 3. 初始化数据库
+
+```bash
+# 运行迁移
+uv run alembic upgrade head
+```
+
+#### 4. 启动服务
+
+```bash
+# 一键启动前后端
+./scripts/start-dev.sh
+
+# 或分别启动
+# 后端
+uv run python src/main.py
+
+# 前端
+cd frontend && npm install && npm run dev
+```
+
+#### 5. 访问应用
+
+| 入口         | 地址                         | 说明       |
+| ------------ | ---------------------------- | ---------- |
+| **Web 前端** | http://localhost:5173        | Vue3 应用  |
+| **API 文档** | http://localhost:8000/docs   | Swagger UI |
+| **健康检查** | http://localhost:8000/health | 服务状态   |
+
+### 开发工具
+
+```bash
+# 后端
+make dev              # 启动开发服务器
+make test             # 运行测试 + 覆盖率
+make lint             # 代码格式化
+make db-init          # 数据库迁移
+
+# 前端
+cd frontend
+npm run dev           # 开发服务器
+npm run build         # 生产构建
+npm run type-check    # 类型检查
+```
+
+---
+
+## 🛠️ 项目结构
+
+```
+wuhao-tutor/
+├── src/                    # 后端源码
+│   ├── api/v1/             # API 路由层 (50+ 端点)
+│   ├── services/           # 业务逻辑层
+│   ├── repositories/       # 数据访问层
+│   ├── models/             # ORM 模型 (15+ 表)
+│   ├── schemas/            # Pydantic 模型
+│   ├── core/               # 核心基础设施
+│   └── main.py             # 应用入口
+├── frontend/               # Vue3 前端
+├── miniprogram/            # 微信小程序 (15+ 页面)
+├── alembic/                # 数据库迁移 (15+ 版本)
+├── scripts/                # 开发脚本
+│   ├── deploy.sh           # 一键部署
+│   ├── start-dev.sh        # 启动开发环境
+│   └── rollback.sh         # 紧急回滚
+├── tests/                  # 测试套件 (80%+ 覆盖率)
+├── docs/                   # 项目文档
+└── config/                 # 配置模板
+```
+
+---
+
+## 📊 项目统计
+
+```
+代码规模: ~44,000 行
+- Python 后端: ~20,000 行
+- Vue 前端: ~12,000 行
+- 微信小程序: ~8,000 行
+- 测试代码: ~4,000 行
+
+API 端点: 50+ 个
+- 学习问答: 25+ | 错题管理: 10+
+- 学习分析: 8+ | 知识图谱: 3+
+
+数据库表: 15+ 个
+测试覆盖率: ~82%
+
+性能指标 (生产):
+- API 响应: P50 < 100ms, P95 < 200ms
+- AI 问答: P50 < 2s, P95 < 3s
+```
+
+---
+
+## 🔮 未来规划
+
+### 短期 (1-2 个月)
+
+- [ ] 向量数据库集成 (PGVector)
+- [ ] 推荐系统基础版
+- [ ] 知识图谱增强
+- [ ] 小程序功能增强
+- [ ] 性能优化
+
+### 中期 (3-6 个月)
+
+- [ ] RAG 语义增强
+- [ ] 协作学习功能
+- [ ] 多模态输入增强
+- [ ] 学习报告生成
+
+### 长期 (6-12 个月)
+
+- [ ] 多学科扩展
+- [ ] 自适应学习
+- [ ] 教师管理端
+- [ ] 移动端原生应用
+
+---
+
+## 👥 维护者
+
+- **hordu-ma** - [GitHub](https://github.com/hordu-ma)
+
+---
+
+## 📡 联系方式
+
+- 项目地址: https://github.com/hordu-ma/wuhao-tutor
+- 问题反馈: https://github.com/hordu-ma/wuhao-tutor/issues
+- 生产环境: https://www.horsduroot.com
+- 健康检查: https://horsduroot.com/health
+
+---
+
+<div align="center">
+
+**⭐ 如果这个项目对你有帮助,请给它一个 Star! ⭐**
+
+Made with ❤️ by hordu-ma
+
+</div>程序 | 用户信息管理、头像上传、学习统计展示                      |
 | **微信小程序**   | ✅ 已上线   | 小程序原生   | 完整功能覆盖，连接生产环境 API (horsduroot.com)           |
 | **答题质量评估** | ✅ 生产可用 | Web + 小程序 | AI 驱动的答案质量评分、改进建议                           |
 | **语音识别**     | ✅ 生产可用 | 小程序       | 阿里云语音识别，支持语音提问                              |
@@ -38,14 +354,14 @@
 
 ### 📚 关键文档
 
-| 文档                                                | 说明                                 |
-| --------------------------------------------------- | ------------------------------------ |
-| **[开发进度](DEVELOPMENT_STATUS.md)** ⭐            | 当前开发状态、已完成功能、下阶段计划 |
-| **[错题本优化方案](MISTAKE_EXTRACTION_OPTIMIZATION.md)** 🔥 | 错题本逐题提取开发指导文档（方案A） |
-| **[更新日志](CHANGELOG.md)**                        | 版本更新和功能变更记录               |
-| **[开发路线图](DEVELOPMENT_ROADMAP.md)**            | 长期开发规划（12 个月路线图）        |
-| **[文档中心](docs/DOCS-README.md)**                 | 完整的项目文档导航                   |
-| **[Copilot 指令](.github/copilot-instructions.md)** | AI 辅助开发规范                      |
+| 文档                                                        | 说明                                 |
+| ----------------------------------------------------------- | ------------------------------------ |
+| **[开发进度](DEVELOPMENT_STATUS.md)** ⭐                    | 当前开发状态、已完成功能、下阶段计划 |
+| **[错题本优化方案](MISTAKE_EXTRACTION_OPTIMIZATION.md)** 🔥 | 错题本逐题提取开发指导文档（方案 A） |
+| **[更新日志](CHANGELOG.md)**                                | 版本更新和功能变更记录               |
+| **[开发路线图](DEVELOPMENT_ROADMAP.md)**                    | 长期开发规划（12 个月路线图）        |
+| **[文档中心](docs/DOCS-README.md)**                         | 完整的项目文档导航                   |
+| **[Copilot 指令](.github/copilot-instructions.md)**         | AI 辅助开发规范                      |
 
 **按类别浏览**:
 
