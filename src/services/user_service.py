@@ -1001,32 +1001,34 @@ class UserService:
             )
             logger.info(f"已删除 {len(mistake_ids)} 个错题记录")
 
-        # 3. 删除作业相关数据
-        homework_result = await self.db.execute(
-            select(Homework.id).where(Homework.user_id == user_id)
+        # 3. 删除作业提交相关数据（学生提交的作业）
+        submissions_result = await self.db.execute(
+            select(HomeworkSubmission.id).where(
+                HomeworkSubmission.student_id == user_id
+            )
         )
-        homework_ids = [str(hid) for hid in homework_result.scalars().all()]
+        submission_ids = [str(sid) for sid in submissions_result.scalars().all()]
 
-        if homework_ids:
+        if submission_ids:
+            # 删除提交的图片
+            await self.db.execute(
+                delete(HomeworkImage).where(
+                    HomeworkImage.submission_id.in_(submission_ids)
+                )
+            )
+            # 删除提交的批改记录
+            await self.db.execute(
+                delete(HomeworkReview).where(
+                    HomeworkReview.submission_id.in_(submission_ids)
+                )
+            )
             # 删除作业提交
             await self.db.execute(
                 delete(HomeworkSubmission).where(
-                    HomeworkSubmission.homework_id.in_(homework_ids)
+                    HomeworkSubmission.student_id == user_id
                 )
             )
-            # 删除作业图片
-            await self.db.execute(
-                delete(HomeworkImage).where(HomeworkImage.homework_id.in_(homework_ids))
-            )
-            # 删除作业批改
-            await self.db.execute(
-                delete(HomeworkReview).where(
-                    HomeworkReview.homework_id.in_(homework_ids)
-                )
-            )
-            # 删除作业
-            await self.db.execute(delete(Homework).where(Homework.user_id == user_id))
-            logger.info(f"已删除 {len(homework_ids)} 个作业及提交记录")
+            logger.info(f"已删除 {len(submission_ids)} 个作业提交记录")
 
         # 4. 删除知识图谱数据
         await self.db.execute(
