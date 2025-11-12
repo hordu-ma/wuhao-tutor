@@ -644,7 +644,7 @@ class UserService:
         """撤销用户所有会话"""
         # 查询用户所有活跃会话
         stmt = select(UserSession).where(
-            UserSession.user_id == user_uuid, UserSession.is_revoked == False
+            UserSession.user_id == user_id, UserSession.is_revoked == False
         )
         result = await self.db.execute(stmt)
         sessions = result.scalars().all()
@@ -1065,7 +1065,9 @@ class UserService:
 
         # 8. 删除错题复习会话
         await self.db.execute(
-            delete(MistakeReviewSession).where(MistakeReviewSession.user_id == user_uuid)
+            delete(MistakeReviewSession).where(
+                MistakeReviewSession.user_id == user_uuid
+            )
         )
 
         # 9. 撤销所有用户会话
