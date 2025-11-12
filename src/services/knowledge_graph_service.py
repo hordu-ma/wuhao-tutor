@@ -1133,7 +1133,11 @@ class KnowledgeGraphService:
             raise ServiceError(f"获取学科知识图谱失败: {str(e)}")
 
     async def create_knowledge_graph_snapshot(
-        self, user_id: UUID, subject: str, period_type: str = "manual"
+        self,
+        user_id: UUID,
+        subject: str,
+        period_type: str = "manual",
+        auto_commit: bool = True,  # 🔧 新增参数,默认True保持兼容性
     ) -> UserKnowledgeGraphSnapshot:
         """
         创建知识图谱快照
@@ -1142,6 +1146,7 @@ class KnowledgeGraphService:
             user_id: 用户ID
             subject: 学科
             period_type: 周期类型
+            auto_commit: 是否自动提交事务,默认True。批量操作时可设为False
 
         Returns:
             创建的快照
@@ -1168,9 +1173,9 @@ class KnowledgeGraphService:
             }
 
             for km in kms:
-                # 安全地转换掌握度为float
-                mastery_value = getattr(km, "mastery_level", None)
-                mastery = float(str(mastery_value)) if mastery_value else 0.0
+                # 🔧 优化类型转换 (修复 Low #6)
+                mastery_value = getattr(km, "mastery_level", 0.0)
+                mastery = float(mastery_value) if mastery_value is not None else 0.0
 
                 km_id = getattr(km, "id", "")
                 kp_name = getattr(km, "knowledge_point", "")
@@ -1202,8 +1207,9 @@ class KnowledgeGraphService:
             total_mistakes_count = sum(
                 int(getattr(km, "mistake_count", 0) or 0) for km in kms
             )
+            # 🔧 优化类型转换
             avg_mastery = (
-                sum(float(str(getattr(km, "mastery_level", 0) or 0)) for km in kms)
+                sum(float(getattr(km, "mastery_level", 0.0) or 0.0) for km in kms)
                 / len(kms)
                 if kms
                 else 0.0
@@ -1230,9 +1236,14 @@ class KnowledgeGraphService:
             }
 
             snapshot = await self.snapshot_repo.create_snapshot(snapshot_data)
-            await self.db.commit()
 
-            logger.info(f"为用户 {user_id} 创建了 {subject} 知识图谱快照")
+            # 🔧 Critical Fix #1: 只在需要时自动提交
+            if auto_commit:
+                await self.db.commit()
+                logger.info(f"为用户 {user_id} 创建了 {subject} 知识图谱快照 (已提交)")
+            else:
+                logger.info(f"为用户 {user_id} 创建了 {subject} 知识图谱快照 (待提交)")
+
             return snapshot
 
         except Exception as e:

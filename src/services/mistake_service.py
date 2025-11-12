@@ -712,41 +712,46 @@ class MistakeService:
         # 3. 删除错题记录
         await self.mistake_repo.delete(mistake_id_str)
 
-        # 提交删除操作
+        # 🔧 Critical Fix #1: 确保删除操作成功提交
         await self.db.commit()
+        logger.info(f"✅ 已删除错题 {mistake_id} 及所有关联数据")
 
-        logger.info(f"Deleted mistake {mistake_id} with all associations")
-
-        # 🔧 Phase 8.3: 删除后异步触发快照更新
+        # 🔧 Phase 8.3: 删除后触发快照更新 (独立事务)
         if affected_subjects:
-            try:
-                from src.services.knowledge_graph_service import KnowledgeGraphService
+            from src.services.knowledge_graph_service import KnowledgeGraphService
 
-                kg_service = KnowledgeGraphService(self.db, self.bailian_service)
+            kg_service = KnowledgeGraphService(self.db, self.bailian_service)
+            updated_subjects = []
 
-                for subject in affected_subjects:
-                    try:
-                        await kg_service.create_knowledge_graph_snapshot(
-                            user_id=user_id, subject=subject, period_type="auto_update"
-                        )
-                        logger.info(
-                            f"✅ 已更新知识图谱快照: user={user_id}, subject={subject}"
-                        )
-                    except Exception as e:
-                        # 单个学科快照更新失败不影响其他学科
-                        logger.warning(
-                            f"⚠️ 更新学科 {subject} 快照失败: {e}，继续处理其他学科"
-                        )
+            for subject in affected_subjects:
+                try:
+                    # 不自动提交,批量处理后统一提交
+                    await kg_service.create_knowledge_graph_snapshot(
+                        user_id=user_id,
+                        subject=subject,
+                        period_type="auto_update",
+                        auto_commit=False,  # 🔧 批量更新,稍后统一提交
+                    )
+                    updated_subjects.append(subject)
+                except ServiceError as e:
+                    # 单个学科快照更新失败不影响其他学科
+                    logger.warning(f"⚠️ 更新学科 {subject} 快照失败: {e}")
 
-                # 提交快照更新
-                await self.db.commit()
-
-            except Exception as e:
-                # 快照更新失败不回滚删除操作
-                logger.warning(
-                    f"⚠️ 知识图谱快照更新失败: {e}，但错题已成功删除", exc_info=True
-                )
-                # 不抛出异常，确保删除操作成功
+            # 批量提交所有快照更新
+            if updated_subjects:
+                try:
+                    await self.db.commit()
+                    logger.info(
+                        f"✅ 已更新知识图谱快照: user={user_id}, "
+                        f"subjects={updated_subjects}"
+                    )
+                except Exception as e:
+                    # 快照更新提交失败,回滚快照但不影响删除
+                    await self.db.rollback()
+                    logger.warning(
+                        f"⚠️ 快照更新提交失败: {e}, 但错题已成功删除",
+                        exc_info=True,
+                    )
 
     async def get_today_review_tasks(self, user_id: UUID) -> TodayReviewResponse:
         """

@@ -5,30 +5,22 @@
 作者: AI Agent
 创建时间: 2025-11-03
 版本: v1.0
+更新: 2025-11-12 - 统一使用 learning.SubjectType 枚举
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
+
+# 🔧 High Fix #2: 统一使用 learning.SubjectType,避免重复定义
+from src.schemas.learning import SubjectType
 
 # ============================================================================
 # 学科枚举定义
 # ============================================================================
 
-# 支持的学科类型
-SubjectType = Literal[
-    "math",  # 数学
-    "chinese",  # 语文
-    "english",  # 英语
-    "physics",  # 物理
-    "chemistry",  # 化学
-    "biology",  # 生物
-    "history",  # 历史
-    "geography",  # 地理
-    "politics",  # 政治
-]
 
 # ============================================================================
 # 知识点关联相关 Schema

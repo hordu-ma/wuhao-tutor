@@ -91,6 +91,13 @@ async def get_subject_knowledge_graph(
             recommendations=graph_data["recommendations"],
         )
 
+    # 🔧 Medium Fix #5: 使用具体异常类型,避免 except Exception
+    except NotFoundError:
+        logger.warning(f"用户知识图谱不存在: user={user_id}, subject={subject}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"未找到该学科的知识图谱: {subject}",
+        )
     except ValidationError as e:
         logger.warning(f"学科参数验证失败: subject={subject}, error={e}")
         raise HTTPException(
@@ -103,11 +110,16 @@ async def get_subject_knowledge_graph(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"获取知识图谱失败: {str(e)}",
         )
+    # 保留最外层 Exception 捕获用于日志,但记录后重新抛出
     except Exception as e:
-        logger.error(f"获取学科知识图谱失败: {e}", exc_info=True)
+        logger.error(
+            f"获取学科知识图谱时发生未预期错误: {e}",
+            exc_info=True,
+            extra={"user_id": str(user_id), "subject": subject},
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取知识图谱失败: {str(e)}",
+            detail="服务器内部错误",
         )
 
 
