@@ -317,7 +317,7 @@ class KnowledgeGraphService:
         ]
 
         # 优先按编码查找，其次按名称
-        if knowledge_point_code:
+        if knowledge_point_code is not None:
             conditions.append(
                 KnowledgeMastery.knowledge_point_code == knowledge_point_code
             )
@@ -1008,6 +1008,129 @@ class KnowledgeGraphService:
 
         # 限制在 5-60 分钟范围内
         return max(5, min(total_time, 60))
+
+    async def get_subject_knowledge_graph(
+        self, user_id: UUID, subject: str
+    ) -> Dict[str, Any]:
+        """
+        获取指定学科的完整知识图谱
+
+        Args:
+            user_id: 用户ID
+            subject: 学科 (math/chinese/english/physics/...)
+
+        Returns:
+            知识图谱数据字典，包含:
+            - subject: 学科名称
+            - nodes: 知识点节点列表（按掌握度升序排列）
+            - weak_chains: 薄弱知识链列表
+            - mastery_distribution: 掌握度分布 {weak, learning, mastered}
+            - total_points: 知识点总数
+            - avg_mastery: 平均掌握度
+            - recommendations: 复习推荐列表
+        """
+        from sqlalchemy import and_, select
+
+        try:
+            # 1. 查询用户该学科的所有知识点掌握度（按掌握度升序排列）
+            stmt = (
+                select(KnowledgeMastery)
+                .where(
+                    and_(
+                        KnowledgeMastery.user_id == str(user_id),
+                        KnowledgeMastery.subject == subject,
+                    )
+                )
+                .order_by(KnowledgeMastery.mastery_level.asc())
+            )
+            result = await self.db.execute(stmt)
+            kms = result.scalars().all()
+
+            if not kms:
+                # 如果该学科没有知识点数据，返回空结果
+                logger.info(f"用户 {user_id} 在学科 {subject} 暂无知识点数据")
+                return {
+                    "subject": subject,
+                    "nodes": [],
+                    "weak_chains": [],
+                    "mastery_distribution": {"weak": 0, "learning": 0, "mastered": 0},
+                    "total_points": 0,
+                    "avg_mastery": 0.0,
+                    "recommendations": [],
+                }
+
+            # 2. 构建知识点节点列表
+            nodes = []
+            mastery_distribution = {"weak": 0, "learning": 0, "mastered": 0}
+            total_mastery = 0.0
+
+            for km in kms:
+                # 安全地转换掌握度为float
+                mastery_value = getattr(km, "mastery_level", None)
+                mastery = float(str(mastery_value)) if mastery_value else 0.0
+                total_mastery += mastery
+
+                km_id = getattr(km, "id", "")
+                kp_name = getattr(km, "knowledge_point", "")
+                mistake_cnt = getattr(km, "mistake_count", 0)
+                correct_cnt = getattr(km, "correct_count", 0)
+                last_practiced = getattr(km, "last_practiced_at", None)
+
+                nodes.append(
+                    {
+                        "id": str(km_id),
+                        "name": str(kp_name),
+                        "mastery": round(mastery, 2),
+                        "mistake_count": int(mistake_cnt) if mistake_cnt else 0,
+                        "correct_count": int(correct_cnt) if correct_cnt else 0,
+                        "last_practiced_at": (
+                            last_practiced.isoformat() if last_practiced else None
+                        ),
+                    }
+                )
+
+                # 统计掌握度分布
+                if mastery < 0.4:
+                    mastery_distribution["weak"] += 1
+                elif mastery < 0.7:
+                    mastery_distribution["learning"] += 1
+                else:
+                    mastery_distribution["mastered"] += 1
+
+            # 3. 识别薄弱知识链（前10个）
+            weak_chains = await self.get_weak_knowledge_chains(
+                user_id, subject, limit=10
+            )
+
+            # 4. 获取复习推荐（前10个）
+            recommendations = await self.recommend_review_path(
+                user_id, subject, limit=10
+            )
+
+            # 5. 计算平均掌握度
+            avg_mastery = round(total_mastery / len(kms), 2) if kms else 0.0
+
+            # 6. 构建返回结果
+            result_data = {
+                "subject": subject,
+                "nodes": nodes,
+                "weak_chains": weak_chains,
+                "mastery_distribution": mastery_distribution,
+                "total_points": len(nodes),
+                "avg_mastery": avg_mastery,
+                "recommendations": recommendations,
+            }
+
+            logger.info(
+                f"获取学科知识图谱成功: user={user_id}, subject={subject}, "
+                f"total_points={len(nodes)}, avg_mastery={avg_mastery}"
+            )
+
+            return result_data
+
+        except Exception as e:
+            logger.error(f"获取学科知识图谱失败: {e}", exc_info=True)
+            raise ServiceError(f"获取学科知识图谱失败: {str(e)}")
 
     async def create_knowledge_graph_snapshot(
         self, user_id: UUID, subject: str, period_type: str = "manual"

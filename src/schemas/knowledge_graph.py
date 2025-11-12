@@ -8,10 +8,27 @@
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
+
+# ============================================================================
+# 学科枚举定义
+# ============================================================================
+
+# 支持的学科类型
+SubjectType = Literal[
+    "math",  # 数学
+    "chinese",  # 语文
+    "english",  # 英语
+    "physics",  # 物理
+    "chemistry",  # 化学
+    "biology",  # 生物
+    "history",  # 历史
+    "geography",  # 地理
+    "politics",  # 政治
+]
 
 # ============================================================================
 # 知识点关联相关 Schema
@@ -361,5 +378,56 @@ class UserKnowledgeMasteryResponse(BaseModel):
                 "items": [],
                 "total_count": 25,
                 "avg_mastery": 0.65,
+            }
+        }
+
+
+# ============================================================================
+# 学科知识图谱响应 Schema (Phase 8.2)
+# ============================================================================
+
+
+class SubjectKnowledgeGraphResponse(BaseModel):
+    """学科知识图谱完整响应"""
+
+    subject: str = Field(..., description="学科")
+    nodes: List[GraphNode] = Field(
+        default_factory=list, description="知识点节点列表（按掌握度升序排列）"
+    )
+    weak_chains: List[WeakKnowledgeChain] = Field(
+        default_factory=list, description="薄弱知识链列表"
+    )
+    mastery_distribution: MasteryDistribution = Field(..., description="掌握度分布统计")
+    total_points: int = Field(..., description="知识点总数")
+    avg_mastery: float = Field(..., description="平均掌握度")
+    recommendations: List[Dict[str, Any]] = Field(
+        default_factory=list, description="复习推荐列表"
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "subject": "math",
+                "nodes": [
+                    {
+                        "id": "123e4567-e89b-12d3-a456-426614174000",
+                        "name": "二次函数",
+                        "mastery": 0.3,
+                        "mistake_count": 5,
+                        "correct_count": 2,
+                    },
+                    {
+                        "id": "123e4567-e89b-12d3-a456-426614174001",
+                        "name": "三角函数",
+                        "mastery": 0.6,
+                        "mistake_count": 2,
+                        "correct_count": 5,
+                    },
+                ],
+                "weak_chains": [],
+                "mastery_distribution": {"weak": 1, "learning": 1, "mastered": 0},
+                "total_points": 2,
+                "avg_mastery": 0.45,
+                "recommendations": [],
             }
         }

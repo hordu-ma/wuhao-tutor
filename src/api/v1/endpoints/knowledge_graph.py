@@ -20,6 +20,8 @@ from src.schemas.knowledge_graph import (
     KnowledgePointListResponse,
     LearningCurveResponse,
     MistakeKnowledgePointsResponse,
+    SubjectKnowledgeGraphResponse,
+    SubjectType,
     UserKnowledgeMasteryResponse,
     WeakKnowledgeChainsResponse,
 )
@@ -27,6 +29,87 @@ from src.services.knowledge_graph_service import KnowledgeGraphService
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+# ========== 知识图谱 ==========
+
+
+@router.get(
+    "/graphs/{subject}",
+    response_model=SubjectKnowledgeGraphResponse,
+    summary="获取学科知识图谱",
+    description="获取指定学科的完整知识图谱，包括知识点、薄弱链、掌握度分布等",
+)
+async def get_subject_knowledge_graph(
+    subject: SubjectType,
+    user_id: UUID = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> SubjectKnowledgeGraphResponse:
+    """
+    获取学科知识图谱
+
+    Phase 8.2 新增接口，支持按学科隔离查询知识图谱
+
+    Args:
+        subject: 学科（枚举验证）
+        user_id: 当前用户ID
+        db: 数据库会话
+
+    Returns:
+        SubjectKnowledgeGraphResponse: 学科知识图谱数据
+    """
+    try:
+        service = KnowledgeGraphService(db)
+
+        # 调用 Service 层方法
+        graph_data = await service.get_subject_knowledge_graph(user_id, subject)
+
+        # 构建响应
+        from src.schemas.knowledge_graph import (
+            GraphNode,
+            MasteryDistribution,
+            WeakKnowledgeChain,
+        )
+
+        nodes = [GraphNode(**node) for node in graph_data["nodes"]]
+        weak_chains = [
+            WeakKnowledgeChain(**chain) for chain in graph_data["weak_chains"]
+        ]
+        mastery_dist = MasteryDistribution(**graph_data["mastery_distribution"])
+
+        logger.info(
+            f"获取学科知识图谱成功: user={user_id}, subject={subject}, "
+            f"total_points={graph_data['total_points']}, avg_mastery={graph_data['avg_mastery']}"
+        )
+
+        return SubjectKnowledgeGraphResponse(
+            subject=graph_data["subject"],
+            nodes=nodes,
+            weak_chains=weak_chains,
+            mastery_distribution=mastery_dist,
+            total_points=graph_data["total_points"],
+            avg_mastery=graph_data["avg_mastery"],
+            recommendations=graph_data["recommendations"],
+        )
+
+    except ValidationError as e:
+        logger.warning(f"学科参数验证失败: subject={subject}, error={e}")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"无效的学科参数: {subject}",
+        )
+    except ServiceError as e:
+        logger.error(f"获取学科知识图谱失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取知识图谱失败: {str(e)}",
+        )
+    except Exception as e:
+        logger.error(f"获取学科知识图谱失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取知识图谱失败: {str(e)}",
+        )
+
 
 # ========== 知识点关联 ==========
 
@@ -243,7 +326,9 @@ async def manually_generate_snapshot(
             "user_id": str(user_id),
             "subject": subject,
             "created_at": (
-                snapshot.created_at.isoformat() if snapshot.created_at else None
+                snapshot.created_at.isoformat()
+                if getattr(snapshot, "created_at", None)
+                else None
             ),
             "message": "快照生成成功",
         }
