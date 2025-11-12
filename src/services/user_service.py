@@ -723,26 +723,69 @@ class UserService:
 
     def _verify_password(self, password: str, password_hash: str) -> bool:
         """验证密码 - 兼容 bcrypt 和 PBKDF2 两种算法"""
-        # 检查密码哈希格式
+        # 🔧 [Bug修复] 添加详细的NULL/空值检查和日志
         if not password_hash:
+            logger.error(
+                "[LOGIN_FAIL] Password hash is empty or None - user data may be corrupted"
+            )
             return False
 
-        # 1. 尝试 bcrypt 验证（旧格式）
+        # 🔧 [增强] 类型检查
+        if not isinstance(password_hash, str):
+            logger.error(
+                f"[LOGIN_FAIL] Password hash is not string: {type(password_hash)}"
+            )
+            return False
+
+        # 1. 尝试 bcrypt 验证（旧格式，$2b$ 或 $2a$ 开头）
         if password_hash.startswith("$2b$") or password_hash.startswith("$2a$"):
             try:
-                return pwd_context.verify(password, password_hash)
-            except Exception:
+                result = pwd_context.verify(password, password_hash)
+                if result:
+                    logger.debug("[LOGIN_SUCCESS] Bcrypt verification passed")
+                else:
+                    logger.warning(
+                        "[LOGIN_FAIL] Bcrypt verification failed - wrong password"
+                    )
+                return result
+            except Exception as e:
+                logger.error(f"[LOGIN_FAIL] Bcrypt verification error: {str(e)}")
                 return False
 
-        # 2. 尝试 PBKDF2 验证（新格式，salt:hash）
-        try:
-            salt, stored_hash = password_hash.split(":")
-            calculated_hash = hashlib.pbkdf2_hmac(
-                "sha256", password.encode("utf-8"), salt.encode("utf-8"), 100000
-            )
-            return calculated_hash.hex() == stored_hash
-        except (ValueError, AttributeError):
-            return False
+        # 2. 尝试 PBKDF2 验证（新格式，salt:hash 格式）
+        if ":" in password_hash:
+            try:
+                salt, stored_hash = password_hash.split(
+                    ":", 1
+                )  # 🔧 仅分割一次，避免多冒号问题
+                if not salt or not stored_hash:
+                    logger.error(
+                        "[LOGIN_FAIL] PBKDF2 format invalid - empty salt or hash"
+                    )
+                    return False
+                calculated_hash = hashlib.pbkdf2_hmac(
+                    "sha256",
+                    password.encode("utf-8"),
+                    salt.encode("utf-8"),
+                    100000,
+                )
+                result = calculated_hash.hex() == stored_hash
+                if result:
+                    logger.debug("[LOGIN_SUCCESS] PBKDF2 verification passed")
+                else:
+                    logger.warning(
+                        "[LOGIN_FAIL] PBKDF2 verification failed - wrong password"
+                    )
+                return result
+            except (ValueError, AttributeError) as e:
+                logger.error(f"[LOGIN_FAIL] PBKDF2 verification error: {str(e)}")
+                return False
+
+        # 3. 未知格式 - 既不是bcrypt也不是PBKDF2
+        logger.error(
+            f"[LOGIN_FAIL] Unknown password hash format: {password_hash[:30]}... (length: {len(password_hash)})"
+        )
+        return False
 
     async def _cleanup_expired_sessions(self):
         """清理过期会话"""

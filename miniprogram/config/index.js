@@ -47,8 +47,8 @@ const config = {
     prefix: 'wuhao_',
     // 默认缓存时间 (毫秒)
     defaultTTL: 5 * 60 * 1000, // 5分钟
-    // 用户信息缓存时间
-    userInfoTTL: 24 * 60 * 60 * 1000, // 24小时
+    // 用户信息缓存时间 - 延长至30天与Refresh Token同步
+    userInfoTTL: 30 * 24 * 60 * 60 * 1000, // 30天
     // 静态数据缓存时间
     staticDataTTL: 60 * 60 * 1000, // 1小时
   },

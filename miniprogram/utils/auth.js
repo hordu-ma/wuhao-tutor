@@ -384,19 +384,23 @@ class AuthManager {
       this.currentRole = role;
       this.currentSessionId = sessionId;
 
-      // 保存到本地存储
+      // 保存到本地存储 - 使用永久缓存策略（ttl: 0）避免被自动清理
       const savePromises = [
-        storage.set(this.tokenKey, accessToken),
-        storage.set(this.userInfoKey, normalizedUserInfo),
-        storage.set(this.roleKey, role),
+        storage.set(this.tokenKey, accessToken, { ttl: 0, strategy: 'userInfo' }),
+        storage.set(this.userInfoKey, normalizedUserInfo, { ttl: 0, strategy: 'userInfo' }),
+        storage.set(this.roleKey, role, { ttl: 0, strategy: 'userInfo' }),
       ];
 
       if (refreshToken) {
-        savePromises.push(storage.set(this.refreshTokenKey, refreshToken));
+        savePromises.push(
+          storage.set(this.refreshTokenKey, refreshToken, { ttl: 0, strategy: 'userInfo' }),
+        );
       }
 
       if (sessionId) {
-        savePromises.push(storage.set(this.sessionIdKey, sessionId));
+        savePromises.push(
+          storage.set(this.sessionIdKey, sessionId, { ttl: 0, strategy: 'userInfo' }),
+        );
       }
 
       await Promise.all(savePromises);

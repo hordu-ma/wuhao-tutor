@@ -361,6 +361,26 @@ App({
               console.error('Token刷新失败:', refreshError);
               await this.handleSessionExpired();
             }
+          } else {
+            // 🔧 [快速修复] Token有效但接近过期时主动刷新（剩余时间<1天）
+            try {
+              const payload = authManager.parseJWT(token);
+              if (payload && payload.exp) {
+                const now = Math.floor(Date.now() / 1000);
+                const timeRemaining = payload.exp - now;
+                const oneDayInSeconds = 24 * 60 * 60;
+
+                if (timeRemaining > 0 && timeRemaining < oneDayInSeconds) {
+                  console.log(
+                    `Token剩余时间不足1天(${Math.floor(timeRemaining / 3600)}小时)，主动刷新`,
+                  );
+                  await authManager.refreshToken();
+                  console.log('Token主动刷新成功');
+                }
+              }
+            } catch (proactiveRefreshError) {
+              console.warn('Token主动刷新失败，将在下次过期时刷新:', proactiveRefreshError);
+            }
           }
         } else {
           console.log('用户会话数据不完整，清理状态');
