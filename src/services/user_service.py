@@ -898,6 +898,149 @@ class UserService:
 
         return user, new_password
 
+    async def admin_delete_user(self, user_id: str) -> bool:
+        """
+        管理员删除用户
+
+        删除用户前会自动清理所有关联数据，包括：
+        - 学习会话及消息
+        - 错题记录及分析
+        - 作业问题及答案
+        - 知识图谱数据
+        - 复习记录
+        - 用户会话
+
+        Args:
+            user_id: 用户ID
+
+        Returns:
+            bool: 是否删除成功
+
+        Raises:
+            NotFoundError: 用户不存在
+        """
+        from sqlalchemy import delete
+
+        from src.models.homework import HomeworkAnswer, HomeworkQuestion
+        from src.models.knowledge import AIKnowledge
+        from src.models.knowledge_graph import UserKnowledgeGraph, UserWeakPoint
+        from src.models.learning import ChatAnswer, ChatMessage, ChatSession
+        from src.models.review import ReviewRecord
+        from src.models.study import (
+            KnowledgePoint,
+            Mistake,
+            MistakeAnalysis,
+            MistakePhoto,
+        )
+
+        # 验证用户存在
+        user = await self.user_repo.get_by_id(user_id)
+        if not user:
+            raise NotFoundError("用户不存在")
+
+        logger.info(
+            "开始删除用户及关联数据",
+            extra={"user_id": user_id, "user_name": user.name, "phone": user.phone},
+        )
+
+        # 1. 删除学习会话相关数据
+        # 先获取所有会话ID
+        chat_sessions_result = await self.db.execute(
+            select(ChatSession.id).where(ChatSession.user_id == user_id)
+        )
+        session_ids = [str(sid) for sid in chat_sessions_result.scalars().all()]
+
+        if session_ids:
+            # 删除会话的消息
+            await self.db.execute(
+                delete(ChatMessage).where(ChatMessage.session_id.in_(session_ids))
+            )
+            # 删除会话的回答
+            await self.db.execute(
+                delete(ChatAnswer).where(ChatAnswer.session_id.in_(session_ids))
+            )
+            # 删除会话
+            await self.db.execute(
+                delete(ChatSession).where(ChatSession.user_id == user_id)
+            )
+            logger.info(f"已删除 {len(session_ids)} 个学习会话及其消息")
+
+        # 2. 删除错题相关数据
+        # 先获取所有错题ID
+        mistakes_result = await self.db.execute(
+            select(Mistake.id).where(Mistake.user_id == user_id)
+        )
+        mistake_ids = [str(mid) for mid in mistakes_result.scalars().all()]
+
+        if mistake_ids:
+            # 删除错题分析
+            await self.db.execute(
+                delete(MistakeAnalysis).where(
+                    MistakeAnalysis.mistake_id.in_(mistake_ids)
+                )
+            )
+            # 删除知识点关联
+            await self.db.execute(
+                delete(KnowledgePoint).where(KnowledgePoint.mistake_id.in_(mistake_ids))
+            )
+            # 删除错题照片
+            await self.db.execute(
+                delete(MistakePhoto).where(MistakePhoto.mistake_id.in_(mistake_ids))
+            )
+            # 删除错题
+            await self.db.execute(delete(Mistake).where(Mistake.user_id == user_id))
+            logger.info(f"已删除 {len(mistake_ids)} 个错题及其分析")
+
+        # 3. 删除作业相关数据
+        # 先获取所有作业问题ID
+        hw_questions_result = await self.db.execute(
+            select(HomeworkQuestion.id).where(HomeworkQuestion.user_id == user_id)
+        )
+        hw_question_ids = [str(hid) for hid in hw_questions_result.scalars().all()]
+
+        if hw_question_ids:
+            # 删除作业答案
+            await self.db.execute(
+                delete(HomeworkAnswer).where(
+                    HomeworkAnswer.question_id.in_(hw_question_ids)
+                )
+            )
+            # 删除作业问题
+            await self.db.execute(
+                delete(HomeworkQuestion).where(HomeworkQuestion.user_id == user_id)
+            )
+            logger.info(f"已删除 {len(hw_question_ids)} 个作业问题及答案")
+
+        # 4. 删除知识图谱数据
+        await self.db.execute(
+            delete(UserKnowledgeGraph).where(UserKnowledgeGraph.user_id == user_id)
+        )
+        await self.db.execute(
+            delete(UserWeakPoint).where(UserWeakPoint.user_id == user_id)
+        )
+        logger.info("已删除知识图谱数据")
+
+        # 5. 删除AI知识数据
+        await self.db.execute(delete(AIKnowledge).where(AIKnowledge.user_id == user_id))
+
+        # 6. 删除复习记录
+        await self.db.execute(
+            delete(ReviewRecord).where(ReviewRecord.user_id == user_id)
+        )
+
+        # 7. 撤销所有用户会话
+        await self.revoke_all_user_sessions(user_id)
+
+        # 8. 最后删除用户
+        await self.user_repo.delete(user_id)
+
+        logger.info(
+            "用户及所有关联数据已删除",
+            extra={"user_id": user_id, "user_name": user.name},
+        )
+
+        return True
+
     async def admin_list_users(
         self, page: int = 1, size: int = 20, search: Optional[str] = None
     ) -> Tuple[List[User], int]:

@@ -275,25 +275,20 @@ async def delete_user(
     管理员删除用户
 
     - 将彻底删除用户及其所有数据
+    - 自动清理所有关联数据（会话、错题、作业等）
     - 需要管理员权限（暂时所有认证用户都有权限）
     - 谨慎操作，不可恢复
     """
     try:
         user_service = get_user_service(db)
-        user = await user_service.user_repo.get_by_id(user_id)
 
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在"
-            )
-
-        # 删除用户
-        await user_service.user_repo.delete(user_id)
+        # 使用新的 admin_delete_user 方法，自动清理关联数据
+        await user_service.admin_delete_user(user_id)
 
         return SuccessResponse(message="用户删除成功")
 
-    except HTTPException:
-        raise
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
