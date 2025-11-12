@@ -644,7 +644,7 @@ class UserService:
         """撤销用户所有会话"""
         # 查询用户所有活跃会话
         stmt = select(UserSession).where(
-            UserSession.user_id == user_id, UserSession.is_revoked == False
+            UserSession.user_id == user_uuid, UserSession.is_revoked == False
         )
         result = await self.db.execute(stmt)
         sessions = result.scalars().all()
@@ -919,6 +919,8 @@ class UserService:
         Raises:
             NotFoundError: 用户不存在
         """
+        from uuid import UUID
+
         from sqlalchemy import delete
 
         from src.models.homework import (
@@ -942,6 +944,9 @@ class UserService:
             StudySession,
         )
 
+        # 转换user_id为UUID类型（PostgreSQL需要）
+        user_uuid = UUID(user_id)
+
         # 验证用户存在
         user = await self.user_repo.get_by_id(user_id)
         if not user:
@@ -954,7 +959,7 @@ class UserService:
 
         # 1. 删除学习会话相关数据（会话、问题、答案）
         chat_sessions_result = await self.db.execute(
-            select(ChatSession.id).where(ChatSession.user_id == user_id)
+            select(ChatSession.id).where(ChatSession.user_id == user_uuid)
         )
         session_ids = [str(sid) for sid in chat_sessions_result.scalars().all()]
 
@@ -974,13 +979,13 @@ class UserService:
                 )
             # 删除会话
             await self.db.execute(
-                delete(ChatSession).where(ChatSession.user_id == user_id)
+                delete(ChatSession).where(ChatSession.user_id == user_uuid)
             )
             logger.info(f"已删除 {len(session_ids)} 个学习会话及其问答")
 
         # 2. 删除错题相关数据
         mistakes_result = await self.db.execute(
-            select(MistakeRecord.id).where(MistakeRecord.user_id == user_id)
+            select(MistakeRecord.id).where(MistakeRecord.user_id == user_uuid)
         )
         mistake_ids = [str(mid) for mid in mistakes_result.scalars().all()]
 
@@ -997,14 +1002,14 @@ class UserService:
             )
             # 删除错题记录
             await self.db.execute(
-                delete(MistakeRecord).where(MistakeRecord.user_id == user_id)
+                delete(MistakeRecord).where(MistakeRecord.user_id == user_uuid)
             )
             logger.info(f"已删除 {len(mistake_ids)} 个错题记录")
 
         # 3. 删除作业提交相关数据（学生提交的作业）
         submissions_result = await self.db.execute(
             select(HomeworkSubmission.id).where(
-                HomeworkSubmission.student_id == user_id
+                HomeworkSubmission.student_id == user_uuid
             )
         )
         submission_ids = [str(sid) for sid in submissions_result.scalars().all()]
@@ -1025,7 +1030,7 @@ class UserService:
             # 删除作业提交
             await self.db.execute(
                 delete(HomeworkSubmission).where(
-                    HomeworkSubmission.student_id == user_id
+                    HomeworkSubmission.student_id == user_uuid
                 )
             )
             logger.info(f"已删除 {len(submission_ids)} 个作业提交记录")
@@ -1033,34 +1038,34 @@ class UserService:
         # 4. 删除知识图谱数据
         await self.db.execute(
             delete(UserKnowledgeGraphSnapshot).where(
-                UserKnowledgeGraphSnapshot.user_id == user_id
+                UserKnowledgeGraphSnapshot.user_id == user_uuid
             )
         )
         await self.db.execute(
             delete(KnowledgePointLearningTrack).where(
-                KnowledgePointLearningTrack.user_id == user_id
+                KnowledgePointLearningTrack.user_id == user_uuid
             )
         )
         logger.info("已删除知识图谱数据")
 
         # 5. 删除学习掌握度数据
         await self.db.execute(
-            delete(KnowledgeMastery).where(KnowledgeMastery.user_id == user_id)
+            delete(KnowledgeMastery).where(KnowledgeMastery.user_id == user_uuid)
         )
 
         # 6. 删除复习计划
         await self.db.execute(
-            delete(ReviewSchedule).where(ReviewSchedule.user_id == user_id)
+            delete(ReviewSchedule).where(ReviewSchedule.user_id == user_uuid)
         )
 
         # 7. 删除学习会话记录
         await self.db.execute(
-            delete(StudySession).where(StudySession.user_id == user_id)
+            delete(StudySession).where(StudySession.user_id == user_uuid)
         )
 
         # 8. 删除错题复习会话
         await self.db.execute(
-            delete(MistakeReviewSession).where(MistakeReviewSession.user_id == user_id)
+            delete(MistakeReviewSession).where(MistakeReviewSession.user_id == user_uuid)
         )
 
         # 9. 撤销所有用户会话
