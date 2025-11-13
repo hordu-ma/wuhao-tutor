@@ -21,6 +21,12 @@ class AdminCreateUserRequest(BaseModel):
     school: Optional[str] = Field(None, max_length=100, description="学校")
     grade_level: Optional[str] = Field(None, description="学段")
     class_name: Optional[str] = Field(None, max_length=50, description="班级")
+    # 允许管理员指定角色（可选）
+    role: Optional[str] = Field(
+        None,
+        description="用户角色: 'student'、'teacher' 或 'admin'",
+        regex=r"^(student|teacher|admin)$",
+    )
 
     model_config = {
         "json_schema_extra": {
@@ -30,6 +36,7 @@ class AdminCreateUserRequest(BaseModel):
                 "school": "示范小学",
                 "grade_level": "primary_3",
                 "class_name": "三年级1班",
+                "role": "admin",
             }
         }
     }

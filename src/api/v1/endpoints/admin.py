@@ -113,6 +113,7 @@ async def create_user(
             school=request.school,
             grade_level=request.grade_level,
             class_name=request.class_name,
+            role=request.role,
         )
 
         # 转换为响应格式

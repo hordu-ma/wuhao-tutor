@@ -813,6 +813,7 @@ class UserService:
         school: Optional[str] = None,
         grade_level: Optional[str] = None,
         class_name: Optional[str] = None,
+        role: Optional[str] = None,
     ) -> Tuple[User, str]:
         """
         管理员创建用户
@@ -835,6 +836,13 @@ class UserService:
         if existing_user:
             raise ConflictError(f"手机号 {phone} 已被注册")
 
+        # 校验角色并设置默认值
+        allowed_roles = {r.value for r in UserRole}
+        if role is None:
+            role = "student"
+        if role not in allowed_roles:
+            raise ValidationError(f"非法的角色: {role}")
+
         # 生成安全密码
         password = self._generate_secure_password()
         password_hash = self._hash_password(password)
@@ -848,7 +856,7 @@ class UserService:
             "school": school,
             "grade_level": grade_level,
             "class_name": class_name,
-            "role": "student",
+            "role": role,
             "is_active": True,
             "is_verified": True,
             "login_count": 0,
