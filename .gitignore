@@ -77,6 +77,9 @@ coverage/
 .nyc_output
 htmlcov/
 
+# Test results
+test-results/
+
 # Task scheduling (if used)
 celerybeat-schedule
 celerybeat.pid
