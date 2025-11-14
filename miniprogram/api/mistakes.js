@@ -560,6 +560,24 @@ const mistakesAPI = {
       ...config,
     });
   },
+
+  /**
+   * 获取学科知识图谱（新版接口，支持学科隔离）
+   * @param {Object} params - 参数对象
+   * @param {string} params.subject - 学科英文名（math/chinese/english/physics/chemistry/biology/history/geography/politics）
+   * @param {Object} [config] - 请求配置（可选）
+   * @returns {Promise} API响应
+   *
+   * @example
+   * mistakesApi.getSubjectKnowledgeGraph({ subject: 'math' })
+   */
+  getSubjectKnowledgeGraph(params, config = {}) {
+    return request.get(
+      `knowledge-graph/graphs/${params.subject}`,
+      {},
+      { showLoading: false, ...config },
+    );
+  },
 };
 
 module.exports = mistakesAPI;

@@ -32,6 +32,37 @@ from src.repositories.knowledge_graph_repository import (
 logger = logging.getLogger(__name__)
 
 
+# Subject 中英文映射
+SUBJECT_MAP_EN_TO_CN = {
+    "math": "数学",
+    "chinese": "语文",
+    "english": "英语",
+    "physics": "物理",
+    "chemistry": "化学",
+    "biology": "生物",
+    "history": "历史",
+    "geography": "地理",
+    "politics": "政治",
+}
+
+SUBJECT_MAP_CN_TO_EN = {v: k for k, v in SUBJECT_MAP_EN_TO_CN.items()}
+
+
+def normalize_subject(subject: str) -> str:
+    """
+    标准化学科名称为中文
+
+    Args:
+        subject: 学科名称（英文或中文）
+
+    Returns:
+        中文学科名称
+    """
+    if subject in SUBJECT_MAP_EN_TO_CN:
+        return SUBJECT_MAP_EN_TO_CN[subject]
+    return subject
+
+
 class KnowledgeGraphService:
     """知识图谱服务"""
 
@@ -1032,13 +1063,17 @@ class KnowledgeGraphService:
         from sqlalchemy import and_, select
 
         try:
+            # 标准化subject为中文（数据库中存储的是中文）
+            normalized_subject = normalize_subject(subject)
+            logger.debug(f"Subject映射: {subject} -> {normalized_subject}")
+
             # 1. 查询用户该学科的所有知识点掌握度（按掌握度升序排列）
             stmt = (
                 select(KnowledgeMastery)
                 .where(
                     and_(
                         KnowledgeMastery.user_id == str(user_id),
-                        KnowledgeMastery.subject == subject,
+                        KnowledgeMastery.subject == normalized_subject,
                     )
                 )
                 .order_by(KnowledgeMastery.mastery_level.asc())

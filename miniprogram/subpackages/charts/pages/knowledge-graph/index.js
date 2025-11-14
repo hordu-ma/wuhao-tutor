@@ -57,6 +57,26 @@ const pageObject = {
     error: null,
   },
 
+  /**
+   * 中文学科名称转英文枚举
+   * @param {string} chineseSubject - 中文学科名（如"数学"）
+   * @returns {string} 英文学科枚举（如"math"）
+   */
+  convertSubjectToEnglish(chineseSubject) {
+    const mapping = {
+      数学: 'math',
+      语文: 'chinese',
+      英语: 'english',
+      物理: 'physics',
+      化学: 'chemistry',
+      生物: 'biology',
+      历史: 'history',
+      地理: 'geography',
+      政治: 'politics',
+    };
+    return mapping[chineseSubject] || 'math'; // 默认返回数学
+  },
+
   async onLoad(options) {
     console.log('知识图谱页面加载', options);
 
@@ -71,7 +91,16 @@ const pageObject = {
   },
 
   onShow() {
-    console.log('知识图谱页面显示');
+    console.log('📍 知识图谱页面显示');
+
+    // 🆕 如果不是首次加载（已有数据），则刷新
+    // 使用场景: 从错题列表删除错题后返回此页面
+    if (this.data.snapshot) {
+      console.log('🔄 检测到已有数据，触发增量刷新');
+      this.loadData(); // 重新加载数据
+    } else {
+      console.log('🆕 首次加载，跳过刷新（将在onLoad中加载）');
+    }
   },
 
   onPullDownRefresh() {
@@ -96,9 +125,23 @@ const pageObject = {
     try {
       this.setData({ snapshotLoading: true, error: null });
 
-      const response = await mistakesApi.getKnowledgeGraphSnapshot({
-        subject: this.data.selectedSubject,
+      console.log('开始加载知识图谱，当前学科:', this.data.selectedSubject);
+
+      // 🆕 转换中文学科名为英文枚举
+      const subjectEn = this.convertSubjectToEnglish(this.data.selectedSubject);
+      console.log('学科转换:', this.data.selectedSubject, '→', subjectEn);
+
+      // 🆕 调用新版学科隔离API
+      const response = await mistakesApi.getSubjectKnowledgeGraph({
+        subject: subjectEn,
       });
+
+      // 旧代码（注释保留，向后兼容）
+      // const response = await mistakesApi.getKnowledgeGraphSnapshot({
+      //   subject: this.data.selectedSubject,
+      // });
+
+      console.log('知识图谱数据加载成功:', response);
 
       // 判断响应是否成功：兼容多种响应格式
       const isStandardFormat = response && response.statusCode !== undefined;
@@ -150,14 +193,48 @@ const pageObject = {
   },
 
   /**
-   * 格式化快照数据（适配 /mastery API）
+   * 格式化快照数据（兼容新旧两种API格式）
+   * @param {Object} snapshot - API响应数据
+   * @returns {Object|null} 格式化后的数据，失败返回null
    */
   formatSnapshotData(snapshot) {
-    // 新版 /mastery API 返回格式: { subject, items, total_count, avg_mastery }
+    if (!snapshot) {
+      console.warn('快照数据为空');
+      return null;
+    }
+
+    // 🆕 新版 /graphs/{subject} API 格式（优先）
+    if (snapshot.nodes && Array.isArray(snapshot.nodes)) {
+      console.log('✅ 检测到新版API格式，nodes数量:', snapshot.nodes.length);
+
+      const knowledge_points = snapshot.nodes.map(node => ({
+        name: node.name || '',
+        mastery_level: node.mastery || 0, // 注意字段名变化: mastery
+        mistake_count: node.mistake_count || 0,
+        correct_count: node.correct_count || 0,
+        total_attempts: node.total_attempts || 0,
+        id: node.id || '', // 🆕 节点ID
+      }));
+
+      return {
+        subject: snapshot.subject || '',
+        knowledge_points,
+        total_mistakes: snapshot.total_points || 0,
+        average_mastery: snapshot.avg_mastery || 0,
+        // 🆕 新增字段（增强功能）
+        weak_chains: snapshot.weak_chains || [],
+        mastery_distribution: snapshot.mastery_distribution || {},
+        recommendations: snapshot.recommendations || [],
+      };
+    }
+
+    // 向后兼容：旧版 /mastery API 格式
     if (snapshot.items && Array.isArray(snapshot.items)) {
+      console.log('⚠️ 检测到旧版API格式，items数量:', snapshot.items.length);
+
       const knowledge_points = snapshot.items.map(item => ({
         name: item.knowledge_point || '',
-        mastery_level: item.mastery_level || 0,
+        mastery_level: item.mastery_level || 0, // 旧格式字段名
         mistake_count: item.mistake_count || 0,
         correct_count: item.correct_count || 0,
         total_attempts: item.total_attempts || 0,
@@ -165,15 +242,20 @@ const pageObject = {
       }));
 
       return {
-        subject: snapshot.subject,
+        subject: snapshot.subject || '',
         knowledge_points,
         total_mistakes: snapshot.total_count || 0,
-        average_mastery: snapshot.avg_mastery || 0,
+        average_mastery: snapshot.average_mastery || 0,
+        // 旧格式无这些字段
+        weak_chains: [],
+        mastery_distribution: {},
+        recommendations: [],
       };
     }
 
-    // 兼容旧版 snapshot 格式（向后兼容）
+    // 再向后兼容：更旧版 snapshot 格式
     if (snapshot.knowledge_points) {
+      console.log('⚠️ 检测到更旧版格式，直接返回');
       return snapshot;
     }
 
@@ -181,19 +263,28 @@ const pageObject = {
     const graphData = snapshot.graph_data || {};
     const nodes = graphData.nodes || [];
 
-    const knowledge_points = nodes.map(node => ({
-      name: node.name || '',
-      mastery_level: node.mastery_level || node.value || 0,
-      mistake_count: node.mistake_count || 0,
-      last_practiced: node.last_practiced || null,
-    }));
+    if (nodes.length > 0) {
+      console.log('⚠️ 检测到 graph_data.nodes 格式');
+      const knowledge_points = nodes.map(node => ({
+        name: node.name || '',
+        mastery_level: node.mastery_level || node.value || 0,
+        mistake_count: node.mistake_count || 0,
+        last_practiced: node.last_practiced || null,
+      }));
 
-    return {
-      ...snapshot,
-      knowledge_points,
-      total_mistakes: snapshot.total_knowledge_points || 0,
-      average_mastery: this.calculateAverageMastery(knowledge_points),
-    };
+      return {
+        ...snapshot,
+        knowledge_points,
+        total_mistakes: snapshot.total_knowledge_points || 0,
+        average_mastery: this.calculateAverageMastery(knowledge_points),
+        weak_chains: [],
+        mastery_distribution: {},
+        recommendations: [],
+      };
+    }
+
+    console.error('❌ 未知的快照数据格式，无法解析:', snapshot);
+    return null;
   },
 
   /**
