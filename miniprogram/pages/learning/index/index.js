@@ -1038,19 +1038,16 @@ const pageObject = {
       if (imageUrls.length > 0) {
         requestParams.image_urls = imageUrls;
 
-        // 🎯 [新增] 批改场景加载提示（有图片时可能是作业批改）
+        // 🎯 [优化] 批改场景不显示加载提示，避免转圈影响体验
+        // 流式输出本身就能展示实时进度，不需要额外的loading
         if (imageUrls.length >= 1 && inputText.includes('批改')) {
-          console.log('🔄 显示批改加载提示');
-          wx.showLoading({
-            title: 'AI批改中...',
-            mask: true,
-          });
-          // 标记显示了批改加载提示
-          this.setData({ _showingCorrectionLoading: true });
+          console.log('🔄 批改场景：使用流式输出，不显示loading提示');
+          // 标记为批改场景，但不显示loading
+          this.setData({ _showingCorrectionLoading: false });
         }
       }
 
-      console.log('发送流式请求参数:', requestParams);
+      // console.log('发送流式请求参数:', requestParams);
 
       // 5. 创建 AI 消息占位符（用于流式更新）
       const aiMessageId = this.generateMessageId();
@@ -1082,14 +1079,14 @@ const pageObject = {
 
       // 6. 调用 WebSocket 流式 API
       const response = await api.learning.askQuestionStreamWS(requestParams, chunk => {
-        console.log('[WebSocket Stream Chunk]', {
-          type: chunk.type,
-          contentLength: chunk.content ? chunk.content.length : 0,
-        });
+        // console.log('[WebSocket Stream Chunk]', {
+        //   type: chunk.type,
+        //   contentLength: chunk.content ? chunk.content.length : 0,
+        // });
 
         // 🔧 [新增] 处理公式增强事件
         if (chunk.type === 'formula_enhanced') {
-          console.log('📐 收到公式增强内容，长度:', chunk.content?.length || 0);
+          // console.log('📐 收到公式增强内容，长度:', chunk.content?.length || 0);
 
           // 使用增强后的完整内容替换
           fullContent = chunk.content || chunk.full_content || fullContent;
@@ -1228,11 +1225,11 @@ const pageObject = {
         questionId = response?.question_id || null;
         answerId = response?.answer_id || null;
 
-        console.log('[Stream Update] 更新消息状态:', {
-          questionId,
-          answerId,
-          contentLength: fullContent.length,
-        });
+        // console.log('[Stream Update] 更新消息状态:', {
+        //   questionId,
+        //   answerId,
+        //   contentLength: fullContent.length,
+        // });
 
         // 更新用户消息状态
         const newMessageList = [...this.data.messageList];
@@ -1271,8 +1268,6 @@ const pageObject = {
           // 🎯 [新增] 数据验证
           if (response.correction_result.length === 0) {
             console.warn('⚠️ 批改结果为空数组');
-            wx.hideLoading();
-            this.setData({ _showingCorrectionLoading: false });
             wx.showToast({
               title: '未识别到题目，请重新上传',
               icon: 'none',
@@ -1280,11 +1275,6 @@ const pageObject = {
             });
             return;
           }
-
-          // 🎯 [新增] 关闭批改加载提示
-          console.log('🔄 关闭批改加载提示（检测到批改结果）');
-          wx.hideLoading();
-          this.setData({ _showingCorrectionLoading: false });
 
           // 创建批改结果卡片消息
           const correctionCardMessage = {
@@ -1325,13 +1315,6 @@ const pageObject = {
           isAITyping: false,
         });
 
-        // 🎯 [修复] 确保关闭批改加载提示（无论是否有 correction_result）
-        if (this.data._showingCorrectionLoading) {
-          console.log('🔄 关闭批改加载提示（流式完成）');
-          wx.hideLoading();
-          this.setData({ _showingCorrectionLoading: false });
-        }
-
         // 🎯 静默处理错题自动创建（无UI提示）
         if (response.mistake_created) {
           console.log('✅ 错题已自动加入复习本:', {
@@ -1347,7 +1330,7 @@ const pageObject = {
         // 更新统计
         this.updateQuestionStats();
 
-        console.log('✅ 流式响应处理完成');
+        // console.log('✅ 流式响应处理完成');
       } else if (!hasContent) {
         // 只有在完全没有内容时才报错
         console.error('流式响应无内容:', {
