@@ -57,7 +57,7 @@
 
 /* 用户信息区域 */
 .user-section {
-  padding: 40rpx 32rpx 32rpx;
+  padding: 40rpx 32rpx 40rpx; /* 减小底部间距，因为统计数据已隐藏 */
   background: linear-gradient(135deg, #1890ff 0%, #36cfc9 100%);
   position: relative;
   overflow: hidden;
@@ -77,7 +77,7 @@
 .user-info {
   position: relative;
   z-index: 1;
-  margin-bottom: 32rpx;
+  margin-bottom: 0; /* 移除底部间距，因为统计数据已隐藏 */
 }
 
 .avatar {

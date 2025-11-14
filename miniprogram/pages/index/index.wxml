@@ -37,8 +37,8 @@
         </view>
       </view>
 
-      <!-- 统计数据 -->
-      <view class="stats-section">
+      <!-- 统计数据 - 暂时隐藏，避免数据不同步问题 -->
+      <!-- <view class="stats-section">
         <view class="stats-grid">
           <view class="stat-item" wx:if="{{role === 'student'}}">
             <text class="stat-number text-white font-bold">{{stats.questionCount}}</text>
@@ -54,7 +54,7 @@
             <text class="stat-label text-white opacity-75">学习时长(小时)</text>
           </view>
         </view>
-      </view>
+      </view> -->
     </view>
 
     <!-- 个性化推荐区域 -->
