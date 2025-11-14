@@ -85,17 +85,17 @@ class ReviewService:
             f"for user {user_id} mistake {mistake_id}"
         )
 
-        # 返回原题内容
-        if not mistake.ocr_text:
-            raise ServiceError("Mistake lacks OCR text for review")
+        # 返回原题内容（如果没有OCR文本，使用占位提示）
+        question_content = mistake.ocr_text or "暂无题目内容，请先上传并识别题目图片"
 
         return {
             "session_id": str(review_session.id),
             "stage": self.STAGE_ORIGINAL,
             "stage_name": "原题复习",
-            "question_content": mistake.ocr_text,
-            "correct_answer": mistake.correct_answer,
+            "question_content": question_content,
+            "correct_answer": mistake.correct_answer or "",
             "knowledge_points": mistake.knowledge_points or [],
+            "has_ocr_text": bool(mistake.ocr_text),  # 标记是否有OCR文本
         }
 
     async def get_review_session(
