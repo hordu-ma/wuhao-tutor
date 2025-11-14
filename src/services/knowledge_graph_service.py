@@ -1085,8 +1085,6 @@ class KnowledgeGraphService:
             if not kms:
                 from sqlalchemy import desc
 
-                from src.models.mistake import MistakeRecord
-
                 logger.info(
                     "知识图谱无 KnowledgeMastery 数据,尝试按错题记录动态聚合: "
                     f"user={user_id}, subject={subject}"
