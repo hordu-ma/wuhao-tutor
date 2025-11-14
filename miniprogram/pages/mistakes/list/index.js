@@ -519,6 +519,7 @@ const pageObject = {
 
     const { mistake } = e.detail;
     console.log('[列表页] 开始三阶段复习，错题:', mistake);
+    console.log('[列表页] 错题ID:', mistake.id, '类型:', typeof mistake.id);
 
     try {
       wx.showLoading({
@@ -527,6 +528,7 @@ const pageObject = {
       });
 
       // 调用后端 API 启动复习会话
+      console.log('[列表页] 调用 startReviewSession，mistake_id:', mistake.id);
       const sessionData = await mistakesApi.startReviewSession(mistake.id);
 
       console.log('[列表页] 复习会话创建成功:', sessionData);
@@ -554,6 +556,8 @@ const pageObject = {
       });
     } catch (error) {
       console.error('[列表页] 启动复习会话失败:', error);
+      console.error('[列表页] 错误详情 - 状态码:', error.statusCode, '消息:', error.message);
+      console.error('[列表页] 错误对象:', JSON.stringify(error, null, 2));
       wx.hideLoading();
 
       // ✅ 详细的错误提示

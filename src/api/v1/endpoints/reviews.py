@@ -41,6 +41,9 @@ async def start_review_session(
             f"Review session created successfully: {session_data.get('session_id')}"
         )
         return session_data
+    except ValueError as e:
+        logger.error(f"Validation error in review session: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"参数验证失败: {str(e)}")
     except Exception as e:
         logger.error(
             f"Failed to start review session: {type(e).__name__}: {str(e)}",
