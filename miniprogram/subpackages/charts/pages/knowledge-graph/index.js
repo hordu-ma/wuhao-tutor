@@ -349,8 +349,22 @@ const pageObject = {
   onSubjectChange(e) {
     const subject = e.detail;
 
+    // 清理旧的图表实例
+    if (this.chartInstance) {
+      try {
+        this.chartInstance.dispose();
+        console.log('✅ 已清理旧图表实例');
+      } catch (error) {
+        console.warn('清理图表实例失败:', error);
+      }
+      this.chartInstance = null;
+    }
+
     this.setData({
       selectedSubject: subject,
+      snapshot: null, // 清空旧数据
+      viewMode: 'list', // 重置为列表视图
+      graphOption: null, // 清空图表配置
     });
 
     this.loadData();
@@ -449,39 +463,50 @@ const pageObject = {
 
     console.log('✅ 图表配置生成完成');
 
-    // 获取ec-canvas组件并手动初始化
-    const ecComponent = this.selectComponent('#knowledge-graph');
-    if (!ecComponent) {
-      console.error('❌ 未找到ec-canvas组件');
-      return;
-    }
+    // 获取ec-canvas组件并手动初始化(带重试机制)
+    const tryInitChart = (retryCount = 0) => {
+      const ecComponent = this.selectComponent('#knowledge-graph');
 
-    console.log('✅ 找到ec-canvas组件,开始初始化');
+      if (!ecComponent) {
+        if (retryCount < 3) {
+          console.warn(`⚠️ 第${retryCount + 1}次未找到组件,100ms后重试...`);
+          setTimeout(() => tryInitChart(retryCount + 1), 100);
+        } else {
+          console.error('❌ 多次尝试后仍未找到ec-canvas组件');
+        }
+        return;
+      }
 
-    // 手动调用组件的init方法
-    ecComponent.init((canvas, width, height, dpr) => {
-      console.log('✅ ECharts初始化回调触发');
+      console.log('✅ 找到ec-canvas组件,开始初始化');
 
-      // 导入echarts
-      const echarts = require('../../components/ec-canvas/echarts');
+      // 手动调用组件的init方法
+      ecComponent.init((canvas, width, height, dpr) => {
+        console.log('✅ ECharts初始化回调触发');
 
-      // 创建图表实例
-      const chart = echarts.init(canvas, null, {
-        width: width,
-        height: height,
-        devicePixelRatio: dpr,
+        // 导入echarts
+        const echarts = require('../../components/ec-canvas/echarts');
+
+        // 创建图表实例
+        const chart = echarts.init(canvas, null, {
+          width: width,
+          height: height,
+          devicePixelRatio: dpr,
+        });
+
+        // 保存实例到页面对象(不是data,避免循环引用)
+        this.chartInstance = chart;
+        console.log('✅ chart实例已保存');
+
+        // 设置图表配置
+        chart.setOption(option);
+        console.log('✅ 图表渲染完成!');
+
+        return chart;
       });
+    };
 
-      // 保存实例到页面对象(不是data,避免循环引用)
-      this.chartInstance = chart;
-      console.log('✅ chart实例已保存');
-
-      // 设置图表配置
-      chart.setOption(option);
-      console.log('✅ 图表渲染完成!');
-
-      return chart;
-    });
+    // 开始初始化
+    tryInitChart();
   },
 
   /**

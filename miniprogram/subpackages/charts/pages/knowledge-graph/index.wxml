@@ -171,13 +171,18 @@
         <text class="tips-text">节点颜色代表掌握度：绿色(已掌握) 黄色(学习中) 红色(待加强)</text>
       </view>
 
-      <!-- ECharts 图谱 -->
-      <view class="graph-container" wx:if="{{graphOption}}">
-        <ec-canvas id="knowledge-graph" canvas-id="knowledge-graph" ec="{{ec}}"></ec-canvas>
+      <!-- ECharts 图谱(始终渲染,避免查找失败) -->
+      <view class="graph-container">
+        <ec-canvas 
+          id="knowledge-graph" 
+          canvas-id="knowledge-graph" 
+          ec="{{ec}}"
+          style="width: 100%; height: 400px;"
+        ></ec-canvas>
       </view>
 
       <!-- 图谱空状态 -->
-      <view class="graph-empty" wx:if="{{!graphOption && snapshot}}">
+      <view class="graph-empty" wx:if="{{!snapshot}}">
         <van-icon name="chart-trending-o" size="48px" color="#ccc" />
         <text class="empty-text">暂无关联关系数据</text>
         <text class="empty-hint">继续学习,系统会自动构建知识图谱</text>
