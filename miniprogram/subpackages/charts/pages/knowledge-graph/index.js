@@ -35,33 +35,9 @@ const pageObject = {
 
     // ECharts配置
     ec: {
-      lazyLoad: true, // 启用懒加载,切换到图谱视图时才初始化
-      onInit: function (canvas, width, height, dpr) {
-        // 导入echarts模块(官方组件内置)
-        const echarts = require('../../components/ec-canvas/echarts');
-
-        // 初始化图表
-        const chart = echarts.init(canvas, null, {
-          width: width,
-          height: height,
-          devicePixelRatio: dpr,
-        });
-
-        // 获取页面实例并设置图表配置
-        const pages = getCurrentPages();
-        const currentPage = pages[pages.length - 1];
-        if (currentPage && currentPage.data && currentPage.data.graphOption) {
-          chart.setOption(currentPage.data.graphOption);
-          console.log('图表配置已设置');
-        } else {
-          console.warn('图表配置未就绪');
-        }
-
-        return chart;
-      },
+      lazyLoad: true, // 延迟加载,在initGraphView中手动初始化
     },
     graphOption: null,
-    chart: null,
 
     // 错误状态
     error: null,
@@ -428,6 +404,9 @@ const pageObject = {
     const nodes = this.buildGraphNodes(this.data.snapshot.knowledge_points);
     const links = this.buildGraphLinks(this.data.snapshot.knowledge_points);
 
+    console.log('✅ 构建图谱节点:', nodes.length, '个');
+    console.log('✅ 构建图谱边:', links.length, '条');
+
     const option = {
       tooltip: {
         trigger: 'item',
@@ -468,18 +447,41 @@ const pageObject = {
       ],
     };
 
-    this.setData({ graphOption: option });
+    console.log('✅ 图表配置生成完成');
 
-    // 延迟初始化,等待组件渲染完成
-    setTimeout(() => {
-      const component = this.selectComponent('#knowledge-graph');
-      if (component && component.init) {
-        console.log('手动触发ECharts组件初始化');
-        component.init();
-      } else {
-        console.warn('ECharts组件未找到');
-      }
-    }, 100);
+    // 获取ec-canvas组件并手动初始化
+    const ecComponent = this.selectComponent('#knowledge-graph');
+    if (!ecComponent) {
+      console.error('❌ 未找到ec-canvas组件');
+      return;
+    }
+
+    console.log('✅ 找到ec-canvas组件,开始初始化');
+
+    // 手动调用组件的init方法
+    ecComponent.init((canvas, width, height, dpr) => {
+      console.log('✅ ECharts初始化回调触发');
+
+      // 导入echarts
+      const echarts = require('../../components/ec-canvas/echarts');
+
+      // 创建图表实例
+      const chart = echarts.init(canvas, null, {
+        width: width,
+        height: height,
+        devicePixelRatio: dpr,
+      });
+
+      // 保存实例到页面对象(不是data,避免循环引用)
+      this.chartInstance = chart;
+      console.log('✅ chart实例已保存');
+
+      // 设置图表配置
+      chart.setOption(option);
+      console.log('✅ 图表渲染完成!');
+
+      return chart;
+    });
   },
 
   /**
