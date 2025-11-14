@@ -533,7 +533,7 @@ Page({
    */
   navigateToAnalysis() {
     console.log('导航到学习报告');
-    wx.switchTab({
+    wx.navigateTo({
       url: '/pages/analysis/report/index',
     });
   },
