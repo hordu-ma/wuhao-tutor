@@ -85,8 +85,8 @@ class ReviewService:
             f"for user {user_id} mistake {mistake_id}"
         )
 
-        # 返回原题内容（如果没有OCR文本，使用占位提示）
-        question_content = mistake.ocr_text or "暂无题目内容，请先上传并识别题目图片"
+        # 🎯 [优化] 多来源提取题目内容
+        question_content = self._extract_question_content(mistake)
 
         return {
             "session_id": str(review_session.id),
@@ -127,8 +127,8 @@ class ReviewService:
         # 根据当前阶段返回对应内容
         stage_name = self._get_stage_name(session.current_stage)
 
-        # 使用占位文本处理无OCR内容的情况
-        question_content = mistake.ocr_text or "暂无题目内容，请先上传并识别题目图片"
+        # 🎯 [优化] 多来源提取题目内容
+        question_content = self._extract_question_content(mistake)
 
         return {
             "session_id": str(session.id),
@@ -462,6 +462,58 @@ class ReviewService:
         except Exception as e:
             logger.error(f"Failed to update mistake stats: {e}")
             # 不抛出异常，避免影响主流程
+
+    def _extract_question_content(self, mistake) -> str:
+        """
+        从多个来源提取题目内容（降级方案）
+
+        优先级：
+        1. ocr_text（OCR识别的题目）
+        2. ai_feedback.question（AI提取的题目）
+        3. title（错题标题）
+        4. 占位文本
+        """
+        # 优先级1: 直接使用OCR文本
+        if mistake.ocr_text and mistake.ocr_text.strip():
+            return mistake.ocr_text
+
+        # 优先级2: 从ai_feedback中提取
+        if mistake.ai_feedback:
+            try:
+                import json
+
+                ai_feedback = (
+                    json.loads(mistake.ai_feedback)
+                    if isinstance(mistake.ai_feedback, str)
+                    else mistake.ai_feedback
+                )
+
+                # 尝试多个可能的字段名
+                for field in ["question", "question_content", "content", "题目"]:
+                    if field in ai_feedback and ai_feedback[field]:
+                        content = ai_feedback[field].strip()
+                        if content and len(content) > 10:  # 确保不是占位文本
+                            logger.info(
+                                f"从ai_feedback.{field}提取题目内容，长度: {len(content)}"
+                            )
+                            return content
+            except Exception as e:
+                logger.warning(f"解析ai_feedback失败: {e}")
+
+        # 优先级3: 使用标题（去除题号后缀）
+        if mistake.title and mistake.title.strip():
+            title = mistake.title.strip()
+            # 去除常见的题号后缀（如"第1题"、"第1题 - 概念错误"）
+            import re
+
+            clean_title = re.sub(r"^第\d+题\s*[-–]?\s*", "", title)
+            if clean_title and len(clean_title) > 5:
+                logger.info(f"使用错题标题作为题目内容: {clean_title[:50]}...")
+                return f"题目: {clean_title}"
+
+        # 优先级4: 占位文本（最后的降级方案）
+        logger.warning(f"错题 {mistake.id} 无法提取题目内容，使用占位文本")
+        return "暂无题目内容，请查看题目图片或联系老师补充"
 
     @staticmethod
     def _get_stage_name(stage: int) -> str:
