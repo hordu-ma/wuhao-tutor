@@ -434,7 +434,46 @@ async def get_homepage_recommendations(
                 }
             )
 
-        # 4. 如果没有推荐数据，返回默认提示
+        # 4. 如果知识图谱没有推荐，降级到基于错题本的推荐
+        if not recommendations:
+            # 4.1 查询最近的错题（按创建时间倒序）
+            mistake_stmt = (
+                select(MistakeRecord)
+                .where(MistakeRecord.user_id == current_user_id)
+                .order_by(desc(MistakeRecord.created_at))
+                .limit(3)
+            )
+            mistake_result = await db.execute(mistake_stmt)
+            recent_mistakes = mistake_result.scalars().all()
+
+            # 4.2 基于错题生成推荐
+            for idx, mistake in enumerate(recent_mistakes):
+                # 获取学科和知识点
+                subject_name = getattr(mistake, "subject", "学科")
+                knowledge_points = getattr(mistake, "knowledge_points", [])
+
+                # 构建推荐标题
+                if knowledge_points and len(knowledge_points) > 0:
+                    kp_name = knowledge_points[0]
+                    title = f"{kp_name} 复习"
+                    content = f"你在{subject_name}的{kp_name}知识点有错题，建议及时复习"
+                else:
+                    title = f"{subject_name}错题复习"
+                    content = f"你有{subject_name}错题待复习，建议巩固相关知识点"
+
+                recommendations.append(
+                    {
+                        "id": f"rec_mistake_{date.today().isoformat()}_{idx}",
+                        "title": title,
+                        "content": content,
+                        "icon": icon_map[idx] if idx < len(icon_map) else "star-o",
+                        "color": color_map[idx] if idx < len(color_map) else "#666666",
+                        "mistake_id": str(getattr(mistake, "id", "")),
+                        "priority": 0.8 - (idx * 0.1),  # 最近的优先级更高
+                    }
+                )
+
+        # 5. 如果仍然没有推荐数据，返回默认提示
         if not recommendations:
             recommendations = [
                 {
