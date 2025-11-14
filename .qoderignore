@@ -1,0 +1,72 @@
+# 指定在索引时要忽略的文件或文件夹，请使用逗号分隔条目，支持 my-security/ 和 *.log 等通配符模式。
+
+# 依赖和包管理
+node_modules/
+miniprogram_npm/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+venv/
+.venv/
+uv.lock
+
+# 前端构建产物
+frontend/dist/
+frontend/node_modules/
+frontend/.nuxt/
+frontend/.output/
+
+# 数据库文件
+*.db
+*.sqlite
+*.sqlite3
+
+# 日志文件
+*.log
+logs/
+*.log.*
+
+# 环境配置（可能包含敏感信息）
+.env
+.env.local
+.env.*.local
+
+# IDE 和编辑器配置
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# 测试覆盖率报告
+.coverage
+htmlcov/
+.pytest_cache/
+coverage/
+*.cover
+
+# 监控和第三方工具
+monitoring/grafana/data/
+monitoring/prometheus/data/
+
+# 临时文件
+*.tmp
+*.temp
+.cache/
+
+# 小程序打包产物
+miniprogram/miniprogram_npm/
+
+# 备份文件
+*.bak
+*.backup
+
+# 大文件数据
+data/uploads/
+data/cache/
