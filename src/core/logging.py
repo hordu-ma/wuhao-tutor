@@ -6,7 +6,7 @@
 import logging
 import sys
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 
 import structlog
 

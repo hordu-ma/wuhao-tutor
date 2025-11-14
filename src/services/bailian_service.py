@@ -18,7 +18,6 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
 import httpx
-from pydantic import BaseModel, Field
 
 from src.core.config import get_settings
 from src.core.exceptions import (
@@ -144,15 +143,6 @@ class BailianService:
 
         except Exception as e:
             processing_time = time.time() - start_time
-            error_response = ChatCompletionResponse(
-                content="",
-                tokens_used=0,
-                processing_time=processing_time,
-                model="",
-                request_id="",
-                success=False,
-                error_message=str(e),
-            )
 
             logger.error(f"百炼API调用失败: {e}")
             if context:
@@ -268,8 +258,6 @@ class BailianService:
         Raises:
             BailianServiceError: 服务调用失败
         """
-        start_time = time.time()
-
         try:
             # 标准化消息格式
             formatted_messages = self._format_messages(messages)

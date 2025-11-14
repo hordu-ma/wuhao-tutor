@@ -3,24 +3,21 @@
 提供学习问答业务相关的复杂查询和数据访问方法
 """
 
-from typing import List, Optional, Dict, Any, Tuple
 from datetime import datetime, timedelta
-import json
+from typing import Any, Dict, List, Optional
 
+from sqlalchemy import and_, asc, desc, func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, desc, asc, and_, or_, text
-from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy.orm import selectinload
 
 from src.core.logging import get_logger
 from src.models.learning import (
-    ChatSession,
-    Question,
     Answer,
+    ChatSession,
     LearningAnalytics,
-    QuestionType,
+    Question,
     SessionStatus,
 )
-from src.models.user import User
 from src.repositories.base_repository import BaseRepository
 
 logger = get_logger(__name__)
@@ -124,7 +121,7 @@ class LearningRepository:
                 stmt = stmt.where(ChatSession.subject == subject)
 
             # 排序和分页
-            stmt = stmt.order_by(desc(ChatSession.updated_at))
+            stmt = stmt.order_by(desc(ChatSession.__table__.c.updated_at))
             if offset:
                 stmt = stmt.offset(offset)
             if limit:
@@ -352,7 +349,7 @@ class LearningRepository:
                         "active_subjects"
                     ),
                     func.avg(Answer.user_rating).label("avg_rating"),
-                    func.count(func.case((Answer.is_helpful == True, 1))).label(
+                    func.count(func.case((Answer.is_helpful.is_(True), 1))).label(
                         "helpful_answers"
                     ),
                 )
@@ -506,7 +503,7 @@ class LearningRepository:
                     func.count(Question.id).label("question_count"),
                     func.avg(Answer.user_rating).label("avg_rating"),
                     func.avg(Answer.confidence_score).label("avg_confidence"),
-                    func.count(func.case((Answer.is_helpful == True, 1))).label(
+                    func.count(func.case((Answer.is_helpful.is_(True), 1))).label(
                         "helpful_count"
                     ),
                 )
@@ -537,7 +534,9 @@ class LearningRepository:
                 mastery_level = (
                     "high"
                     if row.avg_rating >= 4
-                    else "medium" if row.avg_rating >= 3 else "low"
+                    else "medium"
+                    if row.avg_rating >= 3
+                    else "low"
                 )
                 topic_analysis.append(
                     {

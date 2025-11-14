@@ -13,7 +13,6 @@ from uuid import UUID
 
 from sqlalchemy import and_, cast, func, or_, select
 from sqlalchemy.dialects.postgresql import JSON
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.logging import get_logger
 from src.models.base import is_sqlite

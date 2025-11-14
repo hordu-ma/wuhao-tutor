@@ -9,12 +9,10 @@ import logging
 import re
 import time
 from typing import Any, Dict, List, Optional
-from urllib.parse import quote
 
 import httpx
 
 from src.core.config import get_settings
-from src.core.exceptions import ServiceError
 from src.core.monitoring import get_formula_metrics
 
 logger = logging.getLogger(__name__)

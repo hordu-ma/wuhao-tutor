@@ -8,17 +8,16 @@
 """
 
 import asyncio
-import logging
 from datetime import datetime, timedelta
 from typing import List, Tuple
 from uuid import UUID
 
-from sqlalchemy import and_, distinct, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import AsyncSessionLocal
 from src.core.logging import configure_logging, get_logger
-from src.models.study import KnowledgeMastery, MistakeRecord
+from src.models.study import MistakeRecord
 from src.services.knowledge_graph_service import KnowledgeGraphService
 
 # 配置日志

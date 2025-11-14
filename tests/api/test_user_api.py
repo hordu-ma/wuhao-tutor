@@ -3,10 +3,9 @@
 测试用户活动、统计等功能
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 from fastapi.testclient import TestClient
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from tests.factories import UserFactory, HomeworkFactory
 

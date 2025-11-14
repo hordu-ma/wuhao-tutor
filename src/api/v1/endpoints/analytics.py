@@ -20,7 +20,7 @@ from src.schemas.analytics import (
     SubjectStatsResponse,
 )
 from src.schemas.common import DataResponse
-from src.services.analytics_service import AnalyticsService, get_analytics_service
+from src.services.analytics_service import get_analytics_service
 
 router = APIRouter(prefix="/analytics", tags=["学情分析"])
 
@@ -388,7 +388,7 @@ async def get_homepage_recommendations(
 
         from sqlalchemy import desc, func, select
 
-        from src.models.study import KnowledgeMastery, MistakeRecord
+        from src.models.study import MistakeRecord
         from src.services.knowledge_graph_service import KnowledgeGraphService
 
         # 1. 获取用户主要学科（从错题统计）

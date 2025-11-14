@@ -10,13 +10,12 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from sqlalchemy import and_, desc, func, or_, select
+from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from src.core.exceptions import NotFoundError, ServiceError
-from src.models.homework import Homework, HomeworkReview, HomeworkSubmission
-from src.models.learning import Answer, ChatSession, Question
+from src.models.homework import HomeworkSubmission
+from src.models.learning import Question
 from src.models.user import User
 
 logger = logging.getLogger("analytics_service")
@@ -298,7 +297,7 @@ class AnalyticsService:
         try:
             conditions = [
                 Question.user_id == str(user_id),
-                Question.has_images == True,  # 有图片的提问
+                Question.has_images,  # 有图片的提问
             ]
             if start_date:
                 conditions.append(Question.created_at >= start_date)
@@ -377,7 +376,7 @@ class AnalyticsService:
 
             # 计算掌握度(简化版:基于问题数量估算)
             # 修复: row是元组,row[1]是count值
-            total_questions = sum(int(row[1]) for row in rows)
+            _total_questions = sum(int(row[1]) for row in rows)  # 用于后续统计分析
 
             knowledge_points = []
             for row in rows:
@@ -646,7 +645,7 @@ class AnalyticsService:
 
                 knowledge_points.append(
                     {
-                        "id": f"kp_{i+1}",
+                        "id": f"kp_{i + 1}",
                         "name": f"{row.subject}核心知识点",
                         "subject": row.subject,
                         "mastery_level": mastery_level,
@@ -952,7 +951,7 @@ class AnalyticsService:
             学习模式字典
         """
         try:
-            from src.models.learning import ChatSession, Question
+            from src.models.learning import Question
 
             # 构建查询条件
             conditions = [Question.user_id == str(user_id)]

@@ -4,9 +4,9 @@
 """
 
 import secrets
-from typing import Any, Dict, List, Optional, Union
+from typing import List, Optional, Union
 
-from pydantic import AnyHttpUrl, HttpUrl, PostgresDsn, field_validator, model_validator
+from pydantic import PostgresDsn, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
 

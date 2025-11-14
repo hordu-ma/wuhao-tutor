@@ -3,7 +3,6 @@
 包含知识节点、关系、学习路径等
 """
 
-from typing import Optional
 import enum
 
 from sqlalchemy import (
@@ -19,11 +18,9 @@ from sqlalchemy import (
     Index,
 )
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from .base import BaseModel
-from .study import Subject
 
 
 class NodeType(enum.Enum):

@@ -3,13 +3,13 @@
 提供通用的数据访问层基类和方法
 """
 
-from typing import Any, Dict, List, Optional, Type, TypeVar, Generic
+from typing import Any, Dict, Generic, List, Optional, Type, TypeVar
 from uuid import uuid4
 
+from sqlalchemy import and_, delete, func, or_, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete, func, and_, or_
-from sqlalchemy.orm import DeclarativeBase, declared_attr
-from sqlalchemy.exc import IntegrityError, NoResultFound
+from sqlalchemy.orm import DeclarativeBase
 
 from src.core.logging import get_logger
 

@@ -4,11 +4,13 @@
 """
 
 import hashlib
+import io
 import mimetypes
 import os
 import re
 from pathlib import Path
-from typing import Optional, Tuple, Set
+from typing import Optional, Tuple
+
 from PIL import Image
 
 # Optional magic library for MIME type detection
@@ -328,9 +330,6 @@ def create_thumbnail(
         Optional[bytes]: 缩略图内容，失败返回None
     """
     try:
-        import io
-        from PIL import Image
-
         with Image.open(io.BytesIO(image_content)) as img:
             # 转换为RGB模式（处理RGBA等格式）
             if img.mode in ("RGBA", "LA", "P"):
@@ -388,7 +387,3 @@ def validate_file_content(
             return False, error
 
     return True, None
-
-
-# 需要导入io模块
-import io

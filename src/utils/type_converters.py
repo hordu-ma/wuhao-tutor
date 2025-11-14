@@ -3,7 +3,7 @@ SQLAlchemy 类型安全转换工具
 解决 ORM 对象属性的类型转换问题
 """
 
-from typing import Any, Optional, Union, List, Dict
+from typing import Any, Optional, List, Dict
 from uuid import UUID
 from datetime import datetime
 import json

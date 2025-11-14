@@ -7,15 +7,13 @@ Phase 3 单元测试 - AI 作业批改调用
 """
 
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
+from unittest.mock import AsyncMock
 
 import pytest
 
 from src.schemas.learning import HomeworkCorrectionResult, QuestionCorrectionItem
 from src.services.bailian_service import ChatCompletionResponse
 from src.services.learning_service import LearningService
-from tests.conftest import CorrectAnswerFactory, MockBailianService
 
 
 class TestCallAiForHomeworkCorrection:

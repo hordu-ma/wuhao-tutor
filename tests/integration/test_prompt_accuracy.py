@@ -6,7 +6,6 @@ Phase 3.3: Prompt 准确性测试
 """
 
 import json
-from pathlib import Path
 from typing import Any, Dict
 
 import pytest
@@ -92,7 +91,7 @@ class TestPromptAccuracy:
         assert len(correction.knowledge_points) > 0, "应该提取到知识点"
         assert len(correction.knowledge_points) <= 3, "知识点数量不应超过3个"
 
-        print(f"✅ 场景1通过: 单题作业批改准确")
+        print("✅ 场景1通过: 单题作业批改准确")
 
     async def test_all_wrong_correction(
         self, db_session, mock_bailian_service_for_integration
@@ -200,7 +199,7 @@ class TestPromptAccuracy:
             ), f"第 {i + 1} 题分数应该是100, 实际 {correction.score}"
             assert not correction.is_unanswered, f"第 {i + 1} 题不应标记为未作答"
 
-        print(f"✅ 场景3通过: 全对作业批改准确")
+        print("✅ 场景3通过: 全对作业批改准确")
 
     async def test_partial_unanswered_correction(
         self, db_session, mock_bailian_service_for_integration
@@ -254,7 +253,7 @@ class TestPromptAccuracy:
             unanswered_count == 2
         ), f"统计的未作答题数与unanswered_count不一致: {unanswered_count} vs {result.unanswered_count}"
 
-        print(f"✅ 场景4通过: 部分未作答批改准确")
+        print("✅ 场景4通过: 部分未作答批改准确")
 
     async def test_mixed_question_types(
         self, db_session, mock_bailian_service_for_integration
@@ -405,12 +404,12 @@ class TestPromptAccuracyStatistics:
         )
 
         print(f"\n{'='*60}")
-        print(f"📊 Prompt 准确性统计")
+        print("📊 Prompt 准确性统计")
         print(f"{'='*60}")
         print(f"总题数: {total_questions}")
         print(f"正确判断数: {correct_judgements}")
         print(f"准确率: {accuracy:.2f}%")
-        print(f"目标准确率: ≥ 90%")
+        print("目标准确率: ≥ 90%")
         print(f"{'='*60}")
 
         # 断言准确率

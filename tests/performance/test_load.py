@@ -6,7 +6,7 @@ API性能和负载测试脚本
 import asyncio
 import time
 import statistics
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Optional
 from dataclasses import dataclass, field
 from datetime import datetime
 import aiohttp
@@ -201,7 +201,7 @@ class LoadTester:
         print(f"吞吐量:       {result.requests_per_second:.2f} req/s")
 
         if result.errors:
-            print(f"\n主要错误:")
+            print("\n主要错误:")
             for error in result.errors[:5]:
                 print(f"  - {error}")
 
@@ -298,7 +298,7 @@ class PerformanceTestSuite:
 
     async def run_rate_limit_tests(self) -> List[LoadTestResult]:
         """运行限流测试"""
-        print(f"\n运行限流测试...")
+        print("\n运行限流测试...")
 
         async with LoadTester(self.base_url) as tester:
             # 快速发送大量请求，触发限流
@@ -330,7 +330,7 @@ class PerformanceTestSuite:
         total_failed = sum(r.failed_requests for r in self.results)
         overall_error_rate = (total_failed / total_requests * 100) if total_requests > 0 else 0
 
-        report.append(f"\n总体统计:")
+        report.append("\n总体统计:")
         report.append(f"  总请求数: {total_requests}")
         report.append(f"  成功请求: {total_successful}")
         report.append(f"  失败请求: {total_failed}")
@@ -344,7 +344,7 @@ class PerformanceTestSuite:
             report.append(f"  最差响应时间: {max(avg_response_times):.3f}s")
 
         # 详细结果
-        report.append(f"\n详细结果:")
+        report.append("\n详细结果:")
         report.append("-" * 80)
         for result in self.results:
             report.append(f"端点: {result.method} {result.endpoint}")
@@ -447,7 +447,7 @@ async def main():
     with open("performance_test_report.txt", "w", encoding="utf-8") as f:
         f.write(report)
 
-    print(f"\n报告已保存到: performance_test_report.txt")
+    print("\n报告已保存到: performance_test_report.txt")
 
 
 if __name__ == "__main__":

@@ -3,27 +3,17 @@ API集成测试套件
 测试五好伴学API的各个端点功能
 """
 
-import asyncio
-import json
 import os
 import tempfile
-from datetime import datetime
-from pathlib import Path
-from typing import Any, Dict
 from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
-from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.dependencies.auth import get_current_user, get_current_user_id
-from src.core.config import get_settings
-from src.core.database import engine, get_db
+from src.core.database import get_db
 from src.main import app
-from src.models.user import User
 from tests.conftest import (
-    TestingSessionLocal,
     mock_get_current_user,
     mock_get_current_user_id,
     override_get_db,
@@ -55,7 +45,7 @@ class TestAPIIntegration:
 
         # 模拟用户认证
         self.test_user_id = "test_user_123"
-        self.auth_headers = {"Authorization": f"Bearer mock_jwt_token"}
+        self.auth_headers = {"Authorization": "Bearer mock_jwt_token"}
 
     def test_health_check(self):
         """测试健康检查端点"""

@@ -3,10 +3,8 @@
 支持本地存储和阿里云OSS云存储
 """
 
-import os
 import hashlib
-import mimetypes
-from typing import List, Optional, Tuple, Dict, Any, BinaryIO
+from typing import List, Optional, Tuple, Dict, Any
 from datetime import datetime
 from pathlib import Path
 import aiofiles

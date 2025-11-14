@@ -6,7 +6,6 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
 from src.repositories.base_repository import BaseRepository
 from src.models.user import User

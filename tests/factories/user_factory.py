@@ -7,7 +7,6 @@ from datetime import datetime
 from typing import Optional
 from unittest.mock import MagicMock
 
-import factory
 from factory.base import Factory
 from factory.declarations import LazyAttribute, LazyFunction, Sequence
 from factory.faker import Faker

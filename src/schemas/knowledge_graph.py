@@ -15,7 +15,6 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 # 🔧 High Fix #2: 统一使用 learning.SubjectType,避免重复定义
-from src.schemas.learning import SubjectType
 
 # ============================================================================
 # 学科枚举定义

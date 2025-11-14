@@ -9,7 +9,7 @@ import json
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
@@ -21,19 +21,18 @@ project_root = Path(__file__).parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from src.core.config import get_settings
-from src.models.base import Base
-from src.models.learning import Answer, ChatSession, Question, QuestionType
-from src.models.study import MistakeRecord
-from src.models.user import User
-from src.schemas.learning import (
+from src.core.config import get_settings  # noqa: E402
+from src.models.base import Base  # noqa: E402
+from src.models.learning import ChatSession, QuestionType  # noqa: E402
+from src.models.user import User  # noqa: E402
+from src.schemas.learning import (  # noqa: E402
     AskQuestionRequest,
     DifficultyLevel,
     HomeworkCorrectionResult,
     QuestionCorrectionItem,
     SubjectType,
 )
-from src.services.bailian_service import ChatCompletionResponse
+from src.services.bailian_service import ChatCompletionResponse  # noqa: E402
 
 # ========== 数据库 Fixture ==========
 

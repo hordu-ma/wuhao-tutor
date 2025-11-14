@@ -4,7 +4,6 @@
 """
 
 import enum
-from typing import Optional
 
 from sqlalchemy import Boolean, Column, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID

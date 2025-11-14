@@ -4,9 +4,7 @@
 """
 
 import enum
-import uuid as python_uuid
-from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
 from sqlalchemy import (
     JSON,

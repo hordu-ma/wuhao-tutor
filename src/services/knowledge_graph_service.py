@@ -15,7 +15,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.exceptions import NotFoundError, ServiceError, ValidationError
+from src.core.exceptions import ServiceError
 from src.models.knowledge_graph import (
     ErrorType,
     KnowledgePointLearningTrack,
@@ -810,7 +810,7 @@ class KnowledgeGraphService:
             推荐复习路径列表
         """
         try:
-            from datetime import datetime, timedelta
+            from datetime import datetime
 
             from sqlalchemy import and_, select
 
@@ -946,7 +946,6 @@ class KnowledgeGraphService:
             # 从未练习过，风险较低
             return 0.3
 
-        from datetime import timedelta
 
         # 计算距离上次练习的天数
         days_since_practice = (now - last_practiced).days

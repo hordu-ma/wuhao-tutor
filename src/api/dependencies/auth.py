@@ -10,7 +10,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import get_db
-from src.core.exceptions import AuthenticationError, AuthorizationError
+from src.core.exceptions import AuthenticationError
 from src.models.user import User
 from src.services.auth_service import AuthService
 from src.services.user_service import UserService, get_user_service
@@ -67,7 +67,7 @@ async def get_current_user(
             detail=str(e),
             headers={"WWW-Authenticate": "Bearer"},
         )
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",

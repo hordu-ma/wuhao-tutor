@@ -4,12 +4,9 @@
 提供多维度答案质量评分的数据模型
 """
 
-import uuid as uuid_module
-from datetime import datetime
 from typing import Any, Dict, Optional
 
 from sqlalchemy import JSON, Column, ForeignKey, Index, Numeric, String, Text
-from sqlalchemy.orm import relationship
 
 from src.core.config import get_settings
 from src.models.base import BaseModel

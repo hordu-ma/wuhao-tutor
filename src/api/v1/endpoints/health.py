@@ -3,11 +3,9 @@
 提供系统健康状态检查和监控功能，包含性能指标和详细系统状态
 """
 
-import asyncio
 import logging
 import time
 from datetime import datetime
-from typing import Any, Dict
 
 from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
@@ -19,7 +17,6 @@ from src.core.database import get_db
 from src.core.monitoring import get_formula_metrics, get_metrics_collector
 from src.core.security import get_rate_limiter
 from src.services.bailian_service import get_bailian_service
-from src.services.learning_service import get_learning_service
 from src.utils.cache import cache_manager
 
 logger = logging.getLogger("health_api")
@@ -74,7 +71,7 @@ async def health_check(db: AsyncSession = Depends(get_db)) -> JSONResponse:
     # 2. AI服务健康检查
     try:
         ai_start = time.time()
-        bailian_service = get_bailian_service()
+        _bailian_service = get_bailian_service()  # 用于未来的AI服务检查
         # 简单的服务可用性检查
         ai_healthy = True  # 这里可以添加实际的百炼服务检查
         ai_time = round((time.time() - ai_start) * 1000, 2)
@@ -200,8 +197,6 @@ async def readiness_check(db: AsyncSession = Depends(get_db)) -> JSONResponse:
 @router.get("/liveness", summary="活性检查", description="检查应用程序是否正在运行")
 async def liveness_check() -> JSONResponse:
     """活性检查 - 最简单的存活检查"""
-    # 使用全局变量存储启动时间
-    uptime = time.time() - _app_start_time
     return JSONResponse(
         status_code=status.HTTP_200_OK,
         content={

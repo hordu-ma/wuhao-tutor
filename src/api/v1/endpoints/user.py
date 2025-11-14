@@ -3,13 +3,13 @@
 包含用户信息、活动记录等接口
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, Dict, List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi import status as http_status
-from sqlalchemy import and_, desc, or_, select
+from sqlalchemy import and_, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.v1.endpoints.auth import get_current_user_id

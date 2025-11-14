@@ -4,8 +4,6 @@
 """
 
 import enum
-import uuid
-from typing import Optional
 
 from sqlalchemy import (
     Boolean,
@@ -27,7 +25,7 @@ is_sqlite = settings.SQLALCHEMY_DATABASE_URI and "sqlite" in str(
     settings.SQLALCHEMY_DATABASE_URI
 )
 
-from .base import BaseModel
+from .base import BaseModel  # noqa: E402
 
 
 class GradeLevel(enum.Enum):

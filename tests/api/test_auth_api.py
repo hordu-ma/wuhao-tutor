@@ -3,10 +3,8 @@
 测试用户注册、登录、登出、token管理等认证功能
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from tests.factories import UserFactory, RequestFactory, MockDataFactory
 
@@ -120,7 +118,6 @@ class TestLoginAPI:
             mock_service.return_value = mock_instance
             
             with patch("src.api.v1.endpoints.auth.get_auth_service") as mock_auth:
-                from src.core.exceptions import AuthenticationError
                 mock_auth_instance = MagicMock()
                 mock_auth_instance.verify_password = MagicMock(return_value=False)
                 mock_auth.return_value = mock_auth_instance

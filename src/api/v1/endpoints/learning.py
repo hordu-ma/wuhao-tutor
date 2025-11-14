@@ -6,7 +6,7 @@
 import json
 import logging
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Optional
 from uuid import UUID
 
 from fastapi import (
@@ -30,7 +30,7 @@ from src.core.exceptions import (
     ServiceError,
     ValidationError,
 )
-from src.schemas.common import ErrorResponse, SuccessResponse
+from src.schemas.common import SuccessResponse
 from src.schemas.learning import (
     AskQuestionRequest,
     AskQuestionResponse,

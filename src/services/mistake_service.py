@@ -16,7 +16,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.exceptions import NotFoundError, ServiceError, ValidationError
+from src.core.exceptions import NotFoundError, ServiceError
 from src.models.base import is_sqlite
 from src.models.study import MistakeRecord, MistakeReview
 from src.repositories.mistake_repository import MistakeRepository
@@ -64,7 +64,6 @@ class MistakeService:
 
     async def _to_list_item(self, mistake: MistakeRecord) -> MistakeListItem:
         """转换为列表项（包含知识点关联信息）"""
-        from uuid import UUID as UUIDType
 
         from src.utils.type_converters import (
             extract_orm_int,
@@ -657,7 +656,7 @@ class MistakeService:
             mistake_id: 错题ID
             user_id: 用户ID
         """
-        from sqlalchemy import delete, select, text
+        from sqlalchemy import select, text
 
         mistake = await self.mistake_repo.get_by_id(str(mistake_id))
 
@@ -946,8 +945,8 @@ class MistakeService:
         # 计算平均掌握度
         avg_mastery = await self.review_repo.calculate_average_mastery(mistake_id)
 
-        # 最新掌握度
-        latest_mastery = reviews[0].mastery_level if reviews else 0.0
+        # 最新掌握度（用于未来的掌握度趋势分析）
+        _latest_mastery = reviews[0].mastery_level if reviews else 0.0
 
         from src.schemas.mistake import ReviewHistoryItem
         from src.utils.type_converters import (

@@ -3,17 +3,16 @@
 提供查询缓存、连接池优化、慢查询检测等性能优化功能
 """
 
-import asyncio
 import hashlib
 import json
 import logging
 import time
 from collections import defaultdict, deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional
 
 from sqlalchemy import event
 from sqlalchemy.engine import Engine

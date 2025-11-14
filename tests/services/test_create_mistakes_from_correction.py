@@ -6,15 +6,9 @@ Phase 3 单元测试 - 从批改结果创建错题
 覆盖: 各种批改结果组合、错误处理、边界情况
 """
 
-import json
-from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models.study import MistakeRecord
-from src.repositories.mistake_repository import MistakeRepository
 from src.schemas.learning import HomeworkCorrectionResult, QuestionCorrectionItem
 from src.services.learning_service import LearningService
 

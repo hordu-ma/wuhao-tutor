@@ -4,7 +4,6 @@
 """
 
 import enum
-from typing import Optional
 
 from sqlalchemy import (
     JSON,
@@ -18,7 +17,6 @@ from sqlalchemy import (
     Text,
 )
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from .base import BaseModel, is_sqlite

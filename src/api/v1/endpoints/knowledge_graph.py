@@ -664,7 +664,7 @@ async def check_knowledge_point_consistency(
 ) -> Dict[str, Any]:
     """检查知识点数据一致性"""
     try:
-        from sqlalchemy import case, distinct, func, select
+        from sqlalchemy import distinct, func, select
 
         from src.models.knowledge_graph import MistakeKnowledgePoint
         from src.models.study import KnowledgeMastery

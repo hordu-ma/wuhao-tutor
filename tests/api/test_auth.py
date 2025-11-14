@@ -4,7 +4,7 @@ Auth API 端点测试
 """
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from fastapi import status
@@ -12,7 +12,7 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import get_settings
-from src.models.user import GradeLevel, User, UserRole
+from src.models.user import GradeLevel, User
 from tests.factories import MockDataFactory, RequestFactory, UserFactory
 
 settings = get_settings()

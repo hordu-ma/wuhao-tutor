@@ -7,7 +7,6 @@
 版本: v2.0
 """
 
-from datetime import datetime, timedelta
 from uuid import uuid4
 
 import pytest
@@ -15,8 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from src.models.base import Base
-from src.models.study import MistakeRecord, MistakeReview
-from src.schemas.mistake import CreateMistakeRequest, ReviewCompleteRequest
+from src.schemas.mistake import CreateMistakeRequest
 from src.services.mistake_service import MistakeService
 
 

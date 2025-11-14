@@ -6,7 +6,7 @@
 import os
 import shutil
 import mimetypes
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 from pathlib import Path
 from PIL import Image
 from fastapi import UploadFile

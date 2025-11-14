@@ -4,7 +4,6 @@
 """
 
 import logging
-from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -32,7 +31,7 @@ from src.schemas.auth import (
     VerifyCodeResponse,
     WechatLoginRequest,
 )
-from src.schemas.common import ErrorResponse, SuccessResponse
+from src.schemas.common import SuccessResponse
 from src.services.auth_service import get_auth_service
 from src.services.user_service import get_user_service
 
@@ -133,7 +132,7 @@ async def register(
         client_info = get_client_info(client_request)
 
         # 创建用户
-        user_response = await user_service.create_user(request)
+        await user_service.create_user(request)
 
         # 自动登录
         login_response = await auth_service.authenticate_with_password(
@@ -153,7 +152,7 @@ async def register(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)
         )
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="注册失败，请稍后重试",
@@ -296,7 +295,7 @@ async def refresh_token(
 
     except AuthenticationError as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="令牌刷新失败，请稍后重试",
@@ -325,7 +324,7 @@ async def logout(
 
         return SuccessResponse(message="登出成功" if success else "登出失败")
 
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="登出失败，请稍后重试",
@@ -356,7 +355,7 @@ async def send_verification_code(
             message="验证码发送成功", expires_in=300, can_resend_in=60
         )
 
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="验证码发送失败，请稍后重试",
@@ -390,7 +389,7 @@ async def reset_password(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)
         )
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="密码重置失败，请稍后重试",
@@ -425,7 +424,7 @@ async def change_password(
 
     except AuthenticationError as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="密码修改失败，请稍后重试",
@@ -452,7 +451,7 @@ async def get_current_user(
 
         return user_detail
 
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="获取用户信息失败"
         )
@@ -486,9 +485,7 @@ async def check_username(
     - available: 是否可用（true/false）
     """
     try:
-        user_service = get_user_service(db)
         # 简化实现：检查用户名是否存在
-        # 实际应该调用 user_service 的方法
         is_available = len(username) >= 3  # 简单示例
 
         return {
@@ -519,7 +516,6 @@ async def check_email(
     - available: 是否可用（true/false）
     """
     try:
-        user_service = get_user_service(db)
         # 简化实现
         is_available = "@" in email  # 简单示例
 

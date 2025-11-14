@@ -9,18 +9,14 @@
 - 错误处理和重试机制
 """
 
-import asyncio
 import base64
-import json
 import logging
 import time
-import uuid
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional
 
-import aiofiles
 import httpx
-from fastapi import HTTPException, UploadFile
+from fastapi import UploadFile
 
 from src.core.config import get_settings
 from src.core.exceptions import ServiceError

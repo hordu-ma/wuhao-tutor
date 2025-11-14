@@ -17,15 +17,12 @@ from src.schemas.file import (
     FileInfoResponse,
     FileListQuery,
     FileMetadata,
-    FileStatsResponse,
     FileUploadResponse,
 )
 from src.utils.file_utils import (
     calculate_file_hash,
     format_file_size,
     generate_safe_filename,
-    get_file_category,
-    sanitize_filename,
     validate_file_content,
 )
 
@@ -73,8 +70,8 @@ class FileService:
         with open(file_path, "wb") as f:
             f.write(content)
 
-        # 计算文件哈希
-        file_hash = calculate_file_hash(content)
+        # 计算文件哈希（用于未来的去重功能）
+        _file_hash = calculate_file_hash(content)
 
         # 返回响应
         from uuid import UUID

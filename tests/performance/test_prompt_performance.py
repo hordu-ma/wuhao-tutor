@@ -11,7 +11,6 @@ Phase 3.4: 性能与监控测试
 
 import statistics
 import time
-from typing import Any, Dict, List
 
 import pytest
 
@@ -242,7 +241,7 @@ class TestTokenUsage:
         assert mock_bailian_service_for_integration.call_count > 0
         # MockBailianService 返回固定 tokens_used=100
 
-        print(f"\n✅ Token 使用量追踪正常 (Mock: 100 tokens)")
+        print("\n✅ Token 使用量追踪正常 (Mock: 100 tokens)")
 
     async def test_token_usage_by_question_count(
         self, db_session, mock_bailian_service_for_integration
@@ -291,11 +290,11 @@ class TestTokenUsage:
                 # MockBailianService 固定返回 100 tokens
                 token_usage.append((expected_count, 100))
 
-        print(f"\n📊 Token 使用量统计:")
+        print("\n📊 Token 使用量统计:")
         for count, tokens in token_usage:
             print(f"  {count}题 → {tokens} tokens")
 
-        print(f"✅ Token 使用量追踪完成 (Mock模式)")
+        print("✅ Token 使用量追踪完成 (Mock模式)")
 
 
 @pytest.mark.asyncio
@@ -329,7 +328,7 @@ class TestRetryAndTimeout:
         # 验证返回 None（失败情况）
         assert result is None, "AI 服务失败时应返回 None"
 
-        print(f"✅ 失败场景处理正确: 返回 None")
+        print("✅ 失败场景处理正确: 返回 None")
 
     async def test_error_rate_monitoring(
         self, db_session, mock_bailian_service_for_integration
@@ -389,7 +388,7 @@ class TestRetryAndTimeout:
         total = success_count + failure_count
         error_rate = (failure_count / total * 100) if total > 0 else 0
 
-        print(f"\n📊 错误率统计:")
+        print("\n📊 错误率统计:")
         print(f"  成功: {success_count}")
         print(f"  失败: {failure_count}")
         print(f"  错误率: {error_rate:.2f}%")
@@ -464,7 +463,7 @@ class TestPerformanceSummary:
 
         # 生成报告
         print(f"\n{'='*80}")
-        print(f"📊 Phase 3.4 性能测试总结报告")
+        print("📊 Phase 3.4 性能测试总结报告")
         print(f"{'='*80}")
         print(f"\n{'场景':<30} {'题数':<6} {'耗时(s)':<10} {'Token':<8} {'状态':<6}")
         print(f"{'-'*80}")
@@ -489,7 +488,7 @@ class TestPerformanceSummary:
             total_time / total_questions if total_questions > 0 else 0
         )
 
-        print(f"\n汇总统计:")
+        print("\n汇总统计:")
         print(f"  总场景数: {len(performance_data)}")
         print(f"  总题数:   {total_questions}")
         print(f"  总耗时:   {total_time:.3f}s")
@@ -497,13 +496,13 @@ class TestPerformanceSummary:
         print(f"  平均耗时: {avg_time:.3f}s/场景")
         print(f"  单题耗时: {avg_time_per_question:.3f}s/题")
 
-        print(f"\n性能目标达成:")
+        print("\n性能目标达成:")
         print(f"  ✅ 批改耗时 < 30s: {avg_time:.3f}s")
-        print(f"  ✅ 错误率 < 5%: 0.00%")
-        print(f"  ✅ 准确率 ≥ 90%: 100.00%")
+        print("  ✅ 错误率 < 5%: 0.00%")
+        print("  ✅ 准确率 ≥ 90%: 100.00%")
 
         print(f"\n{'='*80}")
-        print(f"✅ Phase 3.4 性能测试全部通过")
+        print("✅ Phase 3.4 性能测试全部通过")
         print(f"{'='*80}\n")
 
         # 验证核心指标

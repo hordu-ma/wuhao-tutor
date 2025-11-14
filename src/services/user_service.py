@@ -13,7 +13,6 @@ from typing import Any, Dict, List, Optional, Tuple
 from passlib.context import CryptContext
 from sqlalchemy import and_, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from src.core.config import get_settings
 from src.core.exceptions import (
@@ -23,18 +22,13 @@ from src.core.exceptions import (
     ServiceError,
     ValidationError,
 )
-from src.models.user import GradeLevel, User, UserRole, UserSession
+from src.models.user import User, UserRole, UserSession
 from src.repositories.base_repository import BaseRepository
 from src.schemas.auth import (
-    LoginRequest,
-    LoginResponse,
-    RefreshTokenRequest,
-    RefreshTokenResponse,
     RegisterRequest,
 )
 from src.schemas.user import (
     AddLearningGoalRequest,
-    PaginatedResponse,
     UpdateStudyPreferencesRequest,
     UpdateUserRequest,
     UserActivityResponse,
@@ -43,15 +37,11 @@ from src.schemas.user import (
     UserProgressResponse,
     UserResponse,
 )
-from src.utils.cache import cache_key, cache_result
+from src.utils.cache import cache_result
 from src.utils.type_converters import (
-    build_user_response_data,
     extract_orm_bool,
-    extract_orm_int,
     extract_orm_str,
     extract_orm_uuid_str,
-    safe_json_loads,
-    wrap_orm,
 )
 
 logger = logging.getLogger("user_service")
@@ -458,7 +448,7 @@ class UserService:
         total_users = total_result.scalar()
 
         # 活跃用户数
-        active_users_stmt = select(func.count(User.id)).where(User.is_active == True)
+        active_users_stmt = select(func.count(User.id)).where(User.is_active)
         active_result = await self.db.execute(active_users_stmt)
         active_users = active_result.scalar()
 
@@ -487,9 +477,7 @@ class UserService:
         new_users_month = month_result.scalar()
 
         # 已验证用户数
-        verified_users_stmt = select(func.count(User.id)).where(
-            User.is_verified == True
-        )
+        verified_users_stmt = select(func.count(User.id)).where(User.is_verified)
         verified_result = await self.db.execute(verified_users_stmt)
         verified_users = verified_result.scalar()
 
@@ -644,7 +632,7 @@ class UserService:
         """撤销用户所有会话"""
         # 查询用户所有活跃会话
         stmt = select(UserSession).where(
-            UserSession.user_id == user_id, UserSession.is_revoked == False
+            UserSession.user_id == user_id, ~UserSession.is_revoked
         )
         result = await self.db.execute(stmt)
         sessions = result.scalars().all()
@@ -717,7 +705,10 @@ class UserService:
         # 使用PBKDF2算法哈希密码
         salt = secrets.token_hex(16)
         password_hash = hashlib.pbkdf2_hmac(
-            "sha256", password.encode("utf-8"), salt.encode("utf-8"), 100000  # 迭代次数
+            "sha256",
+            password.encode("utf-8"),
+            salt.encode("utf-8"),
+            100000,  # 迭代次数
         )
         return f"{salt}:{password_hash.hex()}"
 
@@ -792,7 +783,7 @@ class UserService:
         current_time = datetime.utcnow().isoformat()
 
         stmt = select(UserSession).where(
-            UserSession.expires_at < current_time, UserSession.is_revoked == False
+            UserSession.expires_at < current_time, ~UserSession.is_revoked
         )
         result = await self.db.execute(stmt)
         expired_sessions = result.scalars().all()
@@ -932,7 +923,6 @@ class UserService:
         from sqlalchemy import delete
 
         from src.models.homework import (
-            Homework,
             HomeworkImage,
             HomeworkReview,
             HomeworkSubmission,

@@ -16,9 +16,7 @@ Phase 3.2 集成测试 - ask_question 完整流程
 - 数据库事务一致性
 """
 
-import json
 import logging
-from typing import Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -26,10 +24,10 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.core.exceptions import BailianServiceError, ServiceError, ValidationError
-from src.models.learning import Answer, ChatSession, Question, QuestionStatus
+from src.core.exceptions import ServiceError
+from src.models.learning import Answer, ChatSession, Question
 from src.models.study import MistakeRecord
-from src.schemas.learning import AskQuestionRequest, QuestionType
+from src.schemas.learning import AskQuestionRequest
 from src.services.learning_service import LearningService
 from tests.conftest import MockBailianService
 

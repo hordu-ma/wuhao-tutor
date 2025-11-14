@@ -5,10 +5,9 @@
 
 import uuid
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from sqlalchemy import Column, DateTime, String
-from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql import func
 
 from src.core.config import get_settings

@@ -4,7 +4,6 @@
 """
 
 import base64
-import json
 import asyncio
 from typing import Dict, List, Optional, Tuple, Any
 from datetime import datetime
@@ -17,7 +16,6 @@ import urllib.parse
 import httpx
 import cv2
 import numpy as np
-from PIL import Image
 
 from src.core.config import settings
 from src.core.logging import get_logger

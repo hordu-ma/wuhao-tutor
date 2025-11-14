@@ -3,7 +3,6 @@
 基于百炼AI的智能学习助手服务
 """
 
-import asyncio
 import json
 import logging
 import time
@@ -11,7 +10,8 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 from uuid import UUID
 
-from sqlalchemy import and_, desc, func, join, or_, select
+from sqlalchemy import and_, desc, func, join, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -22,13 +22,12 @@ from src.core.exceptions import (
     ServiceError,
     ValidationError,
 )
-from src.models.homework import HomeworkReview, HomeworkSubmission
+from src.models.homework import HomeworkSubmission
 from src.models.learning import (
     Answer,
     ChatSession,
     LearningAnalytics,
     Question,
-    QuestionStatus,
     QuestionType,
     SessionStatus,
 )
@@ -42,7 +41,6 @@ from src.schemas.learning import (
     FeedbackRequest,
     HomeworkCorrectionResult,
     LearningAnalyticsResponse,
-    PaginatedResponse,
     QuestionCorrectionItem,
     QuestionHistoryQuery,
     QuestionResponse,
@@ -51,20 +49,18 @@ from src.schemas.learning import (
 )
 from src.services.bailian_service import (
     AIContext,
-    BailianService,
     ChatMessage,
     MessageRole,
     get_bailian_service,
 )
 from src.services.formula_service import FormulaService
-from src.utils.cache import cache_key, cache_result
+from src.utils.cache import cache_result
 from src.utils.type_converters import (
     extract_orm_bool,
     extract_orm_int,
     extract_orm_str,
     extract_orm_uuid_str,
     safe_str,
-    wrap_orm,
 )
 
 logger = logging.getLogger("learning_service")
@@ -252,7 +248,7 @@ class LearningService:
                 )
 
                 if is_correction_scenario:
-                    logger.info(f"📝 检测到作业批改场景，启动专用逻辑")
+                    logger.info("📝 检测到作业批改场景，启动专用逻辑")
 
                     # 9.2 调用AI进行批改
                     subject = extract_orm_str(request, "subject") or "math"
@@ -266,13 +262,14 @@ class LearningService:
 
                     # 9.3 如果批改成功，逐题创建错题
                     if correction_result:
-                        mistakes_created_count, mistake_list = (
-                            await self._create_mistakes_from_correction(
-                                user_id=user_id,
-                                correction_result=correction_result,
-                                subject=subject,
-                                image_urls=request.image_urls or [],
-                            )
+                        (
+                            mistakes_created_count,
+                            mistake_list,
+                        ) = await self._create_mistakes_from_correction(
+                            user_id=user_id,
+                            correction_result=correction_result,
+                            subject=subject,
+                            image_urls=request.image_urls or [],
                         )
                         logger.info(
                             f"✅ 作业批改完成: 创建 {mistakes_created_count} 个错题"
@@ -343,7 +340,8 @@ class LearningService:
                         extract_orm_uuid_str(question_var, "id"),
                         {"is_processed": False},
                     )
-            except:
+            except SQLAlchemyError as db_error:
+                logger.warning(f"清理问题状态失败: {db_error}")
                 pass  # Ignore update errors during exception handling
 
             raise ServiceError(f"提问处理失败: {str(e)}") from e
@@ -523,7 +521,7 @@ class LearningService:
                         )
 
                         if is_correction_scenario:
-                            logger.info(f"📝 [流式] 检测到作业批改场景，启动专用逻辑")
+                            logger.info("📝 [流式] 检测到作业批改场景，启动专用逻辑")
 
                             # 调用AI进行批改
                             subject = extract_orm_str(request, "subject") or "math"
@@ -539,13 +537,14 @@ class LearningService:
 
                             # 如果批改成功，逐题创建错题
                             if correction_result:
-                                mistakes_created_count, mistake_list = (
-                                    await self._create_mistakes_from_correction(
-                                        user_id=user_id,
-                                        correction_result=correction_result,
-                                        subject=subject,
-                                        image_urls=request.image_urls or [],
-                                    )
+                                (
+                                    mistakes_created_count,
+                                    mistake_list,
+                                ) = await self._create_mistakes_from_correction(
+                                    user_id=user_id,
+                                    correction_result=correction_result,
+                                    subject=subject,
+                                    image_urls=request.image_urls or [],
                                 )
                                 # 🎯 提交事务，确保错题和知识点都保存
                                 await self.db.commit()
@@ -632,7 +631,8 @@ class LearningService:
                         extract_orm_uuid_str(question, "id"),
                         {"is_processed": False},
                     )
-                except:
+                except SQLAlchemyError as db_error:
+                    logger.warning(f"清理问题状态失败: {db_error}")
                     pass
 
             yield {"type": "error", "message": f"提问处理失败: {str(e)}"}
@@ -1008,7 +1008,7 @@ class LearningService:
             stmt = (
                 select(Question)
                 .options(selectinload(Question.answer))
-                .where(Question.session_id == session_id, Question.is_processed == True)
+                .where(Question.session_id == session_id, Question.is_processed)
                 .order_by(desc(Question.created_at))
                 .limit(max_count)
             )
@@ -1331,18 +1331,22 @@ class LearningService:
         )
 
         avg_rating_result = await self.db.execute(avg_rating_stmt)
-        avg_rating = avg_rating_result.scalar() or 0.0
+        _avg_rating = avg_rating_result.scalar() or 0.0  # 用于未来的评分统计
 
         # 计算正面反馈率
-        positive_feedback_rate = await self._calculate_positive_feedback_rate(user_id)
+        _positive_feedback_rate = await self._calculate_positive_feedback_rate(
+            user_id
+        )  # 用于未来的反馈分析
 
         # 生成改进建议
-        improvement_suggestions = await self._generate_improvement_suggestions(
+        _improvement_suggestions = await self._generate_improvement_suggestions(
             user_id, subject_stats
-        )
+        )  # 用于未来的建议功能
 
         # 识别知识缺口
-        knowledge_gaps = await self._identify_knowledge_gaps(user_id)
+        _knowledge_gaps = await self._identify_knowledge_gaps(
+            user_id
+        )  # 用于未来的缺口分析
 
         # Get basic stats from analytics if available
         if analytics:
@@ -1423,7 +1427,7 @@ class LearningService:
         positive_stmt = (
             select(func.count(Answer.id))
             .select_from(join(Answer, Question, Answer.question_id == Question.id))
-            .where(Question.user_id == user_id, Answer.is_helpful == True)
+            .where(Question.user_id == user_id, Answer.is_helpful)
         )
 
         total_result = await self.db.execute(total_stmt)
@@ -1457,8 +1461,6 @@ class LearningService:
     async def _identify_knowledge_gaps(self, user_id: str) -> List[str]:
         """识别知识缺口"""
         # 基于错题和低分作业识别知识缺口
-        gaps = []
-
         # 从问题话题中分析
         stmt = (
             select(Question.topic)
@@ -1522,7 +1524,8 @@ class LearningService:
                         if isinstance(question_image_urls, str)
                         else question_image_urls
                     )
-                except:
+                except (json.JSONDecodeError, TypeError, ValueError) as parse_error:
+                    logger.warning(f"解析图片URL失败: {parse_error}")
                     image_urls = []
 
             logger.info(
@@ -1951,7 +1954,7 @@ class LearningService:
                 "is_mistake": False,
                 "confidence": 0.2,
                 "mistake_type": None,
-                "reason": f'检测到非错题关键词: {", ".join(matched_exclusion[:2])}',
+                "reason": f"检测到非错题关键词: {', '.join(matched_exclusion[:2])}",
                 "matched_keywords": [],
             }
 
@@ -1976,7 +1979,7 @@ class LearningService:
                 "is_mistake": True,
                 "confidence": 0.9,
                 "mistake_type": mistake_type,
-                "reason": f'检测到高置信度关键词: {", ".join(matched_high[:2])}',
+                "reason": f"检测到高置信度关键词: {', '.join(matched_high[:2])}",
                 "matched_keywords": matched_high,
             }
 
@@ -1986,7 +1989,7 @@ class LearningService:
                 "is_mistake": True,
                 "confidence": 0.7,  # 降低置信度，从0.75降到0.7
                 "mistake_type": mistake_type,
-                "reason": f'检测到多个中置信度关键词: {", ".join(matched_medium[:2])}',
+                "reason": f"检测到多个中置信度关键词: {', '.join(matched_medium[:2])}",
                 "matched_keywords": matched_medium,
             }
 
@@ -2235,7 +2238,7 @@ class LearningService:
             "is_mistake": is_mistake,
             "confidence": avg_confidence,
             "mistake_type": mistake_type,
-            "reason": f'综合判断: {decision_reason}, 证据=[{", ".join(evidences)}]',
+            "reason": f"综合判断: {decision_reason}, 证据=[{', '.join(evidences)}]",
             "evidences": evidences,
             "vote_for_mistake": vote_for_mistake,
             "vote_total": vote_total,
@@ -2337,7 +2340,7 @@ class LearningService:
                 if has_images:
                     should_create = True
                     category = "empty_question"
-                    logger.info(f"🖼️ [降级规则] 检测到图片上传，自动创建错题")
+                    logger.info("🖼️ [降级规则] 检测到图片上传，自动创建错题")
                 elif any(keyword in content for keyword in mistake_keywords):
                     should_create = True
                     if "错" in content or "做错" in content or "答错" in content:
@@ -2353,7 +2356,7 @@ class LearningService:
                 # === 降级规则结束 ===
 
             # 🎯 使用AI结构化提取题目信息（自动创建也应用）
-            logger.info(f"🔍 自动创建错题 - 开始AI结构化提取")
+            logger.info("🔍 自动创建错题 - 开始AI结构化提取")
 
             structured_data = await self._extract_structured_question(
                 user_question=content,
@@ -2394,7 +2397,7 @@ class LearningService:
                 "classification": {
                     "category": category,
                     "confidence": confidence if "confidence" in locals() else 0.8,
-                    "reasoning": f"基于智能判断",
+                    "reasoning": "基于智能判断",
                 },
                 "auto_created_at": datetime.now().isoformat(),
                 "knowledge_points": knowledge_points_list,
@@ -2974,7 +2977,7 @@ class LearningService:
 
             # 调用 AI
             start_time = time.time()
-            logger.info(f"🚀 [AI调用] 调用百炼AI批改服务...")
+            logger.info("🚀 [AI调用] 调用百炼AI批改服务...")
 
             ai_response = await self.bailian_service.chat_completion(
                 messages=messages,
@@ -3006,7 +3009,7 @@ class LearningService:
 
             # 尝试提取 JSON
             try:
-                logger.info(f"🔍 [JSON解析] 开始提取JSON数据...")
+                logger.info("🔍 [JSON解析] 开始提取JSON数据...")
 
                 # 查找 JSON 块
                 json_start = response_content.find("{")
@@ -3029,7 +3032,7 @@ class LearningService:
                 )
 
                 # 构建批改结果
-                logger.info(f"🔨 [数据构建] 构建批改结果对象...")
+                logger.info("🔨 [数据构建] 构建批改结果对象...")
                 corrections = []
                 for idx, item in enumerate(result_dict.get("corrections", []), 1):
                     correction = QuestionCorrectionItem(
@@ -3383,7 +3386,7 @@ class LearningService:
                 f"🎯 [错题创建] 完成: "
                 f"created={len(created_mistakes)}, "
                 f"total={len(correction_result.corrections)}, "
-                f"success_rate={len(created_mistakes)/len(correction_result.corrections)*100:.1f}%"
+                f"success_rate={len(created_mistakes) / len(correction_result.corrections) * 100:.1f}%"
             )
 
             # 🎯 强制提交事务，确保错题和知识点数据持久化

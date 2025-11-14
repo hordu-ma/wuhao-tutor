@@ -2,13 +2,12 @@
 目标相关的API端点
 """
 
-from datetime import date, datetime
+from datetime import datetime
 from typing import List
-from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi import status as http_status
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import get_db

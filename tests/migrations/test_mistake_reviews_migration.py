@@ -8,8 +8,7 @@ from sqlalchemy import create_engine, inspect
 from sqlalchemy.pool import StaticPool
 
 from src.models.base import Base
-from src.models.study import MistakeRecord, MistakeReview
-from src.models.user import User
+from src.models.study import MistakeReview
 
 
 @pytest.fixture

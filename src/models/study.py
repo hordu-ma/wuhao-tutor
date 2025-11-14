@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import enum
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     JSON,
@@ -27,12 +27,9 @@ from .base import BaseModel, is_sqlite
 
 if TYPE_CHECKING:
     from .review import MistakeReviewSession
-    from .user import User
 
-from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
-from .base import BaseModel, is_sqlite
 
 
 class Subject(enum.Enum):

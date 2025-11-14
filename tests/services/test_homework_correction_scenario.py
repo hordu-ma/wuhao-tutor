@@ -6,7 +6,6 @@ Phase 3 单元测试 - 作业批改场景检测
 覆盖: 各种文本/图片/问题类型组合
 """
 
-from uuid import uuid4
 
 import pytest
 

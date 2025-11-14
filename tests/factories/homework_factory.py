@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from typing import List, Optional
 
 from factory.base import Factory
-from factory.declarations import LazyAttribute, LazyFunction, Sequence, SubFactory
+from factory.declarations import LazyFunction, Sequence
 from factory.faker import Faker
 
 from src.models.homework import (

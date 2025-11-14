@@ -8,9 +8,9 @@ import logging
 import threading
 import time
 from collections import defaultdict, deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Deque, Dict, List, Optional
+from typing import Any, Deque, Dict, Optional
 
 import psutil
 from fastapi import Request, Response
@@ -272,7 +272,7 @@ class PerformanceMonitoringMiddleware(BaseHTTPMiddleware):
 
             return response
 
-        except Exception as e:
+        except Exception:
             response_time = time.time() - start_time
 
             # 记录异常请求

@@ -4,7 +4,7 @@ Mock 数据工厂
 """
 
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 
 class MockDataFactory:

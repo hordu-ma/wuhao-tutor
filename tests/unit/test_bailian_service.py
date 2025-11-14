@@ -9,11 +9,9 @@
 - 异常情况处理
 """
 
-import asyncio
 import json
 import pytest
 from unittest.mock import AsyncMock, Mock, patch, MagicMock
-from typing import Dict, Any, List
 
 import httpx
 from src.services.bailian_service import (

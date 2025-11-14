@@ -3,12 +3,11 @@
 测试作业模板、提交、批改等功能
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi.testclient import TestClient
 from io import BytesIO
 
-from tests.factories import HomeworkFactory, UserFactory, RequestFactory
+from tests.factories import HomeworkFactory, RequestFactory
 
 
 class TestHomeworkHealth:

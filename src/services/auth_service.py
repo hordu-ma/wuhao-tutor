@@ -11,8 +11,8 @@ from typing import Any, Dict, Optional
 import jwt
 
 from src.core.config import get_settings
-from src.core.exceptions import AuthenticationError, ServiceError, ValidationError
-from src.models.user import User, UserSession
+from src.core.exceptions import AuthenticationError, ServiceError
+from src.models.user import UserSession
 from src.schemas.auth import LoginResponse, RefreshTokenResponse, UserResponse
 from src.services.user_service import UserService
 

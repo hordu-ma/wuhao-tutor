@@ -217,9 +217,6 @@ class AnswerQualityService:
         }
 
         # 5. 相关性 - 基于问题类型匹配
-        question_lower = question.lower()
-        answer_lower = answer.lower()
-
         # 检查是否回答了问题
         if "如何" in question or "怎么" in question or "怎样" in question:
             # 方法类问题应该有步骤
@@ -439,7 +436,7 @@ class AnswerQualityService:
         updated_score = await self.repository.update(str(score.id), update_data)  # type: ignore
 
         logger.info(
-            f"添加人工反馈: answer_id={answer_id}, " f"override_score={override_score}"
+            f"添加人工反馈: answer_id={answer_id}, override_score={override_score}"
         )
 
         return updated_score  # type: ignore

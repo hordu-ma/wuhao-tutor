@@ -12,7 +12,6 @@ from typing import List, Optional
 from uuid import UUID
 
 from sqlalchemy import and_, desc, func, select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.logging import get_logger
 from src.models.study import MistakeReview

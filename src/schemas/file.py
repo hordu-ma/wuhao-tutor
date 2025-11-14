@@ -2,9 +2,8 @@
 文件管理相关的Schema定义
 """
 
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict
 from datetime import datetime
-from uuid import UUID
 
 from pydantic import BaseModel, Field, validator
 from pydantic.types import UUID4
