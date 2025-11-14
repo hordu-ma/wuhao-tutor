@@ -166,10 +166,20 @@ const pageObject = {
         // 转换数据格式
         const formattedSnapshot = this.formatSnapshotData(snapshot);
 
+        console.log('📊 格式化后的快照数据:', formattedSnapshot);
+        console.log('📚 知识点数量:', formattedSnapshot?.knowledge_points?.length);
+
         this.setData({
           snapshot: formattedSnapshot,
           snapshotLoading: false,
         });
+
+        // 额外验证
+        if (formattedSnapshot && formattedSnapshot.knowledge_points) {
+          console.log('✅ 数据设置成功，knowledge_points:', formattedSnapshot.knowledge_points);
+        } else {
+          console.error('❌ 格式化数据异常:', formattedSnapshot);
+        }
       }
       // 如果响应异常，错误会在 catch 中处理
     } catch (error) {
@@ -216,6 +226,7 @@ const pageObject = {
     // 🆕 新版 /graphs/{subject} API 格式（优先）
     if (snapshot.nodes && Array.isArray(snapshot.nodes)) {
       console.log('✅ 检测到新版API格式，nodes数量:', snapshot.nodes.length);
+      console.log('📦 原始nodes数据示例:', snapshot.nodes[0]);
 
       const knowledge_points = snapshot.nodes.map(node => ({
         name: node.name || '',
@@ -226,7 +237,9 @@ const pageObject = {
         id: node.id || '', // 🆕 节点ID
       }));
 
-      return {
+      console.log('🔄 转换后knowledge_points示例:', knowledge_points[0]);
+
+      const result = {
         subject: snapshot.subject || '',
         knowledge_points,
         total_mistakes: snapshot.total_points || 0,
@@ -236,6 +249,9 @@ const pageObject = {
         mastery_distribution: snapshot.mastery_distribution || {},
         recommendations: snapshot.recommendations || [],
       };
+
+      console.log('📋 返回的result对象:', result);
+      return result;
     }
 
     // 向后兼容：旧版 /mastery API 格式
