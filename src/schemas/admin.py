@@ -25,7 +25,7 @@ class AdminCreateUserRequest(BaseModel):
     role: Optional[str] = Field(
         None,
         description="用户角色: 'student'、'teacher' 或 'admin'",
-        regex=r"^(student|teacher|admin)$",
+        pattern=r"^(student|teacher|admin)$",
     )
 
     model_config = {
