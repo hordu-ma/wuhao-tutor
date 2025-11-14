@@ -375,10 +375,30 @@ class Request {
             }
           } else {
             // HTTP 错误
+            // 尝试从响应体中提取详细错误信息（FastAPI 的 detail 字段）
+            let errorMessage = this.getHttpErrorMessage(res.statusCode);
+            let errorDetails = null;
+
+            if (res.data && typeof res.data === 'object') {
+              // FastAPI 返回的错误格式: { detail: "..." } 或 { detail: [{...}] }
+              if (res.data.detail) {
+                if (typeof res.data.detail === 'string') {
+                  errorMessage = res.data.detail;
+                } else if (Array.isArray(res.data.detail)) {
+                  // Pydantic 验证错误：[{loc, msg, type}]
+                  errorMessage = res.data.detail
+                    .map(err => `${err.loc.join('.')}: ${err.msg}`)
+                    .join('; ');
+                  errorDetails = res.data.detail;
+                }
+              }
+            }
+
             reject({
               code: `HTTP_${res.statusCode}`,
-              message: this.getHttpErrorMessage(res.statusCode),
+              message: errorMessage,
               statusCode: res.statusCode,
+              details: errorDetails,
             });
           }
         },
