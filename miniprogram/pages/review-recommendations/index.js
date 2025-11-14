@@ -146,8 +146,8 @@ const pageObject = {
    * 去学习问答
    */
   goToLearning() {
-    wx.switchTab({
-      url: '/pages/learning/index',
+    wx.navigateTo({
+      url: '/pages/learning/index/index',
     });
   },
 
