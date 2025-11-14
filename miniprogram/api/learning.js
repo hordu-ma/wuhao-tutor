@@ -360,9 +360,18 @@ const learningAPI = {
             usage: chunk.usage,
           });
 
-          // 保存最终数据
-          if (chunk.type === 'done' || chunk.finish_reason === 'stop') {
+          // 保存最终数据（只在明确的done事件时保存）
+          if (chunk.type === 'done') {
             clearTimeout(connectionTimeout); // 🔧 清除超时定时器
+            console.log(
+              '[WebSocket] 收到done事件, chunk数据:',
+              JSON.stringify({
+                type: chunk.type,
+                has_correction: !!chunk.correction_result,
+                correction_length: chunk.correction_result ? chunk.correction_result.length : 0,
+                mistakes_created: chunk.mistakes_created,
+              }),
+            );
             finalData = {
               type: 'done',
               full_content: chunk.full_content || fullContent,
@@ -377,7 +386,11 @@ const learningAPI = {
               mistake_created: chunk.mistake_created,
               mistake_info: chunk.mistake_info,
             };
-            console.log('[WebSocket] 流式响应完成, correction_result:', !!chunk.correction_result);
+            console.log(
+              '[WebSocket] 流式响应完成, correction_result:',
+              !!chunk.correction_result,
+              chunk.correction_result,
+            );
           }
         } catch (error) {
           console.error('[WebSocket] 解析消息失败:', error, res.data);

@@ -402,11 +402,41 @@ class AuthService:
             if str(getattr(session, "user_id", "")) != str(user_id):
                 raise AuthenticationError("令牌用户不匹配")
 
+            # 获取用户信息
+            user = await self.user_service.get_user_by_id(user_id)
+            if not user:
+                raise AuthenticationError("用户不存在")
+
             # 生成新的访问令牌
             access_token = self.create_access_token(
                 subject=str(user_id),
                 jti=str(getattr(session, "access_token_jti", "")),
                 expires_delta=timedelta(minutes=self.access_token_expire_minutes),
+            )
+
+            # 构建用户信息响应
+            from src.schemas.auth import UserResponse
+
+            user_info = UserResponse(
+                id=str(user.id),
+                phone=user.phone,
+                name=user.name,
+                nickname=user.nickname,
+                avatar_url=user.avatar_url,
+                role=user.role,
+                school=user.school,
+                grade_level=user.grade_level,
+                class_name=user.class_name,
+                institution=user.institution,
+                parent_contact=user.parent_contact,
+                parent_name=user.parent_name,
+                is_active=user.is_active,
+                is_verified=user.is_verified,
+                notification_enabled=getattr(user, "notification_enabled", True),
+                last_login_at=getattr(user, "last_login_at", None),
+                login_count=getattr(user, "login_count", 0),
+                created_at=user.created_at,
+                updated_at=user.updated_at,
             )
 
             response = RefreshTokenResponse(
@@ -415,6 +445,7 @@ class AuthService:
                 token_type="bearer",
                 expires_in=self.access_token_expire_minutes * 60,
                 session_id=str(session.id),
+                user=user_info,
             )
 
             logger.info(f"令牌刷新成功: user_id={user_id}, device_type={device_type}")

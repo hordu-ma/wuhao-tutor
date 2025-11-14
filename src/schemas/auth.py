@@ -274,6 +274,7 @@ class RefreshTokenResponse(TokenBase):
     """刷新令牌响应"""
 
     session_id: str = Field(..., description="会话ID")
+    user: "UserResponse" = Field(..., description="用户信息")
 
 
 class UserSessionResponse(BaseModel):

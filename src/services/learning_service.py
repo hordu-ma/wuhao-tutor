@@ -467,7 +467,7 @@ class LearningService:
                                 "type": "formula_enhanced",
                                 "content": enhanced_content,
                                 "full_content": enhanced_content,
-                                "finish_reason": "stop",
+                                # ❌ 移除 finish_reason，避免触发前端done逻辑
                             }
                             logger.info("📤 已发送公式增强内容给前端")
                         else:
@@ -547,6 +547,8 @@ class LearningService:
                                         image_urls=request.image_urls or [],
                                     )
                                 )
+                                # 🎯 提交事务，确保错题和知识点都保存
+                                await self.db.commit()
                                 logger.info(
                                     f"✅ [流式] 作业批改完成: 创建 {mistakes_created_count} 个错题"
                                 )
@@ -3088,6 +3090,166 @@ class LearningService:
             )
             return None
 
+    async def _update_knowledge_mastery(
+        self, user_id: str, subject: str, knowledge_points: List[str]
+    ) -> None:
+        """
+        创建或更新知识点掌握度记录
+
+        Args:
+            user_id: 用户ID
+            subject: 学科
+            knowledge_points: 知识点列表
+        """
+        from datetime import datetime
+
+        from sqlalchemy import select
+
+        from src.models.study import KnowledgeMastery
+
+        logger.info(
+            f"📊 [知识点掌握度] 开始更新: user={user_id}, subject={subject}, "
+            f"knowledge_points={knowledge_points}"
+        )
+
+        for kp in knowledge_points:
+            try:
+                # 查找现有记录
+                stmt = select(KnowledgeMastery).where(
+                    KnowledgeMastery.user_id == user_id,
+                    KnowledgeMastery.subject == subject,
+                    KnowledgeMastery.knowledge_point == kp,
+                )
+                result = await self.db.execute(stmt)
+                existing = result.scalar_one_or_none()
+
+                if existing:
+                    # 更新现有记录：错误次数+1
+                    existing.mistake_count += 1
+                    existing.total_attempts += 1
+                    existing.last_practiced_at = datetime.now()
+                    # 重新计算掌握度（错误次数越多，掌握度越低）
+                    # mastery_level = 1 / (1 + mistake_count * 0.1)
+                    existing.mastery_level = max(
+                        0.0, 1.0 / (1.0 + existing.mistake_count * 0.1)
+                    )
+                    logger.info(
+                        f"    ✅ 更新: {kp}, mistake_count={existing.mistake_count}, "
+                        f"mastery_level={existing.mastery_level:.2f}"
+                    )
+                else:
+                    # 创建新记录
+                    new_mastery = KnowledgeMastery(
+                        user_id=user_id,
+                        subject=subject,
+                        knowledge_point=kp,
+                        mastery_level=0.5,  # 初始掌握度50%
+                        confidence_level=0.3,  # 初始置信度30%
+                        mistake_count=1,
+                        correct_count=0,
+                        total_attempts=1,
+                        last_practiced_at=datetime.now(),
+                    )
+                    self.db.add(new_mastery)
+                    logger.info(f"    ➕ 创建: {kp}, mastery_level=0.5")
+
+            except Exception as e:
+                logger.error(f"⚠️ 更新知识点掌握度失败 ({kp}): {e}", exc_info=True)
+
+        # 🎯 刷新到数据库但不提交，让调用方统一管理事务
+        await self.db.flush()
+        logger.info(f"✅ 知识点掌握度更新完成: {len(knowledge_points)}个")
+
+    def _infer_subject_from_knowledge_points(self, knowledge_points: List[str]) -> str:
+        """
+        从知识点列表推断学科
+
+        Args:
+            knowledge_points: 知识点列表
+
+        Returns:
+            str: 推断的学科（english/math/chinese/physics/chemistry等）
+        """
+        if not knowledge_points:
+            return "math"  # 默认数学
+
+        # 将所有知识点合并
+        all_text = " ".join(knowledge_points).lower()
+
+        # 学科关键词映射
+        subject_keywords = {
+            "english": [
+                "英语",
+                "grammar",
+                "vocabulary",
+                "reading",
+                "writing",
+                "语法",
+                "词汇",
+                "阅读",
+                "写作",
+                "形容词",
+                "副词",
+                "动词",
+                "名词",
+                "时态",
+                "句型",
+                "连词",
+            ],
+            "chinese": [
+                "语文",
+                "汉语",
+                "古诗",
+                "文言文",
+                "作文",
+                "阅读理解",
+                "修辞",
+                "诗词",
+            ],
+            "math": [
+                "数学",
+                "几何",
+                "代数",
+                "函数",
+                "方程",
+                "计算",
+                "公式",
+                "角",
+                "三角形",
+                "圆",
+                "面积",
+                "体积",
+            ],
+            "physics": [
+                "物理",
+                "力学",
+                "运动",
+                "速度",
+                "加速度",
+                "牛顿",
+                "电学",
+                "磁场",
+            ],
+            "chemistry": ["化学", "元素", "分子", "原子", "反应", "溶液", "酸碱"],
+        }
+
+        # 统计每个学科的匹配度
+        scores = {}
+        for subject, keywords in subject_keywords.items():
+            score = sum(1 for kw in keywords if kw in all_text)
+            if score > 0:
+                scores[subject] = score
+
+        # 返回得分最高的学科
+        if scores:
+            inferred = max(scores, key=scores.get)
+            logger.info(
+                f"🔍 学科推断: {knowledge_points[:3]}... → {inferred} (匹配度: {scores})"
+            )
+            return inferred
+
+        return "math"  # 默认数学
+
     async def _create_mistakes_from_correction(
         self,
         user_id: str,
@@ -3157,9 +3319,20 @@ class LearningService:
                         f"⚠️ Q{item.question_number} 缺少question_text，使用降级方案"
                     )
 
+                # 🎯 智能学科推断：优先使用参数学科，否则从知识点推断
+                inferred_subject = subject
+                if item.knowledge_points and len(item.knowledge_points) > 0:
+                    inferred_subject = self._infer_subject_from_knowledge_points(
+                        item.knowledge_points
+                    )
+                    if inferred_subject != subject:
+                        logger.info(
+                            f"🔄 学科修正: {subject} → {inferred_subject} (基于知识点)"
+                        )
+
                 mistake_data = {
                     "user_id": user_id,
-                    "subject": subject,
+                    "subject": inferred_subject,  # 🎯 使用推断的学科
                     "title": title,
                     "ocr_text": question_content,  # 🎯 使用降级后的题目内容
                     "question_number": item.question_number,  # 新增字段
@@ -3189,6 +3362,14 @@ class LearningService:
                     f"knowledge_points={len(item.knowledge_points or [])}"
                 )
 
+                # 🎯 同步创建/更新知识点掌握度记录
+                if item.knowledge_points:
+                    await self._update_knowledge_mastery(
+                        user_id=user_id,
+                        subject=inferred_subject,
+                        knowledge_points=item.knowledge_points,
+                    )
+
                 created_mistakes.append(
                     {
                         "id": mistake_id,
@@ -3204,6 +3385,16 @@ class LearningService:
                 f"total={len(correction_result.corrections)}, "
                 f"success_rate={len(created_mistakes)/len(correction_result.corrections)*100:.1f}%"
             )
+
+            # 🎯 强制提交事务，确保错题和知识点数据持久化
+            try:
+                await self.db.commit()
+                logger.info("✅ [事务提交] 错题和知识点数据已持久化到数据库")
+            except Exception as commit_err:
+                logger.error(f"⚠️ [事务提交失败] {commit_err}", exc_info=True)
+                await self.db.rollback()
+                raise
+
             return len(created_mistakes), created_mistakes
 
         except Exception as e:
