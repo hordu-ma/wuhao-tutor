@@ -325,6 +325,7 @@ class QuestionCorrectionItem(BaseModel):
     """单个题目的批改结果"""
 
     question_number: int = Field(..., ge=1, description="题号(从1开始)")
+    question_text: str = Field(..., description="题目内容(OCR识别的原题)")
     question_type: str = Field(
         ..., description="题目类型: 选择题/填空题/解答题/判断题/多选题/短答题等"
     )
@@ -345,6 +346,7 @@ class QuestionCorrectionItem(BaseModel):
         json_schema_extra={
             "example": {
                 "question_number": 1,
+                "question_text": "已知二次函数y=ax²+bx+c的顶点坐标为(1,2)，求...",
                 "question_type": "选择题",
                 "is_unanswered": False,
                 "student_answer": "A",
@@ -378,6 +380,7 @@ class HomeworkCorrectionResult(BaseModel):
                 "corrections": [
                     {
                         "question_number": 1,
+                        "question_text": "已知二次函数y=ax²+bx+c的顶点坐标为(1,2)，求...",
                         "question_type": "选择题",
                         "is_unanswered": False,
                         "student_answer": "A",

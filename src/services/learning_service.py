@@ -3145,6 +3145,7 @@ class LearningService:
                     "user_id": user_id,
                     "subject": subject,
                     "title": title,
+                    "ocr_text": item.question_text,  # 🎯 关键修复：设置题目内容
                     "question_number": item.question_number,  # 新增字段
                     "is_unanswered": item.is_unanswered,  # 新增字段
                     "question_type": item.question_type,  # 新增字段

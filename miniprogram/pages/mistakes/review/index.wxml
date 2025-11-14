@@ -33,13 +33,23 @@
     </view>
 
     <!-- 题目内容 -->
+    <!-- 题目内容 -->
     <view class="question-section">
       <view class="section-title">
         <van-icon name="question-o" size="20px" color="#1890ff" />
         <text>题目内容</text>
       </view>
-      <view class="question-content">
+      
+      <!-- OCR内容或占位提示 -->
+      <view class="question-content" wx:if="{{questionContent && questionContent.indexOf('暂无') === -1 && questionContent.indexOf('请查看') === -1}}">
         {{questionContent}}
+      </view>
+      
+      <!-- 当没有文字内容时的提示 -->
+      <view class="no-content-tip" wx:else>
+        <van-icon name="info-o" size="32px" color="#ff9800" />
+        <text class="tip-text">{{questionContent || '暂无题目文字内容'}}</text>
+        <text class="tip-hint">建议点击右上角【···】查看题目图片进行作答</text>
       </view>
 
       <!-- 知识点标签 -->
@@ -48,6 +58,7 @@
           wx:for="{{knowledgePoints}}" 
           wx:key="index" 
           type="primary" 
+``` 
           plain 
           size="medium"
           custom-class="knowledge-tag">
