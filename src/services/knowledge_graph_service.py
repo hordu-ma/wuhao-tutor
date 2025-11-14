@@ -1081,18 +1081,112 @@ class KnowledgeGraphService:
             result = await self.db.execute(stmt)
             kms = result.scalars().all()
 
+            # 如果该学科没有知识点掌握度数据,尝试按错题记录进行兜底聚合(方案D)
             if not kms:
-                # 如果该学科没有知识点数据，返回空结果
-                logger.info(f"用户 {user_id} 在学科 {subject} 暂无知识点数据")
-                return {
-                    "subject": subject,
-                    "nodes": [],
-                    "weak_chains": [],
-                    "mastery_distribution": {"weak": 0, "learning": 0, "mastered": 0},
-                    "total_points": 0,
-                    "avg_mastery": 0.0,
-                    "recommendations": [],
-                }
+                from sqlalchemy import desc
+
+                from src.models.mistake import MistakeRecord
+
+                logger.info(
+                    "知识图谱无 KnowledgeMastery 数据,尝试按错题记录动态聚合: "
+                    f"user={user_id}, subject={subject}"
+                )
+
+                # 基于错题记录按知识点进行简单聚合,仅作为兜底方案
+                stmt_from_mistakes = (
+                    select(MistakeRecord)
+                    .where(
+                        and_(
+                            MistakeRecord.user_id == str(user_id),
+                            MistakeRecord.subject == normalized_subject,
+                        )
+                    )
+                    .order_by(desc(MistakeRecord.created_at))
+                )
+
+                mistake_result = await self.db.execute(stmt_from_mistakes)
+                mistake_rows = mistake_result.scalars().all()
+
+                if not mistake_rows:
+                    # 兜底也没有数据,返回空结果
+                    logger.info(
+                        f"用户 {user_id} 在学科 {subject} 暂无错题记录,返回空图谱"
+                    )
+                    return {
+                        "subject": subject,
+                        "nodes": [],
+                        "weak_chains": [],
+                        "mastery_distribution": {
+                            "weak": 0,
+                            "learning": 0,
+                            "mastered": 0,
+                        },
+                        "total_points": 0,
+                        "avg_mastery": 0.0,
+                        "recommendations": [],
+                    }
+
+                # 使用错题记录构建一个简化版的知识点掌握度视图
+                aggregated: Dict[str, Dict[str, Any]] = {}
+
+                for mr in mistake_rows:
+                    # knowledge_points 为 JSON 列,期望是字符串列表
+                    kp_list = getattr(mr, "knowledge_points", None) or []
+                    if not isinstance(kp_list, list):
+                        continue
+
+                    for kp in kp_list:
+                        if not kp:
+                            continue
+
+                        key = str(kp)
+                        if key not in aggregated:
+                            aggregated[key] = {
+                                "knowledge_point": key,
+                                "mistake_count": 0,
+                            }
+
+                        aggregated[key]["mistake_count"] += 1
+
+                if not aggregated:
+                    logger.info(
+                        f"用户 {user_id} 在学科 {subject} 虽有错题,但缺少知识点信息"
+                    )
+                    return {
+                        "subject": subject,
+                        "nodes": [],
+                        "weak_chains": [],
+                        "mastery_distribution": {
+                            "weak": 0,
+                            "learning": 0,
+                            "mastered": 0,
+                        },
+                        "total_points": 0,
+                        "avg_mastery": 0.0,
+                        "recommendations": [],
+                    }
+
+                # 将聚合结果转换为伪 KnowledgeMastery 结构,后续统一走 nodes 构建逻辑
+                # 约定:掌握度简单按错题次数反比估算,这里给一个固定的弱掌握度 0.2
+                kms = []
+                from types import SimpleNamespace
+
+                for item in aggregated.values():
+                    kms.append(
+                        SimpleNamespace(
+                            id=None,
+                            knowledge_point=item["knowledge_point"],
+                            mastery_level=0.2,
+                            mistake_count=item["mistake_count"],
+                            correct_count=0,
+                            last_practiced_at=None,
+                        )
+                    )
+
+                logger.info(
+                    f"基于错题记录动态构建知识图谱视图: user={user_id}, subject={subject}, "
+                    f"points={len(kms)}"
+                )
 
             # 2. 构建知识点节点列表
             nodes = []
