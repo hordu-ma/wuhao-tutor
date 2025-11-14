@@ -7,7 +7,17 @@ const pageObject = {
   data: {
     // 当前选择的科目
     selectedSubject: '数学',
-    subjectOptions: ['数学', '语文', '英语', '物理', '化学', '生物', '历史', '地理', '政治'],
+    subjectOptions: [
+      { text: '数学', value: '数学' },
+      { text: '语文', value: '语文' },
+      { text: '英语', value: '英语' },
+      { text: '物理', value: '物理' },
+      { text: '化学', value: '化学' },
+      { text: '生物', value: '生物' },
+      { text: '历史', value: '历史' },
+      { text: '地理', value: '地理' },
+      { text: '政治', value: '政治' },
+    ],
 
     // 视图模式: 'list'(列表) | 'graph'(图谱)
     viewMode: 'list',
