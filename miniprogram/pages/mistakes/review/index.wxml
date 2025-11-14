@@ -58,7 +58,6 @@
           wx:for="{{knowledgePoints}}" 
           wx:key="index" 
           type="primary" 
-``` 
           plain 
           size="medium"
           custom-class="knowledge-tag">
