@@ -63,7 +63,7 @@ const userAPI = {
     }
 
     return request.post(
-      'api/v1/auth/refresh-token',
+      'api/v1/auth/refresh',
       {
         device_type: 'mini_program',
         ...params,

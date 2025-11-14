@@ -1067,7 +1067,7 @@ const api = {
     // 微信登录
     wechatLogin: data => apiClient.post('/auth/wechat-login', data),
     // 刷新Token
-    refreshToken: data => apiClient.post('/auth/refresh-token', data),
+    refreshToken: data => apiClient.post('/auth/refresh', data),
     // 登出
     logout: () => apiClient.post('/auth/logout'),
     // 获取用户信息

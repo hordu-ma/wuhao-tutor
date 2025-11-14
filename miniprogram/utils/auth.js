@@ -802,7 +802,7 @@ class AuthManager {
       }
 
       const response = await getApiClient().request({
-        url: '/api/v1/auth/refresh-token',
+        url: '/api/v1/auth/refresh',
         method: 'POST',
         data: {
           refresh_token: currentRefreshToken,

@@ -15,7 +15,7 @@ class SessionManager {
     this.sessionKey = 'current_session';
     this.sessionHistoryKey = 'session_history';
     this.refreshAttemptKey = 'refresh_attempts';
-    
+
     // 会话配置
     this.config = {
       sessionTimeout: 24 * 60 * 60 * 1000, // 24小时
@@ -26,7 +26,7 @@ class SessionManager {
       maxConcurrentSessions: 3,
       sessionWarningTime: 5 * 60 * 1000, // 5分钟警告
       enableAutoRefresh: true,
-      enableSessionWarning: true
+      enableSessionWarning: true,
     };
 
     // 运行时状态
@@ -74,14 +74,14 @@ class SessionManager {
         token: loginData.token,
         refreshToken: loginData.refreshToken,
         role: loginData.role || 'student',
-        deviceInfo: loginData.deviceInfo || await this.getDeviceInfo(),
+        deviceInfo: loginData.deviceInfo || (await this.getDeviceInfo()),
         createdAt: now,
         lastActiveAt: now,
         expiresAt: now + this.config.sessionTimeout,
         status: 'active',
         loginMethod: loginData.loginMethod || 'wechat',
         ipAddress: loginData.ipAddress,
-        userAgent: loginData.userAgent
+        userAgent: loginData.userAgent,
       };
 
       // 保存会话
@@ -98,14 +98,13 @@ class SessionManager {
       return {
         success: true,
         session,
-        message: '会话创建成功'
+        message: '会话创建成功',
       };
-
     } catch (error) {
       console.error('[SessionManager] 创建会话失败:', error);
       return {
         success: false,
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -116,7 +115,7 @@ class SessionManager {
   async restoreSession() {
     try {
       const session = await storage.get(this.sessionKey);
-      
+
       if (!session) {
         console.log('[SessionManager] 没有找到保存的会话');
         return false;
@@ -137,13 +136,12 @@ class SessionManager {
         // 恢复会话状态
         this.currentSession = session;
         this.scheduleTokenRefresh(session);
-        
+
         // 更新最后活动时间
         await this.updateSessionActivity();
       }
 
       return true;
-
     } catch (error) {
       console.error('[SessionManager] 恢复会话失败:', error);
       return false;
@@ -164,8 +162,8 @@ class SessionManager {
       this.isRefreshing = true;
       console.log('[SessionManager] 开始刷新会话');
 
-      const currentSession = this.currentSession || await storage.get(this.sessionKey);
-      
+      const currentSession = this.currentSession || (await storage.get(this.sessionKey));
+
       if (!currentSession) {
         throw new Error('没有有效的会话可以刷新');
       }
@@ -187,7 +185,7 @@ class SessionManager {
           refreshToken: refreshResult.data.refreshToken || currentSession.refreshToken,
           lastActiveAt: Date.now(),
           expiresAt: Date.now() + this.config.sessionTimeout,
-          refreshCount: (currentSession.refreshCount || 0) + 1
+          refreshCount: (currentSession.refreshCount || 0) + 1,
         };
 
         await this.saveSession(updatedSession);
@@ -203,27 +201,28 @@ class SessionManager {
         return {
           success: true,
           session: updatedSession,
-          message: '会话刷新成功'
+          message: '会话刷新成功',
         };
-
       } else {
         await this.incrementRefreshAttempts();
         throw new Error(refreshResult.error || '会话刷新失败');
       }
-
     } catch (error) {
       console.error('[SessionManager] 会话刷新失败:', error);
 
       // 如果是认证错误，直接清理会话
-      if (error.message.includes('认证') || error.message.includes('授权') || error.message.includes('登录')) {
+      if (
+        error.message.includes('认证') ||
+        error.message.includes('授权') ||
+        error.message.includes('登录')
+      ) {
         await this.expireSession('authentication_failed');
       }
 
       return {
         success: false,
-        error: error.message
+        error: error.message,
       };
-
     } finally {
       this.isRefreshing = false;
     }
@@ -239,16 +238,16 @@ class SessionManager {
       const { apiClient } = require('./api.js');
 
       const response = await apiClient.request({
-        url: '/auth/refresh-token',
+        url: '/auth/refresh',
         method: 'POST',
         header: {
-          'Authorization': `Bearer ${session.token}`
+          Authorization: `Bearer ${session.token}`,
         },
         data: {
           refreshToken: session.refreshToken,
-          sessionId: session.sessionId
+          sessionId: session.sessionId,
         },
-        timeout: config.api.timeout || 10000
+        timeout: config.api.timeout || 10000,
       });
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -256,7 +255,6 @@ class SessionManager {
       } else {
         throw new Error(`HTTP ${response.statusCode}: ${response.data?.message || '刷新失败'}`);
       }
-
     } catch (error) {
       console.error('[SessionManager] 调用刷新API失败:', error);
       throw error;
@@ -306,7 +304,7 @@ class SessionManager {
 
     const timeUntilRefresh = Math.max(
       0,
-      session.expiresAt - Date.now() - this.config.refreshThreshold
+      session.expiresAt - Date.now() - this.config.refreshThreshold,
     );
 
     console.log(`[SessionManager] 调度Token刷新，${Math.round(timeUntilRefresh / 1000)}秒后执行`);
@@ -336,8 +334,8 @@ class SessionManager {
    */
   async performHeartbeat() {
     try {
-      const session = this.currentSession || await storage.get(this.sessionKey);
-      
+      const session = this.currentSession || (await storage.get(this.sessionKey));
+
       if (!session) {
         return;
       }
@@ -361,7 +359,6 @@ class SessionManager {
       await this.updateSessionActivity();
 
       console.log('[SessionManager] 心跳检测完成');
-
     } catch (error) {
       console.error('[SessionManager] 心跳检测失败:', error);
     }
@@ -381,23 +378,23 @@ class SessionManager {
       content: `您的登录状态将在${minutes}分钟后过期，是否延长会话？`,
       confirmText: '延长',
       cancelText: '稍后',
-      success: async (res) => {
+      success: async res => {
         if (res.confirm) {
           const refreshResult = await this.refreshSession();
           if (refreshResult.success) {
             wx.showToast({
               title: '会话已延长',
-              icon: 'success'
+              icon: 'success',
             });
             this.warningShown = false;
           } else {
             wx.showToast({
               title: '延长失败，请重新登录',
-              icon: 'error'
+              icon: 'error',
             });
           }
         }
-      }
+      },
     });
   }
 
@@ -406,14 +403,13 @@ class SessionManager {
    */
   async updateSessionActivity() {
     try {
-      const session = this.currentSession || await storage.get(this.sessionKey);
-      
+      const session = this.currentSession || (await storage.get(this.sessionKey));
+
       if (session) {
         session.lastActiveAt = Date.now();
         await this.saveSession(session);
         this.currentSession = session;
       }
-
     } catch (error) {
       console.error('[SessionManager] 更新会话活动时间失败:', error);
     }
@@ -427,8 +423,8 @@ class SessionManager {
     try {
       console.log(`[SessionManager] 会话过期: ${reason}`);
 
-      const session = this.currentSession || await storage.get(this.sessionKey);
-      
+      const session = this.currentSession || (await storage.get(this.sessionKey));
+
       if (session) {
         session.status = 'expired';
         session.expiredAt = Date.now();
@@ -442,7 +438,6 @@ class SessionManager {
 
       // 通知用户
       this.handleSessionExpiry(reason);
-
     } catch (error) {
       console.error('[SessionManager] 处理会话过期失败:', error);
     }
@@ -478,9 +473,9 @@ class SessionManager {
       confirmText: '重新登录',
       success: () => {
         wx.reLaunch({
-          url: '/pages/login/index'
+          url: '/pages/login/index',
         });
-      }
+      },
     });
   }
 
@@ -510,7 +505,6 @@ class SessionManager {
       this.isRefreshing = false;
 
       console.log('[SessionManager] 会话已清理');
-
     } catch (error) {
       console.error('[SessionManager] 清理会话失败:', error);
     }
@@ -536,7 +530,7 @@ class SessionManager {
    */
   async recordSessionHistory(action, session) {
     try {
-      const history = await storage.get(this.sessionHistoryKey) || [];
+      const history = (await storage.get(this.sessionHistoryKey)) || [];
 
       const record = {
         id: Date.now().toString(),
@@ -545,7 +539,7 @@ class SessionManager {
         timestamp: Date.now(),
         userId: session.userId,
         deviceInfo: session.deviceInfo,
-        reason: session.expiredReason
+        reason: session.expiredReason,
       };
 
       history.push(record);
@@ -556,7 +550,6 @@ class SessionManager {
       }
 
       await storage.set(this.sessionHistoryKey, history);
-
     } catch (error) {
       console.error('[SessionManager] 记录会话历史失败:', error);
     }
@@ -583,7 +576,7 @@ class SessionManager {
         brand: systemInfo.brand,
         model: systemInfo.model,
         system: systemInfo.system,
-        platform: systemInfo.platform
+        platform: systemInfo.platform,
       };
     } catch (error) {
       console.error('[SessionManager] 获取设备信息失败:', error);
@@ -609,7 +602,7 @@ class SessionManager {
    */
   async incrementRefreshAttempts() {
     try {
-      const data = await storage.get(this.refreshAttemptKey) || { count: 0 };
+      const data = (await storage.get(this.refreshAttemptKey)) || { count: 0 };
       data.count += 1;
       data.lastAttempt = Date.now();
       await storage.set(this.refreshAttemptKey, data);
@@ -653,7 +646,7 @@ class SessionManager {
    */
   async getSessionHistory() {
     try {
-      return await storage.get(this.sessionHistoryKey) || [];
+      return (await storage.get(this.sessionHistoryKey)) || [];
     } catch (error) {
       console.error('[SessionManager] 获取会话历史失败:', error);
       return [];
@@ -667,11 +660,11 @@ class SessionManager {
   async getSessionHealth() {
     try {
       const session = await this.getCurrentSession();
-      
+
       if (!session) {
         return {
           status: 'no_session',
-          message: '没有活动会话'
+          message: '没有活动会话',
         };
       }
 
@@ -679,7 +672,7 @@ class SessionManager {
         return {
           status: 'expired',
           message: '会话已过期',
-          expiredAt: session.expiresAt
+          expiredAt: session.expiresAt,
         };
       }
 
@@ -692,14 +685,13 @@ class SessionManager {
         expiresAt: session.expiresAt,
         timeUntilExpiry,
         needsRefresh,
-        lastActiveAt: session.lastActiveAt
+        lastActiveAt: session.lastActiveAt,
       };
-
     } catch (error) {
       console.error('[SessionManager] 检查会话健康状态失败:', error);
       return {
         status: 'error',
-        message: error.message
+        message: error.message,
       };
     }
   }
@@ -729,5 +721,5 @@ const sessionManager = new SessionManager();
 
 module.exports = {
   sessionManager,
-  SessionManager
+  SessionManager,
 };
