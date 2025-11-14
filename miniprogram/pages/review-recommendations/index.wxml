@@ -105,10 +105,32 @@
     </view>
 
     <!-- 空状态 -->
-    <empty-state 
-      wx:if="{{!loading && recommendations.length === 0}}"
-      type="default"
-      text="暂无推荐"
-      description="该科目还没有需要复习的内容" />
+    <view wx:if="{{!loading && recommendations.length === 0}}" class="empty-container">
+      <empty-state 
+        type="default"
+        text="暂无复习推荐"
+        description="该科目还没有需要复习的内容或学习数据不足" />
+      
+      <!-- 友好提示 -->
+      <view class="empty-tips">
+        <text class="tips-title">💡 如何获得复习推荐?</text>
+        <view class="tips-list">
+          <text class="tips-item">1. 在学习问答中多提问题,积累错题</text>
+          <text class="tips-item">2. 标记知识点,建立知识图谱</text>
+          <text class="tips-item">3. 系统会根据掌握度和遗忘曲线生成推荐</text>
+          <text class="tips-item">4. 当前"数学"有10个知识点,但掌握度都较高</text>
+        </view>
+        
+        <!-- 跳转按钮 -->
+        <view class="empty-actions">
+          <van-button type="primary" size="small" bind:click="goToLearning">
+            去学习问答
+          </van-button>
+          <van-button type="default" size="small" bind:click="goToKnowledgeGraph">
+            查看知识图谱
+          </van-button>
+        </view>
+      </view>
+    </view>
   </scroll-view>
 </view>

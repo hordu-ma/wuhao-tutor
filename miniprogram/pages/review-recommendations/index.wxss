@@ -134,3 +134,44 @@
   display: flex;
   justify-content: flex-end;
 }
+
+/* 空状态样式 */
+.empty-container {
+  padding: 60rpx 30rpx;
+}
+
+.empty-tips {
+  margin-top: 60rpx;
+  padding: 40rpx 30rpx;
+  background-color: #fff;
+  border-radius: 16rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
+}
+
+.tips-title {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 30rpx;
+}
+
+.tips-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+  margin-bottom: 40rpx;
+}
+
+.tips-item {
+  font-size: 28rpx;
+  line-height: 1.8;
+  color: #666;
+  padding-left: 20rpx;
+}
+
+.empty-actions {
+  display: flex;
+  gap: 20rpx;
+  justify-content: center;
+}
