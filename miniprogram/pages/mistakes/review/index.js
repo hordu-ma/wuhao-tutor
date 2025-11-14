@@ -83,7 +83,10 @@ const pageObject = {
 
       const sessionData = await mistakesApi.getReviewSession(this.data.sessionId);
 
-      console.log('复习会话数据', sessionData);
+      console.log('📚 [复习页面] 会话数据完整内容:', sessionData);
+      console.log('📚 [复习页面] question_content:', sessionData.question_content);
+      console.log('📚 [复习页面] question_content类型:', typeof sessionData.question_content);
+      console.log('📚 [复习页面] question_content长度:', sessionData.question_content?.length);
 
       this.setData({
         currentStage: sessionData.stage || 1,
@@ -94,6 +97,9 @@ const pageObject = {
         knowledgePoints: sessionData.knowledge_points || [],
         loading: false,
       });
+
+      console.log('📚 [复习页面] 设置后的questionContent:', this.data.questionContent);
+      console.log('📚 [复习页面] 设置后的loading:', this.data.loading);
 
       // 如果会话已完成，显示结果
       if (sessionData.status !== 'in_progress') {

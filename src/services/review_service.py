@@ -127,13 +127,19 @@ class ReviewService:
         # 根据当前阶段返回对应内容
         stage_name = self._get_stage_name(session.current_stage)
 
+        # 使用占位文本处理无OCR内容的情况
+        question_content = mistake.ocr_text or "暂无题目内容，请先上传并识别题目图片"
+
         return {
             "session_id": str(session.id),
             "stage": session.current_stage,
             "stage_name": stage_name,
             "status": session.status,
             "attempts": session.attempts,
-            "question_content": mistake.ocr_text,  # 简化处理，实际应根据阶段动态生成
+            "question_content": question_content,
+            "correct_answer": mistake.correct_answer or "",
+            "knowledge_points": mistake.knowledge_points or [],
+            "has_ocr_text": bool(mistake.ocr_text),
         }
 
     async def submit_review_answer(
