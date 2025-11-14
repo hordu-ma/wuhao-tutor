@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import ForeignKey, Integer, String
+from sqlalchemy.dialects.postgresql import UUID as PostgreSQL_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel
@@ -16,12 +17,12 @@ if TYPE_CHECKING:
 class MistakeReviewSession(BaseModel):
     __tablename__ = "mistake_review_sessions"
 
-    # 使用 Union 类型来支持 SQLite 和 PostgreSQL
-    mistake_id: Mapped[Union[str, UUID]] = mapped_column(
-        String(36), ForeignKey("mistake_records.id"), nullable=False
+    # 使用 PostgreSQL UUID 类型
+    mistake_id: Mapped[UUID] = mapped_column(
+        PostgreSQL_UUID(as_uuid=True), ForeignKey("mistake_records.id"), nullable=False
     )
-    user_id: Mapped[Union[str, UUID]] = mapped_column(
-        String(36), ForeignKey("users.id"), nullable=False
+    user_id: Mapped[UUID] = mapped_column(
+        PostgreSQL_UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
     )
 
     status: Mapped[str] = mapped_column(String, default="in_progress", index=True)
