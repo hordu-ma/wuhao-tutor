@@ -73,70 +73,44 @@ journalctl -u wuhao-tutor.service -f  # View production logs
 
 ### Four-Layer Strict Separation
 
-The backend follows a strict 4-layer architecture. **NEVER skip layers** (e.g., API → Repository).
-
 ```
 API Layer → Service Layer → Repository Layer → Model Layer
 ```
 
-**Rules**:
-- **API Layer** (`src/api/v1/endpoints/`): HTTP request handling, parameter validation, response formatting (19 files, 50+ endpoints)
-- **Service Layer** (`src/services/`): Business logic, transaction management, multi-repository coordination
-  - `BailianService` (1000+ lines): AI service integration
-  - `LearningService` (2400+ lines): Q&A business logic
-  - `MistakeService` (1260+ lines): Mistake notebook
-  - `KnowledgeGraphService`, `AnalyticsService`, `AuthService`, etc.
-- **Repository Layer** (`src/repositories/`): Data access, complex queries, data transformation
-  - All repositories extend `BaseRepository[ModelType]` generic
-- **Model Layer** (`src/models/`): Database models (11 models), all inherit from `BaseModel` with UUID + timestamps
+**Key Services**:
 
-### Core Infrastructure (`src/core/`)
+- `BailianService`: AI service integration
+- `LearningService`: Q&A business logic (2400+ lines)
+- `MistakeService`: Mistake notebook (1260+ lines)
+- `KnowledgeGraphService`, `AnalyticsService`, `AuthService`
 
-- `config.py`: Pydantic Settings v2 for environment config
-- `database.py`: SQLAlchemy 2.x async engine + connection pooling
-- `security.py`: JWT auth + multi-layer rate limiting (Token Bucket + Sliding Window)
-- `monitoring.py`: Performance metrics collection (response time, error rate)
-- `performance.py`: Slow query listener (>1.0s) + N+1 detection
-- `exceptions.py`: Unified exception hierarchy (20+ types)
+**Core Infrastructure** (`src/core/`): config, database, security, monitoring, performance, exceptions
 
-**DO NOT modify core infrastructure** unless you fully understand the implications.
+⚠️ **See `.github/copilot-instructions.md` for detailed architecture rules and constraints.**
 
 ### Database
 
 - **Development**: SQLite (local file)
 - **Production**: PostgreSQL 14+ (Alibaba Cloud RDS)
-- **ORM**: SQLAlchemy 2.x with async support (`asyncpg` for PostgreSQL, `aiosqlite` for SQLite)
-- **Migrations**: Alembic (~15 migration files in `alembic/versions/`)
-- **Cache**: Redis 6+ for rate limiting, refresh tokens, session cache
-
-**Migration Workflow**:
-1. Modify model in `src/models/`
-2. Run `make db-migrate` (generates migration with description prompt)
-3. Review generated migration in `alembic/versions/`
-4. Run `make db-init` to apply
-5. Test rollback with `make db-downgrade`
+- **ORM**: SQLAlchemy 2.x async (`asyncpg` / `aiosqlite`)
+- **Migrations**: Alembic (`make db-migrate` → `make db-init`)
+- **Cache**: Redis 6+ (rate limiting, tokens, sessions)
 
 ### AI Service Integration
 
 **Alibaba Cloud Bailian** (阿里云百炼):
-- **Service**: `BailianService` (`src/services/bailian_service.py`)
-- **Model**: Qwen (Tongyi Qianwen) large language model
-- **Features**: Learning Q&A, homework correction, knowledge extraction
-- **Timeout**: 120s (supports image OCR)
-- **Retry**: 3 attempts with exponential backoff
-- **Streaming**: Server-Sent Events (SSE) for real-time responses
 
-**Environment Variables** (`.env`):
-- `BAILIAN_API_KEY=sk-xxx` (MUST start with `sk-` in production)
-- `BAILIAN_APPLICATION_ID=xxx`
+- Service: `BailianService` (Q&A, homework correction, knowledge extraction)
+- Model: Qwen (Tongyi Qianwen)
+- Config: 120s timeout, 3 retries, SSE streaming
+- Env: `BAILIAN_API_KEY=sk-xxx`, `BAILIAN_APPLICATION_ID=xxx`
 
-**DO NOT**:
-- Make direct HTTP calls to AI services (always use `BailianService`)
-- Skip retry logic or timeout configuration
+⚠️ Always use `BailianService` wrapper, never direct HTTP calls.
 
 ### Frontend Architecture
 
 **Web Frontend** (`frontend/`):
+
 - **Framework**: Vue 3.4+ (Composition API) + TypeScript 5.6+
 - **UI Library**: Element Plus 2.5+
 - **Build Tool**: Vite 5+
@@ -148,6 +122,7 @@ API Layer → Service Layer → Repository Layer → Model Layer
 - **Charts**: ECharts 6.0 + vue-echarts
 
 **WeChat MiniProgram** (`miniprogram/`):
+
 - **Language**: Native JavaScript + TypeScript declarations
 - **Framework**: WeChat MiniProgram native API
 - **UI**: WeChat native components + custom components
@@ -159,48 +134,22 @@ API Layer → Service Layer → Repository Layer → Model Layer
 
 ### Code Style
 
-- **Type annotations**: Required for all functions (mypy strict mode)
-- **Exception handling**: Use specific exceptions (NEVER `except:` or `except Exception:`)
-- **Function length**: ≤ 60 lines, single responsibility
-- **Docstrings**: Google style for complex logic
-- **Async**: All I/O operations must use `async/await`
+- **Type annotations**: Required (mypy strict)
+- **Exception handling**: Specific exceptions only (see `.github/copilot-instructions.md` for exceptions)
+- **Function length**: ≤ 60 lines
+- **Docstrings**: Google style
+- **Async**: All I/O must use `async/await`
 
-**Example** (reference `src/services/mistake_service.py`):
+### Patterns
 
-```python
-async def create_mistake(
-    self, db: AsyncSession, user_id: UUID
-) -> MistakeDetailResponse:
-    """
-    Create a new mistake record.
-    
-    Args:
-        db: Database session
-        user_id: User UUID
-        
-    Returns:
-        Created mistake detail
-        
-    Raises:
-        ServiceError: If creation fails
-    """
-    try:
-        # Implementation...
-    except SpecificError as e:  # Specific exception
-        raise ServiceError(f"Failed to create mistake: {e}")
-```
-
-### Repository Pattern
-
-All repositories must:
-- Extend `BaseRepository[ModelType]` generic
-- Encapsulate data access logic
-- Use SQLAlchemy async API (`select()`, `update()`, `delete()`)
-- Handle database errors appropriately
+- **Repository**: Extend `BaseRepository[ModelType]`, encapsulate data access
+- **Service**: Handle business logic, transactions, multi-repository coordination
+- **Model**: Inherit from `BaseModel` (UUID + timestamps)
 
 ### Service Layer Transactions
 
 Services handle transactions and business logic:
+
 - Use `async with db.begin()` for explicit transactions
 - Coordinate multiple repositories
 - Implement business rules and validation
@@ -208,6 +157,7 @@ Services handle transactions and business logic:
 ### Model Standards
 
 All models must:
+
 - Inherit from `BaseModel` (provides UUID `id`, `created_at`, `updated_at`)
 - Use SQLAlchemy 2.x declarative style
 - Include proper relationships with lazy loading
@@ -215,113 +165,65 @@ All models must:
 
 ## Security & Performance
 
-### Rate Limiting (Multi-Layer)
+### Rate Limiting
 
-- **IP Level**: 100 requests/minute (Token Bucket) - DDoS protection
-- **User Level**: 50 requests/minute (Token Bucket) - abuse prevention
-- **AI Service**: 20 requests/minute (Sliding Window) - cost control
-- **Login Endpoint**: 10 requests/minute (Token Bucket) - brute force protection
+- IP: 100/min | User: 50/min | AI: 20/min | Login: 10/min
 
 ### Authentication
 
-- **JWT**: Access Token (8 days) + Refresh Token (30 days)
-- **Password**: bcrypt with 12 rounds
-- **Token Storage**: Refresh tokens in Redis
-- **Auto-renewal**: Access token refresh mechanism
+- JWT: Access Token (8d) + Refresh Token (30d)
+- Password: bcrypt (12 rounds)
+- Storage: Redis
 
-### Middleware Stack (Execution Order)
+### Monitoring
 
-1. `PerformanceMonitoringMiddleware` - metrics collection
-2. `SecurityHeadersMiddleware` - CSP, HSTS, X-Frame-Options
-3. `RateLimitMiddleware` - rate limiting
-4. `CORSMiddleware` - CORS handling
-5. `TrustedHostMiddleware` - host validation
-6. `LoggingMiddleware` - request/response logging
-
-### Performance Monitoring
-
-- **Slow queries**: Automatically logged if >1.0s
-- **N+1 detection**: Warns about N+1 query patterns
-- **Metrics collection**: Response time, error rate, system resources
-- **System monitoring**: CPU, memory, disk usage
+- Slow queries: >1.0s logged
+- N+1 detection enabled
+- Metrics: response time, error rate, resources
 
 ## Environment Configuration
 
-**Environments**:
-- **Dev**: SQLite local database
-- **Test**: In-memory SQLite
-- **Prod**: PostgreSQL + Redis
+**Environments**: Dev (SQLite) | Test (In-memory SQLite) | Prod (PostgreSQL + Redis)
 
-**Critical Environment Variables** (`.env`):
-```bash
-# Required in production
-BAILIAN_API_KEY=sk-xxx              # Must start with sk-
-BAILIAN_APPLICATION_ID=xxx
-SQLALCHEMY_DATABASE_URI=xxx
-SECRET_KEY=xxx                      # Must be changed for production
-REDIS_HOST=localhost                # Optional in dev
+**Key Variables** (`.env`): See `.github/copilot-instructions.md` for complete list
 
-# Database
-DATABASE_URL=postgresql+asyncpg://user:pass@host/db  # Production
-
-# Security
-ACCESS_TOKEN_EXPIRE_DAYS=8
-REFRESH_TOKEN_EXPIRE_DAYS=30
-```
+- `BAILIAN_API_KEY=sk-xxx` (must start with `sk-` in prod)
+- `BAILIAN_APPLICATION_ID=xxx`
+- `SECRET_KEY=xxx` (change for prod)
+- `DATABASE_URL=postgresql+asyncpg://...` (prod only)
 
 ## Production Deployment
 
-**Deployment Process**:
-1. Run `./scripts/deploy.sh` (builds frontend locally, deploys to server)
-2. Verify: `curl https://horsduroot.com/health`
-3. Check logs: `journalctl -u wuhao-tutor.service -f`
+**Process**: `./scripts/deploy.sh` → Verify: `curl https://horsduroot.com/health`
 
-**Deployment Structure**:
-- Backend: `/opt/wuhao-tutor`
-- Frontend: `/var/www/html`
-- Logs: `/var/log/wuhao-tutor`
-- Config: `/opt/wuhao-tutor/.env.production`
+**Structure**: Backend (`/opt/wuhao-tutor`) | Frontend (`/var/www/html`) | Logs (`/var/log/wuhao-tutor`)
 
-**Critical Deployment Rules**:
-- ❌ **NEVER** use `start-dev.sh` in production → use `deploy.sh`
-- ❌ **NEVER** skip Alembic migrations → run `make db-migrate` + `make db-init`
-- ❌ **NEVER** hardcode secrets → use environment variables
-- ✅ **ALWAYS** test migrations locally before deploying
-- ✅ **ALWAYS** run lint + type-check before deploying
+**Critical Rules**: See `.github/copilot-instructions.md` for detailed deployment guidelines
 
 ## Testing Strategy
 
-**Unit Tests**: Services and Repositories
-- Mock external dependencies (AI services, Redis)
-- Test business logic in isolation
-- Use `MockBailianService` for AI service testing
-
-**Integration Tests**: API endpoints
-- Test full request/response cycle
-- Use test database (in-memory SQLite)
-- Verify authentication and authorization
-
-**Performance Tests**: Load testing
-- Available via `make test-performance`
-- Monitor response times and resource usage
+- **Unit**: Mock external dependencies, test business logic
+- **Integration**: Full request/response cycle, test database
+- **Performance**: `make test-performance`
 
 ## Important Constraints
 
-1. **Strict Layering**: API → Service → Repository → Model (no layer skipping)
-2. **Async Everywhere**: All I/O operations must use `async/await`
-3. **Type Safety**: Full type annotations + mypy strict checking
-4. **Configuration Externalization**: Environment variables only, no hardcoded values
-5. **Database Changes**: Always use Alembic migrations (never direct schema changes)
+See `.github/copilot-instructions.md` for detailed constraints:
+
+- Strict 4-layer architecture (no layer skipping)
+- Full async/await for I/O
+- Type annotations required (mypy strict)
+- Environment variables only (no hardcoded values)
+- Alembic for all database changes
 
 ## Common Pitfalls
 
-❌ **API directly calling Repository** → Must go through Service layer
-❌ **Sync code in async context** → Use `async/await` for all I/O
-❌ **Generic exception handling** → Use specific exception types
-❌ **Skipping migrations** → Always generate and review migrations
-❌ **Hardcoded API keys** → Use environment variables
-❌ **Missing type annotations** → mypy will fail
-❌ **Long functions (>60 lines)** → Break into smaller functions
+⚠️ See `.github/copilot-instructions.md` for complete list. Key pitfalls:
+
+- ❌ Layer skipping (API → Repository)
+- ❌ Sync code in async context
+- ❌ Generic exception handling
+- ❌ Hardcoded secrets
 
 ## Key Files Reference
 

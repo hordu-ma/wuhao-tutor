@@ -46,11 +46,22 @@ API → Service → Repository → Model
 
 ---
 
+## 输出语言规范
+
+- **用户交互**: 中文（简洁直接）
+- **代码注释**: 中文（复杂逻辑必须注释）
+- **文档编写**: 中文（README、开发文档等）
+- **AGENTS.md**: 保持英文（供国际 AI 工具使用）
+- **Git 提交**: 中文（遵循用户级指令的提交规范）
+
+---
+
 ## 开发规范
 
 **核心约束**:
 
 - 类型注解 + 具体异常（禁止 `except:` 或 `except Exception:`）
+  - ⚠️ **例外**: 最外层 API 入口可用 `Exception` 兜底（需详细日志）
 - 函数 ≤ 60 行，单一职责
 - Google 风格 docstring（复杂逻辑必须）
 - 模型继承 `BaseModel`（UUID 主键 + `created_at` + `updated_at`）
@@ -66,6 +77,17 @@ async def create_mistake(
         # 实现...
     except SpecificError as e:  # 具体异常
         raise ServiceError(f"错误: {e}")
+
+# API层最外层兜底（例外情况）
+@router.post("/mistakes")
+async def create_mistake_endpoint(...):
+    try:
+        return await service.create_mistake(...)
+    except ServiceError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:  # 兜底，避免500裸露
+        logger.error(f"未预期错误: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="服务器内部错误")
 ```
 
 ---
@@ -73,25 +95,12 @@ async def create_mistake(
 ## 快速命令
 
 ```bash
-# 环境
-uv sync && uv run python
-
-# 开发
-./scripts/start-dev.sh  # 前后端一键启动
-make dev                # 仅后端
-
-# 数据库
-make db-init            # Alembic 迁移
-make db-migrate         # 创建新迁移
-make db-reset           # ⚠️ 重置 (开发)
-
-# 质量
-make test               # pytest + 覆盖率
-make lint               # black + flake8
-make type-check         # mypy strict
-
-# 部署
-./scripts/deploy.sh     # 生产一键部署
+# 核心命令（完整命令列表见 AGENTS.md）
+make dev                # 启动后端开发服务器
+make db-migrate         # 创建数据库迁移
+make test               # 运行测试
+make lint               # 代码检查
+./scripts/deploy.sh     # 生产部署
 ```
 
 ---
