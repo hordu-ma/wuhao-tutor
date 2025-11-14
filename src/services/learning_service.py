@@ -592,7 +592,7 @@ class LearningService:
                     # 🎯 添加批改结果（如果存在）
                     if correction_result:
                         # 转换为字典格式
-                        done_event["correction_result"] = [
+                        correction_data = [
                             {
                                 "question_number": item.question_number,
                                 "error_type": item.error_type,
@@ -604,10 +604,15 @@ class LearningService:
                             }
                             for item in correction_result.corrections
                         ]
+                        done_event["correction_result"] = correction_data
                         done_event["mistakes_created"] = mistakes_created_count
                         logger.info(
                             f"📤 [流式] 发送批改结果: {len(correction_result.corrections)} 题, "
                             f"{mistakes_created_count} 个错题"
+                        )
+                        logger.debug(
+                            f"📤 [调试] done_event keys: {list(done_event.keys())}, "
+                            f"correction_result length: {len(correction_data)}"
                         )
 
                     yield done_event

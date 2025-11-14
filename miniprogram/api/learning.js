@@ -371,8 +371,13 @@ const learningAPI = {
               answer_id: chunk.answer_id,
               session_id: chunk.session_id,
               usage: chunk.usage,
+              // 🎯 批改结果相关字段
+              correction_result: chunk.correction_result,
+              mistakes_created: chunk.mistakes_created,
+              mistake_created: chunk.mistake_created,
+              mistake_info: chunk.mistake_info,
             };
-            console.log('[WebSocket] 流式响应完成');
+            console.log('[WebSocket] 流式响应完成, correction_result:', !!chunk.correction_result);
           }
         } catch (error) {
           console.error('[WebSocket] 解析消息失败:', error, res.data);
