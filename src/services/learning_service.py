@@ -3141,11 +3141,22 @@ class LearningService:
                     title = title[:200]
 
                 # 构建错题数据
+                # 🎯 题目内容降级策略：优先使用question_text，否则用explanation前部分
+                question_content = item.question_text
+                if not question_content or not question_content.strip():
+                    # 降级：使用批改说明的前80字
+                    question_content = (
+                        f"题目内容详见图片（批改提示：{item.explanation[:80]}...）"
+                    )
+                    logger.warning(
+                        f"⚠️ Q{item.question_number} 缺少question_text，使用降级方案"
+                    )
+
                 mistake_data = {
                     "user_id": user_id,
                     "subject": subject,
                     "title": title,
-                    "ocr_text": item.question_text,  # 🎯 关键修复：设置题目内容
+                    "ocr_text": question_content,  # 🎯 使用降级后的题目内容
                     "question_number": item.question_number,  # 新增字段
                     "is_unanswered": item.is_unanswered,  # 新增字段
                     "question_type": item.question_type,  # 新增字段
@@ -3156,6 +3167,7 @@ class LearningService:
                     "ai_feedback": {
                         "explanation": item.explanation,
                         "score": item.score,
+                        "question_text": question_content,  # 🎯 同步到ai_feedback
                     },
                     "knowledge_points": item.knowledge_points or [],
                     "difficulty_level": 2,  # 默认中等难度
