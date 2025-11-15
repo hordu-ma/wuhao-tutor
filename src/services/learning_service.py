@@ -1616,6 +1616,9 @@ class LearningService:
             # 3. 构造错题数据（使用结构化提取的数据）
             from src.models.study import MistakeRecord
             from src.repositories.mistake_repository import MistakeRepository
+            from src.services.knowledge_graph_service import (
+                normalize_subject,
+            )
 
             mistake_repo = MistakeRepository(MistakeRecord, self.db)
 
@@ -1623,9 +1626,19 @@ class LearningService:
             clean_question = structured_data.get("question_content", question_content)
             title = self._generate_mistake_title(clean_question)
 
+            # 🔧 关键修复：将英文 subject 转换为中文，确保数据库一致性
+            # 前端发送 subject="math"（英文），需要转换为 "数学"（中文）保存到 MistakeRecord
+            normalized_subject = (
+                normalize_subject(question_subject) if question_subject else "其他"
+            )
+
+            logger.info(
+                f"📝 学科转换: question_subject={question_subject} → normalized_subject={normalized_subject}"
+            )
+
             mistake_data = {
                 "user_id": user_id,
-                "subject": question_subject or "其他",
+                "subject": normalized_subject,
                 "title": title,
                 "ocr_text": clean_question,  # 🎯 使用纯净的题目内容
                 "image_urls": image_urls,
@@ -1676,6 +1689,8 @@ class LearningService:
             )
 
             # 5. 【新增】自动关联知识点
+            # 注意：subject 已在上面转换为中文，无需再转换
+            subject_for_kg = mistake_data.get("subject", "其他")
             try:
                 from uuid import UUID
 
@@ -1698,18 +1713,39 @@ class LearningService:
                 }
 
                 # 调用知识图谱服务分析并关联知识点
-                await kg_service.analyze_and_associate_knowledge_points(
-                    mistake_id=UUID(str(getattr(mistake, "id"))),
-                    user_id=UUID(user_id),
-                    subject=mistake_data.get("subject", "math"),
-                    ocr_text=clean_question,
-                    ai_feedback=ai_feedback_for_kg,
+                kp_list = structured_data.get("knowledge_points", [])
+
+                logger.debug(
+                    f"📌 准备关联知识点: mistake_id={mistake.id}, "
+                    f"user_id={user_id}, subject={subject_for_kg}, "
+                    f"knowledge_points_count={len(kp_list)}"
                 )
 
-                logger.info(f"🔗 已为错题 {mistake.id} 自动关联知识点")
+                if not kp_list:
+                    logger.warning(
+                        f"⚠️ 知识点列表为空，跳过关联: mistake_id={mistake.id}, "
+                        f"structured_data={structured_data.get('extraction_success', False)}"
+                    )
+                else:
+                    await kg_service.analyze_and_associate_knowledge_points(
+                        mistake_id=UUID(str(getattr(mistake, "id"))),
+                        user_id=UUID(user_id),
+                        subject=subject_for_kg,
+                        ocr_text=clean_question,
+                        ai_feedback=ai_feedback_for_kg,
+                    )
+
+                    logger.info(
+                        f"✅ 已为错题 {mistake.id} 自动关联知识点: "
+                        f"{len(kp_list)} 个知识点"
+                    )
             except Exception as e:
-                # 知识点关联失败不影响错题创建
-                logger.warning(f"知识点自动关联失败: {e}")
+                # 知识点关联失败不影响错题创建，但需要详细记录
+                logger.error(
+                    f"❌ 知识点自动关联失败: mistake_id={mistake.id}, "
+                    f"user_id={user_id}, subject={subject_for_kg}, error={e}",
+                    exc_info=True,
+                )
 
             # 6. 转换为响应格式
             return {
@@ -3358,10 +3394,19 @@ class LearningService:
         """
         from src.models.study import MistakeRecord
         from src.repositories.mistake_repository import MistakeRepository
+        from src.services.knowledge_graph_service import (
+            normalize_subject,
+        )  # 🔧 导入学科转换函数
+</parameter>
 
         mistake_repo = MistakeRepository(MistakeRecord, self.db)
         created_mistakes = []
 
+        # 🔧 关键修复：标准化学科名称（英文→中文）
+        normalized_subject = normalize_subject(subject) if subject else "其他"
+        logger.info(
+            f"📝 [错题创建] 学科标准化: {subject} → {normalized_subject}"
+        )
         logger.info(
             f"📝 [错题创建] 开始处理批改结果: "
             f"total_corrections={len(correction_result.corrections)}, "
@@ -3409,20 +3454,26 @@ class LearningService:
                         f"⚠️ Q{item.question_number} 缺少question_text，使用降级方案"
                     )
 
-                # 🎯 智能学科推断：优先使用参数学科，否则从知识点推断
-                inferred_subject = subject
+                # 🔧 使用已标准化的学科名（中文）
+                # 已在前面通过 normalize_subject(subject) 转换为中文
+                final_subject = normalized_subject
+
+                # 如果知识点推断给出新的学科，也需要标准化
                 if item.knowledge_points and len(item.knowledge_points) > 0:
-                    inferred_subject = self._infer_subject_from_knowledge_points(
+                    inferred_en = self._infer_subject_from_knowledge_points(
                         item.knowledge_points
                     )
-                    if inferred_subject != subject:
+                    if inferred_en and inferred_en != subject:
+                        # 🔧 推断结果也需要标准化
+                        inferred_cn = normalize_subject(inferred_en)
                         logger.info(
-                            f"🔄 学科修正: {subject} → {inferred_subject} (基于知识点)"
+                            f"🔄 学科修正: {subject}({normalized_subject}) → {inferred_en}({inferred_cn}) (基于知识点)"
                         )
+                        final_subject = inferred_cn
 
                 mistake_data = {
                     "user_id": user_id,
-                    "subject": inferred_subject,  # 🎯 使用推断的学科
+                    "subject": final_subject,  # 🔧 使用标准化的中文学科名
                     "title": title,
                     "ocr_text": question_content,  # 🎯 使用降级后的题目内容
                     "question_number": item.question_number,  # 新增字段
@@ -3456,7 +3507,7 @@ class LearningService:
                 if item.knowledge_points:
                     await self._update_knowledge_mastery(
                         user_id=user_id,
-                        subject=inferred_subject,
+                        subject=final_subject,  # 🔧 使用标准化的学科名
                         knowledge_points=item.knowledge_points,
                     )
 

@@ -496,13 +496,28 @@ Page({
    */
   navigateToKnowledgeGraph() {
     console.log('导航到知识图谱');
+
+    // 🔧 [修复] 检查登录状态
+    if (!this.data.isLoggedIn) {
+      wx.showToast({
+        title: '请先登录',
+        icon: 'none',
+        duration: 2000,
+      });
+      wx.navigateTo({
+        url: '/pages/login/index',
+      });
+      return;
+    }
+
     wx.navigateTo({
       url: '/subpackages/charts/pages/knowledge-graph/index?subject=数学',
       fail: err => {
-        console.error('导航失败:', err);
+        console.error('导航到知识图谱失败:', err);
         wx.showToast({
-          title: '打开失败',
-          icon: 'none',
+          title: '打开失败，请重试',
+          icon: 'error',
+          duration: 2000,
         });
       },
     });
@@ -513,8 +528,31 @@ Page({
    */
   navigateToMistakes() {
     console.log('导航到错题本');
+
+    // 🔧 [修复] 检查登录状态
+    if (!this.data.isLoggedIn) {
+      wx.showToast({
+        title: '请先登录',
+        icon: 'none',
+        duration: 2000,
+      });
+      wx.navigateTo({
+        url: '/pages/login/index',
+      });
+      return;
+    }
+
+    // 🔧 [修复] 使用 switchTab 而非 navigateTo，因为错题本是 tabBar 页面
     wx.switchTab({
       url: '/pages/mistakes/list/index',
+      fail: err => {
+        console.error('导航到错题本失败:', err);
+        wx.showToast({
+          title: '打开失败，请重试',
+          icon: 'error',
+          duration: 2000,
+        });
+      },
     });
   },
 
@@ -523,8 +561,31 @@ Page({
    */
   navigateToLearning() {
     console.log('导航到作业问答');
-    wx.navigateTo({
+
+    // 🔧 [修复] 检查登录状态
+    if (!this.data.isLoggedIn) {
+      wx.showToast({
+        title: '请先登录',
+        icon: 'none',
+        duration: 2000,
+      });
+      wx.navigateTo({
+        url: '/pages/login/index',
+      });
+      return;
+    }
+
+    // 🔧 [修复] 使用 switchTab 而非 navigateTo，因为作业问答是 tabBar 页面
+    wx.switchTab({
       url: '/pages/learning/index/index',
+      fail: err => {
+        console.error('导航到作业问答失败:', err);
+        wx.showToast({
+          title: '打开失败，请重试',
+          icon: 'error',
+          duration: 2000,
+        });
+      },
     });
   },
 
@@ -533,8 +594,31 @@ Page({
    */
   navigateToAnalysis() {
     console.log('导航到学习报告');
+
+    // 🔧 [修复] 检查登录状态
+    if (!this.data.isLoggedIn) {
+      wx.showToast({
+        title: '请先登录',
+        icon: 'none',
+        duration: 2000,
+      });
+      wx.navigateTo({
+        url: '/pages/login/index',
+      });
+      return;
+    }
+
+    // 🔧 学习报告不是 tabBar 页面，使用 navigateTo
     wx.navigateTo({
       url: '/pages/analysis/report/index',
+      fail: err => {
+        console.error('导航到学习报告失败:', err);
+        wx.showToast({
+          title: '打开失败，请重试',
+          icon: 'error',
+          duration: 2000,
+        });
+      },
     });
   },
 });

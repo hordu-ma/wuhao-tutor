@@ -64,6 +64,20 @@ const PAGE_PERMISSION_CONFIG = {
     description: '问答详情页面',
   },
 
+  // 学习模块页面
+  'pages/learning/index/index': {
+    permissions: [], // 移除权限要求，改为仅需登录即可访问（权限检查在具体操作时进行）
+    roles: ['student', 'parent', 'teacher'],
+    requireLogin: true,
+    description: '作业问答页面',
+  },
+  'pages/learning/detail/index': {
+    permissions: [], // 移除权限要求，改为仅需登录即可访问（权限检查在具体操作时进行）
+    roles: ['student', 'parent', 'teacher'],
+    requireLogin: true,
+    description: '学习详情页面',
+  },
+
   // 分析模块页面
   'pages/analysis/report/index': {
     permissions: ['analysis.view_self'],
@@ -151,16 +165,27 @@ class EnhancedPageGuard {
       async onLoad(options) {
         const guardResult = await guard.executePageGuard(config, pagePath, options);
 
-        if (!guardResult.success) {
-          return; // 守卫失败，停止页面加载
+        // 🔧 [改进] 降级策略：仅在登录失败或token无效时才完全阻止
+        // 权限不足时允许页面加载，但标记权限状态
+        const isCriticalFailure =
+          guardResult.reason === 'not_logged_in' || guardResult.reason === 'token_invalid';
+
+        if (!guardResult.success && isCriticalFailure) {
+          console.warn(`页面 ${pagePath} 被关键权限问题阻止: ${guardResult.reason}`);
+          return; // 只在登录失败时阻止加载
         }
 
-        // 将权限信息注入页面数据
+        // 将权限信息注入页面数据（即使部分权限失败也注入，让页面知道状态）
         if (typeof this.setData === 'function') {
           this.setData({
             userPermissions: guardResult.permissions,
             userRole: guardResult.role,
             canPerformActions: guardResult.actions,
+            permissionCheckResult: {
+              success: guardResult.success,
+              reason: guardResult.reason,
+              failedPermissions: guardResult.failedPermissions || [],
+            },
           });
         }
 
@@ -174,8 +199,13 @@ class EnhancedPageGuard {
         // 每次显示时重新验证权限（处理角色切换情况）
         const quickCheck = await guard.quickPermissionCheck(config, pagePath);
 
-        if (!quickCheck.success) {
-          return; // 快速检查失败，可能权限已变更
+        // 🔧 [改进] 只在登录状态失败时阻止 onShow，其他权限问题不阻止
+        const isCriticalFailure =
+          quickCheck.reason === 'not_logged_in' || quickCheck.reason === 'token_invalid';
+
+        if (!quickCheck.success && isCriticalFailure) {
+          console.warn(`页面 ${pagePath} 在 onShow 时被关键权限问题阻止`);
+          return; // 只在登录失败时阻止
         }
 
         // 调用原始的onShow

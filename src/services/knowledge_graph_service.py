@@ -101,36 +101,71 @@ class KnowledgeGraphService:
         try:
             # 1. 从AI反馈中提取知识点列表
             knowledge_points = self._extract_knowledge_points(ai_feedback)
+            logger.debug(
+                f"📌 步骤1 - 从AI反馈提取知识点: mistake_id={mistake_id}, "
+                f"extracted_count={len(knowledge_points)}, "
+                f"ai_feedback_keys={list(ai_feedback.keys()) if ai_feedback else 'None'}"
+            )
 
             if not knowledge_points:
                 # 如果AI反馈中没有，尝试使用百炼AI分析
                 if self.bailian_service and ocr_text:
+                    logger.debug(
+                        f"📌 步骤1b - AI反馈无知识点，尝试调用百炼AI分析: "
+                        f"mistake_id={mistake_id}, subject={subject}, ocr_text_len={len(ocr_text)}"
+                    )
                     knowledge_points = await self._ai_analyze_knowledge_points(
                         ocr_text, subject
                     )
+                else:
+                    logger.debug(
+                        f"⚠️  步骤1b - 跳过百炼AI分析: "
+                        f"has_bailian_service={self.bailian_service is not None}, has_ocr_text={bool(ocr_text)}"
+                    )
 
             if not knowledge_points:
-                logger.warning(f"无法为错题 {mistake_id} 提取知识点，跳过关联")
+                logger.warning(
+                    f"❌ 无法为错题 {mistake_id} 提取知识点，跳过关联: "
+                    f"user_id={user_id}, subject={subject}, ai_feedback={ai_feedback is not None}"
+                )
                 return []
+
+            logger.info(
+                f"✅ 步骤1 完成 - 提取知识点成功: mistake_id={mistake_id}, "
+                f"knowledge_points={[kp.get('name') for kp in knowledge_points]}"
+            )
 
             # 2. 查询或创建知识点掌握度记录
             associations = []
             # 占位符黑名单（AI 可能返回的无效知识点名称）
             INVALID_NAMES = {"知识点名称", "知识点", "placeholder", "example", "示例"}
+            invalid_kp_count = 0
+            created_km_count = 0
 
             for idx, kp_data in enumerate(knowledge_points):
                 kp_name = kp_data.get("name") or kp_data.get("knowledge_point")
                 if not kp_name:
+                    logger.debug(f"📌 步骤2 - 知识点缺少名称: kp_data={kp_data}")
                     continue
 
                 # 🔧 过滤占位符和无效知识点名称
                 if kp_name.strip() in INVALID_NAMES:
-                    logger.warning(f"跳过无效知识点名称: {kp_name}")
+                    logger.warning(f"⚠️  步骤2 - 跳过无效知识点名称: {kp_name}")
+                    invalid_kp_count += 1
                     continue
 
                 # 查询知识点掌握度记录
+                logger.debug(
+                    f"📌 步骤2 - 查询或创建KnowledgeMastery: "
+                    f"user_id={user_id}, subject={subject}, kp_name={kp_name}, idx={idx}"
+                )
                 km = await self._get_or_create_knowledge_mastery(
                     user_id, subject, kp_name
+                )
+                created_km_count += 1
+                logger.debug(
+                    f"📌 步骤2 - KnowledgeMastery处理完成: "
+                    f"km_id={km.id}, kp_name={kp_name}"
                 )
 
                 # 创建关联记录
@@ -147,15 +182,34 @@ class KnowledgeGraphService:
 
                 associations.append(assoc_data)
 
+            logger.info(
+                f"✅ 步骤2 完成 - 知识点掌握度处理: "
+                f"mistake_id={mistake_id}, total_kp={len(knowledge_points)}, "
+                f"valid_kp={created_km_count}, invalid_kp={invalid_kp_count}, "
+                f"associations={len(associations)}"
+            )
+
             # 🔧 [修复] 先提交知识点掌握度记录，确保不因后续异常而丢失
+            logger.info(
+                f"💾 提交 {len(associations)} 个知识点掌握度记录到数据库: "
+                f"mistake_id={mistake_id}"
+            )
             await self.db.commit()
-            logger.debug(f"已提交 {len(associations)} 个知识点掌握度记录")
+            logger.info(
+                f"✅ 知识点掌握度记录已提交: mistake_id={mistake_id}, count={len(associations)}"
+            )
 
             # 3. 批量创建关联
+            logger.info(
+                f"🔗 开始批量创建 {len(associations)} 个关联记录: mistake_id={mistake_id}"
+            )
             created = await self.mkp_repo.batch_create_associations(associations)
             await self.db.commit()
 
-            logger.info(f"为错题 {mistake_id} 创建了 {len(created)} 个知识点关联")
+            logger.info(
+                f"✅ 为错题 {mistake_id} 成功创建 {len(created)} 个知识点关联: "
+                f"user_id={user_id}, subject={subject}"
+            )
 
             # 🔧 [已废弃] mistake_count 改为实时统计，不再维护冗余字段
             # 错题数量从 mistake_knowledge_points 关联表实时计算
@@ -183,7 +237,11 @@ class KnowledgeGraphService:
 
         except Exception as e:
             await self.db.rollback()
-            logger.error(f"分析并关联知识点失败: {e}", exc_info=True)
+            logger.error(
+                f"❌ 分析并关联知识点失败: mistake_id={mistake_id}, "
+                f"user_id={user_id}, subject={subject}, error={e}",
+                exc_info=True,
+            )
             raise ServiceError(f"知识点关联失败: {str(e)}")
 
     def _extract_knowledge_points(
@@ -772,8 +830,7 @@ class KnowledgeGraphService:
                 )
             elif learning_points:
                 context_parts.append(
-                    "学生整体学习进展良好，可适当提升题目难度，"
-                    "巩固正在学习的知识点。"
+                    "学生整体学习进展良好，可适当提升题目难度，巩固正在学习的知识点。"
                 )
             else:
                 context_parts.append(
@@ -946,7 +1003,6 @@ class KnowledgeGraphService:
             # 从未练习过，风险较低
             return 0.3
 
-
         # 计算距离上次练习的天数
         days_since_practice = (now - last_practiced).days
 
@@ -1064,14 +1120,18 @@ class KnowledgeGraphService:
         try:
             # 标准化subject为中文（数据库中存储的是中文）
             normalized_subject = normalize_subject(subject)
-            logger.debug(f"Subject映射: {subject} -> {normalized_subject}")
+            user_id_str = str(user_id)
+            logger.info(
+                f"🔍 开始获取知识图谱: user_id={user_id_str}, "
+                f"subject_input={subject}, normalized_subject={normalized_subject}"
+            )
 
             # 1. 查询用户该学科的所有知识点掌握度（按掌握度升序排列）
             stmt = (
                 select(KnowledgeMastery)
                 .where(
                     and_(
-                        KnowledgeMastery.user_id == str(user_id),
+                        KnowledgeMastery.user_id == user_id_str,
                         KnowledgeMastery.subject == normalized_subject,
                     )
                 )
@@ -1080,13 +1140,18 @@ class KnowledgeGraphService:
             result = await self.db.execute(stmt)
             kms = result.scalars().all()
 
+            logger.info(
+                f"📊 KnowledgeMastery 查询结果: user_id={user_id_str}, "
+                f"subject={normalized_subject}, found={len(kms)} records"
+            )
+
             # 如果该学科没有知识点掌握度数据,尝试按错题记录进行兜底聚合(方案D)
             if not kms:
                 from sqlalchemy import desc
 
-                logger.info(
-                    "知识图谱无 KnowledgeMastery 数据,尝试按错题记录动态聚合: "
-                    f"user={user_id}, subject={subject}"
+                logger.warning(
+                    f"⚠️ 无 KnowledgeMastery 数据，启用兜底方案: "
+                    f"user_id={user_id_str}, subject={normalized_subject}"
                 )
 
                 # 基于错题记录按知识点进行简单聚合,仅作为兜底方案
@@ -1094,7 +1159,7 @@ class KnowledgeGraphService:
                     select(MistakeRecord)
                     .where(
                         and_(
-                            MistakeRecord.user_id == str(user_id),
+                            MistakeRecord.user_id == user_id_str,
                             MistakeRecord.subject == normalized_subject,
                         )
                     )
@@ -1104,11 +1169,44 @@ class KnowledgeGraphService:
                 mistake_result = await self.db.execute(stmt_from_mistakes)
                 mistake_rows = mistake_result.scalars().all()
 
+                logger.info(
+                    f"📋 MistakeRecord 查询结果: user_id={user_id_str}, "
+                    f"subject={normalized_subject}, found={len(mistake_rows)} records"
+                )
+
                 if not mistake_rows:
-                    # 兜底也没有数据,返回空结果
-                    logger.info(
-                        f"用户 {user_id} 在学科 {subject} 暂无错题记录,返回空图谱"
+                    # 兜底也没有数据，执行诊断查询
+                    logger.warning(
+                        f"⚠️ 用户在该学科暂无数据: user_id={user_id_str}, "
+                        f"subject={normalized_subject}，执行诊断查询"
                     )
+
+                    # 诊断查询1: 检查该用户是否存在任何学科的 KnowledgeMastery
+                    from sqlalchemy import select
+
+                    diag_stmt1 = (
+                        select(KnowledgeMastery)
+                        .where(KnowledgeMastery.user_id == user_id_str)
+                        .limit(5)
+                    )
+                    diag_result1 = await self.db.execute(diag_stmt1)
+                    diag_km_count = len(diag_result1.scalars().all())
+
+                    # 诊断查询2: 检查该用户是否存在任何学科的 MistakeRecord
+                    diag_stmt2 = (
+                        select(MistakeRecord)
+                        .where(MistakeRecord.user_id == user_id_str)
+                        .limit(5)
+                    )
+                    diag_result2 = await self.db.execute(diag_stmt2)
+                    diag_mistake_count = len(diag_result2.scalars().all())
+
+                    logger.warning(
+                        f"📊 诊断结果: 该用户其他学科 KnowledgeMastery 数量={diag_km_count}, "
+                        f"MistakeRecord 数量={diag_mistake_count}, "
+                        f"可能原因: (1)subject标准化不一致 (2)错题未关联知识点 (3)暂无该学科错题"
+                    )
+
                     return {
                         "subject": subject,
                         "nodes": [],
