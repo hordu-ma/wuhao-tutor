@@ -198,6 +198,12 @@ const learningAPI = {
       let hasError = false;
       let connectionTimeout = null;
       let hasReceivedData = false; // 🔧 标记是否收到过数据
+      let lastMessageTimeout = null; // 🔧 消息级超时
+      let lastMessageTime = Date.now(); // 🔧 上次消息时间
+      const CONTENT_TIMEOUT = 90000; // 🔧 流式内容超时：90秒（修复5 - 支持长输出）
+      const PROCESSING_TIMEOUT = 120000; // 🔧 后端处理超时：120秒（修复5 - 给后台任务充足时间）
+      const MESSAGE_TIMEOUT = CONTENT_TIMEOUT; // 兼容旧代码
+      let contentFinished = false; // 🔧 标记内容接收是否完成
 
       // 🔧 连接超时检测（20秒，给图片上传和处理足够时间）
       connectionTimeout = setTimeout(() => {
@@ -265,12 +271,13 @@ const learningAPI = {
         console.log('[WebSocket] 连接已建立，发送请求...');
         clearTimeout(connectionTimeout); // 🔧 清除连接超时
 
-        // 🔧 设置数据接收超时（2分钟，给AI处理足够时间）
-        connectionTimeout = setTimeout(() => {
-          if (!hasError && !finalData) {
-            console.warn('[WebSocket] 等待响应超时');
+        // 🔧 设置消息级超时（30秒无新消息则超时，修复4）
+        lastMessageTime = Date.now();
+        lastMessageTimeout = setTimeout(() => {
+          if (!hasError && !finalData && !contentFinished) {
+            console.warn('[WebSocket] 消息超时：30秒无新数据');
             hasError = true;
-            clearTimeout(connectionTimeout);
+            clearTimeout(lastMessageTimeout);
 
             if (socketTask) {
               try {
@@ -279,11 +286,11 @@ const learningAPI = {
             }
 
             reject({
-              code: 'WS_RESPONSE_TIMEOUT',
-              message: 'AI 响应超时，请稍后重试',
+              code: 'WS_MESSAGE_TIMEOUT',
+              message: 'AI 响应超时，请检查网络后重试',
             });
           }
-        }, 120000);
+        }, CONTENT_TIMEOUT);
 
         // 发送请求数据
         socketTask.send({
@@ -321,6 +328,28 @@ const learningAPI = {
       socketTask.onMessage(res => {
         try {
           hasReceivedData = true; // 🔧 标记已收到数据
+          lastMessageTime = Date.now(); // 🔧 更新最后消息时间
+
+          // 🔧 重置消息级超时（仅在 contentFinished 前使用 CONTENT_TIMEOUT）
+          if (lastMessageTimeout) {
+            clearTimeout(lastMessageTimeout);
+          }
+          lastMessageTimeout = setTimeout(() => {
+            if (!hasError && !finalData && !contentFinished) {
+              console.warn('[WebSocket] 消息超时：30秒无新数据');
+              hasError = true;
+              if (socketTask) {
+                try {
+                  socketTask.close();
+                } catch (e) {}
+              }
+              reject({
+                code: 'WS_MESSAGE_TIMEOUT',
+                message: 'AI 响应超时，请检查网络后重试',
+              });
+            }
+          }, CONTENT_TIMEOUT);
+
           const chunk = JSON.parse(res.data);
           console.log('[WebSocket] 收到消息:', {
             type: chunk.type,
@@ -331,7 +360,7 @@ const learningAPI = {
           // 处理错误
           if (chunk.type === 'error') {
             console.error('[WebSocket] 服务器错误:', chunk.message);
-            clearTimeout(connectionTimeout);
+            clearTimeout(lastMessageTimeout);
             hasError = true;
             reject({
               code: 'SERVER_ERROR',
@@ -348,6 +377,62 @@ const learningAPI = {
             fullContent = chunk.full_content;
           }
 
+          // 🔧 处理内容接收完成信号（新增）
+          if (chunk.type === 'content_finished') {
+            console.log('[WebSocket] 内容接收完成，等待后端处理...');
+            contentFinished = true;
+
+            // 🔧 修复4：切换为处理超时（60s），给后端充足时间
+            clearTimeout(lastMessageTimeout);
+            lastMessageTimeout = setTimeout(() => {
+              if (!hasError && !finalData) {
+                console.warn('[WebSocket] 后端处理超时：60秒无响应');
+                hasError = true;
+                if (socketTask) {
+                  try {
+                    socketTask.close();
+                  } catch (e) {}
+                }
+                reject({
+                  code: 'WS_PROCESSING_TIMEOUT',
+                  message: '后端处理超时，请检查网络后重试',
+                });
+              }
+            }, PROCESSING_TIMEOUT);
+
+            onChunk({
+              type: 'content_finished',
+              full_content: chunk.full_content || fullContent,
+              finish_reason: 'stop',
+            });
+            return; // 不继续处理，等待 done 事件
+          }
+
+          // 🔧 处理 keepalive 心跳（修复5）
+          if (chunk.type === 'keepalive') {
+            console.debug('[WebSocket] 收到 keepalive 心跳，重置超时');
+            // 重置消息级超时定时器，告诉前端后端还在工作
+            if (lastMessageTimeout) {
+              clearTimeout(lastMessageTimeout);
+            }
+            lastMessageTimeout = setTimeout(() => {
+              if (!hasError && !finalData && !contentFinished) {
+                console.warn('[WebSocket] 消息超时：90秒无新数据');
+                hasError = true;
+                if (socketTask) {
+                  try {
+                    socketTask.close();
+                  } catch (e) {}
+                }
+                reject({
+                  code: 'WS_MESSAGE_TIMEOUT',
+                  message: 'AI 响应超时，请检查网络后重试',
+                });
+              }
+            }, CONTENT_TIMEOUT);
+            return; // keepalive 不发送给前端，继续等待数据
+          }
+
           // 调用回调函数，传递流式数据
           onChunk({
             type: chunk.type || 'content',
@@ -362,7 +447,7 @@ const learningAPI = {
 
           // 保存最终数据（只在明确的done事件时保存）
           if (chunk.type === 'done') {
-            clearTimeout(connectionTimeout); // 🔧 清除超时定时器
+            clearTimeout(lastMessageTimeout); // 🔧 清除超时定时器
             console.log(
               '[WebSocket] 收到done事件, chunk数据:',
               JSON.stringify({
@@ -401,7 +486,8 @@ const learningAPI = {
       // 监听连接关闭
       socketTask.onClose(res => {
         console.log('[WebSocket] 连接已关闭:', res);
-        clearTimeout(connectionTimeout); // 🔧 清除超时定时器
+        clearTimeout(lastMessageTimeout); // 🔧 清除消息超时定时器
+        clearTimeout(connectionTimeout); // 🔧 清除连接超时
 
         if (hasError) {
           // 已经在错误处理中 reject，不再重复处理
@@ -424,7 +510,8 @@ const learningAPI = {
       // 监听连接错误
       socketTask.onError(error => {
         console.error('[WebSocket] 连接错误:', error);
-        clearTimeout(connectionTimeout); // 🔧 清除超时定时器
+        clearTimeout(lastMessageTimeout); // 🔧 清除消息超时定时器
+        clearTimeout(connectionTimeout); // 🔧 清除连接超时
 
         if (!hasError) {
           hasError = true;

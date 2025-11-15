@@ -3,6 +3,7 @@
 基于百炼AI的智能学习助手服务
 """
 
+import asyncio
 import json
 import logging
 import time
@@ -345,6 +346,46 @@ class LearningService:
 
             raise ServiceError(f"提问处理失败: {str(e)}") from e
 
+    async def _stream_with_keepalive(self, source_stream, keepalive_interval: int = 5):
+        """
+        为流添加 keepalive 心跳，防止长时间无消息导致前端超时
+
+        Args:
+            source_stream: 原始流生成器
+            keepalive_interval: 心跳间隔（秒）
+
+        Yields:
+            从源流产生的数据或心跳信号
+        """
+        import asyncio
+
+        last_yield_time = asyncio.get_event_loop().time()
+
+        try:
+            async for chunk in source_stream:
+                # 发送真实数据块
+                yield chunk
+                last_yield_time = asyncio.get_event_loop().time()
+        except asyncio.TimeoutError:
+            # 如果源流超时，发送心跳让前端知道我们还在处理
+            while True:
+                current_time = asyncio.get_event_loop().time()
+                time_since_last_yield = current_time - last_yield_time
+
+                if time_since_last_yield > keepalive_interval:
+                    # 发送心跳信号，保持连接活跃
+                    yield {
+                        "type": "keepalive",
+                        "content": "",
+                        "full_content": "",
+                    }
+                    logger.debug(
+                        f"📡 发送 keepalive 心跳 ({int(time_since_last_yield)}s)"
+                    )
+                    last_yield_time = current_time
+
+                await asyncio.sleep(1)
+
     async def ask_question_stream(self, user_id: str, request: AskQuestionRequest):
         """
         流式提问功能
@@ -422,9 +463,9 @@ class LearningService:
                     logger.warning("收到 None chunk，跳过处理")
                     continue
 
-                # 📝 调试：打印每个 chunk 的信息
-                logger.info(
-                    f"📦 收到 chunk: type={chunk.get('type', 'N/A')}, content_len={len(chunk.get('content', ''))}, finish_reason={chunk.get('finish_reason')}"
+                # 📝 调试：打印每个 chunk 的信息（使用 debug 级别，减少日志 I/O）
+                logger.debug(
+                    f"📦 收到 chunk: content_len={len(chunk.get('content', ''))}, finish_reason={chunk.get('finish_reason')}"
                 )
 
                 # 累积完整内容
@@ -440,146 +481,55 @@ class LearningService:
                 }
 
                 # 流式完成后保存数据
-                logger.info(
-                    f"🔍 检查 finish_reason: {chunk.get('finish_reason')}, 类型: {type(chunk.get('finish_reason'))}"
-                )
                 if chunk.get("finish_reason") == "stop":
-                    logger.info("✅ 进入公式增强流程")
-                    # 🎯 5.5 增强答案内容（处理数学公式）
-                    try:
-                        enhanced_content = (
-                            await self.formula_service.process_text_with_formulas(
-                                full_answer_content
-                            )
-                        )
-                        # 如果公式处理成功且内容有变化，使用增强后的内容
-                        if enhanced_content and enhanced_content != full_answer_content:
-                            full_answer_content = enhanced_content
-                            logger.info(
-                                f"✅ 公式增强成功，内容长度: {len(enhanced_content)}"
-                            )
+                    logger.info("✅ 流式生成完成，开始后处理")
 
-                            # 🔧 关键修复：发送增强后的完整内容给前端
-                            yield {
-                                "type": "formula_enhanced",
-                                "content": enhanced_content,
-                                "full_content": enhanced_content,
-                                # ❌ 移除 finish_reason，避免触发前端done逻辑
-                            }
-                            logger.info("📤 已发送公式增强内容给前端")
-                        else:
-                            logger.info("⚠️ 公式增强未生效或内容未变化")
-                    except Exception as formula_err:
-                        logger.warning(
-                            f"公式增强失败，使用原始内容: {str(formula_err)}"
-                        )
-
-                    # 6. 保存答案
-                    answer_data = {
-                        "question_id": question_id,
-                        "content": full_answer_content,
-                        "tokens_used": chunk.get("usage", {}).get("total_tokens", 0),
-                        "model_name": chunk.get(
-                            "model", "qwen-turbo"
-                        ),  # 使用实际调用的模型
+                    # 🔧 5.5 立即发送"内容接收完成"信号，不阻塞前端
+                    yield {
+                        "type": "content_finished",
+                        "full_content": full_answer_content,
+                        "finish_reason": "stop",
                     }
-                    answer = await self.answer_repo.create(answer_data)
-                    answer_id = extract_orm_uuid_str(answer, "id")
+                    logger.info("📤 已发送 content_finished 信号给前端")
 
-                    # 7. 更新问题状态
-                    await self.question_repo.update(
-                        question_id,
-                        {"is_processed": True},
-                    )
-
-                    # 8. 更新会话统计
-                    tokens_used = chunk.get("usage", {}).get("total_tokens", 0)
-                    await self._update_session_stats(session_id, tokens_used)
-
-                    # 9. 更新学习分析（后台任务，不阻塞响应）
+                    # 6. 保存答案（最小必要操作，快速完成）
                     try:
-                        await self._update_learning_analytics(user_id, question, answer)
-                    except Exception as e:
-                        logger.warning(f"更新学习分析失败: {e}")
+                        answer_data = {
+                            "question_id": question_id,
+                            "content": full_answer_content,
+                            "tokens_used": chunk.get("usage", {}).get(
+                                "total_tokens", 0
+                            ),
+                            "model_name": chunk.get("model", "qwen-turbo"),
+                        }
+                        answer = await self.answer_repo.create(answer_data)
+                        answer_id = extract_orm_uuid_str(answer, "id")
 
-                    # 🎯 9.3 作业批改专用逻辑（流式版本）
-                    correction_result = None
-                    mistakes_created_count = 0
-                    try:
-                        # 检测是否为作业批改场景
-                        is_correction_scenario = self._is_homework_correction_scenario(
-                            request.question_type.value
-                            if request.question_type
-                            else None,
-                            extract_orm_str(question, "content") or "",
-                            request.image_urls,
+                        # 7. 更新问题状态
+                        await self.question_repo.update(
+                            question_id,
+                            {"is_processed": True},
                         )
 
-                        logger.info(
-                            f"🔍 [流式] 批改场景检测: is_correction={is_correction_scenario}, "
-                            f"question_type={request.question_type}, "
-                            f"has_images={bool(request.image_urls)}"
-                        )
+                        # 8. 更新会话统计
+                        tokens_used = chunk.get("usage", {}).get("total_tokens", 0)
+                        await self._update_session_stats(session_id, tokens_used)
 
-                        if is_correction_scenario:
-                            logger.info("📝 [流式] 检测到作业批改场景，启动专用逻辑")
+                        logger.info(f"✅ 核心数据保存完成: answer_id={answer_id}")
 
-                            # 调用AI进行批改
-                            subject = extract_orm_str(request, "subject") or "math"
-                            user_hint = extract_orm_str(question, "content")
+                        # 🔧 提交事务，确保核心数据立即持久化（修复1）
+                        await self.db.commit()
+                        logger.info("💾 核心数据事务已提交")
+                    except Exception as save_err:
+                        logger.error(f"保存答案失败: {save_err}", exc_info=True)
+                        await self.db.rollback()
+                        yield {
+                            "type": "error",
+                            "message": f"保存答案失败: {str(save_err)}",
+                        }
+                        return
 
-                            correction_result = (
-                                await self._call_ai_for_homework_correction(
-                                    image_urls=request.image_urls or [],
-                                    subject=subject,
-                                    user_hint=user_hint,
-                                )
-                            )
-
-                            # 如果批改成功，逐题创建错题
-                            if correction_result:
-                                (
-                                    mistakes_created_count,
-                                    mistake_list,
-                                ) = await self._create_mistakes_from_correction(
-                                    user_id=user_id,
-                                    correction_result=correction_result,
-                                    subject=subject,
-                                    image_urls=request.image_urls or [],
-                                )
-                                # 🎯 提交事务，确保错题和知识点都保存
-                                await self.db.commit()
-                                logger.info(
-                                    f"✅ [流式] 作业批改完成: 创建 {mistakes_created_count} 个错题"
-                                )
-                    except Exception as correction_err:
-                        logger.warning(
-                            f"[流式] 作业批改失败，但不影响问答: {str(correction_err)}"
-                        )
-
-                    # 🎯 9.5 智能错题自动创建（简化规则，只在非批改场景执行）
-                    mistake_created = False
-                    mistake_info = None
-                    if not correction_result:  # 只在非批改场景执行
-                        try:
-                            mistake_result = await self._auto_create_mistake_if_needed(
-                                user_id, question, answer, request
-                            )
-                            if mistake_result:
-                                mistake_created = True
-                                mistake_info = mistake_result
-                                logger.info(
-                                    f"✅ [流式] 错题自动创建成功: user_id={user_id}, "
-                                    f"mistake_id={mistake_info.get('id')}, "
-                                    f"category={mistake_info.get('category')}, "
-                                    f"confidence={mistake_info.get('confidence')}"
-                                )
-                        except Exception as mistake_err:
-                            logger.warning(
-                                f"[流式] 错题创建失败，但不影响问答: {str(mistake_err)}"
-                            )
-
-                    # 10. 发送完成事件
+                    # 9. 立即发送 done 事件（关键修复！）
                     done_event = {
                         "type": "done",
                         "question_id": question_id,
@@ -587,37 +537,23 @@ class LearningService:
                         "session_id": session_id,
                         "usage": chunk.get("usage", {}),
                         "full_content": full_answer_content,
-                        "mistake_created": mistake_created,  # 🎯 简化规则创建
-                        "mistake_info": mistake_info,  # 🎯 简化规则信息
                     }
-
-                    # 🎯 添加批改结果（如果存在）
-                    if correction_result:
-                        # 转换为字典格式
-                        correction_data = [
-                            {
-                                "question_number": item.question_number,
-                                "error_type": item.error_type,
-                                "is_unanswered": item.is_unanswered,
-                                "student_answer": item.student_answer,
-                                "correct_answer": item.correct_answer,
-                                "explanation": item.explanation,
-                                "knowledge_points": item.knowledge_points,
-                            }
-                            for item in correction_result.corrections
-                        ]
-                        done_event["correction_result"] = correction_data
-                        done_event["mistakes_created"] = mistakes_created_count
-                        logger.info(
-                            f"📤 [流式] 发送批改结果: {len(correction_result.corrections)} 题, "
-                            f"{mistakes_created_count} 个错题"
-                        )
-                        logger.debug(
-                            f"📤 [调试] done_event keys: {list(done_event.keys())}, "
-                            f"correction_result length: {len(correction_data)}"
-                        )
-
                     yield done_event
+                    logger.info("📤 已发送 done 事件，前端流式响应完成")
+
+                    # 🔧 10. 后台异步处理长时间操作（不阻塞前端）
+                    asyncio.create_task(
+                        self._background_post_processing(
+                            user_id=user_id,
+                            question_id=question_id,
+                            answer_id=answer_id,
+                            full_answer_content=full_answer_content,
+                            request=request,
+                            question=question,
+                            chunk=chunk,
+                        )
+                    )
+                    logger.info("🔄 后台处理任务已创建")
 
         except BailianServiceError as e:
             logger.error(f"AI服务调用失败: {e}")
@@ -637,6 +573,117 @@ class LearningService:
                     pass
 
             yield {"type": "error", "message": f"提问处理失败: {str(e)}"}
+
+    async def _background_post_processing(
+        self,
+        user_id: str,
+        question_id: str,
+        answer_id: str,
+        full_answer_content: str,
+        request: AskQuestionRequest,
+        question: Question,
+        chunk: Dict[str, Any],
+    ) -> None:
+        """
+        后台处理长时间操作（不阻塞 WebSocket 前端响应）
+
+        包括：
+        - 公式增强
+        - 学习分析更新
+        - 作业批改和错题创建
+        """
+        try:
+            logger.info(
+                f"🔄 [后台] 开始后处理: user_id={user_id}, answer_id={answer_id}"
+            )
+
+            # 1. 公式增强（可选）
+            enhanced_content = full_answer_content
+            try:
+                processed_content = (
+                    await self.formula_service.process_text_with_formulas(
+                        full_answer_content
+                    )
+                )
+                if processed_content and processed_content != full_answer_content:
+                    enhanced_content = processed_content
+                    logger.info(
+                        f"✅ [后台] 公式增强成功，内容长度: {len(enhanced_content)}"
+                    )
+                    # 更新答案内容
+                    await self.answer_repo.update(
+                        answer_id, {"content": enhanced_content}
+                    )
+            except Exception as formula_err:
+                logger.warning(f"[后台] 公式增强失败: {str(formula_err)}")
+
+            # 2. 更新学习分析
+            try:
+                answer = await self.answer_repo.get_by_id(answer_id)
+                await self._update_learning_analytics(user_id, question, answer)
+                logger.info("✅ [后台] 学习分析更新完成")
+            except Exception as analytics_err:
+                logger.warning(f"[后台] 学习分析更新失败: {str(analytics_err)}")
+
+            # 3. 作业批改和错题创建
+            try:
+                is_correction_scenario = self._is_homework_correction_scenario(
+                    request.question_type.value if request.question_type else None,
+                    extract_orm_str(question, "content") or "",
+                    request.image_urls,
+                )
+
+                logger.info(
+                    f"🔍 [后台] 批改场景检测: is_correction={is_correction_scenario}"
+                )
+
+                if is_correction_scenario:
+                    logger.info("📝 [后台] 启动作业批改逻辑")
+
+                    subject = extract_orm_str(request, "subject") or "math"
+                    user_hint = extract_orm_str(question, "content")
+
+                    correction_result = await self._call_ai_for_homework_correction(
+                        image_urls=request.image_urls or [],
+                        subject=subject,
+                        user_hint=user_hint,
+                    )
+
+                    if correction_result:
+                        (
+                            mistakes_created_count,
+                            _,
+                        ) = await self._create_mistakes_from_correction(
+                            user_id=user_id,
+                            correction_result=correction_result,
+                            subject=subject,
+                            image_urls=request.image_urls or [],
+                        )
+                        await self.db.commit()
+                        logger.info(
+                            f"✅ [后台] 作业批改完成: 创建 {mistakes_created_count} 个错题"
+                        )
+                else:
+                    # 4. 非批改场景的错题自动创建
+                    try:
+                        answer = await self.answer_repo.get_by_id(answer_id)
+                        mistake_result = await self._auto_create_mistake_if_needed(
+                            user_id, question, answer, request
+                        )
+                        if mistake_result:
+                            logger.info(
+                                f"✅ [后台] 错题自动创建成功: "
+                                f"mistake_id={mistake_result.get('id')}"
+                            )
+                    except Exception as mistake_err:
+                        logger.warning(f"[后台] 错题创建失败: {str(mistake_err)}")
+            except Exception as correction_err:
+                logger.warning(f"[后台] 作业批改失败: {str(correction_err)}")
+
+            logger.info(f"✅ [后台] 后处理完成: answer_id={answer_id}")
+
+        except Exception as e:
+            logger.error(f"❌ [后台] 后处理失败: {str(e)}", exc_info=True)
 
     async def _get_or_create_session(
         self, user_id: str, request: AskQuestionRequest
@@ -1090,22 +1137,40 @@ class LearningService:
         return related_topics[:5], suggested_questions[:3]  # 限制数量
 
     async def _update_session_stats(self, session_id: str, tokens_used: int) -> None:
-        """更新会话统计"""
-        session = await self.session_repo.get_by_id(session_id)
-        if session:
-            # 更新会话统计信息
-            current_tokens = extract_orm_int(session, "total_tokens", 0) or 0
-            current_question_count = extract_orm_int(session, "question_count", 0) or 0
-            session_id_str = extract_orm_uuid_str(session, "id")
+        """
+        更新会话统计（优化版本）
 
-            await self.session_repo.update(
-                session_id_str,
+        使用原始 SQL 更新以减少数据库往返，避免先读后写导致的锁争用
+        特别是在高并发流式请求中
+        """
+        try:
+            from sqlalchemy import text
+
+            # 使用原始 SQL 进行原子性更新，避免竞态条件
+            update_query = text("""
+                UPDATE chat_session
+                SET
+                    total_tokens = COALESCE(total_tokens, 0) + :tokens_used,
+                    question_count = COALESCE(question_count, 0) + 1,
+                    last_active_at = :now
+                WHERE id = :session_id
+            """)
+
+            await self.db.execute(
+                update_query,
                 {
-                    "total_tokens": current_tokens + tokens_used,
-                    "question_count": current_question_count + 1,  # 增加问题计数
-                    "last_active_at": datetime.now().isoformat(),
+                    "tokens_used": tokens_used,
+                    "now": datetime.now().isoformat(),
+                    "session_id": session_id,
                 },
             )
+
+            logger.debug(
+                f"⚡ 会话统计已更新（原子操作）: session_id={session_id}, tokens={tokens_used}"
+            )
+        except Exception as e:
+            logger.warning(f"更新会话统计失败: {e}")
+            # 继续处理，不阻塞流式响应
 
     async def _update_learning_analytics(
         self, user_id: str, question: Question, answer: Answer
