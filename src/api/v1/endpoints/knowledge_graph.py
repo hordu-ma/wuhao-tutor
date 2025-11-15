@@ -21,10 +21,10 @@ from src.schemas.knowledge_graph import (
     LearningCurveResponse,
     MistakeKnowledgePointsResponse,
     SubjectKnowledgeGraphResponse,
-    SubjectType,
     UserKnowledgeMasteryResponse,
     WeakKnowledgeChainsResponse,
 )
+from src.schemas.learning import SubjectType
 from src.services.knowledge_graph_service import KnowledgeGraphService
 
 router = APIRouter()

@@ -162,13 +162,17 @@ async def list_users(
                 "id": str(user.id),
                 "phone": str(user.phone),
                 "name": str(user.name),
-                "nickname": str(user.nickname) if user.nickname else None,
-                "school": str(user.school) if user.school else None,
-                "grade_level": str(user.grade_level) if user.grade_level else None,
-                "class_name": str(user.class_name) if user.class_name else None,
-                "is_active": bool(user.is_active),
-                "is_verified": bool(user.is_verified),
-                "login_count": int(user.login_count),
+                "nickname": str(user.nickname) if user.nickname is not None else None,
+                "school": str(user.school) if user.school is not None else None,
+                "grade_level": str(user.grade_level)
+                if user.grade_level is not None
+                else None,
+                "class_name": str(user.class_name)
+                if user.class_name is not None
+                else None,
+                "is_active": user.is_active,
+                "is_verified": user.is_verified,
+                "login_count": user.login_count,
                 "last_login_at": user.last_login_at,
                 "created_at": user.created_at,
             }

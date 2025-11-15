@@ -15,7 +15,7 @@ import logging
 import time
 from dataclasses import asdict, dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Sequence, Union
 
 import httpx
 
@@ -100,9 +100,9 @@ class BailianService:
 
     async def chat_completion(
         self,
-        messages: List[Union[Dict[str, Any], ChatMessage]],
+        messages: Sequence[Union[Dict[str, Any], ChatMessage]],
         context: Optional[AIContext] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> ChatCompletionResponse:
         """
         聊天补全接口
@@ -142,8 +142,6 @@ class BailianService:
             return response
 
         except Exception as e:
-            processing_time = time.time() - start_time
-
             logger.error(f"百炼API调用失败: {e}")
             if context:
                 logger.error(f"调用上下文: {asdict(context)}")
@@ -529,7 +527,7 @@ class BailianService:
             raise BailianServiceError(f"网络请求错误: {str(e)}") from e
 
     def _format_messages(
-        self, messages: List[Union[Dict[str, Any], ChatMessage]]
+        self, messages: Sequence[Union[Dict[str, Any], ChatMessage]]
     ) -> List[Dict[str, Any]]:
         """
         标准化消息格式，支持多模态内容
@@ -563,21 +561,21 @@ class BailianService:
                 if "role" not in msg:
                     raise ValueError("消息必须包含'role'字段")
 
-                formatted_msg: Dict[str, Any] = {"role": msg["role"]}
+                dict_msg: Dict[str, Any] = {"role": msg["role"]}
 
                 # 处理内容字段，支持多模态
                 if "content" in msg and "image_urls" in msg and msg["image_urls"]:
                     # 构建多模态内容
-                    formatted_msg["content"] = self._build_multimodal_content(
+                    dict_msg["content"] = self._build_multimodal_content(
                         str(msg["content"]), msg["image_urls"]
                     )
                 elif "content" in msg:
                     # 纯文本内容
-                    formatted_msg["content"] = str(msg["content"])
+                    dict_msg["content"] = str(msg["content"])
                 else:
                     raise ValueError("消息必须包含'content'字段")
 
-                formatted.append(formatted_msg)
+                formatted.append(dict_msg)
 
             else:
                 raise ValueError(f"不支持的消息类型: {type(msg)}")
@@ -1004,9 +1002,9 @@ class BailianService:
         except httpx.RequestError as e:
             raise BailianServiceError(f"VL模型网络请求错误: {str(e)}") from e
 
-    def _convert_to_openai_format(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+    def _convert_vl_to_openai_format(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
-        将原生API格式转换为OpenAI兼容格式
+        将VL模型API格式转换为OpenAI兼容格式
         """
         model = payload.get("model", "qwen-vl-max")
         messages = payload.get("input", {}).get("messages", [])

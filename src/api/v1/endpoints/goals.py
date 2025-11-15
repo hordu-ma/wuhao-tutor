@@ -41,11 +41,12 @@ async def get_daily_goals(
     **返回数据:**
     - 每个目标包含：id, title, type, target, current, completed, progress
     """
-    try:
-        import uuid
+    import uuid
 
-        # 开发环境使用固定的测试用户ID
-        current_user_id = "3cf7dbd5-bafc-42f8-9f3d-1493cab87a93"
+    # 开发环境使用固定的测试用户ID
+    current_user_id = "3cf7dbd5-bafc-42f8-9f3d-1493cab87a93"
+
+    try:
         user_uuid = uuid.UUID(current_user_id)
 
         today = datetime.now().date()
@@ -81,13 +82,13 @@ async def get_daily_goals(
         # ========== 2. 提问目标 ==========
         try:
             # 查询今日提问数（这里查询真实数据）
-            from src.models.learning import LearningQuestion
+            from src.models.learning import Question
 
             question_result = await db.execute(
-                select(LearningQuestion).where(
+                select(Question).where(
                     and_(
-                        LearningQuestion.user_id == user_uuid,
-                        LearningQuestion.created_at
+                        Question.user_id == user_uuid,
+                        Question.created_at
                         >= datetime.combine(today, datetime.min.time()),
                     )
                 )

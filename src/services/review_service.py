@@ -182,7 +182,7 @@ class ReviewService:
         if skip:
             session.status = self.STATUS_COMPLETED_FAIL
             await self.review_repo.update(
-                session.id,
+                str(session.id),
                 {
                     "status": session.status,
                     "current_stage": session.current_stage,
@@ -212,9 +212,13 @@ class ReviewService:
 
         # 调用AI判断答案正确性
         try:
+            # 转换ORM列属性为字符串，避免类型检查错误
+            question_text = str(mistake.ocr_text or mistake.title or "")
+            standard_answer_text = str(mistake.correct_answer or "")
+
             judge_result = await self.bailian_service.judge_answer(
-                question=mistake.ocr_text or mistake.title or "",
-                standard_answer=mistake.correct_answer or "",
+                question=question_text,
+                standard_answer=standard_answer_text,
                 user_answer=answer,
             )
             is_correct = judge_result["is_correct"]
@@ -231,7 +235,7 @@ class ReviewService:
         if not is_correct:
             session.status = self.STATUS_COMPLETED_FAIL
             await self.review_repo.update(
-                session.id,
+                str(session.id),
                 {
                     "status": session.status,
                     "current_stage": session.current_stage,
@@ -264,7 +268,7 @@ class ReviewService:
             # 第三阶段完成 → 会话成功结束
             session.status = self.STATUS_COMPLETED_SUCCESS
             await self.review_repo.update(
-                session.id,
+                str(session.id),
                 {
                     "status": session.status,
                     "attempts": session.attempts,
@@ -290,7 +294,7 @@ class ReviewService:
         next_stage = current_stage + 1
         session.current_stage = next_stage
         await self.review_repo.update(
-            session.id,
+            str(session.id),
             {
                 "current_stage": session.current_stage,
                 "attempts": session.attempts,
@@ -365,7 +369,7 @@ class ReviewService:
                 temperature=0.7,  # 适当创造性
             )
 
-            variant_content = response.get("content", "")
+            variant_content = response.content if response else ""
             if not variant_content:
                 raise ServiceError("AI failed to generate variant question")
 
@@ -395,11 +399,12 @@ class ReviewService:
         Returns:
             包含巩固题内容的字典
         """
-        try:
-            knowledge_points = mistake.knowledge_points or []
-            if not knowledge_points:
-                knowledge_points = ["基础知识"]
+        # 初始化knowledge_points确保在异常处理中可用
+        knowledge_points = mistake.knowledge_points or []
+        if not knowledge_points:
+            knowledge_points = ["基础知识"]
 
+        try:
             prompt = f"""请针对以下知识点生成一道巩固练习题。
 
 知识点：
@@ -417,7 +422,7 @@ class ReviewService:
                 temperature=0.6,
             )
 
-            knowledge_content = response.get("content", "")
+            knowledge_content = response.content if response else ""
             if not knowledge_content:
                 raise ServiceError("AI failed to generate knowledge question")
 

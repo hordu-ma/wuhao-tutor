@@ -1002,9 +1002,11 @@ class AnalyticsService:
 
             # 找出最活跃时段和日期
             most_active_hour = (
-                max(hour_counts, key=hour_counts.get) if hour_counts else 0
+                max(hour_counts, key=lambda h: hour_counts[h]) if hour_counts else 0
             )
-            most_active_day = max(day_counts, key=day_counts.get) if day_counts else 0
+            most_active_day = (
+                max(day_counts, key=lambda d: day_counts[d]) if day_counts else 0
+            )
 
             # 找出偏好难度
             difficulty_map = {1: "easy", 2: "easy", 3: "medium", 4: "hard", 5: "hard"}

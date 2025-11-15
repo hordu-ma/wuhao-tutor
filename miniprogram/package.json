@@ -29,7 +29,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/wuhao-tutor.git",
+    "url": "https://github.com/hordu-ma/wuhao-tutor.git",
     "directory": "miniprogram"
   },
   "dependencies": {

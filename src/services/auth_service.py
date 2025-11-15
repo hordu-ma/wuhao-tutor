@@ -13,7 +13,9 @@ import jwt
 from src.core.config import get_settings
 from src.core.exceptions import AuthenticationError, ServiceError
 from src.models.user import UserSession
+from src.schemas.auth import GradeLevel as AuthGradeLevel
 from src.schemas.auth import LoginResponse, RefreshTokenResponse, UserResponse
+from src.schemas.auth import UserRole as AuthUserRole
 from src.services.user_service import UserService
 
 logger = logging.getLogger("auth_service")
@@ -304,7 +306,6 @@ class AuthService:
                     avatar_url=avatar,
                     name=user_info.get("name") if user_info else None,
                     phone=user_info.get("phone") if user_info else None,
-                    role=user_info.get("role", "student") if user_info else "student",
                 )
 
             # 创建用户会话
@@ -415,7 +416,21 @@ class AuthService:
             )
 
             # 构建用户信息响应
-            from src.schemas.auth import UserResponse
+            # 确保角色类型正确
+            user_role = (
+                AuthUserRole(user.role) if isinstance(user.role, str) else user.role
+            )
+
+            # 确保学段类型正确
+            user_grade_level = None
+            if user.grade_level:
+                if isinstance(user.grade_level, str):
+                    try:
+                        user_grade_level = AuthGradeLevel(user.grade_level)
+                    except (ValueError, KeyError):
+                        user_grade_level = None
+                else:
+                    user_grade_level = user.grade_level
 
             user_info = UserResponse(
                 id=str(user.id),
@@ -423,9 +438,9 @@ class AuthService:
                 name=user.name,
                 nickname=user.nickname,
                 avatar_url=user.avatar_url,
-                role=user.role,
+                role=user_role,
                 school=user.school,
-                grade_level=user.grade_level,
+                grade_level=user_grade_level,
                 class_name=user.class_name,
                 institution=user.institution,
                 parent_contact=user.parent_contact,

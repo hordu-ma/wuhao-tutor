@@ -231,8 +231,7 @@ class AIImageAccessService:
         allowed_types = {"image/jpeg", "image/png", "image/webp", "image/gif"}
         if file.content_type not in allowed_types:
             raise AIServiceError(
-                f"不支持的图片格式（{file.content_type}），"
-                f"仅支持: JPG、PNG、WebP、GIF"
+                f"不支持的图片格式（{file.content_type}），仅支持: JPG、PNG、WebP、GIF"
             )
 
         # 检查文件内容（简单验证）
@@ -304,6 +303,100 @@ class AIImageAccessService:
             "storage_type": "local",
             "warning": "本地存储，需要配置公网访问",
         }
+
+    async def file_exists(self, object_name: str) -> bool:
+        """
+        检查OSS中的文件是否存在
+
+        Args:
+            object_name: OSS对象名
+
+        Returns:
+            bool: 文件是否存在
+        """
+        if not self.is_oss_available or not self.bucket:
+            logger.debug(f"OSS不可用，无法检查文件: {object_name}")
+            return False
+
+        try:
+            # 使用 exists 方法检查对象是否存在
+            exists = self.bucket.object_exists(object_name)
+            logger.debug(f"文件存在检查: {object_name} -> {exists}")
+            return exists
+        except Exception as e:
+            logger.debug(f"检查文件存在性失败: {object_name}, error={e}")
+            return False
+
+    async def get_file_url(self, object_name: str) -> Optional[str]:
+        """
+        获取OSS文件的公网可访问URL
+
+        Args:
+            object_name: OSS对象名
+
+        Returns:
+            Optional[str]: 文件的公网URL，如果不可用则返回None
+        """
+        if not self.is_oss_available or not self.bucket:
+            logger.debug(f"OSS不可用，无法获取文件URL: {object_name}")
+            return None
+
+        try:
+            # 生成公网可访问的URL
+            url = self._generate_ai_accessible_url(object_name)
+            logger.debug(f"获取文件URL成功: {object_name} -> {url[:80]}...")
+            return url
+        except Exception as e:
+            logger.error(f"获取文件URL失败: {object_name}, error={e}")
+            return None
+
+    async def upload_file(
+        self,
+        file_data: bytes,
+        object_name: str,
+        content_type: str = "application/octet-stream",
+    ) -> Optional[str]:
+        """
+        上传文件到OSS并返回公网可访问URL
+
+        Args:
+            file_data: 文件内容（字节）
+            object_name: OSS对象名
+            content_type: 文件内容类型
+
+        Returns:
+            Optional[str]: 上传后的公网可访问URL，失败则返回None
+        """
+        if not self.is_oss_available or not self.bucket:
+            logger.warning(f"OSS不可用，无法上传文件: {object_name}")
+            return None
+
+        try:
+            # 上传文件到OSS
+            result = self.bucket.put_object(
+                object_name,
+                file_data,
+                headers={
+                    "Content-Type": content_type,
+                    "Cache-Control": "max-age=86400",  # 缓存24小时
+                },
+            )
+
+            if result.status == 200:
+                # 生成公网可访问的URL
+                url = self._generate_ai_accessible_url(object_name)
+                logger.info(
+                    f"文件上传成功: {object_name}, size={len(file_data)}, "
+                    f"type={content_type}"
+                )
+                return url
+            else:
+                logger.error(f"上传文件失败: {object_name}, status={result.status}")
+                return None
+
+        except Exception as e:
+            logger.error(f"上传文件异常: {object_name}, error={e}")
+            return None
 
     def generate_signed_url(
         self, object_name: str, expires_in: int = 14400

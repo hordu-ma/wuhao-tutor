@@ -216,7 +216,7 @@ class FormulaService:
                 cache_repo = FormulaCacheRepository(db)
                 cached = await cache_repo.get_by_hash(cache_key)
 
-                if cached and cached.image_url:
+                if cached is not None and cached.image_url is not None:
                     logger.debug(f"✅ 数据库缓存命中: {cache_key[:8]}...")
 
                     # 验证 URL 是否仍然有效（可选，增加一次网络请求）
@@ -226,7 +226,11 @@ class FormulaService:
                             await cache_repo.increment_hit_count(cache_key)
                         except Exception as e:
                             logger.debug(f"更新命中计数失败（不影响主流程）: {e}")
-                        return str(cached.image_url) if cached.image_url else None
+                        return (
+                            str(cached.image_url)
+                            if cached.image_url is not None
+                            else None
+                        )
                     else:
                         logger.warning(
                             f"缓存 URL 已失效，将重新渲染: {cache_key[:8]}..."
@@ -246,9 +250,9 @@ class FormulaService:
                     if hasattr(self.ai_image_service, "file_exists") and hasattr(
                         self.ai_image_service, "get_file_url"
                     ):
-                        if await self.ai_image_service.file_exists(png_path):
-                            url = await self.ai_image_service.get_file_url(png_path)
-                            if url:
+                        if await self.ai_image_service.file_exists(png_path):  # type: ignore
+                            url = await self.ai_image_service.get_file_url(png_path)  # type: ignore
+                            if url is not None:
                                 logger.info(f"OSS 缓存命中（PNG）: {cache_key[:8]}...")
                                 # 回写到数据库缓存
                                 await self._save_to_db_cache(
@@ -256,15 +260,17 @@ class FormulaService:
                                 )
                                 return str(url)
 
-                        # 检查 SVG 文件
-                        if await self.ai_image_service.file_exists(svg_path):
-                            url = await self.ai_image_service.get_file_url(svg_path)
-                            if url:
-                                logger.info(f"OSS 缓存命中（SVG）: {cache_key[:8]}...")
-                                await self._save_to_db_cache(
-                                    cache_key, "", str(url), "inline"
-                                )
-                                return str(url)
+                            # 检查 SVG 文件
+                            if await self.ai_image_service.file_exists(svg_path):  # type: ignore
+                                url = await self.ai_image_service.get_file_url(svg_path)  # type: ignore
+                                if url is not None:
+                                    logger.info(
+                                        f"OSS 缓存命中（SVG）: {cache_key[:8]}..."
+                                    )
+                                    await self._save_to_db_cache(
+                                        cache_key, "", str(url), "inline"
+                                    )
+                                    return str(url)
                 except Exception as oss_err:
                     logger.debug(f"OSS 检查失败（可能不支持）: {oss_err}")
             finally:
@@ -479,13 +485,13 @@ class FormulaService:
                 cache_path = f"{self.cache_prefix}{cache_key}.png"
 
                 if hasattr(self.ai_image_service, "upload_file"):
-                    url_result = await self.ai_image_service.upload_file(
+                    url_result = await self.ai_image_service.upload_file(  # type: ignore
                         file_data=image_bytes,
                         object_name=cache_path,
                         content_type="image/png",
                     )
                     logger.debug(f"PNG 已上传到 OSS: {cache_path}")
-                    return str(url_result) if url_result else None
+                    return str(url_result) if url_result is not None else None
                 else:
                     logger.warning("AIImageAccessService 不支持 upload_file 方法")
                     return None
@@ -495,13 +501,13 @@ class FormulaService:
                 cache_path = f"{self.cache_prefix}{cache_key}.svg"
 
                 if hasattr(self.ai_image_service, "upload_file"):
-                    url_result = await self.ai_image_service.upload_file(
+                    url_result = await self.ai_image_service.upload_file(  # type: ignore
                         file_data=image_content.encode("utf-8"),
                         object_name=cache_path,
                         content_type="image/svg+xml",
                     )
                     logger.debug(f"SVG 已上传到 OSS: {cache_path}")
-                    return str(url_result) if url_result else None
+                    return str(url_result) if url_result is not None else None
                 else:
                     logger.warning("AIImageAccessService 不支持 upload_file 方法")
                     return None

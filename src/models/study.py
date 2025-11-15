@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import enum
-from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     JSON,
@@ -22,14 +21,9 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
-
-from .base import BaseModel, is_sqlite
-
-if TYPE_CHECKING:
-    from .review import MistakeReviewSession
-
 from sqlalchemy.sql import func
 
+from .base import BaseModel, is_sqlite
 
 
 class Subject(enum.Enum):
@@ -112,7 +106,10 @@ class MistakeRecord(BaseModel):
 
     # 题目属性
     difficulty_level = Column(
-        Integer, default=2, nullable=False, comment="难度等级(1-5)"  # INTERMEDIATE
+        Integer,
+        default=2,
+        nullable=False,
+        comment="难度等级(1-5)",  # INTERMEDIATE
     )
 
     estimated_time = Column(Integer, nullable=True, comment="预估解题时间（分钟）")
@@ -188,9 +185,7 @@ class MistakeRecord(BaseModel):
     # 关联关系
     user = relationship("User", back_populates="mistakes")
     reviews = relationship("MistakeReview", back_populates="mistake")
-    review_sessions: list["MistakeReviewSession"] = relationship(
-        back_populates="mistake"
-    )
+    review_sessions = relationship("MistakeReviewSession", back_populates="mistake")
 
     # 索引
     __table_args__ = (

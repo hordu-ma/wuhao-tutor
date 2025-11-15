@@ -28,7 +28,6 @@ from src.models.learning import (
     ChatSession,
     LearningAnalytics,
     Question,
-    QuestionType,
     SessionStatus,
 )
 from src.models.user import User
@@ -233,7 +232,7 @@ class LearningService:
             try:
                 # 9.1 检测是否为作业批改场景
                 is_correction_scenario = self._is_homework_correction_scenario(
-                    request.question_type,
+                    request.question_type.value if request.question_type else None,
                     extract_orm_str(question, "content") or "",
                     request.image_urls,
                 )
@@ -509,7 +508,9 @@ class LearningService:
                     try:
                         # 检测是否为作业批改场景
                         is_correction_scenario = self._is_homework_correction_scenario(
-                            request.question_type,
+                            request.question_type.value
+                            if request.question_type
+                            else None,
                             extract_orm_str(question, "content") or "",
                             request.image_urls,
                         )
@@ -2391,12 +2392,15 @@ class LearningService:
                     logger.warning(f"规则提取知识点失败: {kp_err}")
                     knowledge_points_list = []
 
+            # 初始化confidence确保在所有代码路径上都已定义
+            confidence = 0.8
+
             ai_feedback_data = {
                 "category": category,
                 "auto_created": True,
                 "classification": {
                     "category": category,
-                    "confidence": confidence if "confidence" in locals() else 0.8,
+                    "confidence": confidence,
                     "reasoning": "基于智能判断",
                 },
                 "auto_created_at": datetime.now().isoformat(),
@@ -2860,7 +2864,7 @@ class LearningService:
 
         # 返回匹配最多的科目，如果没有匹配则默认数学
         if scores:
-            inferred = max(scores, key=scores.get)
+            inferred = max(scores, key=lambda x: scores[x])
             logger.debug(f"科目推断: {inferred} (匹配分数: {scores})")
             return inferred
 
@@ -2871,7 +2875,7 @@ class LearningService:
 
     def _is_homework_correction_scenario(
         self,
-        question_type: Optional[QuestionType],
+        question_type: Optional[str],
         content: str,
         image_urls: Optional[List[str]],
     ) -> bool:
@@ -2879,7 +2883,7 @@ class LearningService:
         判断是否为作业批改场景
 
         Args:
-            question_type: 问题类型
+            question_type: 问题类型（字符串值或None）
             content: 问题内容
             image_urls: 图片列表
 
@@ -2887,7 +2891,7 @@ class LearningService:
             bool: 是否为批改场景
         """
         # 检查问题类型
-        if question_type == QuestionType.HOMEWORK_HELP:
+        if question_type == "homework_help":
             logger.info("🔍 批改场景检测: question_type=HOMEWORK_HELP → True")
             return True
 
@@ -3008,6 +3012,7 @@ class LearningService:
             logger.debug(f"📄 完整响应: {response_content}")
 
             # 尝试提取 JSON
+            json_str = ""  # 初始化以确保在异常处理中可用
             try:
                 logger.info("🔍 [JSON解析] 开始提取JSON数据...")
 
@@ -3045,6 +3050,7 @@ class LearningService:
                         explanation=item.get("explanation"),
                         knowledge_points=item.get("knowledge_points", []),
                         score=item.get("score"),
+                        question_text=item.get("question_text", ""),
                     )
                     corrections.append(correction)
                     logger.debug(
@@ -3076,9 +3082,10 @@ class LearningService:
                 return correction_result
 
             except json.JSONDecodeError as e:
+                json_str_preview = json_str[:200] if json_str else "N/A"
                 logger.error(
                     f"❌ [JSON解析] 解析失败: {str(e)}, "
-                    f"json_preview={json_str[:200] if 'json_str' in locals() else 'N/A'}",
+                    f"json_preview={json_str_preview}",
                     exc_info=True,
                 )
                 return None
@@ -3128,17 +3135,29 @@ class LearningService:
 
                 if existing:
                     # 更新现有记录：错误次数+1
-                    existing.mistake_count += 1
-                    existing.total_attempts += 1
-                    existing.last_practiced_at = datetime.now()
+                    # 注意：SQLAlchemy ORM对象在运行时行为正确，类型检查器可能报错
+                    from decimal import Decimal
+
+                    # 提取值并进行计算
+                    mistake_count_val: int = int(existing.mistake_count or 0)  # type: ignore
+                    total_attempts_val: int = int(existing.total_attempts or 0)  # type: ignore
+
+                    mistake_count_val += 1
+                    total_attempts_val += 1
+
+                    # 更新ORM对象属性（运行时正确）
+                    existing.mistake_count = mistake_count_val  # type: ignore
+                    existing.total_attempts = total_attempts_val  # type: ignore
+                    existing.last_practiced_at = datetime.now()  # type: ignore
                     # 重新计算掌握度（错误次数越多，掌握度越低）
                     # mastery_level = 1 / (1 + mistake_count * 0.1)
-                    existing.mastery_level = max(
-                        0.0, 1.0 / (1.0 + existing.mistake_count * 0.1)
+                    new_mastery = Decimal(
+                        str(max(0.0, 1.0 / (1.0 + float(mistake_count_val) * 0.1)))
                     )
+                    existing.mastery_level = new_mastery  # type: ignore
                     logger.info(
-                        f"    ✅ 更新: {kp}, mistake_count={existing.mistake_count}, "
-                        f"mastery_level={existing.mastery_level:.2f}"
+                        f"    ✅ 更新: {kp}, mistake_count={mistake_count_val}, "
+                        f"mastery_level={float(new_mastery):.2f}"
                     )
                 else:
                     # 创建新记录
@@ -3245,7 +3264,7 @@ class LearningService:
 
         # 返回得分最高的学科
         if scores:
-            inferred = max(scores, key=scores.get)
+            inferred = max(scores, key=lambda x: scores[x])
             logger.info(
                 f"🔍 学科推断: {knowledge_points[:3]}... → {inferred} (匹配度: {scores})"
             )
@@ -3312,11 +3331,14 @@ class LearningService:
 
                 # 构建错题数据
                 # 🎯 题目内容降级策略：优先使用question_text，否则用explanation前部分
-                question_content = item.question_text
+                question_content: str = getattr(item, "question_text", "") or ""
                 if not question_content or not question_content.strip():
                     # 降级：使用批改说明的前80字
+                    explanation_preview = (
+                        item.explanation[:80] if item.explanation else "无"
+                    )
                     question_content = (
-                        f"题目内容详见图片（批改提示：{item.explanation[:80]}...）"
+                        f"题目内容详见图片（批改提示：{explanation_preview}...）"
                     )
                     logger.warning(
                         f"⚠️ Q{item.question_number} 缺少question_text，使用降级方案"

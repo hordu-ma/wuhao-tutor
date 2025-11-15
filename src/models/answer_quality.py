@@ -19,7 +19,9 @@ is_sqlite = settings.SQLALCHEMY_DATABASE_URI and "sqlite" in str(
 
 # 根据数据库类型导入合适的 UUID 类型
 if not is_sqlite:
-    from sqlalchemy.dialects.postgresql import UUID
+    from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+else:
+    PG_UUID = None  # type: ignore
 
 
 def get_uuid_column():
@@ -27,7 +29,7 @@ def get_uuid_column():
     if is_sqlite:
         return String(36)
     else:
-        return UUID(as_uuid=True)
+        return PG_UUID(as_uuid=True)  # type: ignore
 
 
 class AnswerQualityScore(BaseModel):
