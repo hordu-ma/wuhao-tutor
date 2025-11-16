@@ -30,8 +30,9 @@ NC='\033[0m' # No Color
 # 配置
 REMOTE_USER="root"
 REMOTE_HOST="121.199.173.244"
-PROJECT_DIR="/root/wuhao-tutor"
-BACKUP_DIR="/root/wuhao-tutor-backups"
+PROJECT_DIR="/opt/wuhao-tutor"
+BACKUP_DIR="/opt/wuhao-tutor/backups"
+PYTHON_BIN="/opt/wuhao-tutor/venv/bin/python3"
 
 # 打印带颜色的日志
 log_info() {
@@ -147,9 +148,9 @@ fi
 log_info "🔄 步骤2: 执行数据补全..."
 
 if [ "$MODE" = "dry-run" ]; then
-    CMD="cd ${PROJECT_DIR} && source venv/bin/activate && python scripts/backfill_knowledge_graph.py --dry-run --batch-size ${BATCH_SIZE}"
+    CMD="cd ${PROJECT_DIR} && ${PYTHON_BIN} scripts/backfill_knowledge_graph.py --dry-run --batch-size ${BATCH_SIZE}"
 else
-    CMD="cd ${PROJECT_DIR} && source venv/bin/activate && python scripts/backfill_knowledge_graph.py --batch-size ${BATCH_SIZE}"
+    CMD="cd ${PROJECT_DIR} && ${PYTHON_BIN} scripts/backfill_knowledge_graph.py --batch-size ${BATCH_SIZE}"
 fi
 
 ssh ${REMOTE_USER}@${REMOTE_HOST} "$CMD"

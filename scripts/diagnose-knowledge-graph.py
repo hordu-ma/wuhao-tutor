@@ -24,9 +24,10 @@ from sqlalchemy.orm import sessionmaker
 # 添加项目路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.core.config import settings
-from src.models.knowledge_graph import MistakeKnowledgePoint
-from src.models.study import KnowledgeMastery, MistakeRecord
+# noqa: E402 - 模块导入必须在 sys.path 修改之后
+from src.core.config import settings  # noqa: E402
+from src.models.knowledge_graph import MistakeKnowledgePoint  # noqa: E402
+from src.models.study import KnowledgeMastery, MistakeRecord  # noqa: E402
 
 
 class KnowledgeGraphDiagnoser:
