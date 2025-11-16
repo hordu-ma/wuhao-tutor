@@ -1118,12 +1118,12 @@ class KnowledgeGraphService:
         from sqlalchemy import and_, select
 
         try:
-            # 标准化subject为中文（数据库中存储的是中文）
-            normalized_subject = normalize_subject(subject)
+            # 🔧 修复: 数据库中学科主要是英文存储(physics/math/english),直接使用原始参数
+            # 不再使用 normalize_subject() 转换为中文,避免查询不到数据
             user_id_str = str(user_id)
             logger.info(
                 f"🔍 开始获取知识图谱: user_id={user_id_str}, "
-                f"subject_input={subject}, normalized_subject={normalized_subject}"
+                f"subject={subject}"
             )
 
             # 1. 查询用户该学科的所有知识点掌握度（按掌握度升序排列）
@@ -1132,7 +1132,7 @@ class KnowledgeGraphService:
                 .where(
                     and_(
                         KnowledgeMastery.user_id == user_id_str,
-                        KnowledgeMastery.subject == normalized_subject,
+                        KnowledgeMastery.subject == subject,  # 直接使用原始subject
                     )
                 )
                 .order_by(KnowledgeMastery.mastery_level.asc())
@@ -1142,7 +1142,7 @@ class KnowledgeGraphService:
 
             logger.info(
                 f"📊 KnowledgeMastery 查询结果: user_id={user_id_str}, "
-                f"subject={normalized_subject}, found={len(kms)} records"
+                f"subject={subject}, found={len(kms)} records"
             )
 
             # 如果该学科没有知识点掌握度数据,尝试按错题记录进行兜底聚合(方案D)
@@ -1151,7 +1151,7 @@ class KnowledgeGraphService:
 
                 logger.warning(
                     f"⚠️ 无 KnowledgeMastery 数据，启用兜底方案: "
-                    f"user_id={user_id_str}, subject={normalized_subject}"
+                    f"user_id={user_id_str}, subject={subject}"
                 )
 
                 # 基于错题记录按知识点进行简单聚合,仅作为兜底方案
@@ -1160,7 +1160,7 @@ class KnowledgeGraphService:
                     .where(
                         and_(
                             MistakeRecord.user_id == user_id_str,
-                            MistakeRecord.subject == normalized_subject,
+                            MistakeRecord.subject == subject,  # 直接使用原始subject
                         )
                     )
                     .order_by(desc(MistakeRecord.created_at))
@@ -1171,14 +1171,14 @@ class KnowledgeGraphService:
 
                 logger.info(
                     f"📋 MistakeRecord 查询结果: user_id={user_id_str}, "
-                    f"subject={normalized_subject}, found={len(mistake_rows)} records"
+                    f"subject={subject}, found={len(mistake_rows)} records"
                 )
 
                 if not mistake_rows:
                     # 兜底也没有数据，执行诊断查询
                     logger.warning(
                         f"⚠️ 用户在该学科暂无数据: user_id={user_id_str}, "
-                        f"subject={normalized_subject}，执行诊断查询"
+                        f"subject={subject}，执行诊断查询"
                     )
 
                     # 诊断查询1: 检查该用户是否存在任何学科的 KnowledgeMastery
