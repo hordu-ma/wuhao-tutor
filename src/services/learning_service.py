@@ -2743,14 +2743,18 @@ class LearningService:
         ai_feedback: Dict[str, Any],
     ) -> None:
         """
-        触发知识图谱服务进行知识点关联
+        触发知识图谱服务进行知识点关联 + 实时快照更新
+        
+        Phase 1: 实时同步机制修复
+        - 创建知识点关联后立即更新知识图谱快照
+        - 快照更新失败不影响错题创建流程
         """
         try:
             from src.services.knowledge_graph_service import KnowledgeGraphService
 
             kg_service = KnowledgeGraphService(self.db, self.bailian_service)
 
-            # 调用知识图谱服务进行关联
+            # 1. 调用知识图谱服务进行关联
             associations = await kg_service.analyze_and_associate_knowledge_points(
                 mistake_id=mistake_id,
                 user_id=user_id,
@@ -2764,6 +2768,25 @@ class LearningService:
                     f"✅ 知识点关联成功: mistake_id={mistake_id}, "
                     f"关联数量={len(associations)}"
                 )
+                
+                # 🆕 Phase 1: 立即更新知识图谱快照
+                try:
+                    await kg_service.create_knowledge_graph_snapshot(
+                        user_id=user_id,
+                        subject=subject,
+                        period_type="realtime_update",
+                        auto_commit=False  # 使用已有事务,统一提交
+                    )
+                    logger.info(
+                        f"✅ 知识图谱快照实时更新成功: user={user_id}, "
+                        f"subject={subject}, trigger=mistake_create"
+                    )
+                except Exception as snapshot_error:
+                    # 快照更新失败不影响错题创建
+                    logger.warning(
+                        f"⚠️ 知识图谱快照实时更新失败(不影响错题创建): "
+                        f"user={user_id}, subject={subject}, error={snapshot_error}"
+                    )
             else:
                 logger.warning(f"⚠️ 未能为错题 {mistake_id} 关联知识点")
 
@@ -3397,7 +3420,6 @@ class LearningService:
         from src.services.knowledge_graph_service import (
             normalize_subject,
         )  # 🔧 导入学科转换函数
-</parameter>
 
         mistake_repo = MistakeRepository(MistakeRecord, self.db)
         created_mistakes = []

@@ -583,7 +583,7 @@ class MistakeService:
 
         logger.info(f"Created mistake {mistake.id} for user {user_id}")
 
-        # 【新增】自动关联知识点
+        # 【新增】自动关联知识点 + 实时快照更新
         try:
             from src.services.knowledge_graph_service import KnowledgeGraphService
 
@@ -596,8 +596,8 @@ class MistakeService:
                 "explanation": request.explanation,
             }
 
-            # 调用知识图谱服务分析并关联知识点
-            await kg_service.analyze_and_associate_knowledge_points(
+            # 1. 调用知识图谱服务分析并关联知识点
+            associations = await kg_service.analyze_and_associate_knowledge_points(
                 mistake_id=UUID(str(getattr(mistake, "id"))),
                 user_id=user_id,
                 subject=request.subject,
@@ -607,7 +607,25 @@ class MistakeService:
                 ),
             )
 
-            logger.info(f"已为错题 {mistake.id} 自动关联知识点")
+            if associations:
+                logger.info(f"已为错题 {mistake.id} 自动关联知识点")
+                
+                # 🆕 Phase 1: 立即更新知识图谱快照
+                try:
+                    await kg_service.create_knowledge_graph_snapshot(
+                        user_id=user_id,
+                        subject=request.subject,
+                        period_type="realtime_update",
+                        auto_commit=False  # 使用已有事务
+                    )
+                    logger.info(
+                        f"✅ 知识图谱快照实时更新成功: user={user_id}, "
+                        f"subject={request.subject}, trigger=manual_create"
+                    )
+                except Exception as snapshot_error:
+                    logger.warning(
+                        f"⚠️ 知识图谱快照实时更新失败(不影响错题创建): {snapshot_error}"
+                    )
         except Exception as e:
             # 知识点关联失败不影响错题创建
             logger.warning(f"知识点自动关联失败: {e}")
