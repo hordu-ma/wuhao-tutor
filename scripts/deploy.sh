@@ -31,6 +31,8 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+PYTHON_VERSION=$(cat .python-version 2>/dev/null || echo "3.12")
+
 # ==================== 辅助函数 ====================
 
 log_info() {
@@ -66,10 +68,10 @@ check_ssh_connection() {
 # 确保 .env.production 存在
 ensure_env_production() {
     log_info "检查环境配置文件..."
-    
+
     if ssh "${SERVER_SSH}" "[ ! -f ${BACKEND_REMOTE_DIR}/.env.production ]"; then
         log_warning ".env.production 不存在，将从 .env 创建"
-        
+
         if ssh "${SERVER_SSH}" "[ -f ${BACKEND_REMOTE_DIR}/.env ]"; then
             ssh "${SERVER_SSH}" "cp ${BACKEND_REMOTE_DIR}/.env ${BACKEND_REMOTE_DIR}/.env.production"
             log_success "已创建 .env.production"
@@ -83,34 +85,45 @@ ensure_env_production() {
     fi
 }
 
+# 确保远端可用 uv
+ensure_uv_available() {
+    log_info "确认服务器已安装 uv..."
+    if ssh "${SERVER_SSH}" "export PATH=\"\$HOME/.local/bin:\$PATH\" && command -v uv >/dev/null 2>&1"; then
+        log_success "服务器已安装 uv"
+    else
+        log_error "服务器未安装 uv，请先在 ${SERVER_HOST} 上安装 uv 后再部署"
+        exit 1
+    fi
+}
+
 # 验证并修复 systemd 配置
 validate_systemd_config() {
     log_info "验证 systemd 配置..."
-    
+
     local systemd_config="/etc/systemd/system/${BACKEND_SERVICE}"
     local needs_fix=false
-    
+
     # 检查是否使用了错误的应用路径
     if ssh "${SERVER_SSH}" "grep -q 'src\.main:app' ${systemd_config}" 2>/dev/null; then
         log_warning "检测到错误的应用路径 (src.main:app)，将修复为 main:app"
         ssh "${SERVER_SSH}" "sed -i 's/src\.main:app/main:app/g' ${systemd_config}"
         needs_fix=true
     fi
-    
+
     # 检查是否缺少 PYTHONPATH
     if ! ssh "${SERVER_SSH}" "grep -q 'PYTHONPATH=${BACKEND_REMOTE_DIR}' ${systemd_config}" 2>/dev/null; then
         log_warning "systemd 配置缺少 PYTHONPATH，将添加"
         ssh "${SERVER_SSH}" "sed -i '/^\[Service\]/a Environment=\"PYTHONPATH=${BACKEND_REMOTE_DIR}\"' ${systemd_config}"
         needs_fix=true
     fi
-    
+
     # 检查是否使用了正确的环境文件
     if ! ssh "${SERVER_SSH}" "grep -q 'EnvironmentFile=${BACKEND_REMOTE_DIR}/.env.production' ${systemd_config}" 2>/dev/null; then
         log_warning "systemd 配置未使用 .env.production"
         ssh "${SERVER_SSH}" "sed -i '/^\[Service\]/a EnvironmentFile=${BACKEND_REMOTE_DIR}/.env.production' ${systemd_config}"
         needs_fix=true
     fi
-    
+
     if [ "$needs_fix" = true ]; then
         log_info "重新加载 systemd 配置..."
         ssh "${SERVER_SSH}" "systemctl daemon-reload"
@@ -123,7 +136,7 @@ validate_systemd_config() {
 # 同步 Python 包结构（包括所有 __init__.py）
 sync_python_packages() {
     log_info "同步 Python 包结构..."
-    
+
     # 使用 rsync 同步 src 目录，明确包含 __init__.py 文件
     rsync -avz --delete \
         --include='**/__init__.py' \
@@ -132,39 +145,39 @@ sync_python_packages() {
         --exclude='*.pyc' \
         --exclude='*.pyo' \
         src/ "${SERVER_SSH}:${BACKEND_REMOTE_DIR}/src/"
-    
+
     log_success "Python 包结构同步完成"
 }
 
 # 同步主要应用文件
 sync_main_files() {
     log_info "同步主应用文件..."
-    
+
     # 同步 main.py（从 src/ 复制到根目录）
     # 注意：本地在 src/main.py，生产环境需要在根目录
     rsync -avz src/main.py "${SERVER_SSH}:${BACKEND_REMOTE_DIR}/"
-    
+
     # 同步其他必要文件
     rsync -avz \
         alembic.ini \
         pyproject.toml \
-        requirements.txt \
-        requirements.prod.txt \
+        uv.lock \
+        .python-version \
         "${SERVER_SSH}:${BACKEND_REMOTE_DIR}/"
-    
+
     # 同步 alembic 目录
     rsync -avz --delete \
         --exclude='__pycache__/' \
         --exclude='*.pyc' \
         alembic/ "${SERVER_SSH}:${BACKEND_REMOTE_DIR}/alembic/"
-    
+
     log_success "主应用文件同步完成"
 }
 
 # 验证后端部署
 verify_backend_deployment() {
     log_info "验证后端部署..."
-    
+
     # 检查关键文件是否存在
     local files_to_check=(
         "main.py"
@@ -172,14 +185,14 @@ verify_backend_deployment() {
         "src/core/__init__.py"
         ".env.production"
     )
-    
+
     for file in "${files_to_check[@]}"; do
         if ! ssh "${SERVER_SSH}" "[ -f ${BACKEND_REMOTE_DIR}/${file} ]"; then
             log_error "关键文件缺失: ${file}"
             exit 1
         fi
     done
-    
+
     log_success "后端关键文件检查通过"
 }
 
@@ -187,9 +200,9 @@ verify_backend_deployment() {
 wait_for_service() {
     local max_wait=$HEALTH_CHECK_TIMEOUT
     local elapsed=0
-    
+
     log_info "等待服务启动 (最多 ${max_wait} 秒)..."
-    
+
     while [ $elapsed -lt $max_wait ]; do
         if ssh "${SERVER_SSH}" "curl -sf ${HEALTH_CHECK_URL} > /dev/null 2>&1"; then
             log_success "服务已启动 (${elapsed}s)"
@@ -199,7 +212,7 @@ wait_for_service() {
         elapsed=$((elapsed + 2))
         echo -n "."
     done
-    
+
     echo
     log_warning "服务启动超时，请手动检查"
     return 1
@@ -208,29 +221,29 @@ wait_for_service() {
 # 构建前端
 build_frontend() {
     log_info "构建前端应用..."
-    
+
     if [ ! -d "${FRONTEND_LOCAL_DIR}" ]; then
         log_error "前端目录不存在: ${FRONTEND_LOCAL_DIR}"
         exit 1
     fi
-    
+
     cd "${FRONTEND_LOCAL_DIR}"
-    
+
     # 安装依赖（如果需要）
     if [ ! -d "node_modules" ]; then
         log_info "安装前端依赖..."
         npm install
     fi
-    
+
     # 构建
     log_info "执行前端构建..."
     npm run build
-    
+
     if [ ! -d "dist" ]; then
         log_error "前端构建失败，dist 目录不存在"
         exit 1
     fi
-    
+
     cd ..
     log_success "前端构建完成"
 }
@@ -260,37 +273,57 @@ sync_main_files
 # 4. 确保环境配置正确
 ensure_env_production
 
-# 5. 验证并修复 systemd 配置
+# 5. 确认服务器 uv 可用
+ensure_uv_available
+
+# 6. 验证并修复 systemd 配置
 validate_systemd_config
 
-# 6. 验证部署文件
+# 7. 验证部署文件
 verify_backend_deployment
 
-# 7. 安装/更新 Python 依赖
-log_info "更新 Python 依赖..."
-ssh "${SERVER_SSH}" "cd ${BACKEND_REMOTE_DIR} && source venv/bin/activate && pip install -r requirements.prod.txt -q"
-log_success "Python 依赖更新完成"
+# 8. 安装/更新 Python 依赖（增量同步）
+log_info "检查 Python 依赖变化..."
 
-# 8. 执行数据库迁移
+# 检查依赖是否变化（对比 uv.lock 文件）
+DEPS_CHANGED=$(ssh "${SERVER_SSH}" "cd ${BACKEND_REMOTE_DIR} && \
+    if [ -f .venv/uv.lock.deployed ] && cmp -s uv.lock .venv/uv.lock.deployed; then \
+        echo 'false'; \
+    else \
+        echo 'true'; \
+    fi")
+
+if [ "$DEPS_CHANGED" = "false" ]; then
+    log_success "依赖未变化，跳过同步（节省时间）"
+else
+    log_info "检测到依赖变化，执行同步..."
+    ssh "${SERVER_SSH}" "cd ${BACKEND_REMOTE_DIR} && export PATH=\"\$HOME/.local/bin:\$PATH\" && uv sync --python /usr/bin/python3.12"
+
+    # 保存当前 uv.lock 作为已部署标记
+    ssh "${SERVER_SSH}" "cd ${BACKEND_REMOTE_DIR} && mkdir -p .venv && cp uv.lock .venv/uv.lock.deployed"
+    log_success "Python 依赖同步完成"
+fi
+
+# 9. 执行数据库迁移
 log_info "执行数据库迁移..."
-if ssh "${SERVER_SSH}" "cd ${BACKEND_REMOTE_DIR} && source venv/bin/activate && ENVIRONMENT=production alembic upgrade head"; then
+if ssh "${SERVER_SSH}" "cd ${BACKEND_REMOTE_DIR} && export PATH=\"\$HOME/.local/bin:\$PATH\" && ENVIRONMENT=production uv run alembic upgrade head"; then
     log_success "数据库迁移完成"
 else
     log_warning "数据库迁移可能失败，请手动检查"
 fi
 
-# 9. 重启后端服务
+# 10. 重启后端服务
 log_info "重启后端服务..."
 ssh "${SERVER_SSH}" "systemctl restart ${BACKEND_SERVICE}"
 log_success "后端服务已重启"
 
-# 10. 验证服务状态
+# 11. 验证服务状态
 log_info "验证服务状态..."
 sleep 3  # 给服务一点启动时间
 
 if ssh "${SERVER_SSH}" "systemctl is-active --quiet ${BACKEND_SERVICE}"; then
     log_success "后端服务运行正常"
-    
+
     # 等待健康检查通过
     wait_for_service
 else
@@ -305,17 +338,17 @@ echo
 log_info "🎨 前端部署阶段"
 echo
 
-# 11. 构建前端
+# 12. 构建前端
 build_frontend
 
-# 12. 同步前端文件
+# 13. 同步前端文件
 log_info "同步前端文件到服务器..."
 rsync -avz --delete \
     "${FRONTEND_LOCAL_DIR}/dist/" \
     "${SERVER_SSH}:${FRONTEND_REMOTE_DIR}/"
 log_success "前端文件同步完成"
 
-# 13. 重启 Nginx
+# 14. 重启 Nginx
 log_info "重启 Nginx..."
 ssh "${SERVER_SSH}" "systemctl reload nginx"
 log_success "Nginx 已重启"
@@ -325,7 +358,7 @@ echo
 log_info "🔍 部署验证阶段"
 echo
 
-# 14. 检查后端健康状态
+# 15. 检查后端健康状态
 log_info "检查后端 API..."
 if ssh "${SERVER_SSH}" "curl -sf ${HEALTH_CHECK_URL} | grep -q 'healthy'"; then
     log_success "后端 API 响应正常"
@@ -335,7 +368,7 @@ else
     echo "  curl https://horsduroot.com/health"
 fi
 
-# 15. 检查前端文件
+# 16. 检查前端文件
 log_info "检查前端文件..."
 if ssh "${SERVER_SSH}" "[ -f ${FRONTEND_REMOTE_DIR}/index.html ]"; then
     log_success "前端文件部署正常"
@@ -344,7 +377,7 @@ else
     exit 1
 fi
 
-# 16. 检查 Python 包结构
+# 17. 检查 Python 包结构
 log_info "检查 Python 包结构..."
 init_count=$(ssh "${SERVER_SSH}" "find ${BACKEND_REMOTE_DIR}/src -name '__init__.py' -type f | wc -l")
 if [ "$init_count" -gt 0 ]; then

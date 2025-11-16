@@ -117,3 +117,4 @@ production_users_report.md
 
 # 备份目录
 backup/
+.env.production
