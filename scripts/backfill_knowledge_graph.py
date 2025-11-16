@@ -97,12 +97,27 @@ class KnowledgeGraphBackfiller:
             # 构建 AI 反馈数据
             ai_feedback: Optional[Dict[str, Any]] = None
             
-            if mistake.ai_analysis:
-                ai_feedback = {
-                    "knowledge_points": mistake.ai_analysis.get("knowledge_points", []),
-                    "question": mistake.question_content or "",
-                    "explanation": mistake.ai_analysis.get("explanation", ""),
-                }
+            if mistake.ai_feedback:
+                # 容错处理：确保 ai_feedback 是字典类型
+                if isinstance(mistake.ai_feedback, dict):
+                    ai_feedback = {
+                        "knowledge_points": mistake.ai_feedback.get("knowledge_points", []),
+                        "question": mistake.title or mistake.ocr_text or "",
+                        "explanation": mistake.ai_feedback.get("explanation", ""),
+                    }
+                elif isinstance(mistake.ai_feedback, str):
+                    # 如果是字符串，尝试解析 JSON
+                    import json
+                    try:
+                        feedback_dict = json.loads(mistake.ai_feedback)
+                        if isinstance(feedback_dict, dict):
+                            ai_feedback = {
+                                "knowledge_points": feedback_dict.get("knowledge_points", []),
+                                "question": mistake.title or mistake.ocr_text or "",
+                                "explanation": feedback_dict.get("explanation", ""),
+                            }
+                    except (json.JSONDecodeError, Exception):
+                        pass  # 无法解析，使用 None
             
             # 调用知识图谱服务分析并关联
             print(f"  📊 分析错题: {mistake.id} (用户: {mistake.user_id}, 学科: {mistake.subject})")
@@ -112,7 +127,7 @@ class KnowledgeGraphBackfiller:
                     mistake_id=UUID(str(mistake.id)),
                     user_id=UUID(str(mistake.user_id)),
                     subject=str(mistake.subject),
-                    ocr_text=str(mistake.question_content or mistake.ocr_text or ""),
+                    ocr_text=str(mistake.title or mistake.ocr_text or ""),
                     ai_feedback=ai_feedback,
                 )
                 
