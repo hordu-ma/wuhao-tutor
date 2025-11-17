@@ -18,6 +18,7 @@
       <van-icon name="cluster-o" size="20px" color="#1890ff" bindtap="onOpenKnowledgeGraph" />
       <van-icon name="filter-o" size="20px" bindtap="onOpenFilter" />
       <van-icon name="search" size="20px" bindtap="onOpenSearch" />
+      <van-icon name="down" size="20px" color="#52c41a" bindtap="onExportMistakes" />
     </view>
   </view>
 

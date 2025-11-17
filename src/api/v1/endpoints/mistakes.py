@@ -8,6 +8,7 @@ from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.v1.endpoints.auth import get_current_user_id
@@ -111,7 +112,7 @@ search: {search}
     "/statistics",
     response_model=MistakeStatisticsResponse,
     summary="获取错题统计",
-    description="获取用户的错题统计数据,包括总数、掌握情况、学科分布等",
+    description="获取用户的错题统计信息(总数、各学科分布、掌握状态分布等)",
 )
 async def get_mistake_statistics(
     user_id: UUID = Depends(get_current_user_id),
@@ -127,6 +128,62 @@ async def get_mistake_statistics(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"获取错题统计失败: {str(e)}",
+        )
+
+
+# ========== 导出功能 ==========
+
+
+@router.get(
+    "/export",
+    summary="导出错题为Markdown",
+    description="将错题导出为Markdown格式文件,支持按学科、状态等筛选",
+)
+async def export_mistakes_markdown(
+    format: str = Query("markdown", description="导出格式(markdown/json)"),
+    subject: Optional[str] = Query(None, description="学科筛选"),
+    mastery_status: Optional[str] = Query(None, description="掌握状态筛选"),
+    start_date: Optional[str] = Query(None, description="开始日期(YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="结束日期(YYYY-MM-DD)"),
+    user_id: UUID = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """导出错题为Markdown"""
+    try:
+        service = MistakeService(db)
+
+        # 构建筛选条件
+        filters = {}
+        if subject:
+            filters["subject"] = subject
+        if mastery_status:
+            filters["mastery_status"] = mastery_status
+        if start_date:
+            filters["start_date"] = start_date
+        if end_date:
+            filters["end_date"] = end_date
+
+        # 生成Markdown
+        result = await service.export_mistakes_to_markdown(user_id, filters)
+
+        if format == "json":
+            # 返回JSON格式(小程序端使用)
+            return {"success": True, "data": result}
+        else:
+            # 返回文件下载(Web端使用)
+            return Response(
+                content=result["content"],
+                media_type="text/markdown; charset=utf-8",
+                headers={
+                    "Content-Disposition": f"attachment; filename={result['filename']}"
+                },
+            )
+
+    except ServiceError as e:
+        logger.error(f"导出错题失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"导出错题失败: {str(e)}",
         )
 
 
@@ -262,3 +319,4 @@ async def complete_review(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"完成复习失败: {str(e)}",
         )
+

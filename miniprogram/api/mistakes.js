@@ -578,6 +578,42 @@ const mistakesAPI = {
       { showLoading: false, ...config },
     );
   },
+
+  /**
+   * 导出错题为Markdown格式
+   * @param {Object} params - 导出参数
+   * @param {string} [params.subject] - 学科筛选
+   * @param {string} [params.mastery_status] - 掌握状态筛选(mastered/learning/reviewing)
+   * @param {string} [params.start_date] - 开始日期(YYYY-MM-DD)
+   * @param {string} [params.end_date] - 结束日期(YYYY-MM-DD)
+   * @param {string} [params.format='json'] - 返回格式(json/markdown)
+   * @param {Object} [config] - 请求配置
+   * @returns {Promise<Object>} 导出结果
+   *
+   * @example
+   * // 导出数学错题
+   * mistakesApi.exportMistakesMarkdown({ subject: 'math', format: 'json' })
+   *
+   * // 导出已掌握的错题
+   * mistakesApi.exportMistakesMarkdown({ mastery_status: 'mastered' })
+   */
+  exportMistakesMarkdown(params = {}, config = {}) {
+    const queryParams = {
+      format: params.format || 'json', // 小程序默认使用json格式
+    };
+
+    if (params.subject) queryParams.subject = params.subject;
+    if (params.mastery_status) queryParams.mastery_status = params.mastery_status;
+    if (params.start_date) queryParams.start_date = params.start_date;
+    if (params.end_date) queryParams.end_date = params.end_date;
+
+    return request.get('mistakes/export', queryParams, {
+      showLoading: true,
+      loadingText: '正在生成...',
+      timeout: 30000, // 30秒超时
+      ...config,
+    });
+  },
 };
 
 module.exports = mistakesAPI;

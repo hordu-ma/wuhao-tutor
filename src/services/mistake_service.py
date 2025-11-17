@@ -609,7 +609,7 @@ class MistakeService:
 
             if associations:
                 logger.info(f"已为错题 {mistake.id} 自动关联知识点")
-                
+
                 # 🆕 Phase 1: 立即更新知识图谱快照
                 try:
                     await kg_service.create_knowledge_graph_snapshot(
@@ -1364,3 +1364,157 @@ class MistakeService:
             "analysis_time": 0.0,
             "is_fallback": True,
         }
+
+    async def export_mistakes_to_markdown(
+        self, user_id: UUID, filters: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        导出错题为Markdown格式
+
+        Args:
+            user_id: 用户ID
+            filters: 筛选条件(subject, mastery_status, start_date, end_date)
+
+        Returns:
+            包含markdown内容和元数据的字典
+        """
+        try:
+            # 1. 获取错题列表(使用现有的分页方法,但获取全部)
+            result = await self.get_mistake_list(
+                user_id=user_id, page=1, page_size=1000, filters=filters or {}
+            )
+            mistakes_data = result.items
+
+            # 2. 构建Markdown内容
+            md_content = self._build_markdown_content(mistakes_data, filters or {})
+
+            # 3. 生成文件名
+            subject_part = filters.get("subject", "全部学科") if filters else "全部学科"
+            timestamp = datetime.now().strftime("%Y-%m-%d")
+            filename = f"错题本_{subject_part}_{timestamp}.md"
+
+            return {
+                "filename": filename,
+                "content": md_content,
+                "total_mistakes": len(mistakes_data),
+                "export_time": datetime.now().isoformat(),
+            }
+
+        except Exception as e:
+            logger.error(f"导出错题失败: {e}", exc_info=True)
+            raise ServiceError(f"导出错题失败: {str(e)}")
+
+    def _build_markdown_content(
+        self, mistakes: List[MistakeListItem], filters: Dict[str, Any]
+    ) -> str:
+        """
+        构建Markdown内容
+
+        Args:
+            mistakes: 错题列表
+            filters: 筛选条件
+
+        Returns:
+            Markdown格式的字符串
+        """
+        lines = []
+
+        # 标题和元数据
+        lines.append("# 错题本导出报告\n")
+        lines.append(
+            f"**导出时间**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}  "
+        )
+        lines.append(f"**学科**: {filters.get('subject', '全部')}  ")
+        lines.append(f"**错题总数**: {len(mistakes)} 道  ")
+
+        # 统计掌握情况
+        mastered = sum(1 for m in mistakes if m.mastery_status == "mastered")
+        learning = sum(1 for m in mistakes if m.mastery_status == "learning")
+        reviewing = sum(
+            1 for m in mistakes if m.mastery_status == "reviewing"
+        )
+        lines.append(
+            f"**掌握情况**: 已掌握 {mastered} / "
+            f"学习中 {learning} / 复习中 {reviewing}\n"
+        )
+
+        lines.append("---\n")
+
+        # 遍历每道错题
+        for idx, mistake in enumerate(mistakes, 1):
+            lines.extend(self._format_mistake_markdown(idx, mistake))
+            lines.append("\n---\n")
+
+        return "\n".join(lines)
+
+    def _format_mistake_markdown(
+        self, index: int, mistake: MistakeListItem
+    ) -> List[str]:
+        """
+        格式化单个错题为Markdown
+
+        Args:
+            index: 序号
+            mistake: 错题对象
+
+        Returns:
+            Markdown行列表
+        """
+        lines = []
+
+        # 标题
+        knowledge_points = mistake.knowledge_points or []
+        kp_str = (
+            " - ".join(knowledge_points[:2]) if knowledge_points else "未标注知识点"
+        )
+        lines.append(f"## {index}. {kp_str}\n")
+
+        # 难度
+        difficulty_stars = "⭐" * (mistake.difficulty_level or 2)
+        difficulty_map = {1: "简单", 2: "中等", 3: "困难", 4: "挑战", 5: "专家"}
+        difficulty_text = difficulty_map.get(
+            mistake.difficulty_level or 2, "中等"
+        )
+        lines.append(f"**难度**: {difficulty_stars} ({difficulty_text})  ")
+
+        # 来源和状态
+        source_map = {
+            "learning": "学习问答",
+            "homework": "作业批改",
+            "manual": "手动添加",
+            "upload": "上传导入",
+        }
+        source_text = source_map.get(mistake.source or "manual", "未知")
+        lines.append(f"**来源**: {source_text}  ")
+
+        mastery_map = {
+            "mastered": "✅ 已掌握",
+            "learning": "📖 学习中",
+            "reviewing": "🔄 复习中",
+        }
+        mastery_text = mastery_map.get(
+            mistake.mastery_status or "learning", "学习中"
+        )
+        lines.append(f"**掌握状态**: {mastery_text}  ")
+        lines.append(
+            f"**复习次数**: {mistake.total_reviews or 0}次 "
+            f"(正确{mistake.correct_count or 0}次)\n"
+        )
+
+        # 知识点关联信息
+        if mistake.knowledge_point_associations:
+            lines.append("**关联知识点掌握度**:  ")
+            for assoc in mistake.knowledge_point_associations[:3]:
+                mastery_pct = int(assoc.get("mastery_level", 0) * 100)
+                lines.append(
+                    f"  - {assoc.get('knowledge_point_name', '未知')}: {mastery_pct}%"
+                )
+            lines.append("")
+
+        # 知识点标签
+        if knowledge_points:
+            lines.append("**涉及知识点**: ")
+            lines.append(" | ".join([f"`{kp}`" for kp in knowledge_points]))
+            lines.append("\n")
+
+        return lines

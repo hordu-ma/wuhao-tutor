@@ -796,6 +796,82 @@ const pageObject = {
       },
     });
   },
+
+  /**
+   * 导出错题为Markdown
+   */
+  async onExportMistakes() {
+    console.log('导出错题');
+
+    try {
+      wx.showLoading({
+        title: '正在生成...',
+        mask: true,
+      });
+
+      // 构建筛选条件（仅使用后端API支持的参数）
+      const filters = {};
+
+      // 后端支持的参数: subject, mastery_status, start_date, end_date
+      if (this.data.selectedSubject && this.data.selectedSubject !== '全部') {
+        filters.subject = this.data.selectedSubject;
+      }
+
+      if (this.data.activeTab === 'mastered') {
+        filters.mastery_status = 'mastered';
+      }
+
+      // 注意：后端暂不支持 difficulty_level, category, source, knowledge_point
+      // 如果需要这些筛选，需要先在后端添加支持
+
+      console.log('导出筛选条件:', filters);
+
+      // 调用导出API
+      const result = await mistakesApi.exportMistakesMarkdown({
+        ...filters,
+        format: 'json',
+      });
+
+      wx.hideLoading();
+
+      if (!result || !result.data) {
+        throw new Error('导出数据为空');
+      }
+
+      const exportData = result.data;
+
+      // 显示导出结果弹窗
+      wx.showModal({
+        title: '导出成功',
+        content: `已生成 ${exportData.total_mistakes} 道错题的Markdown文档\n\n点击“复制内容”可将Markdown复制到剪贴板，然后粘贴到其他应用中保存。`,
+        confirmText: '复制内容',
+        cancelText: '取消',
+        success: res => {
+          if (res.confirm) {
+            // 复制到剪贴板
+            wx.setClipboardData({
+              data: exportData.content,
+              success: () => {
+                wx.showToast({
+                  title: '已复制到剪贴板',
+                  icon: 'success',
+                });
+              },
+            });
+          }
+        },
+      });
+    } catch (error) {
+      console.error('导出错题失败', error);
+      wx.hideLoading();
+
+      wx.showToast({
+        title: error.message || '导出失败',
+        icon: 'none',
+        duration: 2500,
+      });
+    }
+  },
 };
 
 // 应用增强的页面守卫
