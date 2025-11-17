@@ -20,6 +20,9 @@ const pageObject = {
     questionContent: '',
     correctAnswer: '',
     knowledgePoints: [],
+    // 🎯 [Phase 1] 新增：原题图片
+    imageUrls: [],
+    hasImages: false,
 
     // 用户答案
     userAnswer: '',
@@ -95,6 +98,9 @@ const pageObject = {
         questionContent: sessionData.question_content || '',
         correctAnswer: sessionData.correct_answer || '',
         knowledgePoints: sessionData.knowledge_points || [],
+        // 🎯 [Phase 1] 新增：接收图片数据
+        imageUrls: sessionData.image_urls || [],
+        hasImages: sessionData.has_images || false,
         loading: false,
       });
 
@@ -292,6 +298,9 @@ const pageObject = {
         stageName: resultData.stage_name || `阶段 ${resultData.next_stage}`,
         questionContent: resultData.next_question?.question_content || '',
         knowledgePoints: resultData.next_question?.knowledge_points || [],
+        // 🎯 [Phase 1] 新增：下一阶段也可能有图片
+        imageUrls: resultData.next_question?.image_urls || [],
+        hasImages: resultData.next_question?.has_images || false,
         userAnswer: '', // 清空答案
       });
     }
@@ -332,6 +341,30 @@ const pageObject = {
    */
   onBackToList() {
     wx.navigateBack();
+  },
+
+  /**
+   * 🎯 [Phase 1] 新增：图片预览
+   */
+  onPreviewImage(e) {
+    const { url, urls } = e.currentTarget.dataset;
+
+    if (!url || !urls || urls.length === 0) {
+      console.warn('图片数据无效');
+      return;
+    }
+
+    wx.previewImage({
+      current: url,
+      urls: urls,
+      fail: error => {
+        console.error('预览图片失败', error);
+        wx.showToast({
+          title: '预览失败',
+          icon: 'none',
+        });
+      },
+    });
   },
 
   /**

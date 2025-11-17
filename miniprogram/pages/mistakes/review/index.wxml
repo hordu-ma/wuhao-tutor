@@ -33,23 +33,49 @@
     </view>
 
     <!-- 题目内容 -->
-    <!-- 题目内容 -->
     <view class="question-section">
       <view class="section-title">
         <van-icon name="question-o" size="20px" color="#1890ff" />
         <text>题目内容</text>
       </view>
       
-      <!-- OCR内容或占位提示 -->
+      <!-- OCR文字内容 -->
       <view class="question-content" wx:if="{{questionContent && questionContent.indexOf('暂无') === -1 && questionContent.indexOf('请查看') === -1}}">
         {{questionContent}}
       </view>
       
-      <!-- 当没有文字内容时的提示 -->
-      <view class="no-content-tip" wx:else>
+      <!-- 🎯 [Phase 1] 原题图片轮播 -->
+      <view class="question-images" wx:if="{{hasImages && imageUrls.length > 0}}">
+        <swiper 
+          class="image-swiper"
+          indicator-dots="{{imageUrls.length > 1}}"
+          indicator-color="rgba(255, 255, 255, 0.5)"
+          indicator-active-color="#1890ff"
+          autoplay="{{false}}"
+          duration="300"
+          circular="{{imageUrls.length > 1}}">
+          <swiper-item wx:for="{{imageUrls}}" wx:key="index">
+            <image 
+              src="{{item}}" 
+              mode="widthFix"
+              class="question-image"
+              bindtap="onPreviewImage"
+              data-url="{{item}}"
+              data-urls="{{imageUrls}}"
+              lazy-load="{{true}}" />
+          </swiper-item>
+        </swiper>
+        <view class="image-count" wx:if="{{imageUrls.length > 1}}">
+          <van-icon name="photo-o" size="14px" />
+          <text>共 {{imageUrls.length}} 张图片，点击可放大查看</text>
+        </view>
+      </view>
+      
+      <!-- 无内容提示 -->
+      <view class="no-content-tip" wx:if="{{!questionContent && !hasImages}}">
         <van-icon name="info-o" size="32px" color="#ff9800" />
-        <text class="tip-text">{{questionContent || '暂无题目文字内容'}}</text>
-        <text class="tip-hint">建议点击右上角【···】查看题目图片进行作答</text>
+        <text class="tip-text">暂无题目内容</text>
+        <text class="tip-hint">请联系老师补充题目信息</text>
       </view>
 
       <!-- 知识点标签 -->

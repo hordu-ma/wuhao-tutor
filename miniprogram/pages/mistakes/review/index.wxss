@@ -194,6 +194,66 @@
   border-left: 4rpx solid #1890ff;
 }
 
+/* 🎯 [Phase 1] 原题图片轮播样式 */
+.question-images {
+  margin-top: 20rpx;
+  border-radius: 12rpx;
+  overflow: hidden;
+  background: #fafafa;
+}
+
+.image-swiper {
+  width: 100%;
+  height: 400rpx;
+  border-radius: 12rpx;
+  overflow: hidden;
+}
+
+.question-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: #f5f5f5;
+}
+
+.image-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  padding: 12rpx 20rpx;
+  background: rgba(24, 144, 255, 0.05);
+  border-top: 1rpx solid #e8e8e8;
+  font-size: 22rpx;
+  color: #1890ff;
+}
+
+/* 无内容提示优化 */
+.no-content-tip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60rpx 40rpx;
+  gap: 20rpx;
+  background: #fafafa;
+  border-radius: 12rpx;
+  border: 2rpx dashed #d9d9d9;
+}
+
+.tip-text {
+  font-size: 28rpx;
+  color: #595959;
+  font-weight: 500;
+}
+
+.tip-hint {
+  font-size: 24rpx;
+  color: #8c8c8c;
+  text-align: center;
+  line-height: 1.5;
+}
+
 .knowledge-points {
   display: flex;
   flex-wrap: wrap;

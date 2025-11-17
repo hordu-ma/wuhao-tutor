@@ -130,6 +130,12 @@ class ReviewService:
         # 🎯 [优化] 多来源提取题目内容
         question_content = self._extract_question_content(mistake)
 
+        # 🎯 [Phase 1] 处理图片列表
+        image_urls_value = mistake.image_urls
+        image_urls_list = (
+            image_urls_value if isinstance(image_urls_value, list) else []
+        )
+
         return {
             "session_id": str(session.id),
             "stage": session.current_stage,
@@ -140,6 +146,9 @@ class ReviewService:
             "correct_answer": mistake.correct_answer or "",
             "knowledge_points": mistake.knowledge_points or [],
             "has_ocr_text": bool(mistake.ocr_text),
+            # 🎯 [Phase 1] 新增：返回原题图片列表
+            "image_urls": image_urls_list,
+            "has_images": bool(image_urls_list and len(image_urls_list) > 0),
         }
 
     async def submit_review_answer(
