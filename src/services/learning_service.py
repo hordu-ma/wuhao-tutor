@@ -2833,10 +2833,17 @@ class LearningService:
                 "sin",
                 "cos",
                 "tan",
-                "x",
-                "y",
-                "z",
+                # 🔧 [Phase 1 - 方案3] 移除单字母关键词，改为上下文特征
+                # "x", "y", "z",  # ❌ 容易误触发英语题
+                "x=",
+                "y=",
+                "z=",
+                "x²",
+                "y²",
+                "x³",
                 "f(x)",
+                "g(x)",
+                "h(x)",
                 "π",
                 "∫",
                 "∑",
@@ -2912,6 +2919,7 @@ class LearningService:
                 "单质",
             ],
             "英语": [
+                # 元语言词汇（原有）
                 "grammar",
                 "vocabulary",
                 "tense",
@@ -2928,12 +2936,95 @@ class LearningService:
                 "present",
                 "future",
                 "passive",
+                # 疑问词
                 "what",
                 "where",
                 "when",
                 "who",
                 "how",
                 "why",
+                # 🎯 [Phase 1 - 方案1] 新增常见英语实词和题型特征
+                # 常见动词
+                "choose",
+                "correct",
+                "answer",
+                "question",
+                "fill",
+                "complete",
+                "write",
+                "read",
+                "listen",
+                "say",
+                "tell",
+                "speak",
+                "talk",
+                "ask",
+                # 连接词和介词
+                "because",
+                "although",
+                "however",
+                "therefore",
+                "moreover",
+                "besides",
+                # 助动词和情态动词
+                "should",
+                "would",
+                "could",
+                "might",
+                "must",
+                "can",
+                "will",
+                "shall",
+                # 常见be动词和助动词变形
+                " is ",
+                " are ",
+                " was ",
+                " were ",
+                " been ",
+                " have ",
+                " has ",
+                " had ",
+                " do ",
+                " does ",
+                " did ",
+                # 常见实义动词
+                "make",
+                "take",
+                "get",
+                "give",
+                "put",
+                "think",
+                "know",
+                "see",
+                "come",
+                "go",
+                # 选择题特征标志
+                "a.",
+                "b.",
+                "c.",
+                "d.",
+                "choose the",
+                "fill in",
+                "complete the",
+                "write the",
+                # 题型标志词
+                "passage",
+                "article",
+                "comprehension",
+                "dialogue",
+                "conversation",
+                "letter",
+                "story",
+                "text",
+                "paragraph",
+                # 常见冠词和代词（带空格避免误触发）
+                " the ",
+                " a ",
+                " an ",
+                " this ",
+                " that ",
+                " these ",
+                " those ",
             ],
             "语文": [
                 "作文",
@@ -2986,13 +3077,29 @@ class LearningService:
             if count > 0:
                 scores[subject] = count
 
-        # 返回匹配最多的科目，如果没有匹配则默认数学
+        # 返回匹配最多的科目
         if scores:
             inferred = max(scores, key=lambda x: scores[x])
             logger.debug(f"科目推断: {inferred} (匹配分数: {scores})")
             return inferred
 
-        logger.debug("科目推断: 无明显关键词，默认数学")
+        # 🎯 [Phase 1 - 方案2] 关键词匹配失败时，使用英文内容比例检测
+        import re
+
+        # 统计英文字母数量
+        english_chars = len(re.findall(r"[a-zA-Z]", content))
+        total_chars = len(re.findall(r"\S", content))  # 非空白字符总数
+
+        if total_chars > 10:  # 至少有10个字符才进行判断
+            english_ratio = english_chars / total_chars
+            if english_ratio > 0.5:  # 英文字符占比超过50%
+                logger.debug(
+                    f"科目推断: 英文内容占比 {english_ratio:.1%} > 50% → 判定为英语"
+                )
+                return "英语"
+
+        # 最后兜底：默认数学
+        logger.debug("科目推断: 无明显关键词且非英文内容，默认数学")
         return "数学"
 
     # ========== 作业批改核心方法 ==========
