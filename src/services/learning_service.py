@@ -149,6 +149,17 @@ class LearningService:
             session = await self._get_or_create_session(user_id, request)
             session_id_str = extract_orm_uuid_str(session, "id")  # 🔧 立即提取ID
 
+            # 🔧 自动更新标题：如果是首次提问且标题为"新对话"，自动更新为问题摘要
+            if session.question_count == 0 and session.title == "新对话":
+                new_title = await self._generate_session_title(request.content)
+                await self.session_repo.update(session_id_str, {"title": new_title})
+                # 更新内存中的session对象，确保返回的session包含新标题
+                session.title = new_title
+                logger.info(
+                    f"✅ 自动更新会话标题: session_id={session_id_str}, "
+                    f"new_title={new_title}"
+                )
+
             # 2. 保存问题
             question = await self._save_question(user_id, session_id_str, request)
             question_id_str = extract_orm_uuid_str(question, "id")  # 🔧 立即提取ID
@@ -2744,7 +2755,7 @@ class LearningService:
     ) -> None:
         """
         触发知识图谱服务进行知识点关联 + 实时快照更新
-        
+
         Phase 1: 实时同步机制修复
         - 创建知识点关联后立即更新知识图谱快照
         - 快照更新失败不影响错题创建流程
@@ -2768,14 +2779,14 @@ class LearningService:
                     f"✅ 知识点关联成功: mistake_id={mistake_id}, "
                     f"关联数量={len(associations)}"
                 )
-                
+
                 # 🆕 Phase 1: 立即更新知识图谱快照
                 try:
                     await kg_service.create_knowledge_graph_snapshot(
                         user_id=user_id,
                         subject=subject,
                         period_type="realtime_update",
-                        auto_commit=False  # 使用已有事务,统一提交
+                        auto_commit=False,  # 使用已有事务,统一提交
                     )
                     logger.info(
                         f"✅ 知识图谱快照实时更新成功: user={user_id}, "
@@ -3533,9 +3544,7 @@ class LearningService:
 
         # 🔧 关键修复：标准化学科名称（英文→中文）
         normalized_subject = normalize_subject(subject) if subject else "其他"
-        logger.info(
-            f"📝 [错题创建] 学科标准化: {subject} → {normalized_subject}"
-        )
+        logger.info(f"📝 [错题创建] 学科标准化: {subject} → {normalized_subject}")
         logger.info(
             f"📝 [错题创建] 开始处理批改结果: "
             f"total_corrections={len(correction_result.corrections)}, "
