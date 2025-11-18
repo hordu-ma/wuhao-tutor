@@ -1278,6 +1278,22 @@ class LearningService:
         result = await self.db.execute(stmt)
         sessions = result.scalars().all()
 
+        # 🔧 [修复] 确保每个会话都有 title，如果为空则生成摘要
+        items = []
+        for session in sessions:
+            response = SessionResponse.model_validate(session)
+
+            # 如果 title 为空或是默认值"新对话"，生成摘要
+            if (
+                not response.title
+                or response.title.strip() == ""
+                or response.title == "新对话"
+            ):
+                summary = await self._generate_session_summary(session)
+                response.title = summary
+
+            items.append(response)
+
         return {
             "total": total,
             "page": query.page,
@@ -1285,8 +1301,60 @@ class LearningService:
             "pages": (
                 (total + query.size - 1) // query.size if total and query.size else 0
             ),
-            "items": [SessionResponse.model_validate(session) for session in sessions],
+            "items": items,
         }
+
+    async def _generate_session_summary(self, session: ChatSession) -> str:
+        """根据会话内容生成摘要
+
+        如果会话 title 为空，尝试从第一个问题生成摘要
+        如果没有问题，使用会话 ID 的前 8 个字符
+
+        Args:
+            session: ChatSession 对象
+
+        Returns:
+            生成的摘要字符串（最多 20 个字符）
+        """
+        try:
+            # 获取会话的第一个问题
+            question_stmt = (
+                select(Question)
+                .where(Question.session_id == session.id)
+                .order_by(Question.created_at.asc())
+                .limit(1)
+            )
+            result = await self.db.execute(question_stmt)
+            first_question = result.scalars().first()
+
+            if first_question and first_question.content:
+                # 截取前 20 个字符作为摘要
+                content = first_question.content.strip()
+                if len(content) > 20:
+                    return content[:20] + "..."
+                return content
+
+            # 如果没有问题，使用会话创建时间作为标识
+            if session.created_at:
+                from datetime import datetime
+
+                created_time = session.created_at
+                if isinstance(created_time, str):
+                    created_time = datetime.fromisoformat(created_time)
+                return f"会话 {created_time.strftime('%m-%d %H:%M')}"
+
+            # 最后的 fallback：使用会话 ID
+            session_id_str = str(session.id)[:8] if session.id else "会话"
+            return f"会话 {session_id_str}"
+
+        except Exception as e:
+            # 生成摘要失败时，返回安全的默认值
+            logger.warning(f"生成会话摘要失败 (session_id={session.id}): {e}")
+            try:
+                session_id_str = str(session.id)[:8] if session.id else "会话"
+                return f"会话 {session_id_str}"
+            except Exception:
+                return "新会话"
 
     async def get_question_history(
         self, user_id: str, query: QuestionHistoryQuery

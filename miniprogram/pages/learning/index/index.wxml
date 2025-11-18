@@ -52,7 +52,7 @@
         <text class="welcome-title">你好！我是五好AI助手</text>
         <text class="welcome-desc">我可以帮你解答学习中的各种问题，快来问我吧～</text>
       </view>
-      
+
       <!-- 快捷问题气泡 -->
       <view class="quick-questions-bubbles" wx:if="{{quickQuestions.length > 0}}">
         <view class="bubble-item"
@@ -97,10 +97,10 @@
             </view>
 
             <!-- 用户消息中的图片（如果有） -->
-            <view wx:if="{{item.sender === 'user' && item.images && item.images.length > 0}}" 
+            <view wx:if="{{item.sender === 'user' && item.images && item.images.length > 0}}"
                   class="message-images">
-              <image wx:for="{{item.images}}" 
-                     wx:for-item="img" 
+              <image wx:for="{{item.images}}"
+                     wx:for-item="img"
                      wx:key="tempFilePath"
                      class="message-image"
                      src="{{img.tempFilePath}}"
@@ -181,18 +181,18 @@
     <view class="image-preview-area" wx:if="{{uploadedImages.length > 0}}">
       <scroll-view scroll-x="{{true}}" class="image-preview-scroll">
         <view class="image-preview-list">
-          <view class="image-preview-item" 
-                wx:for="{{uploadedImages}}" 
+          <view class="image-preview-item"
+                wx:for="{{uploadedImages}}"
                 wx:key="index">
-            <image src="{{item.tempFilePath}}" 
-                   mode="aspectFill" 
+            <image src="{{item.tempFilePath}}"
+                   mode="aspectFill"
                    class="preview-image"
                    lazy-load="{{true}}"
                    binderror="onImageLoadError"
                    bindload="onImageLoad" />
             <!-- 删除按钮 -->
-            <view class="remove-image-btn" 
-                  bindtap="removeImage" 
+            <view class="remove-image-btn"
+                  bindtap="removeImage"
                   data-index="{{index}}">
               <van-icon name="cross" size="12" color="#fff" />
             </view>
@@ -214,7 +214,7 @@
           <view class="voice-guide-bubble" wx:if="{{showVoiceGuide}}">
             <text>长按录音，松开发送</text>
           </view>
-          
+
           <view class="voice-btn-circle"
                 bindtouchstart="onVoiceTouchStart"
                 bindtouchend="onVoiceTouchEnd"
@@ -236,7 +236,7 @@
                     cursor-spacing="10"
                     maxlength="{{maxInputLength || 500}}"
                     fixed="{{true}}" />
-          
+
           <!-- 内嵌发送按钮 -->
           <view class="send-btn-inner {{!hasInputContent && uploadedImages.length === 0 ? 'disabled' : ''}}"
                 bindtap="sendMessage">
@@ -335,14 +335,14 @@
       <text class="history-title">最近会话</text>
       <van-icon name="cross" size="20" bindtap="onCloseHistory" />
     </view>
-    
+
     <scroll-view class="history-list" scroll-y="{{true}}">
       <!-- 空状态 -->
       <view class="history-empty" wx:if="{{!recentSessions.length}}">
         <van-icon name="chat-o" size="48" color="#ccc" />
         <text class="empty-text">暂无历史会话</text>
       </view>
-      
+
       <!-- 会话列表 -->
       <view class="history-item {{item.id === sessionId ? 'active' : ''}}"
             wx:for="{{recentSessions}}"
@@ -352,7 +352,7 @@
         <view class="history-item-content">
           <view class="history-item-title">
             <van-icon name="chat-o" size="16" color="#7c3aed" />
-            <text class="title-text">{{item.title}}</text>
+            <text class="title-text">{{item.title || '新会话'}}</text>
           </view>
           <view class="history-item-meta">
             <text class="meta-count">{{item.messageCount}}条消息</text>
@@ -369,4 +369,3 @@
 <!-- 全局提示组件 -->
 <van-toast id="van-toast" />
 <van-dialog id="van-dialog" />
-
