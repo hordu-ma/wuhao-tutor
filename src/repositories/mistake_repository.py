@@ -604,3 +604,31 @@ source: {source}
         logger.debug(f"Retrieved knowledge point distribution for user {user_id}")
 
         return dict(sorted_kps)
+
+    async def find_for_revision(
+        self,
+        user_id: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> List[MistakeRecord]:
+        """
+        查询用于复习的错题（按时间范围）
+
+        Args:
+            user_id: 用户ID
+            start_date: 开始时间
+            end_date: 结束时间
+
+        Returns:
+            错题记录列表
+        """
+        stmt = select(MistakeRecord).where(
+            and_(
+                MistakeRecord.user_id == str(user_id),
+                MistakeRecord.created_at >= start_date,
+                MistakeRecord.created_at <= end_date,
+            )
+        ).order_by(MistakeRecord.created_at.desc())
+
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())

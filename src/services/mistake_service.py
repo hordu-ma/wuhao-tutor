@@ -1518,3 +1518,86 @@ class MistakeService:
             lines.append("\n")
 
         return lines
+
+    async def get_mistakes_for_revision(
+        self,
+        user_id: UUID,
+        days_lookback: int = 30,
+    ) -> Dict[str, Any]:
+        """
+        获取用于生成复习计划的错题数据
+
+        Args:
+            user_id: 用户ID
+            days_lookback: 回顾天数
+
+        Returns:
+            包含错题列表、统计信息、知识点列表等的字典
+        """
+        # 计算时间范围
+        end_date = datetime.utcnow()
+        start_date = end_date - timedelta(days=days_lookback)
+
+        # 查询错题
+        mistakes = await self.mistake_repo.find_for_revision(user_id, start_date, end_date)
+
+        # 转换为列表项
+        items = []
+        knowledge_points = set()
+
+        for m in mistakes:
+            item = await self._to_list_item(m)
+            items.append(item)
+            if item.knowledge_points:
+                knowledge_points.update(item.knowledge_points)
+
+        # 统计信息
+        stats = {
+            "total_count": len(items),
+            "knowledge_point_count": len(knowledge_points),
+            "subject_distribution": {},
+            "difficulty_distribution": {},
+        }
+
+        for item in items:
+            # 学科分布
+            subject = item.subject or "unknown"
+            stats["subject_distribution"][subject] = stats["subject_distribution"].get(subject, 0) + 1
+
+            # 难度分布
+            diff = item.difficulty_level or 0
+            stats["difficulty_distribution"][diff] = stats["difficulty_distribution"].get(diff, 0) + 1
+
+        return {
+            "items": items,
+            "statistics": stats,
+            "knowledge_points": list(knowledge_points),
+            "date_range": {
+                "start": start_date.isoformat(),
+                "end": end_date.isoformat()
+            }
+        }
+
+    async def generate_markdown_export(
+        self,
+        user_id: UUID,
+        mistakes_data: Dict[str, Any],
+    ) -> str:
+        """
+        生成错题导出 Markdown
+        """
+        items = mistakes_data.get("items", [])
+        if not items:
+            return "暂无错题数据"
+
+        lines = []
+        lines.append(f"# 错题复习汇总 ({len(items)}题)")
+        lines.append(f"生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n")
+
+        for i, item in enumerate(items, 1):
+            # item 是 MistakeListItem 对象
+            mistake_lines = self._format_mistake_markdown(i, item)
+            lines.extend(mistake_lines)
+            lines.append("\n---\n")
+
+        return "\n".join(lines)

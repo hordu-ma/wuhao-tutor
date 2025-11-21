@@ -5,6 +5,7 @@
 
 import os
 import uuid
+from io import BytesIO
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -309,6 +310,65 @@ class FileService:
             "category_stats": {"general": total_files},
             "recent_uploads": 0,
         }
+
+    async def save_file(
+        self,
+        file_buffer: BytesIO,
+        file_key: str,
+        content_type: str = "application/octet-stream",
+    ) -> str:
+        """
+        保存文件（支持 OSS 或本地）
+
+        Args:
+            file_buffer: 文件内容
+            file_key: 文件路径/Key (e.g. "plans/123.pdf")
+            content_type: MIME类型
+
+        Returns:
+            文件访问URL
+        """
+        # 检查是否配置了 OSS
+        if settings.OSS_ACCESS_KEY_ID and settings.OSS_ACCESS_KEY_SECRET:
+            return await self._save_to_oss(file_buffer, file_key, content_type)
+        else:
+            return await self._save_to_local(file_buffer, file_key)
+
+    async def _save_to_oss(
+        self, file_buffer: BytesIO, file_key: str, content_type: str
+    ) -> str:
+        import oss2
+
+        auth = oss2.Auth(
+            settings.OSS_ACCESS_KEY_ID, settings.OSS_ACCESS_KEY_SECRET
+        )
+        bucket = oss2.Bucket(
+            auth, settings.OSS_ENDPOINT, settings.OSS_BUCKET_NAME
+        )
+
+        # 确保指针在开始位置
+        file_buffer.seek(0)
+
+        # 上传
+        bucket.put_object(
+            file_key, file_buffer, headers={"Content-Type": content_type}
+        )
+
+        # 生成签名URL (有效期1小时)
+        url = bucket.sign_url("GET", file_key, 3600)
+        return url
+
+    async def _save_to_local(self, file_buffer: BytesIO, file_key: str) -> str:
+        # 确保目录存在
+        full_path = self.upload_dir / file_key
+        full_path.parent.mkdir(parents=True, exist_ok=True)
+
+        file_buffer.seek(0)
+        with open(full_path, "wb") as f:
+            f.write(file_buffer.read())
+
+        # 返回本地访问URL
+        return f"{settings.BASE_URL}/uploads/{file_key}"
 
 
 # 全局实例

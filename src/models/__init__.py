@@ -50,7 +50,11 @@ from .learning import (
 )
 
 # 复习会话模型
+# from .review import Mistake, MistakeReview, ReviewPlan, ReviewType
 from .review import MistakeReviewSession
+
+# 复习计划模型 (AI生成)
+from .revision_plan import RevisionPlan
 
 # 学习记录模型
 from .study import (
@@ -58,6 +62,7 @@ from .study import (
     KnowledgeMastery,
     MasteryStatus,
     MistakeRecord,
+    MistakeReview,
     ReviewSchedule,
     StudySession,
     Subject,
@@ -65,6 +70,7 @@ from .study import (
 
 # 用户相关模型
 from .user import GradeLevel, User, UserRole, UserSession
+# from .user import AuthProvider, GradeLevel, User, UserRole, UserStatus, UserSession
 
 # 导出所有模型类
 __all__ = [
@@ -90,8 +96,11 @@ __all__ = [
     "Subject",
     "DifficultyLevel",
     "MasteryStatus",
+    "MistakeReview",
     # 复习会话模型
     "MistakeReviewSession",
+    # 复习计划模型
+    "RevisionPlan",
     # 知识图谱模型
     "KnowledgeNode",
     "KnowledgeRelation",

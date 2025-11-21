@@ -51,7 +51,6 @@ API → Service → Repository → Model
 - **用户交互**: 中文（简洁直接）
 - **代码注释**: 中文（复杂逻辑必须注释）
 - **文档编写**: 中文（README、开发文档等）
-- **AGENTS.md**: 保持英文（供国际 AI 工具使用）
 - **Git 提交**: 中文（遵循用户级指令的提交规范）
 
 ---
@@ -95,7 +94,7 @@ async def create_mistake_endpoint(...):
 ## 快速命令
 
 ```bash
-# 核心命令（完整命令列表见 AGENTS.md）
+# 核心命令
 make dev                # 启动后端开发服务器
 make db-migrate         # 创建数据库迁移
 make test               # 运行测试

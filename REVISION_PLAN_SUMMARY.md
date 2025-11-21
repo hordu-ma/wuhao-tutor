@@ -1,7 +1,7 @@
 # AI 复习计划生成功能 - 执行方案总结
 
-**版本**: v1.0  
-**状态**: 待确认  
+**版本**: v1.1
+**状态**: 开发中 (In Progress)
 **优先级**: 中等
 
 ---
@@ -29,13 +29,13 @@
 
 | 层级 | 组件 | 功能 | 状态 |
 |------|------|------|------|
-| **API** | `/api/v1/revisions` | REST 接口 | **新增** |
-| **Service** | RevisionPlanService | 计划生成 + 缓存 | **新增** |
-| | PDFGeneratorService | PDF 生成 (WeasyPrint) | **新增** |
-| | AliyunOSSService | 文件存储 | **新增/扩展** |
-| **Repository** | RevisionPlanRepository | 数据持久化 (PG) | **新增** |
-| **Model** | RevisionPlan | 数据结构 | **新增** |
-| **Frontend** | 小程序学习报告页 + 详情页 | UI 交互 | **改造现有** |
+| **API** | `/api/v1/revisions` | REST 接口 | **待开发** |
+| **Service** | RevisionPlanService | 计划生成 + 缓存 | **已完成** |
+| | PDFGeneratorService | PDF 生成 (WeasyPrint) | **已完成** |
+| | AliyunOSSService | 文件存储 | **已完成** |
+| **Repository** | RevisionPlanRepository | 数据持久化 (PG) | **已完成** |
+| **Model** | RevisionPlan | 数据结构 | **已完成** |
+| **Frontend** | 小程序学习报告页 + 详情页 | UI 交互 | **待开发** |
 
 ### 2.2 数据流图
 
@@ -528,20 +528,24 @@ miniprogram/utils/api.ts              # 新增 revisions API 调用
 
 ## 十二、下一步行动
 
-### 确认要点
-1. ✅ 功能范围是否清晰
-2. ✅ 技术方案是否可行
-3. ✅ 工作量和时间表是否合理
-4. ✅ 优先级和扩展功能是否正确
+### 当前进度 (2025-11-21)
+- ✅ **Phase 1 (数据库/模型)**: 完成 Model, Repository 和 Alembic 脚本。
+- ✅ **Phase 2 (核心服务)**: 完成 RevisionPlanService, PDFGeneratorService, MistakeService 扩展。
+- ✅ **依赖管理**: 完成 weasyprint, jinja2 等依赖安装。
+
+### 待办事项 (Phase 3 & 4)
+- [ ] **API 开发**: 实现 `/api/v1/revisions` 相关接口 (生成/列表/详情/下载)。
+- [ ] **前端开发**: 小程序端页面 (列表页/详情页/PDF预览)。
+- [ ] **联调测试**: 前后端联调及生产环境部署。
 
 ### 待你确认
-- [ ] 是否同意此方案
-- [ ] 是否需要调整某些设计细节
-- [ ] 是否可以开始开发
+- [x] 是否同意此方案
+- [x] 是否需要调整某些设计细节
+- [x] 是否可以开始开发
 - [ ] 是否需要补充或澄清某些方面
 
 ---
 
-**文档完成于**: 2025-01-15  
-**方案状态**: 待你确认  
+**文档更新于**: 2025-11-21
+**方案状态**: 开发中
 **联系**: 随时可讨论细节和调整

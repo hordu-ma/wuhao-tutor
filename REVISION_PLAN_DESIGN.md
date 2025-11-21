@@ -1,8 +1,8 @@
 # AI 复习计划生成功能 - 完整设计方案
 
-**版本**: v1.0  
-**日期**: 2025-01-15  
-**状态**: 待审批  
+**版本**: v1.1
+**日期**: 2025-11-21
+**状态**: 开发中 (In Progress)
 **优先级**: 中
 
 ---
@@ -1639,14 +1639,14 @@ def downgrade():
 
 ### 7.1 后端集成
 
-- [ ] 创建 RevisionPlan 数据模型
-- [ ] 创建 RevisionPlanRepository
-- [ ] 实现 RevisionPlanService
-- [ ] 实现 PDFGeneratorService
+- [x] 创建 RevisionPlan 数据模型
+- [x] 创建 RevisionPlanRepository
+- [x] 实现 RevisionPlanService
+- [x] 实现 PDFGeneratorService
 - [ ] 添加 /api/v1/revisions 路由
-- [ ] 添加大模型提示词配置
-- [ ] 配置 PDF 文件存储（OSS/本地）
-- [ ] 数据库迁移脚本
+- [x] 添加大模型提示词配置 (集成在 Service 中)
+- [x] 配置 PDF 文件存储（OSS/本地）
+- [x] 数据库迁移脚本
 - [ ] 异步任务配置（可选）
 - [ ] 单元测试 + 集成测试
 - [ ] 日志和监控
