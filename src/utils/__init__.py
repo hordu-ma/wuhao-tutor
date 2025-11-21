@@ -5,8 +5,8 @@
 
 # 导入工具模块
 from .cache import RedisCache, cache_manager
+from .file_upload import FileInfo, FileType, FileUploadService, file_upload_service
 from .ocr import AliCloudOCRService, OCRResult, OCRType, ocr_service
-from .file_upload import FileUploadService, FileInfo, FileType, file_upload_service
 
 __all__ = [
     # 缓存工具

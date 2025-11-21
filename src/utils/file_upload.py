@@ -4,19 +4,19 @@
 """
 
 import hashlib
-from typing import List, Optional, Tuple, Dict, Any
+import uuid
 from datetime import datetime
 from pathlib import Path
-import aiofiles
-import uuid
+from typing import Any, Dict, List, Optional, Tuple
 
+import aiofiles
 import oss2
-from PIL import Image
 from fastapi import UploadFile
+from PIL import Image
 
 from src.core.config import settings
-from src.core.logging import get_logger
 from src.core.exceptions import AIServiceError
+from src.core.logging import get_logger
 
 logger = get_logger(__name__)
 

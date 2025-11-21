@@ -4,14 +4,15 @@ API性能和负载测试脚本
 """
 
 import asyncio
-import time
+import logging
 import statistics
-from typing import List, Dict, Optional
+import time
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Dict, List, Optional
+
 import aiohttp
 import pytest
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class LoadTestResult:
     """负载测试结果"""
+
     endpoint: str
     method: str
     total_requests: int
@@ -37,6 +39,7 @@ class LoadTestResult:
 @dataclass
 class RequestResult:
     """单次请求结果"""
+
     success: bool
     response_time: float
     status_code: int
@@ -54,7 +57,7 @@ class LoadTester:
         """异步上下文管理器入口"""
         self.session = aiohttp.ClientSession(
             timeout=aiohttp.ClientTimeout(total=30),
-            connector=aiohttp.TCPConnector(limit=100)
+            connector=aiohttp.TCPConnector(limit=100),
         )
         return self
 
@@ -63,9 +66,13 @@ class LoadTester:
         if self.session:
             await self.session.close()
 
-    async def single_request(self, endpoint: str, method: str = "GET",
-                           json_data: Optional[Dict] = None,
-                           headers: Optional[Dict] = None) -> RequestResult:
+    async def single_request(
+        self,
+        endpoint: str,
+        method: str = "GET",
+        json_data: Optional[Dict] = None,
+        headers: Optional[Dict] = None,
+    ) -> RequestResult:
         """执行单次请求"""
         start_time = time.time()
 
@@ -73,10 +80,7 @@ class LoadTester:
             url = f"{self.base_url}{endpoint}"
 
             async with self.session.request(
-                method=method,
-                url=url,
-                json=json_data,
-                headers=headers
+                method=method, url=url, json=json_data, headers=headers
             ) as response:
                 response_time = time.time() - start_time
                 await response.text()  # 读取响应内容
@@ -85,7 +89,9 @@ class LoadTester:
                     success=response.status < 400,
                     response_time=response_time,
                     status_code=response.status,
-                    error_message=None if response.status < 400 else f"HTTP {response.status}"
+                    error_message=None
+                    if response.status < 400
+                    else f"HTTP {response.status}",
                 )
 
         except Exception as e:
@@ -94,13 +100,18 @@ class LoadTester:
                 success=False,
                 response_time=response_time,
                 status_code=0,
-                error_message=str(e)
+                error_message=str(e),
             )
 
-    async def concurrent_load_test(self, endpoint: str, concurrent_users: int,
-                                 requests_per_user: int, method: str = "GET",
-                                 json_data: Optional[Dict] = None,
-                                 headers: Optional[Dict] = None) -> LoadTestResult:
+    async def concurrent_load_test(
+        self,
+        endpoint: str,
+        concurrent_users: int,
+        requests_per_user: int,
+        method: str = "GET",
+        json_data: Optional[Dict] = None,
+        headers: Optional[Dict] = None,
+    ) -> LoadTestResult:
         """并发负载测试"""
         print(f"开始负载测试: {endpoint}")
         print(f"并发用户数: {concurrent_users}, 每用户请求数: {requests_per_user}")
@@ -109,8 +120,8 @@ class LoadTester:
 
         # 创建任务
         tasks = []
-        for user in range(concurrent_users):
-            for request in range(requests_per_user):
+        for _ in range(concurrent_users):
+            for _ in range(requests_per_user):
                 task = asyncio.create_task(
                     self.single_request(endpoint, method, json_data, headers)
                 )
@@ -163,7 +174,7 @@ class LoadTester:
             percentile_99=percentile_99,
             requests_per_second=requests_per_second,
             error_rate=error_rate,
-            errors=error_summary
+            errors=error_summary,
         )
 
         self._print_result(result)
@@ -186,9 +197,9 @@ class LoadTester:
 
     def _print_result(self, result: LoadTestResult):
         """打印测试结果"""
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"负载测试结果: {result.method} {result.endpoint}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"总请求数:     {result.total_requests}")
         print(f"成功请求数:   {result.successful_requests}")
         print(f"失败请求数:   {result.failed_requests}")
@@ -205,7 +216,7 @@ class LoadTester:
             for error in result.errors[:5]:
                 print(f"  - {error}")
 
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
 
 
 class PerformanceTestSuite:
@@ -223,22 +234,22 @@ class PerformanceTestSuite:
                 "method": "GET",
                 "concurrent_users": 10,
                 "requests_per_user": 10,
-                "description": "健康检查端点"
+                "description": "健康检查端点",
             },
             {
                 "endpoint": "/health/readiness",
                 "method": "GET",
                 "concurrent_users": 5,
                 "requests_per_user": 5,
-                "description": "就绪检查端点"
+                "description": "就绪检查端点",
             },
             {
                 "endpoint": "/health/liveness",
                 "method": "GET",
                 "concurrent_users": 20,
                 "requests_per_user": 10,
-                "description": "活性检查端点"
-            }
+                "description": "活性检查端点",
+            },
         ]
 
         results = []
@@ -249,7 +260,7 @@ class PerformanceTestSuite:
                     endpoint=test["endpoint"],
                     method=test["method"],
                     concurrent_users=test["concurrent_users"],
-                    requests_per_user=test["requests_per_user"]
+                    requests_per_user=test["requests_per_user"],
                 )
                 results.append(result)
 
@@ -267,15 +278,15 @@ class PerformanceTestSuite:
                 "method": "GET",
                 "concurrent_users": 5,
                 "requests_per_user": 10,
-                "description": "系统指标端点"
+                "description": "系统指标端点",
             },
             {
                 "endpoint": "/api/v1/health/performance",
                 "method": "GET",
                 "concurrent_users": 3,
                 "requests_per_user": 5,
-                "description": "性能监控端点"
-            }
+                "description": "性能监控端点",
+            },
         ]
 
         results = []
@@ -286,7 +297,7 @@ class PerformanceTestSuite:
                     endpoint=test["endpoint"],
                     method=test["method"],
                     concurrent_users=test["concurrent_users"],
-                    requests_per_user=test["requests_per_user"]
+                    requests_per_user=test["requests_per_user"],
                 )
                 results.append(result)
 
@@ -306,7 +317,7 @@ class PerformanceTestSuite:
                 endpoint="/health",
                 method="GET",
                 concurrent_users=20,
-                requests_per_user=10
+                requests_per_user=10,
             )
 
             self.results.append(result)
@@ -328,7 +339,9 @@ class PerformanceTestSuite:
         total_requests = sum(r.total_requests for r in self.results)
         total_successful = sum(r.successful_requests for r in self.results)
         total_failed = sum(r.failed_requests for r in self.results)
-        overall_error_rate = (total_failed / total_requests * 100) if total_requests > 0 else 0
+        overall_error_rate = (
+            (total_failed / total_requests * 100) if total_requests > 0 else 0
+        )
 
         report.append("\n总体统计:")
         report.append(f"  总请求数: {total_requests}")
@@ -337,7 +350,9 @@ class PerformanceTestSuite:
         report.append(f"  整体错误率: {overall_error_rate:.2f}%")
 
         # 性能指标
-        avg_response_times = [r.avg_response_time for r in self.results if r.successful_requests > 0]
+        avg_response_times = [
+            r.avg_response_time for r in self.results if r.successful_requests > 0
+        ]
         if avg_response_times:
             report.append(f"  平均响应时间: {statistics.mean(avg_response_times):.3f}s")
             report.append(f"  最佳响应时间: {min(avg_response_times):.3f}s")
@@ -348,7 +363,9 @@ class PerformanceTestSuite:
         report.append("-" * 80)
         for result in self.results:
             report.append(f"端点: {result.method} {result.endpoint}")
-            report.append(f"  成功率: {((result.successful_requests / result.total_requests) * 100):.1f}%")
+            report.append(
+                f"  成功率: {((result.successful_requests / result.total_requests) * 100):.1f}%"
+            )
             report.append(f"  平均响应时间: {result.avg_response_time:.3f}s")
             report.append(f"  95%响应时间: {result.percentile_95:.3f}s")
             report.append(f"  吞吐量: {result.requests_per_second:.2f} req/s")
@@ -400,8 +417,12 @@ class TestPerformance:
         # 断言检查
         for result in results:
             assert result.error_rate < 10, f"错误率过高: {result.error_rate}%"
-            assert result.avg_response_time < 2.0, f"响应时间过慢: {result.avg_response_time}s"
-            assert result.requests_per_second > 10, f"吞吐量过低: {result.requests_per_second} req/s"
+            assert result.avg_response_time < 2.0, (
+                f"响应时间过慢: {result.avg_response_time}s"
+            )
+            assert result.requests_per_second > 10, (
+                f"吞吐量过低: {result.requests_per_second} req/s"
+            )
 
     @pytest.mark.asyncio
     async def test_api_stress_performance(self):
@@ -412,7 +433,9 @@ class TestPerformance:
         # 检查关键指标
         for result in results:
             assert result.error_rate < 20, f"压力测试错误率过高: {result.error_rate}%"
-            assert result.percentile_95 < 5.0, f"95%响应时间过慢: {result.percentile_95}s"
+            assert result.percentile_95 < 5.0, (
+                f"95%响应时间过慢: {result.percentile_95}s"
+            )
 
     @pytest.mark.asyncio
     async def test_rate_limiting(self):

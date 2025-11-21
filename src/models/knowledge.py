@@ -6,16 +6,16 @@
 import enum
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     Column,
+    DateTime,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
     Text,
-    DateTime,
-    JSON,
-    Index,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func

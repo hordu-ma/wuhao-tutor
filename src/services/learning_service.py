@@ -1807,7 +1807,7 @@ class LearningService:
                     )
                 else:
                     await kg_service.analyze_and_associate_knowledge_points(
-                        mistake_id=UUID(str(getattr(mistake, "id"))),
+                        mistake_id=UUID(str(mistake.id)),
                         user_id=UUID(user_id),
                         subject=subject_for_kg,
                         ocr_text=clean_question,

@@ -238,7 +238,7 @@ async def get_mistake_knowledge_points(
 
             kp_list.append(
                 KnowledgePointAssociation(
-                    id=UUID(str(getattr(assoc, "id"))),
+                    id=UUID(str(assoc.id)),
                     knowledge_point_id=UUID(str(kp_id_str)),
                     knowledge_point_name=str(getattr(km, "knowledge_point", "")),
                     relevance_score=float(str(getattr(assoc, "relevance_score", 0.5))),
@@ -399,10 +399,10 @@ async def create_snapshot(
         weak_chains = [WeakKnowledgeChain(**chain) for chain in weak_chains_raw]
 
         return KnowledgeGraphSnapshot(
-            id=UUID(str(getattr(snapshot, "id"))),
-            user_id=UUID(str(getattr(snapshot, "user_id"))),
-            subject=str(getattr(snapshot, "subject")),
-            snapshot_date=getattr(snapshot, "snapshot_date"),
+            id=UUID(str(snapshot.id)),
+            user_id=UUID(str(snapshot.user_id)),
+            subject=str(snapshot.subject),
+            snapshot_date=snapshot.snapshot_date,
             graph_data=graph_data,
             mastery_distribution=mastery_dist,
             weak_knowledge_chains=weak_chains,
@@ -465,10 +465,10 @@ async def get_latest_snapshot(
         weak_chains = [WeakKnowledgeChain(**chain) for chain in weak_chains_raw]
 
         return KnowledgeGraphSnapshot(
-            id=UUID(str(getattr(snapshot, "id"))),
-            user_id=UUID(str(getattr(snapshot, "user_id"))),
-            subject=str(getattr(snapshot, "subject")),
-            snapshot_date=getattr(snapshot, "snapshot_date"),
+            id=UUID(str(snapshot.id)),
+            user_id=UUID(str(snapshot.user_id)),
+            subject=str(snapshot.subject),
+            snapshot_date=snapshot.snapshot_date,
             graph_data=graph_data,
             mastery_distribution=mastery_dist,
             weak_knowledge_chains=weak_chains,
@@ -619,7 +619,7 @@ async def get_user_knowledge_mastery(
 
             items.append(
                 KnowledgeMasteryItem(
-                    id=UUID(str(getattr(km, "id"))),
+                    id=UUID(str(km.id)),
                     knowledge_point=str(getattr(km, "knowledge_point", "")),
                     subject=str(getattr(km, "subject", "")),
                     mastery_level=mastery_level,

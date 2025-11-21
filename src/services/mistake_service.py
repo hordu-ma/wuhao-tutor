@@ -114,12 +114,12 @@ class MistakeService:
 
             # 只取前3个知识点（列表页不需要全部显示）
             for assoc in associations[:3]:
-                kp_id = UUID(str(getattr(assoc, "knowledge_point_id")))
+                kp_id = UUID(str(assoc.knowledge_point_id))
                 mastery = await km_repo.get_by_id(str(kp_id))
 
                 knowledge_point_associations.append(
                     {
-                        "association_id": str(getattr(assoc, "id")),
+                        "association_id": str(assoc.id),
                         "knowledge_point_id": str(kp_id),
                         "knowledge_point_name": (
                             getattr(mastery, "knowledge_point", "未知知识点")
@@ -359,12 +359,12 @@ class MistakeService:
             # 构建知识点关联详情
             for assoc in associations:
                 # 查询对应的知识点掌握度信息
-                kp_id = UUID(str(getattr(assoc, "knowledge_point_id")))
+                kp_id = UUID(str(assoc.knowledge_point_id))
                 mastery = await km_repo.get_by_id(str(kp_id))
 
                 knowledge_point_associations.append(
                     {
-                        "association_id": str(getattr(assoc, "id")),
+                        "association_id": str(assoc.id),
                         "knowledge_point_id": str(kp_id),
                         "knowledge_point_name": (
                             getattr(mastery, "knowledge_point", "未知知识点")
@@ -376,7 +376,7 @@ class MistakeService:
                         ),
                         "is_primary": getattr(assoc, "is_primary", False),
                         "error_type": getattr(assoc, "error_type", ""),
-                        "error_reason": getattr(assoc, "error_reason"),
+                        "error_reason": assoc.error_reason,
                         "mastery_level": (
                             float(str(getattr(mastery, "mastery_level", 0.0)))
                             if mastery
@@ -384,7 +384,7 @@ class MistakeService:
                         ),
                         "mastered": getattr(assoc, "mastered_after_review", False),
                         "review_count": getattr(assoc, "review_count", 0),
-                        "last_review_result": getattr(assoc, "last_review_result"),
+                        "last_review_result": assoc.last_review_result,
                     }
                 )
 
@@ -598,7 +598,7 @@ class MistakeService:
 
             # 1. 调用知识图谱服务分析并关联知识点
             associations = await kg_service.analyze_and_associate_knowledge_points(
-                mistake_id=UUID(str(getattr(mistake, "id"))),
+                mistake_id=UUID(str(mistake.id)),
                 user_id=user_id,
                 subject=request.subject,
                 ocr_text=request.question_content,
@@ -616,7 +616,7 @@ class MistakeService:
                         user_id=user_id,
                         subject=request.subject,
                         period_type="realtime_update",
-                        auto_commit=False  # 使用已有事务
+                        auto_commit=False,  # 使用已有事务
                     )
                     logger.info(
                         f"✅ 知识图谱快照实时更新成功: user={user_id}, "
@@ -1421,18 +1421,14 @@ class MistakeService:
 
         # 标题和元数据
         lines.append("# 错题本导出报告\n")
-        lines.append(
-            f"**导出时间**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}  "
-        )
+        lines.append(f"**导出时间**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}  ")
         lines.append(f"**学科**: {filters.get('subject', '全部')}  ")
         lines.append(f"**错题总数**: {len(mistakes)} 道  ")
 
         # 统计掌握情况
         mastered = sum(1 for m in mistakes if m.mastery_status == "mastered")
         learning = sum(1 for m in mistakes if m.mastery_status == "learning")
-        reviewing = sum(
-            1 for m in mistakes if m.mastery_status == "reviewing"
-        )
+        reviewing = sum(1 for m in mistakes if m.mastery_status == "reviewing")
         lines.append(
             f"**掌握情况**: 已掌握 {mastered} / "
             f"学习中 {learning} / 复习中 {reviewing}\n"
@@ -1472,9 +1468,7 @@ class MistakeService:
         # 难度
         difficulty_stars = "⭐" * (mistake.difficulty_level or 2)
         difficulty_map = {1: "简单", 2: "中等", 3: "困难", 4: "挑战", 5: "专家"}
-        difficulty_text = difficulty_map.get(
-            mistake.difficulty_level or 2, "中等"
-        )
+        difficulty_text = difficulty_map.get(mistake.difficulty_level or 2, "中等")
         lines.append(f"**难度**: {difficulty_stars} ({difficulty_text})  ")
 
         # 来源和状态
@@ -1492,9 +1486,7 @@ class MistakeService:
             "learning": "📖 学习中",
             "reviewing": "🔄 复习中",
         }
-        mastery_text = mastery_map.get(
-            mistake.mastery_status or "learning", "学习中"
-        )
+        mastery_text = mastery_map.get(mistake.mastery_status or "learning", "学习中")
         lines.append(f"**掌握状态**: {mastery_text}  ")
         lines.append(
             f"**复习次数**: {mistake.total_reviews or 0}次 "
@@ -1539,7 +1531,9 @@ class MistakeService:
         start_date = end_date - timedelta(days=days_lookback)
 
         # 查询错题
-        mistakes = await self.mistake_repo.find_for_revision(user_id, start_date, end_date)
+        mistakes = await self.mistake_repo.find_for_revision(
+            user_id, start_date, end_date
+        )
 
         # 转换为列表项
         items = []
@@ -1562,11 +1556,15 @@ class MistakeService:
         for item in items:
             # 学科分布
             subject = item.subject or "unknown"
-            stats["subject_distribution"][subject] = stats["subject_distribution"].get(subject, 0) + 1
+            stats["subject_distribution"][subject] = (
+                stats["subject_distribution"].get(subject, 0) + 1
+            )
 
             # 难度分布
             diff = item.difficulty_level or 0
-            stats["difficulty_distribution"][diff] = stats["difficulty_distribution"].get(diff, 0) + 1
+            stats["difficulty_distribution"][diff] = (
+                stats["difficulty_distribution"].get(diff, 0) + 1
+            )
 
         return {
             "items": items,
@@ -1574,8 +1572,8 @@ class MistakeService:
             "knowledge_points": list(knowledge_points),
             "date_range": {
                 "start": start_date.isoformat(),
-                "end": end_date.isoformat()
-            }
+                "end": end_date.isoformat(),
+            },
         }
 
     async def generate_markdown_export(

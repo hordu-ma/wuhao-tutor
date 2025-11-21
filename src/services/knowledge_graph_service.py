@@ -536,20 +536,20 @@ class KnowledgeGraphService:
                 )
 
                 # 4. 更新知识点掌握度（使用setattr避免类型检查问题）
-                setattr(km, "total_attempts", total_attempts + 1)
+                km.total_attempts = total_attempts + 1
                 if review_result == "correct":
                     correct_count = getattr(km, "correct_count", 0)
-                    setattr(km, "correct_count", int(correct_count) + 1)
+                    km.correct_count = int(correct_count) + 1
                 # 🔧 [已废弃] mistake_count 改为实时统计，不再维护
 
-                setattr(km, "mastery_level", mastery_after)
-                setattr(km, "confidence_level", confidence_level / 5.0)
-                setattr(km, "last_practiced_at", datetime.now())
+                km.mastery_level = mastery_after
+                km.confidence_level = confidence_level / 5.0
+                km.last_practiced_at = datetime.now()
 
                 # 如果首次掌握（mastery >= 0.8）
                 first_mastered = getattr(km, "first_mastered_at", None)
                 if mastery_after >= 0.8 and not first_mastered:
-                    setattr(km, "first_mastered_at", datetime.now())
+                    km.first_mastered_at = datetime.now()
 
                 # 5. 更新关联记录
                 mastered = review_result == "correct" and mastery_after >= 0.8
@@ -1122,8 +1122,7 @@ class KnowledgeGraphService:
             # 不再使用 normalize_subject() 转换为中文,避免查询不到数据
             user_id_str = str(user_id)
             logger.info(
-                f"🔍 开始获取知识图谱: user_id={user_id_str}, "
-                f"subject={subject}"
+                f"🔍 开始获取知识图谱: user_id={user_id_str}, subject={subject}"
             )
 
             # 1. 查询用户该学科的所有知识点掌握度（按掌握度升序排列）

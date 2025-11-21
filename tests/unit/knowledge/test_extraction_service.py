@@ -3,7 +3,6 @@
 """
 
 import pytest
-
 from src.services.knowledge.extraction_service import (
     KnowledgeExtractionService,
     KnowledgePoint,

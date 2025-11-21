@@ -15,7 +15,9 @@ from .base import BaseModel
 
 # 获取配置以确定数据库类型
 settings = get_settings()
-is_sqlite = settings.SQLALCHEMY_DATABASE_URI and "sqlite" in str(settings.SQLALCHEMY_DATABASE_URI)  # type: ignore
+is_sqlite = settings.SQLALCHEMY_DATABASE_URI and "sqlite" in str(
+    settings.SQLALCHEMY_DATABASE_URI
+)  # type: ignore
 
 # 根据数据库类型选择合适的UUID字段类型
 if is_sqlite:

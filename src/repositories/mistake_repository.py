@@ -622,13 +622,17 @@ source: {source}
         Returns:
             错题记录列表
         """
-        stmt = select(MistakeRecord).where(
-            and_(
-                MistakeRecord.user_id == str(user_id),
-                MistakeRecord.created_at >= start_date,
-                MistakeRecord.created_at <= end_date,
+        stmt = (
+            select(MistakeRecord)
+            .where(
+                and_(
+                    MistakeRecord.user_id == str(user_id),
+                    MistakeRecord.created_at >= start_date,
+                    MistakeRecord.created_at <= end_date,
+                )
             )
-        ).order_by(MistakeRecord.created_at.desc())
+            .order_by(MistakeRecord.created_at.desc())
+        )
 
         result = await self.db.execute(stmt)
         return list(result.scalars().all())

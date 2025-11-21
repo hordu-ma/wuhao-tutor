@@ -78,9 +78,9 @@ class TestMistakeService:
         # 创建一些错题
         for i in range(3):
             request = CreateMistakeRequest(
-                title=f"错题 {i+1}",
+                title=f"错题 {i + 1}",
                 subject="math",
-                question_content=f"题目内容 {i+1}",
+                question_content=f"题目内容 {i + 1}",
             )
             await mistake_service.create_mistake(user_id, request)
 
@@ -100,9 +100,9 @@ class TestMistakeService:
         # 创建一些错题
         for i in range(5):
             request = CreateMistakeRequest(
-                title=f"错题 {i+1}",
+                title=f"错题 {i + 1}",
                 subject="math" if i % 2 == 0 else "english",
-                question_content=f"题目内容 {i+1}",
+                question_content=f"题目内容 {i + 1}",
             )
             await mistake_service.create_mistake(user_id, request)
 
@@ -117,4 +117,3 @@ class TestMistakeService:
 if __name__ == "__main__":
     """直接运行测试"""
     pytest.main([__file__, "-v", "-s"])
-

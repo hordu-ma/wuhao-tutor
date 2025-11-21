@@ -15,7 +15,9 @@ from src.core.database import Base
 
 # 获取配置以确定数据库类型
 settings = get_settings()
-is_sqlite = settings.SQLALCHEMY_DATABASE_URI and "sqlite" in str(settings.SQLALCHEMY_DATABASE_URI)  # type: ignore
+is_sqlite = settings.SQLALCHEMY_DATABASE_URI and "sqlite" in str(
+    settings.SQLALCHEMY_DATABASE_URI
+)  # type: ignore
 
 
 class BaseModel(Base):

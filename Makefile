@@ -74,15 +74,14 @@ dev-reload: ## 启动开发服务器（自动重载）
 .PHONY: format
 format: ## 格式化代码
 	@echo "$(GREEN)格式化代码...$(RESET)"
-	$(UV) run black src/ tests/ --line-length 88
-	$(UV) run isort src/ tests/ --profile black
+	$(UV) run ruff format src/ tests/
+	$(UV) run ruff check --fix --select I src/ tests/
 
 .PHONY: lint
 lint: ## 代码检查
 	@echo "$(GREEN)运行代码检查...$(RESET)"
-	$(UV) run flake8 src/ tests/ --max-line-length=88 --extend-ignore=E203,W503
-	$(UV) run black src/ tests/ --check --line-length 88
-	$(UV) run isort src/ tests/ --check-only --profile black
+	$(UV) run ruff check src/ tests/
+	$(UV) run ruff format --check src/ tests/
 
 .PHONY: type-check
 type-check: ## 类型检查

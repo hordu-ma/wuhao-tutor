@@ -132,9 +132,7 @@ class ReviewService:
 
         # 🎯 [Phase 1] 处理图片列表
         image_urls_value = mistake.image_urls
-        image_urls_list = (
-            image_urls_value if isinstance(image_urls_value, list) else []
-        )
+        image_urls_list = image_urls_value if isinstance(image_urls_value, list) else []
 
         return {
             "session_id": str(session.id),

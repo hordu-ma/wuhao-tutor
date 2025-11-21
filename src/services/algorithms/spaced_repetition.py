@@ -145,7 +145,7 @@ class SpacedRepetitionAlgorithm:
             score += result_score * weight
 
             logger.debug(
-                f"Review {i+1}: result={review_result}, score={result_score}, weight={weight}"
+                f"Review {i + 1}: result={review_result}, score={result_score}, weight={weight}"
             )
 
         mastery = round(score, 2)

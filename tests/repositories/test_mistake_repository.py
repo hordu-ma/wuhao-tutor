@@ -56,14 +56,14 @@ async def sample_mistakes(mistake_repo):
         data = {
             "user_id": user_id,
             "subject": "math" if i % 2 == 0 else "english",
-            "title": f"错题 {i+1}",
-            "ocr_text": f"题目内容 {i+1}",
+            "title": f"错题 {i + 1}",
+            "ocr_text": f"题目内容 {i + 1}",
             "difficulty_level": (i % 3) + 1,
             "mastery_status": ["learning", "reviewing", "mastered"][i % 3],
             "review_count": i,
             "correct_count": i // 2,
             "next_review_at": datetime.now() + timedelta(days=i),
-            "knowledge_points": [f"知识点{i}", f"知识点{i+1}"],
+            "knowledge_points": [f"知识点{i}", f"知识点{i + 1}"],
         }
         mistake = await mistake_repo.create(data)
         mistakes.append(mistake)
@@ -79,13 +79,17 @@ class TestMistakeRepository:
         """测试基本用户查询"""
         user_id, _ = sample_mistakes
 
-        items, total = await mistake_repo.find_by_user(user_id=user_id, page=1, page_size=10)
+        items, total = await mistake_repo.find_by_user(
+            user_id=user_id, page=1, page_size=10
+        )
 
         assert total == 5
         assert len(items) == 5
 
     @pytest.mark.asyncio
-    async def test_find_by_user_with_subject_filter(self, mistake_repo, sample_mistakes):
+    async def test_find_by_user_with_subject_filter(
+        self, mistake_repo, sample_mistakes
+    ):
         """测试学科筛选"""
         user_id, _ = sample_mistakes
 

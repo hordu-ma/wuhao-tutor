@@ -70,6 +70,7 @@ from .study import (
 
 # 用户相关模型
 from .user import GradeLevel, User, UserRole, UserSession
+
 # from .user import AuthProvider, GradeLevel, User, UserRole, UserStatus, UserSession
 
 # 导出所有模型类

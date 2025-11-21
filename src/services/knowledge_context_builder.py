@@ -602,8 +602,9 @@ class KnowledgeContextBuilder:
             Dict[str, float]: 知识点名称 -> 掌握度 (0-1)
         """
         try:
-            from src.models.knowledge_graph import UserKnowledgeGraphSnapshot
             from uuid import UUID
+
+            from src.models.knowledge_graph import UserKnowledgeGraphSnapshot
 
             # 查询最新快照
             stmt = (

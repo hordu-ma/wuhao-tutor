@@ -87,20 +87,22 @@ class RevisionPlanService:
         )
 
         # 6. 保存到数据库
-        revision_plan = await self.revision_repo.create({
-            "user_id": str(user_id),
-            "title": plan_json["title"],
-            "description": plan_json.get("description", ""),
-            "cycle_type": cycle_type,
-            "status": "published",
-            "mistake_count": len(mistakes_data["items"]),
-            "knowledge_points": mistakes_data["knowledge_points"],
-            "date_range": mistakes_data["date_range"],
-            "plan_content": plan_json,
-            "pdf_url": pdf_info["url"],
-            "pdf_size": pdf_info["size"],
-            "expired_at": self._calculate_expiry(cycle_type),
-        })
+        revision_plan = await self.revision_repo.create(
+            {
+                "user_id": str(user_id),
+                "title": plan_json["title"],
+                "description": plan_json.get("description", ""),
+                "cycle_type": cycle_type,
+                "status": "published",
+                "mistake_count": len(mistakes_data["items"]),
+                "knowledge_points": mistakes_data["knowledge_points"],
+                "date_range": mistakes_data["date_range"],
+                "plan_content": plan_json,
+                "pdf_url": pdf_info["url"],
+                "pdf_size": pdf_info["size"],
+                "expired_at": self._calculate_expiry(cycle_type),
+            }
+        )
 
         logger.info(f"✅ 复习计划生成成功: {revision_plan.id}")
         return revision_plan
@@ -138,8 +140,7 @@ class RevisionPlanService:
 
         messages = [
             ChatMessage(
-                role=MessageRole.SYSTEM,
-                content=self._build_system_prompt(cycle_type)
+                role=MessageRole.SYSTEM, content=self._build_system_prompt(cycle_type)
             ),
             ChatMessage(
                 role=MessageRole.USER,
@@ -168,14 +169,14 @@ class RevisionPlanService:
 - review_focus: 重点复习内容
 - assessment: 评估标准
 - tips: 学习建议
-"""
-            )
+""",
+            ),
         ]
 
         response = await self.bailian_service.chat_completion(
             messages=messages,
         )
-        
+
         # 解析并验证 JSON
         plan_json = self._parse_json_response(response.content)
         return plan_json
@@ -196,7 +197,7 @@ class RevisionPlanService:
                 "user_id": str(user_id),
                 "generated_at": datetime.utcnow().isoformat(),
                 "markdown_source": markdown_content,
-            }
+            },
         )
 
         # 上传到阿里云 OSS
@@ -273,9 +274,7 @@ class RevisionPlanService:
     ) -> Dict[str, Any]:
         """获取复习计划列表"""
         plans, total = await self.revision_repo.find_by_user(
-            user_id=user_id,
-            page=offset // limit + 1,
-            page_size=limit
+            user_id=user_id, page=offset // limit + 1, page_size=limit
         )
 
         return {
@@ -295,14 +294,16 @@ class RevisionPlanService:
 
         # 更新下载计数
         plan.download_count += 1
-        await self.revision_repo.update(str(plan_id), {"download_count": plan.download_count})
+        await self.revision_repo.update(
+            str(plan_id), {"download_count": plan.download_count}
+        )
 
         return plan.pdf_url
 
     def _parse_json_response(self, response: str) -> Dict[str, Any]:
         """从 AI 响应中解析 JSON"""
         # 尝试找到 JSON 块
-        match = re.search(r'\{[\s\S]*\}', response)
+        match = re.search(r"\{[\s\S]*\}", response)
         if match:
             try:
                 return json.loads(match.group())

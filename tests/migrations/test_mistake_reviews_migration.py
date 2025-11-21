@@ -58,9 +58,9 @@ def test_upgrade_migration(test_db_engine):
         "updated_at",
     }
 
-    assert expected_columns.issubset(
-        columns
-    ), f"Missing columns: {expected_columns - columns}"
+    assert expected_columns.issubset(columns), (
+        f"Missing columns: {expected_columns - columns}"
+    )
 
 
 def test_model_fields():

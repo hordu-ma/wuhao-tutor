@@ -6,7 +6,6 @@ Phase 3 单元测试 - 从批改结果创建错题
 覆盖: 各种批改结果组合、错误处理、边界情况
 """
 
-
 import pytest
 
 from src.schemas.learning import HomeworkCorrectionResult, QuestionCorrectionItem
@@ -36,13 +35,14 @@ class TestCreateMistakesFromCorrection:
         self, learning_service, test_user_id, test_correction_result, test_image_urls
     ):
         """测试: 创建包含错误和未作答的错题"""
-        created_count, created_mistakes = (
-            await learning_service._create_mistakes_from_correction(
-                user_id=test_user_id,
-                correction_result=test_correction_result,
-                subject="math",
-                image_urls=test_image_urls,
-            )
+        (
+            created_count,
+            created_mistakes,
+        ) = await learning_service._create_mistakes_from_correction(
+            user_id=test_user_id,
+            correction_result=test_correction_result,
+            subject="math",
+            image_urls=test_image_urls,
         )
 
         # 验证只创建了错误和未作答的题目
@@ -91,13 +91,14 @@ class TestCreateMistakesFromCorrection:
             error_count=0,
         )
 
-        created_count, created_mistakes = (
-            await learning_service._create_mistakes_from_correction(
-                user_id=test_user_id,
-                correction_result=correction_result,
-                subject="math",
-                image_urls=test_image_urls,
-            )
+        (
+            created_count,
+            created_mistakes,
+        ) = await learning_service._create_mistakes_from_correction(
+            user_id=test_user_id,
+            correction_result=correction_result,
+            subject="math",
+            image_urls=test_image_urls,
         )
 
         # 应该没有创建任何错题
@@ -132,13 +133,14 @@ class TestCreateMistakesFromCorrection:
             error_count=0,
         )
 
-        created_count, created_mistakes = (
-            await learning_service._create_mistakes_from_correction(
-                user_id=test_user_id,
-                correction_result=correction_result,
-                subject="math",
-                image_urls=test_image_urls,
-            )
+        (
+            created_count,
+            created_mistakes,
+        ) = await learning_service._create_mistakes_from_correction(
+            user_id=test_user_id,
+            correction_result=correction_result,
+            subject="math",
+            image_urls=test_image_urls,
         )
 
         # 应该创建 1 个错题
@@ -174,13 +176,14 @@ class TestCreateMistakesFromCorrection:
             error_count=1,
         )
 
-        created_count, created_mistakes = (
-            await learning_service._create_mistakes_from_correction(
-                user_id=test_user_id,
-                correction_result=correction_result,
-                subject="math",
-                image_urls=test_image_urls,
-            )
+        (
+            created_count,
+            created_mistakes,
+        ) = await learning_service._create_mistakes_from_correction(
+            user_id=test_user_id,
+            correction_result=correction_result,
+            subject="math",
+            image_urls=test_image_urls,
         )
 
         assert created_count == 1
@@ -267,13 +270,14 @@ class TestCreateMistakesFromCorrection:
             error_count=4,  # 奇数索引的
         )
 
-        created_count, created_mistakes = (
-            await learning_service._create_mistakes_from_correction(
-                user_id=test_user_id,
-                correction_result=correction_result,
-                subject="math",
-                image_urls=test_image_urls,
-            )
+        (
+            created_count,
+            created_mistakes,
+        ) = await learning_service._create_mistakes_from_correction(
+            user_id=test_user_id,
+            correction_result=correction_result,
+            subject="math",
+            image_urls=test_image_urls,
         )
 
         # 应该创建错误的题目和未作答的题目
@@ -415,13 +419,14 @@ class TestCreateMistakesFromCorrection:
             error_count=0,
         )
 
-        created_count, created_mistakes = (
-            await learning_service._create_mistakes_from_correction(
-                user_id=test_user_id,
-                correction_result=correction_result,
-                subject="math",
-                image_urls=test_image_urls,
-            )
+        (
+            created_count,
+            created_mistakes,
+        ) = await learning_service._create_mistakes_from_correction(
+            user_id=test_user_id,
+            correction_result=correction_result,
+            subject="math",
+            image_urls=test_image_urls,
         )
 
         assert created_count == 0
@@ -644,13 +649,14 @@ class TestCreateMistakesFromCorrection:
             error_count=1,
         )
 
-        created_count, created_mistakes = (
-            await learning_service._create_mistakes_from_correction(
-                user_id=test_user_id,
-                correction_result=correction_result,
-                subject="math",
-                image_urls=test_image_urls,
-            )
+        (
+            created_count,
+            created_mistakes,
+        ) = await learning_service._create_mistakes_from_correction(
+            user_id=test_user_id,
+            correction_result=correction_result,
+            subject="math",
+            image_urls=test_image_urls,
         )
 
         # 应该只创建 2 个（未作答 + 错误，不包括正确的）

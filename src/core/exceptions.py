@@ -8,7 +8,7 @@
 - API相关异常
 """
 
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 
 class BaseCustomException(Exception):

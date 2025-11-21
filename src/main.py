@@ -3,30 +3,30 @@
 基于AI的初高中学情管理系统
 """
 
-from contextlib import asynccontextmanager
-from typing import Dict, Any
 import asyncio
+from contextlib import asynccontextmanager
+from typing import Any, Dict
 
 import uvicorn
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.responses import JSONResponse
 
 from src.core.config import settings
-from src.core.logging import configure_logging, get_logger, LoggingMiddleware
+from src.core.logging import LoggingMiddleware, configure_logging, get_logger
 from src.core.monitoring import (
-    get_metrics_collector,
-    get_system_collector,
     PerformanceMonitoringMiddleware,
     cleanup_old_metrics,
+    get_metrics_collector,
+    get_system_collector,
 )
 from src.core.security import (
-    get_rate_limiter,
     RateLimitMiddleware,
     SecurityHeadersMiddleware,
     cleanup_rate_limiters,
+    get_rate_limiter,
 )
 
 

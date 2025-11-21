@@ -3,23 +3,23 @@
 使用阿里云通用OCR API进行图片文字识别
 """
 
-import base64
 import asyncio
-from typing import Dict, List, Optional, Tuple, Any
-from datetime import datetime
-from pathlib import Path
+import base64
 import hashlib
 import hmac
 import time
 import urllib.parse
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
-import httpx
 import cv2
+import httpx
 import numpy as np
 
 from src.core.config import settings
-from src.core.logging import get_logger
 from src.core.exceptions import AIServiceError
+from src.core.logging import get_logger
 
 logger = get_logger(__name__)
 

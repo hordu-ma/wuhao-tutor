@@ -5,8 +5,8 @@
 
 import os
 import uuid
-from io import BytesIO
 from datetime import datetime
+from io import BytesIO
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -339,20 +339,14 @@ class FileService:
     ) -> str:
         import oss2
 
-        auth = oss2.Auth(
-            settings.OSS_ACCESS_KEY_ID, settings.OSS_ACCESS_KEY_SECRET
-        )
-        bucket = oss2.Bucket(
-            auth, settings.OSS_ENDPOINT, settings.OSS_BUCKET_NAME
-        )
+        auth = oss2.Auth(settings.OSS_ACCESS_KEY_ID, settings.OSS_ACCESS_KEY_SECRET)
+        bucket = oss2.Bucket(auth, settings.OSS_ENDPOINT, settings.OSS_BUCKET_NAME)
 
         # 确保指针在开始位置
         file_buffer.seek(0)
 
         # 上传
-        bucket.put_object(
-            file_key, file_buffer, headers={"Content-Type": content_type}
-        )
+        bucket.put_object(file_key, file_buffer, headers={"Content-Type": content_type})
 
         # 生成签名URL (有效期1小时)
         url = bucket.sign_url("GET", file_key, 3600)

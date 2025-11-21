@@ -89,7 +89,6 @@ class TestAnalyticsService:
     ):
         """测试获取学习进度 - 空数据"""
 
-
         result = await analytics_service.get_learning_progress(
             user_id=UUID(test_user_data),
             start_date="2023-01-01",
@@ -109,7 +108,6 @@ class TestAnalyticsService:
     ):
         """测试知识点掌握情况 - 空数据"""
 
-
         result = await analytics_service.get_knowledge_points_mastery(
             user_id=UUID(test_user_data)
         )
@@ -123,7 +121,6 @@ class TestAnalyticsService:
         self, analytics_service: AnalyticsService, test_user_data: str
     ):
         """测试学科统计 - 空数据"""
-
 
         result = await analytics_service.get_subject_statistics(
             user_id=UUID(test_user_data), time_range="30d"

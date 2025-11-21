@@ -3,13 +3,15 @@
 为API层提供文件验证、保存和管理功能
 """
 
+import mimetypes
 import os
 import shutil
-import mimetypes
-from typing import Dict, Any
 from pathlib import Path
-from PIL import Image
+from typing import Any, Dict
+
 from fastapi import UploadFile
+from PIL import Image
+
 from src.core.config import get_settings
 
 settings = get_settings()

@@ -89,9 +89,9 @@ class TestMistakeAutoDetection:
 
         # AI意图识别不应因回答内容误判
         ai_intent_result = learning_service._extract_ai_mistake_metadata(ai_answer)
-        assert (
-            ai_intent_result["is_mistake"] is None
-        ), "修复后：AI回答内容不应触发错题判断"
+        assert ai_intent_result["is_mistake"] is None, (
+            "修复后：AI回答内容不应触发错题判断"
+        )
 
         # 综合判断
         keyword_result = learning_service._detect_mistake_keywords(question_content)

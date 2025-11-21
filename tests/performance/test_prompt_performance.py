@@ -178,17 +178,17 @@ class TestCorrectionPerformance:
         min_time = min(times)
         std_dev = statistics.stdev(times) if len(times) > 1 else 0
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"📊 批改性能统计 (共 {len(times)} 个场景)")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"平均耗时: {avg_time:.3f}s")
         print(f"最大耗时: {max_time:.3f}s")
         print(f"最小耗时: {min_time:.3f}s")
         print(f"标准差:   {std_dev:.3f}s")
         print(
-            f"题目数:   {sum(question_counts)} 题 (平均 {sum(question_counts)/len(question_counts):.1f} 题/场景)"
+            f"题目数:   {sum(question_counts)} 题 (平均 {sum(question_counts) / len(question_counts):.1f} 题/场景)"
         )
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         # 验证平均耗时
         assert avg_time < 30.0, f"平均批改耗时 {avg_time:.2f}s 超过目标 30s"
@@ -462,11 +462,11 @@ class TestPerformanceSummary:
                 )
 
         # 生成报告
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print("📊 Phase 3.4 性能测试总结报告")
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
         print(f"\n{'场景':<30} {'题数':<6} {'耗时(s)':<10} {'Token':<8} {'状态':<6}")
-        print(f"{'-'*80}")
+        print(f"{'-' * 80}")
 
         total_time = 0
         total_tokens = 0
@@ -482,7 +482,7 @@ class TestPerformanceSummary:
             total_tokens += data["tokens"]
             total_questions += data["questions"]
 
-        print(f"{'-'*80}")
+        print(f"{'-' * 80}")
         avg_time = total_time / len(performance_data)
         avg_time_per_question = (
             total_time / total_questions if total_questions > 0 else 0
@@ -501,9 +501,9 @@ class TestPerformanceSummary:
         print("  ✅ 错误率 < 5%: 0.00%")
         print("  ✅ 准确率 ≥ 90%: 100.00%")
 
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print("✅ Phase 3.4 性能测试全部通过")
-        print(f"{'='*80}\n")
+        print(f"{'=' * 80}\n")
 
         # 验证核心指标
         assert avg_time < 30.0, "平均批改耗时超标"

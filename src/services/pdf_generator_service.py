@@ -4,17 +4,19 @@ PDF生成服务
 """
 
 from io import BytesIO
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 try:
     from weasyprint import HTML
 except OSError as e:
     # 允许在缺少系统依赖的环境中导入，但在使用时报错
     import logging
+
     logging.getLogger(__name__).warning(f"WeasyPrint 系统依赖缺失: {e}")
     HTML = None
 except ImportError as e:
     import logging
+
     logging.getLogger(__name__).warning(f"WeasyPrint 未安装: {e}")
     HTML = None
 
@@ -25,7 +27,7 @@ logger = get_logger(__name__)
 
 class PDFGeneratorService:
     """PDF 生成服务"""
-    
+
     async def generate(
         self,
         title: str,
@@ -34,32 +36,34 @@ class PDFGeneratorService:
     ) -> BytesIO:
         """
         生成 PDF 文件
-        
+
         使用 weasyprint 将 HTML 渲染为 PDF
-        
+
         Args:
             title: 计划标题
             content: 复习计划 JSON 数据
             metadata: 元数据（用户信息、生成时间等）
-        
+
         Returns:
             PDF 文件的 BytesIO 对象
         """
         try:
             # 1. 将 JSON 转换为 HTML
             html_content = self._build_html(title, content, metadata)
-            
+
             # 2. 使用 weasyprint 生成 PDF
             pdf_bytes = self._render_html_to_pdf(html_content)
-            
+
             return pdf_bytes
         except Exception as e:
             logger.error(f"PDF生成失败: {str(e)}", exc_info=True)
             raise
 
-    def _build_html(self, title: str, content: Dict[str, Any], metadata: Dict[str, Any]) -> str:
+    def _build_html(
+        self, title: str, content: Dict[str, Any], metadata: Dict[str, Any]
+    ) -> str:
         """构建 PDF HTML 模板"""
-        
+
         # 辅助函数：安全获取字典值
         def get_val(data: Dict, key: str, default: Any = "") -> Any:
             return data.get(key, default)
@@ -218,15 +222,15 @@ class PDFGeneratorService:
     </style>
 </head>
 <body>
-    <div class="watermark">{get_val(metadata, 'user_id', '五好伴学')}</div>
+    <div class="watermark">{get_val(metadata, "user_id", "五好伴学")}</div>
     
     <div class="header">
         <h1>{title}</h1>
         <p style="margin: 10px 0; font-size: 14px; color: #666;">
-            {get_val(content, 'description', '')}
+            {get_val(content, "description", "")}
         </p>
         <div class="metadata">
-            <p>生成时间：{get_val(metadata, 'generated_at', '')}</p>
+            <p>生成时间：{get_val(metadata, "generated_at", "")}</p>
         </div>
     </div>
     
@@ -234,7 +238,7 @@ class PDFGeneratorService:
     <div class="section">
         <h2>📋 计划概述</h2>
         <div class="overview">
-            {get_val(content, 'overview', '个性化学习复习计划')}
+            {get_val(content, "overview", "个性化学习复习计划")}
         </div>
     </div>
     
@@ -242,21 +246,21 @@ class PDFGeneratorService:
     <div class="section">
         <h2>📊 数据统计</h2>
         <div class="stats-grid">
-            {self._render_stats_cards(get_val(content, 'statistics', {}))}
+            {self._render_stats_cards(get_val(content, "statistics", {}))}
         </div>
     </div>
     
     <!-- 每日任务 -->
     <div class="section">
         <h2>📅 每日任务规划</h2>
-        {self._render_daily_tasks(get_val(content, 'daily_tasks', []))}
+        {self._render_daily_tasks(get_val(content, "daily_tasks", []))}
     </div>
     
     <!-- 复习重点 -->
     <div class="section">
         <h2>⭐ 复习重点</h2>
         <ul class="focus-list">
-            {self._render_focus_points(get_val(content, 'review_focus', []))}
+            {self._render_focus_points(get_val(content, "review_focus", []))}
         </ul>
     </div>
     
@@ -264,12 +268,12 @@ class PDFGeneratorService:
     <div class="section">
         <h2>✓ 评估标准</h2>
         <div class="assessment">
-            {self._render_assessment(get_val(content, 'assessment', {}))}
+            {self._render_assessment(get_val(content, "assessment", {}))}
         </div>
     </div>
     
     <!-- 学习建议 -->
-    {self._render_tips(get_val(content, 'tips', []))}
+    {self._render_tips(get_val(content, "tips", []))}
     
     <div class="footer">
         <p>© 2025 五好伴学 | 此文档由 AI 生成，仅供学习参考</p>
@@ -277,7 +281,7 @@ class PDFGeneratorService:
 </body>
 </html>
         """
-    
+
     def _render_stats_cards(self, stats: Dict[str, Any]) -> str:
         """渲染统计卡片"""
         cards = []
@@ -289,42 +293,44 @@ class PDFGeneratorService:
                 </div>
             """)
         return "".join(cards)
-    
+
     def _render_daily_tasks(self, tasks: List[Dict[str, Any]]) -> str:
         """渲染每日任务"""
         tasks_html = []
         for task in tasks:
-            items_html = "".join([
-                f"<div class='task-item'>• {item}</div>"
-                for item in task.get('tasks', [])
-            ])
+            items_html = "".join(
+                [
+                    f"<div class='task-item'>• {item}</div>"
+                    for item in task.get("tasks", [])
+                ]
+            )
             tasks_html.append(f"""
                 <div class="daily-task">
                     <div class="task-day">
-                        第 {task.get('day')} 天 ({task.get('date')}) 
-                        - 预计 {task.get('estimated_hours', 1.5)} 小时
+                        第 {task.get("day")} 天 ({task.get("date")}) 
+                        - 预计 {task.get("estimated_hours", 1.5)} 小时
                     </div>
                     <div class="task-items">{items_html}</div>
                 </div>
             """)
         return "".join(tasks_html)
-    
+
     def _render_focus_points(self, focus: List[str]) -> str:
         """渲染重点"""
         return "".join([f"<li>{point}</li>" for point in focus])
-    
+
     def _render_assessment(self, assessment: Dict[str, Any]) -> str:
         """渲染评估标准"""
         html = []
         for criterion, details in assessment.items():
             html.append(f"<p><strong>{criterion}:</strong> {details}</p>")
         return "".join(html)
-    
+
     def _render_tips(self, tips: List[str]) -> str:
         """渲染学习建议"""
         if not tips:
             return ""
-        
+
         tips_html = "".join([f"<li>{tip}</li>" for tip in tips])
         return f"""
         <div class="section">
@@ -332,7 +338,7 @@ class PDFGeneratorService:
             <ul class="focus-list">{tips_html}</ul>
         </div>
         """
-    
+
     def _render_html_to_pdf(self, html: str) -> BytesIO:
         """使用 weasyprint 将 HTML 渲染为 PDF"""
         if HTML is None:
@@ -341,5 +347,5 @@ class PDFGeneratorService:
         pdf_bytes = BytesIO()
         HTML(string=html).write_pdf(pdf_bytes)
         pdf_bytes.seek(0)
-        
+
         return pdf_bytes

@@ -3,11 +3,10 @@
 包含API响应的通用数据结构
 """
 
-from typing import Any, Optional, Dict, List, Generic, TypeVar
 from datetime import datetime
+from typing import Any, Dict, Generic, List, Optional, TypeVar
 
-from pydantic import BaseModel, Field
-from pydantic import ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 T = TypeVar("T")
 

@@ -3,7 +3,6 @@
 用于缓存已渲染的LaTeX公式，提高渲染性能
 """
 
-
 from sqlalchemy import Column, Index, Integer, String, Text
 from sqlalchemy.sql import func
 

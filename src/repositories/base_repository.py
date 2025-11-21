@@ -84,7 +84,7 @@ class BaseRepository(Generic[ModelType]):
             模型实例或None
         """
         try:
-            stmt = select(self.model).where(getattr(self.model, "id") == record_id)
+            stmt = select(self.model).where(self.model.id == record_id)
             result = await self.db.execute(stmt)
             instance = result.scalar_one_or_none()
 
@@ -203,7 +203,7 @@ class BaseRepository(Generic[ModelType]):
         try:
             stmt = (
                 update(self.model)
-                .where(getattr(self.model, "id") == record_id)
+                .where(self.model.id == record_id)
                 .values(**data)
                 .returning(self.model)
             )
@@ -244,7 +244,7 @@ class BaseRepository(Generic[ModelType]):
             是否删除成功
         """
         try:
-            stmt = delete(self.model).where(getattr(self.model, "id") == record_id)
+            stmt = delete(self.model).where(self.model.id == record_id)
             result = await self.db.execute(stmt)
             await self.db.commit()
 
@@ -276,7 +276,7 @@ class BaseRepository(Generic[ModelType]):
             记录数量
         """
         try:
-            stmt = select(func.count(getattr(self.model, "id")))
+            stmt = select(func.count(self.model.id))
 
             # 应用过滤条件
             if filters:
@@ -311,9 +311,7 @@ class BaseRepository(Generic[ModelType]):
             是否存在
         """
         try:
-            stmt = select(func.count(getattr(self.model, "id"))).where(
-                getattr(self.model, "id") == record_id
-            )
+            stmt = select(func.count(self.model.id)).where(self.model.id == record_id)
             result = await self.db.execute(stmt)
             count = result.scalar()
 
@@ -381,7 +379,7 @@ class BaseRepository(Generic[ModelType]):
                 record_id = update_data.pop("id")
                 stmt = (
                     update(self.model)
-                    .where(getattr(self.model, "id") == record_id)
+                    .where(self.model.id == record_id)
                     .values(**update_data)
                 )
 
@@ -408,7 +406,7 @@ class BaseRepository(Generic[ModelType]):
             删除的记录数量
         """
         try:
-            stmt = delete(self.model).where(getattr(self.model, "id").in_(record_ids))
+            stmt = delete(self.model).where(self.model.id.in_(record_ids))
             result = await self.db.execute(stmt)
             await self.db.commit()
 
