@@ -11,10 +11,10 @@
 
 ### 1.1 需求描述
 
-在小程序学习报告页面增加"AI 复习计划"模块，通过以下流程为学生生成个性化的周期性复习指导：
+在微信小程序学习报告页面增加"AI 复习计划"模块，通过以下流程为学生生成个性化的周期性复习指导：
 
 ```
-错题本数据 → 导出 Markdown → 大模型分析 → 生成复习计划 → 导出 PDF → 下载存档
+错题本数据 → 导出 Markdown → 大模型分析 → 生成复习计划 → 导出 PDF → 上传阿里云 OSS → 小程序下载/预览
 ```
 
 ### 1.2 核心价值
@@ -34,7 +34,7 @@
 
 ```
 ┌─────────────────┐
-│  错题本数据库    │
+│  RDS PostgreSQL │
 │ (Mistake 表)    │
 └────────┬────────┘
          │
@@ -77,14 +77,22 @@
 │     - 格式化排版                     │
 │     - 嵌入图表                       │
 │     - 添加水印（用户信息）          │
-│     - 保存到文件系统/OSS             │
+│     - 依赖: weasyprint + cairo      │
 └────────┬────────────────────────────┘
          │
          ▼
 ┌─────────────────────────────────────┐
-│  6. 返回下载 URL                     │
-│     - 小程序调用下载                 │
-│     - 支持在线预览/离线存储          │
+│  6. 上传至阿里云 OSS                 │
+│     - 存储路径: plans/{user_id}/    │
+│     - 设置 Content-Type             │
+│     - 获取签名 URL (如有需要)        │
+└────────┬────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────┐
+│  7. 返回下载 URL                     │
+│     - 小程序调用 `wx.downloadFile`   │
+│     - 支持 `wx.openDocument` 预览    │
 └─────────────────────────────────────┘
 ```
 
@@ -94,11 +102,12 @@
 |------|------|------|---------|
 | **MistakeDataService** | Service | 错题本数据聚合 & Markdown 导出 | 现有 + 扩展 |
 | **RevisionPlanService** | Service | 复习计划生成 & 缓存管理 | **新增** |
-| **PDFGeneratorService** | Service | PDF 生成 & 文件管理 | **新增** |
-| **RevisionPlanRepository** | Repository | 复习计划持久化 | **新增** |
+| **PDFGeneratorService** | Service | PDF 生成 (WeasyPrint) | **新增** |
+| **AliyunOSSService** | Service | 文件上传与管理 | **新增/扩展** |
+| **RevisionPlanRepository** | Repository | 复习计划持久化 (PostgreSQL) | **新增** |
 | **RevisionPlan 模型** | Model | 复习计划数据结构 | **新增** |
 | **/api/v1/revisions** | API | 复习计划 REST 接口 | **新增** |
-| **学习报告页面** | Frontend | UI 展示 & 交互 | **现有** 改造 |
+| **小程序学习报告页** | Frontend | UI 展示 & 交互 (WXML/TS) | **现有** 改造 |
 
 ---
 
@@ -128,8 +137,8 @@ class RevisionPlan(BaseModel):
     knowledge_points: list[str]  # JSON: 涉及的知识点
     date_range: dict  # JSON: {"start": "2025-01-01", "end": "2025-01-15"}
     
-    # 复习计划内容（存储为 JSON）
-    plan_content: dict  # 结构化的复习计划数据
+    # 复习计划内容（存储为 JSONB）
+    plan_content: dict = Field(sa_column=Column(JSONB))  # 结构化的复习计划数据
     # {
     #   "overview": "...",
     #   "statistics": {...},
@@ -146,7 +155,7 @@ class RevisionPlan(BaseModel):
     # }
     
     # 文件信息
-    pdf_url: str | None  # PDF 下载链接（OSS/本地路径）
+    pdf_url: str | None  # 阿里云 OSS 下载链接
     pdf_size: int | None  # 文件大小（字节）
     markdown_url: str | None  # Markdown 源文件（可选存档）
     
@@ -368,7 +377,7 @@ class RevisionPlanService:
         plan_json: dict,
         markdown_content: str,
     ) -> dict:
-        """生成 PDF 文件"""
+        """生成 PDF 文件并上传至 OSS"""
         
         # 调用 PDFGeneratorService
         pdf_generator = PDFGeneratorService()
@@ -382,8 +391,11 @@ class RevisionPlanService:
             }
         )
         
-        # 保存文件
+        # 上传到阿里云 OSS
+        # 路径格式: revision-plans/{user_id}/{YYYYMMDD_HHMMSS}.pdf
         file_key = f"revision-plans/{user_id}/{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.pdf"
+        
+        # 使用 FileService (需配置为 Aliyun OSS backend)
         url = await self.file_service.save_file(
             file_buffer=pdf_buffer,
             file_key=file_key,
@@ -543,6 +555,10 @@ class PDFGeneratorService:
         使用 reportlab + weasyprint 组合：
         - reportlab: 用于简单表格和基础排版
         - weasyprint: 用于复杂 HTML 渲染
+        
+        ⚠️ 部署注意：
+        在 Aliyun Linux 上需要安装系统依赖：
+        yum install -y pango cairo cairo-gobject libffi-devel
         
         Args:
             title: 计划标题
@@ -970,14 +986,14 @@ async def download_revision_plan(
     service: RevisionPlanService = Depends(get_revision_plan_service),
 ):
     """
-    下载 PDF 文件
+    获取 PDF 下载链接
     
-    返回：PDF 文件的下载链接或直接流式返回
+    返回：PDF 文件的 OSS 签名链接 (Signed URL)
     
-    注：实际下载由前端发起，此接口用于：
-    1. 验证权限
-    2. 更新下载统计
-    3. 返回下载链接
+    前端 (小程序) 处理流程：
+    1. 调用此接口获取 url
+    2. 使用 `wx.downloadFile({ url: res.data.pdf_url })` 下载
+    3. 使用 `wx.openDocument()` 预览
     """
     try:
         pdf_url = await service.download_revision_plan(user_id, plan_id)

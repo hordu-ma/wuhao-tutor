@@ -9,10 +9,10 @@
 ## 一、功能概述
 
 ### 需求
-在小程序学习报告页面增加"AI 复习计划"模块，通过以下流程为学生生成个性化的周期性复习指导：
+在微信小程序学习报告页面增加"AI 复习计划"模块，通过以下流程为学生生成个性化的周期性复习指导：
 
 ```
-错题本数据 → 导出 Markdown → 大模型分析 → 生成复习计划 → 导出 PDF → 下载存档
+错题本数据 → 导出 Markdown → 大模型分析 → 生成复习计划 → 导出 PDF → 上传 OSS → 小程序下载/预览
 ```
 
 ### 核心价值
@@ -31,16 +31,17 @@
 |------|------|------|------|
 | **API** | `/api/v1/revisions` | REST 接口 | **新增** |
 | **Service** | RevisionPlanService | 计划生成 + 缓存 | **新增** |
-| | PDFGeneratorService | PDF 生成 | **新增** |
-| **Repository** | RevisionPlanRepository | 数据持久化 | **新增** |
+| | PDFGeneratorService | PDF 生成 (WeasyPrint) | **新增** |
+| | AliyunOSSService | 文件存储 | **新增/扩展** |
+| **Repository** | RevisionPlanRepository | 数据持久化 (PG) | **新增** |
 | **Model** | RevisionPlan | 数据结构 | **新增** |
-| **Frontend** | 学习报告页 + 详情页 | UI 交互 | **改造现有** |
+| **Frontend** | 小程序学习报告页 + 详情页 | UI 交互 | **改造现有** |
 
 ### 2.2 数据流图
 
 ```
 ┌──────────────┐
-│ 错题本数据库   │
+│ RDS PostgreSQL │
 └──────┬───────┘
        │
        ▼
@@ -87,10 +88,10 @@
        │
        ▼
 ┌──────────────────────────────┐
-│ 6. 保存文件 + 返回 URL
-│    - 存储到 OSS/本地
+│ 6. 上传 OSS + 返回 URL
+│    - 存储到阿里云 OSS
 │    - 更新数据库记录
-│    - 返回下载链接
+│    - 返回签名下载链接
 └──────────────────────────────┘
 ```
 
@@ -110,10 +111,10 @@
 - cycle_type: 周期（7days|14days|30days）
 - status: 状态（draft|published|completed|expired）
 - mistake_count: 涉及错题数
-- knowledge_points: JSON 知识点列表
-- date_range: JSON 日期范围
-- plan_content: JSON 详细计划内容
-- pdf_url: PDF 下载链接
+- knowledge_points: JSONB 知识点列表
+- date_range: JSONB 日期范围
+- plan_content: JSONB 详细计划内容
+- pdf_url: 阿里云 OSS 下载链接
 - download_count: 下载次数
 - view_count: 浏览次数
 - created_at / updated_at / expired_at: 时间戳
@@ -130,7 +131,7 @@
   - 生成 Markdown 文本
   - 调用大模型
   - 生成 PDF
-  - 保存到数据库
+  - 上传至阿里云 OSS 并保存记录
 
 - `_call_ai_for_plan()` - 调用百炼大模型
   - 使用系统提示词
@@ -155,6 +156,7 @@
   - JSON → HTML（使用 Jinja2 模板）
   - HTML → PDF（使用 weasyprint）
   - 包含格式化排版、图表、水印
+  - **注意**: 生产环境需安装 `pango`, `cairo`, `libffi-devel`
 
 ### 3.3 API 端点设计
 
@@ -170,7 +172,7 @@ GET    /api/v1/revisions/{plan_id}
        获取计划详情
        
 GET    /api/v1/revisions/{plan_id}/download
-       下载 PDF（返回链接）
+       获取 PDF 下载链接 (OSS Signed URL)
        
 DELETE /api/v1/revisions/{plan_id}
        删除计划
@@ -222,11 +224,11 @@ JSON 结构化数据，包含：
 
 ---
 
-## 四、前端实现方案
+## 四、前端实现方案 (微信小程序)
 
 ### 4.1 UI 结构
 
-**在学习报告页添加新模块**
+**在学习报告页 (`pages/report/index`) 添加新模块**
 
 ```
 ┌─ 学习报告页面
@@ -259,7 +261,7 @@ JSON 结构化数据，包含：
 
 ### 4.2 新增子页面
 
-**复习计划详情页** (`pages/revision-detail/index`)
+**复习计划详情页** (`miniprogram/pages/revision-detail/index`)
 
 ```
 ┌─ 顶部
@@ -267,7 +269,7 @@ JSON 结构化数据，包含：
 │  ├─ 生成时间 + 过期时间
 │  └─ 分享 + 删除按钮
 │
-├─ 标签页切换
+├─ 标签页切换 (Tabs)
 │  ├─ 概览
 │  │  ├─ 计划描述文字
 │  │  ├─ 数据统计卡片
@@ -284,8 +286,8 @@ JSON 结构化数据，包含：
 │     └─ 自测题和评估指标
 │
 └─ 底部
-   ├─ "下载 PDF" 按钮
-   ├─ "分享计划"
+   ├─ "下载 PDF" 按钮 (调用 wx.downloadFile)
+   ├─ "分享计划" (调用 onShareAppMessage)
    └─ "返回"
 ```
 
@@ -296,7 +298,7 @@ JSON 结构化数据，包含：
 - onGeneratePlan()：调用生成 API，显示进度条
 - onSelectCycle()：选择计划周期
 - onRefresh()：强制重新生成
-- onDownloadPDF()：下载 PDF 文件
+- onDownloadPDF()：调用 wx.downloadFile + wx.openDocument
 - onViewDetail()：跳转到详情页
 - formatDate()、formatStatus()：数据格式化
 ```
@@ -305,8 +307,8 @@ JSON 结构化数据，包含：
 ```typescript
 - 标签页切换
 - 每日任务展开/收起
-- PDF 在线预览（可选）
-- 分享功能
+- PDF 在线预览 (wx.openDocument)
+- 分享功能 (onShareAppMessage)
 ```
 
 ---
