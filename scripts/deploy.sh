@@ -107,41 +107,48 @@ install_system_dependencies() {
     fi
 }
 
-# 验证并修复 systemd 配置
+# 同步并更新 systemd 配置
+sync_systemd_config() {
+    log_info "同步 systemd 配置..."
+
+    local local_config="deploy/systemd/${BACKEND_SERVICE}"
+    local remote_config="/etc/systemd/system/${BACKEND_SERVICE}"
+
+    if [ ! -f "$local_config" ]; then
+        log_error "本地 systemd 配置不存在: $local_config"
+        exit 1
+    fi
+
+    # 同步配置文件
+    scp "$local_config" "${SERVER_SSH}:${remote_config}"
+    
+    # 重新加载 systemd 配置
+    ssh "${SERVER_SSH}" "systemctl daemon-reload"
+    
+    log_success "systemd 配置已更新"
+}
+
+# 验证 systemd 配置（保留兼容性）
 validate_systemd_config() {
     log_info "验证 systemd 配置..."
 
     local systemd_config="/etc/systemd/system/${BACKEND_SERVICE}"
-    local needs_fix=false
-
-    # 检查是否使用了错误的应用路径
-    if ssh "${SERVER_SSH}" "grep -q 'src\.main:app' ${systemd_config}" 2>/dev/null; then
-        log_warning "检测到错误的应用路径 (src.main:app)，将修复为 main:app"
-        ssh "${SERVER_SSH}" "sed -i 's/src\.main:app/main:app/g' ${systemd_config}"
-        needs_fix=true
+    
+    # 检查配置文件是否存在
+    if ! ssh "${SERVER_SSH}" "[ -f ${systemd_config} ]"; then
+        log_warning "systemd 配置不存在，将同步"
+        sync_systemd_config
+        return
     fi
 
-    # 检查是否缺少 PYTHONPATH
-    if ! ssh "${SERVER_SSH}" "grep -q 'PYTHONPATH=${BACKEND_REMOTE_DIR}' ${systemd_config}" 2>/dev/null; then
-        log_warning "systemd 配置缺少 PYTHONPATH，将添加"
-        ssh "${SERVER_SSH}" "sed -i '/^\[Service\]/a Environment=\"PYTHONPATH=${BACKEND_REMOTE_DIR}\"' ${systemd_config}"
-        needs_fix=true
+    # 检查是否使用 uv run
+    if ! ssh "${SERVER_SSH}" "grep -q 'uv run' ${systemd_config}" 2>/dev/null; then
+        log_warning "检测到旧的 systemd 配置，将更新"
+        sync_systemd_config
+        return
     fi
 
-    # 检查是否使用了正确的环境文件
-    if ! ssh "${SERVER_SSH}" "grep -q 'EnvironmentFile=${BACKEND_REMOTE_DIR}/.env.production' ${systemd_config}" 2>/dev/null; then
-        log_warning "systemd 配置未使用 .env.production"
-        ssh "${SERVER_SSH}" "sed -i '/^\[Service\]/a EnvironmentFile=${BACKEND_REMOTE_DIR}/.env.production' ${systemd_config}"
-        needs_fix=true
-    fi
-
-    if [ "$needs_fix" = true ]; then
-        log_info "重新加载 systemd 配置..."
-        ssh "${SERVER_SSH}" "systemctl daemon-reload"
-        log_success "systemd 配置已修复"
-    else
-        log_success "systemd 配置正确"
-    fi
+    log_success "systemd 配置正确"
 }
 
 # 同步 Python 包结构（包括所有 __init__.py）

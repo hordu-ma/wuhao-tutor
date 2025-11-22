@@ -1,0 +1,18 @@
+[Unit]
+Description=Wuhao Tutor FastAPI Application
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/wuhao-tutor
+Environment="PATH=/root/.local/bin:/opt/wuhao-tutor/.venv/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="PYTHONPATH=/opt/wuhao-tutor"
+Environment="ENVIRONMENT=production"
+EnvironmentFile=/opt/wuhao-tutor/.env.production
+ExecStart=/root/.local/bin/uv run uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
