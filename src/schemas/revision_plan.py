@@ -41,7 +41,11 @@ class RevisionPlanResponse(RevisionPlanBase):
 class RevisionPlanDetailResponse(RevisionPlanResponse):
     """复习计划详情响应模型"""
 
-    plan_content: Optional[Dict[str, Any]] = None
+    plan_content: Optional[Dict[str, Any]] = Field(None, serialization_alias="content")
+    
+    class Config:
+        from_attributes = True
+        populate_by_name = True  # 允许使用别名或原始字段名
 
 
 class RevisionPlanGenerateRequest(BaseModel):
