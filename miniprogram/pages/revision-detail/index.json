@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "计划详情",
+  "usingComponents": {
+    "towxml-renderer": "/components/towxml-renderer/index"
+  }
+}

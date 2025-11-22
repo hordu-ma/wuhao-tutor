@@ -9,6 +9,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
 import jwt
+from fastapi import Depends
 
 from src.core.config import get_settings
 from src.core.exceptions import AuthenticationError, ServiceError
@@ -16,7 +17,7 @@ from src.models.user import UserSession
 from src.schemas.auth import GradeLevel as AuthGradeLevel
 from src.schemas.auth import LoginResponse, RefreshTokenResponse, UserResponse
 from src.schemas.auth import UserRole as AuthUserRole
-from src.services.user_service import UserService
+from src.services.user_service import UserService, get_user_service
 
 logger = logging.getLogger("auth_service")
 settings = get_settings()
@@ -648,6 +649,6 @@ class AuthService:
 
 
 # 依赖注入函数
-def get_auth_service(user_service: UserService) -> AuthService:
+def get_auth_service(user_service: UserService = Depends(get_user_service)) -> AuthService:
     """获取认证服务实例"""
     return AuthService(user_service)

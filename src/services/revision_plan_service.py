@@ -300,6 +300,19 @@ class RevisionPlanService:
 
         return plan.pdf_url
 
+    async def delete_revision_plan(
+        self,
+        user_id: UUID,
+        plan_id: UUID,
+    ) -> bool:
+        """删除复习计划"""
+        plan = await self.revision_repo.get_by_id(str(plan_id))
+
+        if not plan or plan.user_id != str(user_id):
+            raise ServiceError("计划不存在或无权访问")
+
+        return await self.revision_repo.delete(str(plan_id))
+
     def _parse_json_response(self, response: str) -> Dict[str, Any]:
         """从 AI 响应中解析 JSON"""
         # 尝试找到 JSON 块

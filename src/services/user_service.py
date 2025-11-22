@@ -10,11 +10,13 @@ import string
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
+from fastapi import Depends
 from passlib.context import CryptContext
 from sqlalchemy import and_, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import get_settings
+from src.core.database import get_db
 from src.core.exceptions import (
     AuthenticationError,
     ConflictError,
@@ -815,12 +817,14 @@ class UserService:
             school: 学校
             grade_level: 学段
             class_name: 班级
+            role: 角色（可选）
 
         Returns:
             Tuple[User, str]: (用户对象, 明文密码)
 
         Raises:
             ConflictError: 手机号已存在
+            ValidationError: 非法的角色
         """
         # 检查手机号是否已存在
         existing_user = await self.user_repo.get_by_field("phone", phone)
@@ -1147,6 +1151,6 @@ class UserService:
 
 
 # 依赖注入函数
-def get_user_service(db: AsyncSession) -> UserService:
+def get_user_service(db: AsyncSession = Depends(get_db)) -> UserService:
     """获取用户服务实例"""
     return UserService(db)

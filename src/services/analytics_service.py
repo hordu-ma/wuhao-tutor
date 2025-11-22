@@ -10,9 +10,11 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
+from fastapi import Depends
 from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.database import get_db
 from src.core.exceptions import NotFoundError, ServiceError
 from src.models.homework import HomeworkSubmission
 from src.models.learning import Question
@@ -1053,6 +1055,6 @@ class AnalyticsService:
 # ========== 依赖注入 ==========
 
 
-def get_analytics_service(db: AsyncSession) -> AnalyticsService:
+def get_analytics_service(db: AsyncSession = Depends(get_db)) -> AnalyticsService:
     """获取AnalyticsService实例(依赖注入)"""
     return AnalyticsService(db=db)

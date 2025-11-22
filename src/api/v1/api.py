@@ -16,6 +16,7 @@ from src.api.v1.endpoints import (
     learning,
     mistakes,
     reviews,
+    revisions,
     user,
 )
 
@@ -38,6 +39,9 @@ api_router.include_router(mistakes.router, prefix="/mistakes", tags=["错题手�
 
 # 复习会话路由
 api_router.include_router(reviews.router, prefix="/reviews", tags=["复习会话"])
+
+# 复习计划路由
+api_router.include_router(revisions.router, prefix="/revisions", tags=["复习计划"])
 
 # 知识图谱路由
 api_router.include_router(

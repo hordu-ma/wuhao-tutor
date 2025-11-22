@@ -9,6 +9,8 @@
     "pages/mistakes/today-review/index",
     "pages/mistakes/review/index",
     "pages/review-recommendations/index",
+    "pages/revision-plan/index",
+    "pages/revision-detail/index",
     "pages/learning/index/index",
     "pages/learning/detail/index",
     "pages/analysis/report/index",

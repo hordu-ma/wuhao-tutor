@@ -431,7 +431,16 @@ const pageObject = {
   },
 
   /**
-   * 页面分享
+   * 跳转到复习计划页面
+   */
+  navigateToRevisionPlan() {
+    wx.navigateTo({
+      url: '/pages/revision-plan/index',
+    });
+  },
+
+  /**
+   * 页面分享设置
    */
   onShareAppMessage() {
     return {

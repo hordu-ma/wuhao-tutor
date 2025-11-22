@@ -96,6 +96,17 @@ ensure_uv_available() {
     fi
 }
 
+# 安装系统依赖 (针对 WeasyPrint 等库)
+install_system_dependencies() {
+    log_info "检查并安装系统依赖..."
+    # WeasyPrint 需要的依赖: libcairo2, libpango-1.0-0, libpangocairo-1.0-0, libgdk-pixbuf2.0-0, libffi-dev, shared-mime-info
+    if ssh "${SERVER_SSH}" "apt-get update >/dev/null 2>&1 && apt-get install -y libcairo2 libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libffi-dev shared-mime-info >/dev/null 2>&1"; then
+        log_success "系统依赖安装完成"
+    else
+        log_warning "系统依赖安装失败，请手动检查服务器 apt 配置"
+    fi
+}
+
 # 验证并修复 systemd 配置
 validate_systemd_config() {
     log_info "验证 systemd 配置..."
@@ -276,13 +287,16 @@ ensure_env_production
 # 5. 确认服务器 uv 可用
 ensure_uv_available
 
-# 6. 验证并修复 systemd 配置
+# 6. 安装系统依赖
+install_system_dependencies
+
+# 7. 验证并修复 systemd 配置
 validate_systemd_config
 
-# 7. 验证部署文件
+# 8. 验证部署文件
 verify_backend_deployment
 
-# 8. 安装/更新 Python 依赖（增量同步）
+# 9. 安装/更新 Python 依赖（增量同步）
 log_info "检查 Python 依赖变化..."
 
 # 检查依赖是否变化（对比 uv.lock 文件）
@@ -304,7 +318,7 @@ else
     log_success "Python 依赖同步完成"
 fi
 
-# 9. 执行数据库迁移
+# 10. 执行数据库迁移
 log_info "执行数据库迁移..."
 if ssh "${SERVER_SSH}" "cd ${BACKEND_REMOTE_DIR} && export PATH=\"\$HOME/.local/bin:\$PATH\" && ENVIRONMENT=production uv run alembic upgrade head"; then
     log_success "数据库迁移完成"
@@ -312,12 +326,12 @@ else
     log_warning "数据库迁移可能失败，请手动检查"
 fi
 
-# 10. 重启后端服务
+# 11. 重启后端服务
 log_info "重启后端服务..."
 ssh "${SERVER_SSH}" "systemctl restart ${BACKEND_SERVICE}"
 log_success "后端服务已重启"
 
-# 11. 验证服务状态
+# 12. 验证服务状态
 log_info "验证服务状态..."
 sleep 3  # 给服务一点启动时间
 
@@ -329,7 +343,7 @@ if ssh "${SERVER_SSH}" "systemctl is-active --quiet ${BACKEND_SERVICE}"; then
 else
     log_error "后端服务启动失败"
     log_info "查看日志："
-    ssh "${SERVER_SSH}" "journalctl -u ${BACKEND_SERVICE} -n 50"
+    ssh "${SERVER_SSH}" "journalctl -u ${BACKEND_SERVICE} -n 100 --no-pager"
     exit 1
 fi
 
@@ -338,17 +352,17 @@ echo
 log_info "🎨 前端部署阶段"
 echo
 
-# 12. 构建前端
+# 13. 构建前端
 build_frontend
 
-# 13. 同步前端文件
+# 14. 同步前端文件
 log_info "同步前端文件到服务器..."
 rsync -avz --delete \
     "${FRONTEND_LOCAL_DIR}/dist/" \
     "${SERVER_SSH}:${FRONTEND_REMOTE_DIR}/"
 log_success "前端文件同步完成"
 
-# 14. 重启 Nginx
+# 15. 重启 Nginx
 log_info "重启 Nginx..."
 ssh "${SERVER_SSH}" "systemctl reload nginx"
 log_success "Nginx 已重启"
@@ -358,7 +372,7 @@ echo
 log_info "🔍 部署验证阶段"
 echo
 
-# 15. 检查后端健康状态
+# 16. 检查后端健康状态
 log_info "检查后端 API..."
 if ssh "${SERVER_SSH}" "curl -sf ${HEALTH_CHECK_URL} | grep -q 'healthy'"; then
     log_success "后端 API 响应正常"
@@ -368,7 +382,7 @@ else
     echo "  curl https://horsduroot.com/health"
 fi
 
-# 16. 检查前端文件
+# 17. 检查前端文件
 log_info "检查前端文件..."
 if ssh "${SERVER_SSH}" "[ -f ${FRONTEND_REMOTE_DIR}/index.html ]"; then
     log_success "前端文件部署正常"
@@ -377,7 +391,7 @@ else
     exit 1
 fi
 
-# 17. 检查 Python 包结构
+# 18. 检查 Python 包结构
 log_info "检查 Python 包结构..."
 init_count=$(ssh "${SERVER_SSH}" "find ${BACKEND_REMOTE_DIR}/src -name '__init__.py' -type f | wc -l")
 if [ "$init_count" -gt 0 ]; then

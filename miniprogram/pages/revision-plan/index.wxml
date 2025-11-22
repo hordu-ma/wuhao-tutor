@@ -1,0 +1,54 @@
+<view class="container">
+  <view class="header">
+    <view class="title">我的复习计划</view>
+    <button class="create-btn" type="primary" size="mini" bindtap="onGenerateTap">生成计划</button>
+  </view>
+
+  <view class="plan-list">
+    <block wx:if="{{loading}}">
+      <view class="loading">加载中...</view>
+    </block>
+    <block wx:elif="{{plans.length === 0}}">
+      <view class="empty">
+        <view class="empty-icon" wx:if="{{!hasEmptyImage}}">
+          <van-icon name="todo-list-o" size="64px" color="#dcdfe6" />
+        </view>
+        <text class="empty-text">暂无复习计划，快来创建一个吧</text>
+        <button class="create-btn-large" bindtap="onGenerateTap">立即生成</button>
+      </view>
+    </block>
+    <block wx:else>
+      <view class="plan-item" wx:for="{{plans}}" wx:key="id" bindtap="onPlanTap" data-id="{{item.id}}">
+        <view class="plan-info">
+          <view class="plan-title">{{item.title}}</view>
+          <view class="plan-meta">
+            <text class="plan-date">{{item.created_at_formatted}}</text>
+            <text class="plan-count">{{item.mistake_count}} 道错题</text>
+          </view>
+        </view>
+        <view class="plan-status {{item.status}}">
+          {{item.status_text}}
+        </view>
+      </view>
+    </block>
+  </view>
+
+  <!-- 生成计划弹窗 -->
+  <view class="modal {{showGenerateModal ? 'show' : ''}}">
+    <view class="modal-mask" bindtap="closeGenerateModal"></view>
+    <view class="modal-content">
+      <view class="modal-header">生成复习计划</view>
+      <view class="modal-body">
+        <view class="form-item">
+          <text class="label">计划标题</text>
+          <input class="input" placeholder="例如：期中数学复习" placeholder-style="color: #c0c4cc;" model:value="{{generateForm.title}}" />
+        </view>
+        <!-- 可以添加更多筛选条件 -->
+      </view>
+      <view class="modal-footer">
+        <button class="btn cancel" bindtap="closeGenerateModal">取消</button>
+        <button class="btn confirm" bindtap="confirmGenerate" loading="{{generating}}">开始生成</button>
+      </view>
+    </view>
+  </view>
+</view>

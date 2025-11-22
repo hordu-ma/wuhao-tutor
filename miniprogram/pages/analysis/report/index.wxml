@@ -83,6 +83,23 @@
       </view>
     </view>
 
+    <!-- AI 复习计划入口 -->
+    <view class="section revision-section" bindtap="navigateToRevisionPlan">
+      <view class="revision-card">
+        <view class="revision-icon">
+          <van-icon name="todo-list-o" size="32px" color="#fff" />
+        </view>
+        <view class="revision-info">
+          <view class="revision-title">AI 复习计划</view>
+          <view class="revision-desc">基于错题本为您定制专属复习方案</view>
+        </view>
+        <view class="revision-action">
+          <text>去查看</text>
+          <van-icon name="arrow" />
+        </view>
+      </view>
+    </view>
+
     <!-- 最后更新时间 -->
     <view class="report-footer">
       <text class="update-time">更新于 {{formattedUpdateTime}}</text>
