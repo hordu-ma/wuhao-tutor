@@ -88,6 +88,7 @@ Page({
     try {
       await api.revisions.generateRevisionPlan({
         title,
+        cycle_type: '7days',
       });
       
       wx.showToast({

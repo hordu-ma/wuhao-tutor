@@ -50,6 +50,7 @@ async def generate_revision_plan(
             cycle_type=request.cycle_type,
             days_lookback=request.days_lookback,
             force_regenerate=request.force_regenerate,
+            title=request.title,
         )
         return plan
     except ServiceError as e:

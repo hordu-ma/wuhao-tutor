@@ -47,7 +47,8 @@ class RevisionPlanDetailResponse(RevisionPlanResponse):
 class RevisionPlanGenerateRequest(BaseModel):
     """生成复习计划请求"""
 
-    cycle_type: str = Field(..., description="周期类型: 7days, 14days, 30days")
+    title: Optional[str] = Field(None, description="计划标题")
+    cycle_type: str = Field("7days", description="周期类型: 7days, 14days, 30days")
     days_lookback: int = Field(30, description="回顾过去多少天的错题")
     force_regenerate: bool = Field(False, description="是否强制重新生成")
 

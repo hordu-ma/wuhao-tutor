@@ -45,6 +45,7 @@ class RevisionPlanService:
         cycle_type: str = "7days",  # "7days" | "14days" | "30days"
         days_lookback: int = 30,  # 回顾近N天的错题
         force_regenerate: bool = False,  # 强制重新生成
+        title: Optional[str] = None,  # 用户自定义标题
     ) -> RevisionPlan:
         """
         生成个性化复习计划
@@ -87,10 +88,11 @@ class RevisionPlanService:
         )
 
         # 6. 保存到数据库
+        final_title = title if title else plan_json["title"]
         revision_plan = await self.revision_repo.create(
             {
                 "user_id": str(user_id),
-                "title": plan_json["title"],
+                "title": final_title,
                 "description": plan_json.get("description", ""),
                 "cycle_type": cycle_type,
                 "status": "published",
