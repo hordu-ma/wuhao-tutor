@@ -52,6 +52,7 @@ async def generate_revision_plan(
             force_regenerate=request.force_regenerate,
             title=request.title,
         )
+        logger.info(f"📤 返回复习计划: id={plan.id}, title={plan.title}")
         return plan
     except ServiceError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -77,6 +78,11 @@ async def list_revision_plans(
     try:
         result = await service.list_revision_plans(
             user_id=user_id, limit=page_size, offset=(page - 1) * page_size
+        )
+        logger.info(
+            f"📋 返回复习计划列表: 共{result['total']}条, "
+            f"当前页{len(result['items'])}条, "
+            f"IDs={[str(p.id) for p in result['items'][:3]]}"
         )
         return result
     except Exception as e:
