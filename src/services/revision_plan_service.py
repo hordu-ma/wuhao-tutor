@@ -257,9 +257,18 @@ class RevisionPlanService:
         plan_id: UUID,
     ) -> RevisionPlan:
         """获取复习计划详情"""
+        logger.info(f"🔍 查询复习计划: plan_id={plan_id}, user_id={user_id}")
         plan = await self.revision_repo.get_by_id(str(plan_id))
 
-        if not plan or plan.user_id != str(user_id):
+        if not plan:
+            logger.warning(f"❌ 计划不存在: plan_id={plan_id}")
+            raise ServiceError("计划不存在或无权访问")
+        
+        logger.info(f"📌 找到计划: plan.id={plan.id}, plan.user_id={plan.user_id}, type(plan.user_id)={type(plan.user_id)}")
+        logger.info(f"📌 用户校验: user_id={user_id}, str(user_id)={str(user_id)}, type(user_id)={type(user_id)}")
+        
+        if plan.user_id != str(user_id):
+            logger.warning(f"❌ 权限拒绝: plan.user_id={plan.user_id} != str(user_id)={str(user_id)}")
             raise ServiceError("计划不存在或无权访问")
 
         # 更新访问计数
