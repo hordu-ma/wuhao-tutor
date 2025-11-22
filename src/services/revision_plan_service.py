@@ -264,11 +264,9 @@ class RevisionPlanService:
             logger.warning(f"❌ 计划不存在: plan_id={plan_id}")
             raise ServiceError("计划不存在或无权访问")
         
-        logger.info(f"📌 找到计划: plan.id={plan.id}, plan.user_id={plan.user_id}, type(plan.user_id)={type(plan.user_id)}")
-        logger.info(f"📌 用户校验: user_id={user_id}, str(user_id)={str(user_id)}, type(user_id)={type(user_id)}")
-        
-        if plan.user_id != str(user_id):
-            logger.warning(f"❌ 权限拒绝: plan.user_id={plan.user_id} != str(user_id)={str(user_id)}")
+        # 统一转换为字符串进行比较（PostgreSQL 返回 UUID 对象）
+        if str(plan.user_id) != str(user_id):
+            logger.warning(f"❌ 权限拒绝: plan.user_id={plan.user_id} != user_id={user_id}")
             raise ServiceError("计划不存在或无权访问")
 
         # 更新访问计数
